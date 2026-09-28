@@ -714,3 +714,140 @@ fn a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries() {
         "the reused tree is no longer registered"
     );
 }
+
+// ---------------------------------------------------------------------------------------------
+// s8d-ii round 1, a tests-mutants minor: the two values `rk-cli` hands `rk-git` — the lock's
+// liveness probe (ADR-0180 decision 6: *"`rk-cli` builds the predicate from
+// `rk_containment::is_alive` and a new `rk_containment::process_start_time`"*) and
+// `GIT_LFS_SKIP_SMUDGE` (§8d-ii.5 read (4)) — had no `rk-cli` test, so `S8D-II-M21`'s kill covered
+// `rk-git`'s side only. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
+// ---------------------------------------------------------------------------------------------
+
+/// `redkiln -C <repo> run <item>` with `env` added to the child's environment (never `set_var`,
+/// §7d.13), and the fixture child's mode set as [`crate::run::spawn_run`] sets it: an absent mode
+/// is a 600 s park.
+#[expect(
+    clippy::disallowed_types,
+    reason = "the verb is exercised AS A PROCESS, so the value rk-cli reads from its own \
+              environment and hands rk-git is the one under test"
+)]
+fn spawn_run_with_env(repo: &Path, item: &str, env: &[(&str, &str)]) -> std::process::Output {
+    let markers = repo.join(".rk-markers");
+    std::fs::create_dir_all(&markers).expect("the marker directory is created");
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.arg("-C").arg(repo).arg("run").arg(item);
+    cmd.env("RK_FIXTURE_MODE", "exit:0")
+        .env("RK_FIXTURE_MARKER_DIR", &markers);
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    crate::support::output_bounded(&mut cmd)
+}
+
+/// **The liveness probe `run` injects reads the real process table** (ADR-0180 decision 6). A run
+/// tree locked with THIS test process's pid and its OS start time, in redkiln's own reason form,
+/// is held by a live run: the next `run` refuses by name (exit 3) and leaves that lock as it is.
+/// The control: the same lock naming a pid no process holds is stale, and the run releases it,
+/// proceeds, and releases its own lock at its end.
+///
+/// Green at its writing, the wiring being built (P6): a pin. `R1FIX-PROBE-NONE` (`process_probe`
+/// reads nothing, so every lock is stale) shows it can fail.
+#[test]
+fn a_run_tree_locked_by_a_live_process_refuses_the_next_run_by_name() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+    let first = crate::run::spawn_run(root, "bug-1", None);
+    let tree = crate::run_tree(root, "bug-1").path;
+    assert!(
+        worktree_record(root, &tree).is_some(),
+        "PREMISE: the first run created no registered tree; stderr:\n{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    let id = rk_git::worktree::ItemId::parse("bug-1").expect("the item id parses");
+    let me = std::process::id();
+    let start = rk_containment::process_start_time(me)
+        .expect("PREMISE: the OS reports this test process's start time");
+    let live = rk_git::worktree::lock_reason(&id, &rk_git::worktree::LockOwner { pid: me, start });
+    let tree_s = tree.to_str().expect("utf-8");
+    git_out(root, &["worktree", "lock", "--reason", &live, tree_s]);
+
+    let out = spawn_run_with_env(root, "bug-1", &[]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("run-tree-lock-held") && stderr.contains(&format!("pid {me} ")),
+        "a lock held by a LIVE process (this test, pid {me}) did not refuse the run by name \
+         (exit {:?}); stderr:\n{stderr}",
+        out.status.code()
+    );
+    assert_eq!(out.status.code(), Some(3), "stderr:\n{stderr}");
+    let record = worktree_record(root, &tree).expect("the tree is still registered");
+    assert!(
+        record.iter().any(|l| l == &format!("locked {live}")),
+        "the live run's lock was touched: {record:?}"
+    );
+
+    // CONTROL: a pid no process holds is stale; the run releases it and proceeds.
+    git_out(root, &["worktree", "unlock", tree_s]);
+    let dead = rk_git::worktree::lock_reason(
+        &id,
+        &rk_git::worktree::LockOwner {
+            pid: u32::MAX - 1,
+            start,
+        },
+    );
+    git_out(root, &["worktree", "lock", "--reason", &dead, tree_s]);
+    let out = spawn_run_with_env(root, "bug-1", &[]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        !stderr.contains("run-tree-lock-held") && !stderr.contains("run-tree-foreign-lock"),
+        "CONTROL: a stale lock (no such pid) refused the run; stderr:\n{stderr}"
+    );
+    let record = worktree_record(root, &tree).expect("the tree is still registered");
+    assert!(
+        !record.iter().any(|l| l.starts_with("locked")),
+        "CONTROL: the stale lock was not released, or the run's own was kept: {record:?}"
+    );
+}
+
+/// **`GIT_LFS_SKIP_SMUDGE` in `run`'s own environment refuses creation by name** (§8d-ii.5 read
+/// (4) and refusal (b): `rk-cli` reads it through `env.rs` and hands it to `rk-git`). The fixture
+/// commits `*.bin filter=fx` and an `a.bin`, with `fx` effective at `local` scope; with
+/// `GIT_LFS_SKIP_SMUDGE=1` the run exits 3 naming the variable, and no tree exists. The control:
+/// `GIT_LFS_SKIP_SMUDGE=0` creates the tree.
+///
+/// Green at its writing, the wiring being built (P6): a pin. `R1FIX-LFS-NONE` (`run` hands `rk-git`
+/// `None`) shows it can fail.
+#[test]
+fn git_lfs_skip_smudge_in_runs_environment_refuses_creation_by_name() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+    std::fs::write(root.join(".gitattributes"), b"*.bin filter=fx\n").expect("attributes write");
+    std::fs::write(root.join("a.bin"), b"payload\n").expect("a.bin writes");
+    crate::git(root, &["add", ".gitattributes", "a.bin"]);
+    crate::git(root, &["commit", "--quiet", "-m", "a filtered path"]);
+    crate::git(root, &["config", "filter.fx.smudge", "tr a-z A-Z"]);
+    crate::git(root, &["config", "filter.fx.clean", "tr A-Z a-z"]);
+    let tree = crate::run_tree(root, "bug-1").path;
+
+    let out = spawn_run_with_env(root, "bug-1", &[("GIT_LFS_SKIP_SMUDGE", "1")]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("run-tree-smudge-skipped") && stderr.contains("GIT_LFS_SKIP_SMUDGE=1"),
+        "GIT_LFS_SKIP_SMUDGE=1 in run's environment did not refuse creation by name (exit {:?}); \
+         stderr:\n{stderr}",
+        out.status.code()
+    );
+    assert_eq!(out.status.code(), Some(3), "stderr:\n{stderr}");
+    assert!(
+        worktree_record(root, &tree).is_none() && std::fs::symlink_metadata(&tree).is_err(),
+        "a tree exists after the refusal"
+    );
+
+    // CONTROL: `0` skips nothing, and the same repository creates its tree.
+    let out = spawn_run_with_env(root, "bug-1", &[("GIT_LFS_SKIP_SMUDGE", "0")]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        worktree_record(root, &tree).is_some(),
+        "CONTROL: GIT_LFS_SKIP_SMUDGE=0 did not create the tree; stderr:\n{stderr}"
+    );
+}

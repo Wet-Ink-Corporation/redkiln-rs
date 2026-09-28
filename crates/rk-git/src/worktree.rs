@@ -1454,18 +1454,38 @@ fn discard(exec: &GitExec, at: &WorktreePath, path: &Path) -> Result<Vec<String>
     Ok(paths)
 }
 
-/// Does `refs/heads/<branch>` exist? Exit 1 of `rev-parse --verify --quiet` means *no*.
-fn branch_exists(exec: &GitExec, main: &WorktreePath, branch: &str) -> Result<bool, GitError> {
-    let full = format!("refs/heads/{branch}");
+/// The commit `refs/heads/<branch>` names, or `None` when the branch does not exist. Exit 1 of
+/// `rev-parse --verify --quiet` means *no*. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii:
+/// it was `branch_exists`, a bool; D21-89 needs the tip itself.)*
+fn branch_tip(
+    exec: &GitExec,
+    main: &WorktreePath,
+    branch: &str,
+) -> Result<Option<String>, GitError> {
+    let full = format!("refs/heads/{branch}^{{commit}}");
     match exec.run(
         GitOp::RevParse,
         main,
         ["rev-parse", "--verify", "--quiet", full.as_str()],
     ) {
-        Ok(_) => Ok(true),
-        Err(GitError::NonZeroExit { code: Some(1), .. }) => Ok(false),
+        Ok(out) => Ok(Some(out.stdout_trimmed())),
+        Err(GitError::NonZeroExit { code: Some(1), .. }) => Ok(None),
         Err(other) => Err(other),
     }
+}
+
+/// `git merge-base <head> <tip>`: where an existing run branch forked from start's `HEAD` (D21-89
+/// ruling 2). A read (`GitOp::MergeBase`). Histories with no common ancestor exit 1, which is
+/// returned as the wrapper's error before any add: nothing is created.
+fn merge_base(
+    exec: &GitExec,
+    main: &WorktreePath,
+    head: &str,
+    tip: &str,
+) -> Result<String, GitError> {
+    Ok(exec
+        .run(GitOp::MergeBase, main, ["merge-base", head, tip])?
+        .stdout_trimmed())
 }
 
 /// **Enter the run tree for `item`** (s8d-ii §8d-ii.3; W1, W2): create it, or re-enter and reuse
@@ -1485,6 +1505,11 @@ fn branch_exists(exec: &GitExec, main: &WorktreePath, branch: &str) -> Result<bo
 ///   [`check_filters`] reads the drivers and refuses when pointer files would result (D21-47 V1,
 ///   §8d-ii.5), with `lfs_skip_smudge` the `GIT_LFS_SKIP_SMUDGE` value `rk-cli` read. Re-entry
 ///   reads and scans nothing: a reused tree was scanned when it was created.
+/// - **D21-89, when the branch exists** *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii)*:
+///   the length rule, the filter read and so the scan's path set read the **commit the tree
+///   checks out**, the branch's tip (read before the add), never start's `HEAD`; and `RK_BASE`
+///   records `merge-base(start HEAD, tip)`, the point the branch forked. A first creation is
+///   unchanged: it checks out, reads and records start's `HEAD`.
 ///
 /// # Errors
 /// [`GitError::WorktreeRefused`] naming the path and the reason; wrapper errors.
@@ -1609,7 +1634,20 @@ fn reenter(
         }));
     }
     take_lock(exec, main, &tree, current_lock, owner, probe)?;
-    let discarded = discard(exec, &at, &tree.path)?;
+    // A refused discard releases the lock this call just took, so no refusal leaves the run's own
+    // lock behind (ADR-0180 decision 6, *"released at the run's end"*; round-1 minor). The tree
+    // is kept. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
+    let discarded = match discard(exec, &at, &tree.path) {
+        Ok(paths) => paths,
+        Err(refused) => {
+            exec.run(
+                GitOp::WorktreeUnlock,
+                main,
+                ["worktree", "unlock", at.as_str()],
+            )?;
+            return Err(refused);
+        }
+    };
     Ok(Entered {
         tree,
         fork: base.fork,
@@ -1629,18 +1667,29 @@ fn create(
     lfs_skip_smudge: Option<&str>,
 ) -> Result<Entered, GitError> {
     let start_at = WorktreePath::new(start)?;
-    // The fork is the frozen `HEAD`, read ONCE, before the add (D21-45); RK_BASE records it.
-    let fork = exec
+    // start's frozen `HEAD`, read ONCE, before the add (D21-45). A first creation forks there.
+    let head = exec
         .run(
             GitOp::RevParse,
             &start_at,
             ["rev-parse", "--verify", "HEAD^{commit}"],
         )?
         .stdout_trimmed();
-    let tree = prepare_creation(exec, start, id.as_str(), &fork)?;
-    let filters = check_filters(exec, Path::new(main.as_str()), id, &fork, lfs_skip_smudge)?;
+    // D21-89 ruling 1: when `rk-run/<item>` exists, the tree checks out its TIP, so the length
+    // rule, the filter read and the scan's path set read that commit, read here before the add.
+    // *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
+    let tip = branch_tip(exec, main, &derive(Path::new(main.as_str()), id).branch)?;
+    let checked = tip.as_deref().unwrap_or(head.as_str());
+    let tree = prepare_creation(exec, start, id.as_str(), checked)?;
+    let filters = check_filters(exec, Path::new(main.as_str()), id, checked, lfs_skip_smudge)?;
+    // D21-89 ruling 2: RK_BASE records where the branch forked, `merge-base(start HEAD, tip)`; a
+    // first creation's fork is start's `HEAD`, unchanged.
+    let fork = match tip.as_deref() {
+        Some(t) => merge_base(exec, main, &head, t)?,
+        None => head.clone(),
+    };
     let path = WorktreePath::new(&tree.path)?;
-    let created = if branch_exists(exec, main, &tree.branch)? {
+    let created = if tip.is_some() {
         // The branch exists and no tree is registered: check it out as it stands. Never `-B`.
         exec.run(
             GitOp::WorktreeAdd,
@@ -2009,7 +2058,9 @@ const SCOPES_READ: &str = "system, global, local, worktree and command";
 /// 2. The drivers at every scope: `config -z --show-scope --show-origin --includes
 ///    --get-regexp '^(filter|includeif)\.'`, run in the main worktree.
 /// 3. Every `includeIf` whose condition matches the **run tree** (its gitdir
-///    `<common-dir>/worktrees/<item>`, or its branch `rk-run/<item>`) is read from the file it
+///    `<common-dir>/worktrees/<name>`, where `<name>` is the item, suffixed as git suffixes a
+///    basename collision: `admin_dir_name`, dated 2026-09-28, s8d-ii build, package R1FIX-8dii;
+///    or its branch `rk-run/<item>`) is read from the file it
 ///    names and folded in at its own position, with its includer's scope and the included file
 ///    as origin. A condition this module cannot evaluate (`~`, `hasconfig:`) is not folded; it
 ///    goes to the debug notes, and D21-48 X2's scan is the backstop.
@@ -2291,20 +2342,37 @@ fn driver_entries(
     Ok((out, notes))
 }
 
+/// The name `git worktree add` will give the run tree's admin directory under
+/// `<common>/worktrees/`: the tree path's basename (the item), with a number appended while that
+/// name exists (git's `add_worktree`: `mkdir` of `worktrees/<name>`, then `<name>1`, `<name>2`, …
+/// on `EEXIST`). Round 1 measured the suffix on git 2.55.0.windows.3: `../a/item`, then
+/// `../b/item`, left `item` and `item1`, and in this repository the legacy tree already holds
+/// `worktrees/rk-fix-doctor-test-count`. Read before the add, as read (3) is; an admin directory
+/// created between this read and the add (a concurrent `worktree add`) is the one case it can
+/// miss, and D21-48 X2's scan is the backstop. *(dated 2026-09-28, s8d-ii build, package
+/// R1FIX-8dii: read (3) assumed `worktrees/<item>`.)*
+fn admin_dir_name(common: &str, item: &ItemId) -> String {
+    let admin = Path::new(common).join("worktrees");
+    let mut name = item.as_str().to_string();
+    let mut n: u32 = 0;
+    while std::fs::symlink_metadata(admin.join(&name)).is_ok() {
+        n = n.saturating_add(1);
+        name = format!("{}{n}", item.as_str());
+    }
+    name
+}
+
 /// The run tree's gitdir as git would match an `includeIf "gitdir:"` against it: the canonical
-/// common dir's `worktrees/<item>` first (git tries the realpath first), then the absolute form.
+/// common dir's `worktrees/<name>` first (git tries the realpath first), then the absolute form,
+/// where `<name>` is [`admin_dir_name`]'s, the directory git will assign.
 fn run_tree_gitdirs(common: &str, item: &ItemId) -> Vec<String> {
-    let absolute = format!(
-        "{}/worktrees/{}",
-        common.trim_end_matches('/'),
-        item.as_str()
-    );
+    let name = admin_dir_name(common, item);
+    let absolute = format!("{}/worktrees/{name}", common.trim_end_matches('/'));
     let mut out = Vec::new();
     if let Ok(canon) = std::fs::canonicalize(common) {
         out.push(format!(
-            "{}/worktrees/{}",
+            "{}/worktrees/{name}",
             shown(&canon).to_string_lossy().trim_end_matches('/'),
-            item.as_str()
         ));
     }
     if !out.contains(&absolute) {

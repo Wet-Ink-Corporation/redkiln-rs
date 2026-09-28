@@ -85,6 +85,11 @@ pub enum GitOp {
     /// select a filter driver AT THE FORK COMMIT (s8d-ii §8d-ii.5 read (1), D21-47 V1: *"Attributes
     /// are read from the fork commit."*). A read. *(dated 2026-09-27, s8d-ii build, P4.)*
     CheckAttr,
+    /// `merge-base <start HEAD> <run-branch tip>` — the fork `RK_BASE` records for a run tree
+    /// created on an EXISTING run branch (D21-89 ruling 2: *"`RK_BASE` records `merge-base(start
+    /// HEAD, run-branch tip)`"*). A read, so it supersedes nothing (D21-47: *"A READ is not a
+    /// supersession"*). *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
+    MergeBase,
 }
 
 impl GitOp {
@@ -113,6 +118,7 @@ impl GitOp {
             Self::LsTree => "ls-tree",
             Self::Config => "config",
             Self::CheckAttr => "check-attr",
+            Self::MergeBase => "merge-base",
         }
     }
 
@@ -142,7 +148,8 @@ impl GitOp {
             | Self::WorktreeList
             | Self::LsTree
             | Self::Config
-            | Self::CheckAttr => false,
+            | Self::CheckAttr
+            | Self::MergeBase => false,
         }
     }
 

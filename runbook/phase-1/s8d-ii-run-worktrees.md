@@ -24,7 +24,9 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 *Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
 - **The legacy registration survives `s8a`.** `s8a` guard (11) restores the tree 7f's whole run removes and asserts
   its ref (§8d-ii.0 item 1), so finding 4 is settled by `s8a`, not left to the lead.
-- **Checkpoint 8d now honours `RK_CP_NESTED=1`**, so (7a)'s replay of it skips 8d's own re-runs of 8c and 7g. The
+- **Checkpoint 8d now honours `RK_CP_NESTED=1`**, so (7a)'s replay of it skips 8d's own re-runs of ~~8c and 7g~~ 8c,
+  8b, 7g, 7a and 5 *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* (Checkpoint 8d's (13) reads *"its re-runs of 8c, 8b, 7g, 7a and 5 ran at
+  Checkpoint 8d's own close"*; this named two of the five). The
   trap asserts that it starts empty, in `s8g`'s form.
 - **The floor chain is recomputed once**: Checkpoint 8d's 885 + this stage's 32 = **917**, not the drafted 864.
 - **Finding 11's sibling edits are made** in `s8c`, `s8d` and `s8j`. `INDEX.md`'s and `PROGRESS.md`'s rows stay the
@@ -328,13 +330,15 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
    adds `rk-cli` `run_worktree`. If a predecessor created `run_worktree`, the tests go into it. The module-qualified
    names in §8d-ii.8 stay as they are.
 8. **The whole-suite floor.** The expected value is **re-derived at stage open from Checkpoint 8d's recorded
-   count**, plus this stage's **50** new tests (§8d-ii.8). Computed once, on the final chain: 740 (ADR-0164's
+   count**, plus this stage's ~~**50**~~ **61** new tests (§8d-ii.8) *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* (53 at package D2188, and 61 once
+   round 1's fixes added eight: `rk-git` six, `rk-cli` two; this read **50** after D2188 moved the floor, a stale
+   instruction round 1 found). Computed once, on the final chain: 740 (ADR-0164's
    evidence, `992d257`) + 9 (8a) + 25 (8b) + 78 (8c) + 62 (8d) = 914 at Checkpoint 8d, so 914 + 50 = ~~**964**~~ **1021** *(dated 2026-09-27, s8d-ii build, package P1-RECORD:
    re-derived from Checkpoint 8d's RECORDED count, 971 passed / 0 failed over 44 at `b183eb9` (D21-78); its
    post-flip re-run after `0b470ee` passed again (rc 0, 0 FAIL), and this stage's open baseline read 971, so 971 + 50 =
    1021; the 914 chain above was the planned figure)* *(dated 2026-09-27, s8d-ii build, package D2188.)* **1024**: 971 + 53, D21-88 ruling 2 adding three
-   tests (§8d-ii.8's count).
-   Replace ~~964~~ in Checkpoint 8d-ii's `FLOOR=` line with Checkpoint 8d's recorded count plus 50, by a dated edit, before the
+   tests (§8d-ii.8's count). *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* **1032**: 971 + 61, round 1's fixes adding eight tests (§8d-ii.8's count).
+   Replace ~~964~~ in Checkpoint 8d-ii's `FLOOR=` line with Checkpoint 8d's recorded count plus ~~50~~ 61, by a dated edit, before the
    block's first run. It is never lowered to make a red run green. *(It read 32 and 917 before the adversarial-review
    fixes of 2026-09-24, and 885 + 46 = 931 before the final consistency pass of 2026-09-24. *D21-48 (2026-09-24):* it read 46
    and 947 before X2's four tests. *D21-48 (2026-09-24), floor propagation:* it read 901 + 50 = 951 before `s8c`'s
@@ -576,6 +580,12 @@ This replaces `recreate_run_worktree` whole, and its doc's *"**Re-created, never
   `origin/<default>`"*). The fork sha is read once, before the add, and it is what `RK_BASE` records.
 - **The branch exists but no tree is registered:** `git worktree add <path> rk-run/<item>`. That happens after a
   landed removal, or after a deleted tree. **Never `-B`** (`worktree::an_existing_run_branch_is_never_reset`).
+  *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* **D21-89, by the operator on refuting round 1's findings:** *"On the existing-branch path: (1)
+  the filter read, the pointer scan's path set and the length rule read the **commit being checked out** (the run
+  branch's tip, read before the add); (2) `RK_BASE` records **`merge-base(start HEAD, run-branch tip)`** — the point
+  the branch forked. First creation is unchanged (fork = start's HEAD)."* The path is routine after D21-88 ruling
+  2's rollback, which keeps the branch. Round 1's probe created a tree holding a pointer file here with no refusal,
+  and `RK_BASE` recorded start's moved `HEAD` as the fork (§8d-ii.9 findings 24 and 25).
 - **Re-entry:** the registered tree is reused when it carries `RK_BASE`, passes the re-entry check, and its `HEAD` is
   **symbolic**, on `refs/heads/rk-run/<item>`, and equals that ref's tip. In-flight changes are read first, path by
   path, through `GitOp::Status` (`--porcelain=v1 -z --untracked-files=all`). They are then discarded explicitly
@@ -623,7 +633,9 @@ This replaces `recreate_run_worktree` whole, and its doc's *"**Re-created, never
   - **It is created at `RK_BASE`'s fork sha, not at `HEAD`.** `reference_worktree`'s doc argues *"[`recreate_run_worktree`]
     creates `rk-run/<item>` **at `HEAD`**, so the base of `HEAD` and that branch IS `HEAD`"*. Under reuse that
     premise is false. The run branch forked at an earlier `HEAD`, and the operator's checkout may have moved since.
-    The fork sha in the run tree's `RK_BASE` is the base, read without a `merge-base`, which clause 5 still does not
+    The fork sha in the run tree's `RK_BASE` is the base, read without a `merge-base` *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii: at the
+    reference tree's creation; a run tree created on an existing branch records a merge-base in `RK_BASE` at ITS
+    creation, D21-89 ruling 2, a read that supersedes nothing)*, which clause 5 still does not
     carry. `run_worktree::the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves` moves `HEAD`
     between two invocations and asserts that the reference tree's `HEAD` is the recorded fork sha. The doc is
     rewritten in the same commit.
@@ -632,7 +644,7 @@ This replaces `recreate_run_worktree` whole, and its doc's *"**Re-created, never
     One without it is refused by name and kept
     (`run_worktree::a_leftover_reference_tree_without_rk_base_is_refused_and_kept`).
 
-  Decision 10's contrast clause, *"unlike the run-owned worktree, which `recreate_run_worktree` recreates and never
+  Decision 10's contrast clause, *"**unlike** the run-owned worktree, which `recreate_run_worktree` recreates and never
   removes"*, describes a function this record retires. The record cites decision 10, says so, and supersedes none of
   it, because the decision's rule stands.
 - **Halt 6 is answered, not overridden.** Halt 6 reads *"If a fixture tree will not delete, that is the handle, and
@@ -703,7 +715,9 @@ that yields pointer files. V1 turns it the right way round.
 so they supersede nothing (D21-47's clause-5 rule).
 1. **The selecting paths, at the fork commit.** `git check-attr --source=<fork> filter` over every path `git ls-tree
    -r --name-only <fork>` lists. The attributes are the fork commit's `.gitattributes`, not the working tree's, which
-   is what a run tree checks out. Git 2.55 on this box takes `--source`: `git check-attr --source=HEAD filter --
+   is what a run tree checks out. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* On the existing-branch arm the commit read is the run branch's tip, which
+   is what that tree checks out (D21-89 ruling 1); `<fork>` in this section means the commit checked out. Git 2.55 on
+   this box takes `--source`: `git check-attr --source=HEAD filter --
    Cargo.toml` printed `Cargo.toml: filter: unspecified`, rc 0 [measured at `fc80687`].
 2. **The drivers, at every scope.** `git config --show-scope --show-origin --includes --get-regexp '^filter\.'` over
    the resolved configuration: `system`, `global`, `local`, `worktree` and `command` scopes, with every `include`
@@ -714,6 +728,11 @@ so they supersede nothing (D21-47's clause-5 rule).
    2.55.0.windows.3, a `gitdir:` pattern covering `.redkiln/worktrees/` does **not** match a run tree. Git matches
    `gitdir:` against the tree's gitdir, `<common-dir>/worktrees/<item>`, so `gitdir:**/.git/worktrees/**` and
    `onbranch:rk-run/**` are the run-tree conditions. The read matches against those, as §8d-ii.8's P4 note records.)*
+   *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* The `<item>` in `<common-dir>/worktrees/<item>` is the admin directory git WILL assign: git names it
+   after the tree path's basename and appends a number on a collision (round 1 measured `item`, then `item1`), and
+   this repository's legacy tree already holds `worktrees/rk-fix-doctor-test-count`. The read predicts the suffix as
+   git's `add_worktree` does, before the add; a directory created between that read and the add is the one case it
+   misses, and D21-48 X2's scan is the backstop (§8d-ii.9 finding 27).
 4. **`GIT_LFS_SKIP_SMUDGE`**, which `rk-cli` reads through `env.rs`, the one environment read (ADR-0083), and passes
    in.
 
@@ -750,7 +769,9 @@ exists with no tree registered (§8d-ii.3), in this order: `git worktree add`, t
 write, the scan, and only then the lock, the carry and `setup` (§8d-ii.4). Re-entry does not scan. A reused tree was
 scanned when it was created, and the scan never judges a tree this call did not create.
 - **What it reads.** The path set is the one read (1) already took: every path that `git check-attr
-  --source=<fork> filter` names with a driver, at the fork commit `RK_BASE` records. For each path it reads the
+  --source=<fork> filter` names with a driver, at the fork commit `RK_BASE` records *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii: at the commit
+  the tree checks out, which on the existing-branch arm is the tip and not the merge-base `RK_BASE` records; D21-89
+  ruling 1)*. For each path it reads the
   **checked-out file in the fresh tree**, never the blob at the fork commit. The committed bytes of a working LFS path
   are a pointer by design; the question is what the checkout left. A selected path the tree does not hold as a
   regular file is skipped, at the debug level.
@@ -839,7 +860,9 @@ drops its reads from its supersession"*. So the worktree record supersedes claus
 remove` are already on clause 5's list. The reads this takes are `worktree list --porcelain`, `rev-parse
 --git-common-dir`, `status --porcelain=v1 -z`, `config --show-scope --show-origin --includes --get-regexp` at every
 scope, `check-attr --source=<fork>`, `ls-tree` and `check-ignore`. Each gets a `GitOp` variant, and none supersedes
-anything. D21-48 X2's post-checkout scan adds no git read: it reuses the `check-attr` path set and reads files in the
+anything. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* D21-89 ruling 2 adds one more read, `merge-base <start HEAD> <tip>` (`GitOp::MergeBase`), for
+the fork a tree created on an existing branch records; it supersedes nothing, and s8a's GitOp pin admits it (its name
+matches none of `diff|range|show|revlist|catfile`). D21-48 X2's post-checkout scan adds no git read: it reuses the `check-attr` path set and reads files in the
 fresh tree. Its rollback is `worktree remove` without `--force`, already on clause 5's list. `init`'s `info/exclude` append is not a wrapper write either: `rk-cli` makes it, and it is ADR-0107 decision
 2's supersession, not clause 5's (§8d-ii.5).
 
@@ -849,7 +872,8 @@ replay none of them runs.
 **The worst-case path (§8d-ii.0 item 2).** The record states the bound for an item: `len(root) + 20 + len(item) + 11 +
 1 +` the longest path tracked at the fork commit, where the root is the main worktree's directory. It measured
 **255** of **259** at `c5d19d7` for a 64-character item, and **215** for `rk-fix-doctor-test-count`. The rule:
-creation refuses by name when that bound, **computed on the item being created**, exceeds 259 and `core.longpaths` is
+creation refuses by name when that bound, **computed on the item being created** *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* (and on the commit the
+tree checks out: the tip, when the branch exists; D21-89 ruling 1), exceeds 259 and `core.longpaths` is
 not `true`, rather than check out a partial tree (`worktree::creation_refuses_a_path_past_the_platform_limit_by_name`).
 The draft computed it on a 64-character item whatever the item was. That left a 23-character root budget, which
 Checkpoint 7f's clone could never meet (the adversarial review, D21-47). `worktree::the_length_rule_reads_the_actual_item_length`
@@ -928,6 +952,11 @@ test first seen green is not evidence (PIA-035). **Seven rows are pins over beha
 - `worktree::a_pointer_header_at_a_path_no_filter_selects_does_not_refuse` (D21-48 X2);
 - `worktree::a_committed_pointer_that_the_driver_smudges_creates_silently` (D21-48 X2).
 
+*(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* **Two further pins** are round 1's `rk-cli` rows for the values `rk-cli` hands `rk-git`,
+`run_worktree::a_run_tree_locked_by_a_live_process_refuses_the_next_run_by_name` and
+`run_worktree::git_lfs_skip_smudge_in_runs_environment_refuses_creation_by_name`: the wiring existed (P6), so they
+were green at their writing, and `R1FIX-PROBE-NONE` and `R1FIX-LFS-NONE` show each can fail.
+
 They are green at entry by design. Each is shown able to fail by the mutant named for it: `S8D-II-M9` for the planted
 tree, `S8D-II-M18` for the length rule, `S8D-II-M12` and `S8D-II-M13` for the BrittonGames shape, `S8D-II-M13` for the
 declared-but-unselected driver, `S8D-II-M14` for the empty case, `S8D-II-M23` for the unselected pointer header,
@@ -993,6 +1022,14 @@ Each test is selected in Checkpoint 8d-ii by its module-qualified name with `--e
 | `rk-cli` | `run_worktree::a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries` (D21-88 ruling 2; dated 2026-09-27, s8d-ii build, package D2188) | the failed fresh tree stays registered, and the next run reuses it with no carry and no `setup` |
 | `rk-git` | `worktree::a_fresh_tree_whose_carry_failed_is_rolled_back_with_its_links_unlinked` (D21-88 rulings 1 and 2; package D2188) | no rollback: `roll_back_fresh` kept the tree |
 | `rk-git` | `worktree::a_reused_tree_or_one_this_run_did_not_lock_is_never_rolled_back` (D21-88 ruling 2; package D2188) | no rollback to observe; `S8D-II-M29` and `S8D-II-M30` show it can fail |
+| `rk-git` | `worktree::an_existing_run_branch_whose_tip_selects_an_ineffective_driver_refuses` (D21-89 ruling 1; dated 2026-09-28, package R1FIX-8dii) | the read runs over start's `HEAD`, which selects nothing: the tree is created on the branch holding a pointer file |
+| `rk-git` | `worktree::an_existing_run_branch_whose_tip_leaves_a_pointer_is_scanned_refused_and_rolled_back` (D21-89 ruling 1; R1FIX-8dii) | the scan's path set is start's `HEAD`'s: the pointer at the tip is never read |
+| `rk-git` | `worktree::an_existing_run_branch_whose_tip_is_past_the_path_limit_refuses` (D21-89 ruling 1; R1FIX-8dii) | the length rule reads start's `HEAD`: a 260 worst case at the tip is admitted |
+| `rk-git` | `worktree::a_tree_created_on_an_existing_run_branch_records_the_merge_base_as_its_fork` (D21-89 ruling 2; R1FIX-8dii) | `RK_BASE` records start's moved `HEAD` |
+| `rk-git` | `worktree::a_reentry_whose_discard_is_incomplete_releases_its_own_lock_and_keeps_the_tree` (round-1 minor; R1FIX-8dii) | the refusal returns with the run's own lock still held |
+| `rk-git` | `worktree::an_include_if_is_matched_against_the_suffixed_gitdir_git_assigns` (round-1 minor; R1FIX-8dii) | read (3) assumes `worktrees/<item>`: it misses the run tree's suffixed gitdir and folds another tree's include |
+| `rk-cli` | `run_worktree::a_run_tree_locked_by_a_live_process_refuses_the_next_run_by_name` (round-1 minor; R1FIX-8dii) | green — a pin; `R1FIX-PROBE-NONE` shows it can fail |
+| `rk-cli` | `run_worktree::git_lfs_skip_smudge_in_runs_environment_refuses_creation_by_name` (round-1 minor; R1FIX-8dii) | green — a pin; `R1FIX-LFS-NONE` shows it can fail |
 | `rk-cli` | `run_worktree::the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves` | the reference tree is created at `HEAD` |
 | `rk-cli` | `run_worktree::a_leftover_reference_tree_without_rk_base_is_refused_and_kept` | a leftover is force-removed |
 | `rk-cli` | `init::init_writes_the_redkiln_runtime_exclude_block_once` (from a repository in the pre-stage initialised shape) | `init` writes no exclude |
@@ -1005,8 +1042,13 @@ rename, so **50 are new**, and the suite gains **50** passed (§8d-ii.0 item 8).
 the adversarial-review fixes of 2026-09-24. The fixes added fourteen rows and replaced four filter rows with eight.)*
 *(D21-48 (2026-09-24): it was 49 names and 46 new before D21-48 X2 added four `rk-git` rows.)*
 *(dated 2026-09-27, s8d-ii build, package D2188.)* **D21-88 ruling 2 adds three rows: 56 names, `rk-git` 44, `rk-containment` 1, `rk-cli` 11, and 53 new**
-(`a_failed_setup_refuses_by_name` is amended, not new), so the suite gains **53** passed over Checkpoint 8d's
+~~(`a_failed_setup_refuses_by_name` is amended, not new)~~ *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* (the renamed
+`a_tree_without_rk_base_is_refused_and_never_removed` is not new in the pass count; `a_failed_setup_refuses_by_name`
+was amended by D2188 and is new to the stage: round 1 measured `git diff 83cf836` at 53 added `#[test]` lines and
+none removed, 56 names less 2 witnesses less 1 rename), so the suite gains **53** passed over Checkpoint 8d's
 recorded 971: `FLOOR=1024`.
+*(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* **Round 1's fixes add eight rows, all new: 64 names, `rk-git` 50, `rk-containment` 1, `rk-cli` 13, and
+61 new**, so the suite gains **61** passed over Checkpoint 8d's recorded 971: `FLOOR=1032`.
 
 `rk-git`'s `worktree::control_a_worktree_can_be_created_and_removed` is **re-pointed**, not deleted, because its
 removal now needs a clean, landed, marked, unlocked tree. The six `rk-cli` test sites that derive the old root
@@ -1050,6 +1092,14 @@ were `s8e`'s S8E-M19 and S8E-M21 to S8E-M24, S8E-M30 to S8E-M33, and the rk-git 
 | S8D-II-M28 | the rollback skips the pre-unlink | `worktree::a_fresh_tree_whose_carry_failed_is_rolled_back_with_its_links_unlinked` | new (D21-88) |
 | S8D-II-M29 | the rollback's `Reused` guard dropped | `worktree::a_reused_tree_or_one_this_run_did_not_lock_is_never_rolled_back` | new (D21-88) |
 | S8D-II-M30 | the rollback's own-lock guard dropped | `worktree::a_reused_tree_or_one_this_run_did_not_lock_is_never_rolled_back` | new (D21-88) |
+| R1FIX-PB-SUFFIX | `path_bound` drops `.review-ref` + 1 (dated 2026-09-28, package R1FIX-8dii) | `worktree::creation_refuses_a_path_past_the_platform_limit_by_name` | new (round 1; SURVIVED the fixture sized from `path_bound`) |
+| R1FIX-PB-PLUS1 | `path_bound` drops the `+ 1` | `worktree::creation_refuses_a_path_past_the_platform_limit_by_name` | new (round 1; SURVIVED likewise) |
+| R1FIX-D2189-HEAD | the existing-branch arm checks start's `HEAD`, not the tip | the three D21-89 ruling-1 rows | new (D21-89) |
+| R1FIX-D2189-BASE | `RK_BASE` on the existing-branch arm records start's `HEAD` | `worktree::a_tree_created_on_an_existing_run_branch_records_the_merge_base_as_its_fork` | new (D21-89) |
+| R1FIX-DISCARD-LOCK | the incomplete-discard refusal keeps the run's own lock | `worktree::a_reentry_whose_discard_is_incomplete_releases_its_own_lock_and_keeps_the_tree` | new (round 1) |
+| R1FIX-GITDIR-SUFFIX | read (3) matches `gitdir:` against `worktrees/<item>` | `worktree::an_include_if_is_matched_against_the_suffixed_gitdir_git_assigns` (both directions, `-OTHER`) | new (round 1) |
+| R1FIX-PROBE-NONE | `run`'s liveness probe reads nothing (every lock stale) | `run_worktree::a_run_tree_locked_by_a_live_process_refuses_the_next_run_by_name` | new (round 1) |
+| R1FIX-LFS-NONE | `run` hands `rk-git` no `GIT_LFS_SKIP_SMUDGE` | `run_worktree::git_lfs_skip_smudge_in_runs_environment_refuses_creation_by_name` | new (round 1) |
 
 A mutant that survives is not waved through. It is either an **unobservable property**, which moves to a source lint
 with its reason written down, or a **missing fixture branch**. Both are recorded by the mutant's name.
@@ -1239,10 +1289,11 @@ absent `.redkiln/worktrees` are all unchanged.
 - **Re-entry order.** Re-entry checks `RK_BASE` first, then the repository, then commits the run ref lacks, a
   detached `HEAD` and another ref. It **takes the lock before the discard**, so a live run's in-flight work is never
   discarded under its lock (`a_lock_held_by_a_live_pid_refuses_by_name` asserts the file survives).
-- **The fork on an existing branch.** When the branch exists and no tree is registered, the fork `RK_BASE` records is
+- ~~**The fork on an existing branch.**~~ *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* *Superseded by D21-89 ruling 2 (`RK_BASE` records
+  `merge-base(start HEAD, run-branch tip)`); the struck choice follows.* ~~When the branch exists and no tree is registered, the fork `RK_BASE` records is
   `start`'s `HEAD` at that moment: the old tree's `RK_BASE` went with its gitdir, and no `merge-base` is read. The
   review reference tree's base (§8d-ii.3) is therefore that `HEAD` for such a tree, the pre-stage behaviour. §8d-ii.3
-  does not settle this, and it is named here for the reference-tree package.
+  does not settle this, and it is named here for the reference-tree package.~~
 - **Removal order.** Removal checks: registered (`KeepReason::NotRegistered`, added), marked, unlocked, symbolic on the
   run ref, clean (the dirty count is status entries), and the `closed` mark (`<project>/<item> closed`, exactly two
   tokens).
@@ -1716,6 +1767,50 @@ twenty-six and were not re-run.
   any fetch, so its tree holds no `node_modules`. The junction case is `rk-git`'s test, over `mklink /J` junctions.
 - **Selections:** (2)'s `rk-git` list is 44 and `rk-cli` 11; `FLOOR=1024` (971 + 53).
 
+*(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* **Refuting round 1's findings: D21-89's two rulings, the platform-limit tests' fixture, and the
+minors, built red first; every new mutant killed, and the rk-git ledger re-killed on the amended tree.**
+- **D21-89, in `rk_git::worktree::create`.** `branch_exists` became `branch_tip`, which reads
+  `refs/heads/rk-run/<item>^{commit}` before any guard. `checked` is that tip, or start's `HEAD` on a first creation, and
+  `prepare_creation` (so the length rule) and `check_filters` (so the scan's path set) read it. `RK_BASE`'s fork is
+  `merge-base(start HEAD, tip)` on the existing-branch arm, read before the add through a new `GitOp::MergeBase` read,
+  and start's `HEAD` otherwise; `Entered::fork` agrees, so `roll_back_fresh`'s marker check holds on either arm.
+  Histories with no common ancestor return the wrapper's `merge-base` error before the add, with nothing created.
+- **Round-1 minors in code.** A re-entry whose discard is incomplete unlocks the lock it took before returning
+  `DiscardIncomplete`. Read (3)'s `gitdir:` match uses `admin_dir_name`, which predicts git's suffix.
+- **RED, before the product change** (the six `rk-git` rows): *"0 passed; 6 failed"*, each for its row's reason:
+  the ineffective-driver row *"the tip selects `nodrv`, declared at no scope; start's HEAD selects nothing: ADMITTED
+  (Entered { … created: OnExistingBranch …"*; the pointer row *"a pointer file at a path the tip selects:
+  ADMITTED"*; the length row *"the tip's worst case is 260; start's HEAD's is short: ADMITTED"*; the merge-base row
+  *"RK_BASE records e76a1d3… and not the merge-base b018798… of start's HEAD e76a1d3… and the tip a39d7ed…"*; the
+  discard row *"the refused re-entry left the run's own lock on the tree"*, `left: Some("redkiln run item-1 (pid 2
+  start 2000)")`; the gitdir row *"`gitdir:**/.git/worktrees/item-11` (the run tree's suffixed gitdir): not the
+  skipped-smudge refusal: PointerFilesAfterCheckout(…)"*, the scan catching what the read missed.
+- **GREEN:** *"6 passed; 0 failed; 0 ignored; 0 measured; 121 filtered out"*. The two `rk-cli` pins: *"2 passed; 0
+  failed"*.
+- **The platform-limit tests (round 1's major).** Their fixtures were sized from `path_bound`, the function under
+  test, so a dropped term moved the fixture with it. Measured first, on the unchanged tests: `R1FIX-PB-SUFFIX` and
+  `R1FIX-PB-PLUS1` each read *"test result: ok. 1 passed"*, SURVIVED. The tests now size the fixture from the literal
+  terms (`fixed_terms`: root + 20 + item + 11 + 1), assert `bound: 260` as a literal, and pin `path_bound(10, 6, 100)
+  == 148` at the end; both mutants are then KILLED, *"a 260-character worst case: ADMITTED"*.
+- **Mutants** (`r1fix8dii_mutants.py`: each anchor asserted once, tmp plus `os.replace`, restored in `finally`, sha256
+  verified; a kill needs rc non-zero, the exact *"0 passed; N failed"* line, each named test `FAILED`, and the reason):
+  **KILLED 9 of 9** on the final tree — the two PB mutants; `R1FIX-D2189-HEAD` (3 of 3, each *"… ADMITTED"*);
+  `R1FIX-D2189-BASE` (the merge-base row's line above); `R1FIX-DISCARD-LOCK`; `R1FIX-GITDIR-SUFFIX` and, with the
+  test's `item-11` case removed by the driver so the other direction is read, `R1FIX-GITDIR-SUFFIX-OTHER`
+  (*"`gitdir:**/.git/worktrees/item-1` (another tree's gitdir): creation was REFUSED … SmudgeSkipped … sfxother-skip.cfg"*);
+  `R1FIX-PROBE-NONE` (*"a lock held by a LIVE process (this test, pid …) did not refuse the run by name (exit
+  Some(10))"*); `R1FIX-LFS-NONE` (*"GIT_LFS_SKIP_SMUDGE=1 in run's environment did not refuse creation by name (exit
+  Some(10))"*).
+- **The ledger re-killed on the amended `worktree.rs` and `git_exec.rs`:** P7's driver re-pointed at the main checkout
+  (`r1fix8dii_p7rerun.py`), every anchor found once, *"KILLED 22 of 22"* for `S8D-II-M2`–`M5`, `M7`, `M8`, `M10`–`M18`
+  and `M20`–`M26`; D2188's driver, *"KILLED 3 of 3"* for `S8D-II-M28`–`M30`. `M1`, `M6`, `M9`, `M19` and `M27` sit in
+  files this package did not change in their anchored regions and were not re-run.
+- **Selections:** (2)'s `rk-git` list is 50 and `rk-cli` 13; `FLOOR=1032` (971 + 61).
+- **Design choices, recorded rather than hidden:** the tip is read, then the tree is added by the branch name, so a
+  branch moved between the read and the add would be checked out unread (a concurrent writer of `rk-run/<item>`,
+  which the lock does not yet cover because no tree is registered); `admin_dir_name` predicts git's name before the
+  add and nothing re-reads the gitdir after it, the same race, with X2's scan as the backstop.
+
 ### 8d-ii.9 What this file found
 
 Findings carried from `s8e`'s revision (its former findings 10–13 and 15–17), with their disposition now, then this
@@ -1858,6 +1953,30 @@ sweep.)*
     `s7d`'s tables and `s8a`, never in a block. Of the older blocks' tokens, 765 resolve to entry test names, and none
     is missing now.
 
+*(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* **Refuting round 1** (five finders, two refuters per blocker or major; the raw findings in the
+session scratchpad, `s8dii-r1.json`):
+
+24. **On the existing-branch arm, the filter read, the scan's path set and the length rule read start's `HEAD`,
+    not the tip the tree checks out** (filed blocker; both refuters: major, one voting it refuted as a blocker because
+    the code followed the stage text's *"at the fork commit `RK_BASE` records"*). A probe created a tree holding a
+    pointer file with no refusal. *Closed by D21-89 ruling 1*, built red first (§8d-ii.8's R1FIX-8dii note).
+25. **`RK_BASE` recorded start's moved `HEAD` as the fork on the existing-branch arm**, so the review reference tree
+    would sit at the wrong base (major; one refuter minor, as P3 had disclosed it). *Closed by D21-89 ruling 2:
+    `merge-base(start HEAD, tip)`.*
+26. **The platform-limit tests sized their fixtures with `path_bound` itself** (major, both refuters), so a mutant
+    dropping `.review-ref` + 1 survived the rk-git package. *Fixed:* literal terms, measured surviving before and
+    killed after.
+27. *Minors, each fixed or recorded:* (a) an incomplete discard kept the run's own lock: *fixed*, red first;
+    (b) read (3) assumed the admin dir is `worktrees/<item>`, which git suffixes on a basename collision: *fixed* by
+    predicting git's name, the between-read-and-add race *recorded* (X2 the backstop); (c) README's *"sixty-eight are
+    partial"*: *fixed*, 75 − 4 = 71, by a dated recount; (d) ADR-0180 omitted ADR-0127 from `related` and `source`
+    and dropped ADR-0162's bold on **unlike**: *fixed* (and the same quotation in §8d-ii.3); (e) §8d-ii.8's count gave
+    the wrong reason for 53 and §8d-ii.0 item 8 still said *plus 50*: *fixed* by dated edits; (f) the amended
+    Checkpoint 7f's catalog-load failure line left its clone: *fixed* by a dated amendment in `s7f`, its other lines
+    untouched and nothing replayed (AFK rule); (g) the stage text named two of the five nested re-runs 8d skips:
+    *fixed*; (h) no `rk-cli` test held the two values `rk-cli` hands `rk-git`: *two pins added*, each shown able to
+    fail.
+
 ### 8d-ii.10 Acceptance set
 
 **Claimed: none as met at this stage.** This stage builds the placement and lifecycle that AC-518 and AC-529 run over,
@@ -1900,7 +2019,7 @@ and adds the dated notes. AC-518's instrument is a lane run (`s8e`'s `lane_e2e`)
   existing tests selected in (2). The block skips both nested re-runs when it is itself run with `RK_CP_NESTED=1`, the
   D21-46 convention: *"running as another checkpoint's entry gate: skip your own nested whole re-runs"*. It sets the
   same variable for the checkpoints it calls. `s8d`'s block honours the variable (consistency pass 2026-09-24), so it
-  skips its own re-runs of 8c and 7g when this block replays it. The card precondition sits inside the non-nested
+  skips its own re-runs of ~~8c and 7g~~ 8c, 8b, 7g, 7a and 5 *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)* when this block replays it. The card precondition sits inside the non-nested
   branch (D21-47).
 - **No process this block starts can reach a real `claude` unobserved (D21-47).** The block sources the shared
   wrapper, `runbook/tools/nodispatch.sh`, and every cargo run and every replay runs under `nodispatch`: a compiled
@@ -2261,9 +2380,10 @@ out=$(nodispatch cargo test -p rk-git --test it -- worktree::s8dii_control_no_su
 printf '%s\n' "$out" | grep -qE 'test result: ok\. 0 passed; 0 failed' || { echo "FAIL: CONTROL — a zero-match filter did not report 0 passed, so this block cannot tell it from a real run"; exit 1; }
 
 # (dated 2026-09-27, s8d-ii build, package D2188) rk-git 42 -> 44 and rk-cli 10 -> 11: D21-88 ruling 2's three rollback tests.
-sel_tests rk-git 44 worktree::an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused worktree::an_item_id_that_case_folds_onto_a_registered_tree_is_refused worktree::the_root_is_the_main_worktree_when_run_from_a_linked_worktree worktree::a_bare_repository_is_refused_by_name worktree::a_symlinked_redkiln_or_worktrees_directory_is_refused worktree::a_created_worktree_whose_realpath_leaves_the_root_is_refused worktree::creation_refuses_when_the_worktree_root_is_not_ignored worktree::creation_refuses_a_path_past_the_platform_limit_by_name worktree::the_length_rule_reads_the_actual_item_length worktree::creation_writes_rk_base_into_the_worktree_gitdir worktree::creation_locks_the_worktree_with_the_pid_and_start_reason worktree::a_lock_held_by_a_dead_pid_is_released worktree::a_lock_whose_pid_now_names_another_process_is_released worktree::a_lock_held_by_a_live_pid_refuses_by_name worktree::reentry_reuses_the_registered_tree_when_head_equals_the_run_ref_tip worktree::reentry_discards_in_flight_changes_and_reports_each_path worktree::reentry_keeps_ignored_files worktree::a_tree_without_rk_base_is_refused_and_never_removed worktree::a_tree_with_commits_the_run_ref_lacks_is_refused_and_never_removed worktree::a_tree_registered_to_another_repository_is_refused worktree::a_tree_on_a_detached_head_is_refused_at_reentry_and_kept worktree::an_existing_run_branch_is_never_reset worktree::a_dirty_tree_is_kept_with_its_reason worktree::an_unlanded_tree_is_kept_with_its_reason worktree::a_locked_tree_is_not_removed worktree::a_clean_landed_marked_unlocked_tree_is_removed worktree::removal_never_follows_a_junction worktree::a_selected_filter_with_no_driver_at_any_scope_refuses_naming_the_path worktree::a_smudge_skipped_at_local_scope_refuses_naming_the_scope worktree::a_smudge_skipped_at_global_scope_refuses_naming_the_scope worktree::a_smudge_skipped_at_system_scope_refuses_naming_the_scope worktree::git_lfs_skip_smudge_in_the_environment_refuses_by_name worktree::an_include_if_that_skips_the_smudge_for_the_run_tree_refuses_naming_the_included_file worktree::the_filter_attribute_is_read_from_the_fork_commit worktree::a_selected_filter_with_a_driver_effective_at_system_scope_creates_silently worktree::a_filter_declared_but_selected_by_no_path_does_not_refuse worktree::a_repo_with_no_filter_or_include_if_creates worktree::a_pointer_file_at_a_selected_path_after_checkout_refuses_by_name_and_removes_the_fresh_tree worktree::the_pointer_scan_never_removes_a_tree_this_call_did_not_create worktree::a_pointer_header_at_a_path_no_filter_selects_does_not_refuse worktree::a_committed_pointer_that_the_driver_smudges_creates_silently gitops::every_git_child_runs_with_lc_all_c worktree::a_fresh_tree_whose_carry_failed_is_rolled_back_with_its_links_unlinked worktree::a_reused_tree_or_one_this_run_did_not_lock_is_never_rolled_back
+# (dated 2026-09-28, s8d-ii build, package R1FIX-8dii) rk-git 44 -> 50 and rk-cli 11 -> 13: round 1's eight (D21-89 and the minors).
+sel_tests rk-git 50 worktree::an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused worktree::an_item_id_that_case_folds_onto_a_registered_tree_is_refused worktree::the_root_is_the_main_worktree_when_run_from_a_linked_worktree worktree::a_bare_repository_is_refused_by_name worktree::a_symlinked_redkiln_or_worktrees_directory_is_refused worktree::a_created_worktree_whose_realpath_leaves_the_root_is_refused worktree::creation_refuses_when_the_worktree_root_is_not_ignored worktree::creation_refuses_a_path_past_the_platform_limit_by_name worktree::the_length_rule_reads_the_actual_item_length worktree::creation_writes_rk_base_into_the_worktree_gitdir worktree::creation_locks_the_worktree_with_the_pid_and_start_reason worktree::a_lock_held_by_a_dead_pid_is_released worktree::a_lock_whose_pid_now_names_another_process_is_released worktree::a_lock_held_by_a_live_pid_refuses_by_name worktree::reentry_reuses_the_registered_tree_when_head_equals_the_run_ref_tip worktree::reentry_discards_in_flight_changes_and_reports_each_path worktree::reentry_keeps_ignored_files worktree::a_tree_without_rk_base_is_refused_and_never_removed worktree::a_tree_with_commits_the_run_ref_lacks_is_refused_and_never_removed worktree::a_tree_registered_to_another_repository_is_refused worktree::a_tree_on_a_detached_head_is_refused_at_reentry_and_kept worktree::an_existing_run_branch_is_never_reset worktree::a_dirty_tree_is_kept_with_its_reason worktree::an_unlanded_tree_is_kept_with_its_reason worktree::a_locked_tree_is_not_removed worktree::a_clean_landed_marked_unlocked_tree_is_removed worktree::removal_never_follows_a_junction worktree::a_selected_filter_with_no_driver_at_any_scope_refuses_naming_the_path worktree::a_smudge_skipped_at_local_scope_refuses_naming_the_scope worktree::a_smudge_skipped_at_global_scope_refuses_naming_the_scope worktree::a_smudge_skipped_at_system_scope_refuses_naming_the_scope worktree::git_lfs_skip_smudge_in_the_environment_refuses_by_name worktree::an_include_if_that_skips_the_smudge_for_the_run_tree_refuses_naming_the_included_file worktree::the_filter_attribute_is_read_from_the_fork_commit worktree::a_selected_filter_with_a_driver_effective_at_system_scope_creates_silently worktree::a_filter_declared_but_selected_by_no_path_does_not_refuse worktree::a_repo_with_no_filter_or_include_if_creates worktree::a_pointer_file_at_a_selected_path_after_checkout_refuses_by_name_and_removes_the_fresh_tree worktree::the_pointer_scan_never_removes_a_tree_this_call_did_not_create worktree::a_pointer_header_at_a_path_no_filter_selects_does_not_refuse worktree::a_committed_pointer_that_the_driver_smudges_creates_silently gitops::every_git_child_runs_with_lc_all_c worktree::a_fresh_tree_whose_carry_failed_is_rolled_back_with_its_links_unlinked worktree::a_reused_tree_or_one_this_run_did_not_lock_is_never_rolled_back worktree::an_existing_run_branch_whose_tip_selects_an_ineffective_driver_refuses worktree::an_existing_run_branch_whose_tip_leaves_a_pointer_is_scanned_refused_and_rolled_back worktree::an_existing_run_branch_whose_tip_is_past_the_path_limit_refuses worktree::a_tree_created_on_an_existing_run_branch_records_the_merge_base_as_its_fork worktree::a_reentry_whose_discard_is_incomplete_releases_its_own_lock_and_keeps_the_tree worktree::an_include_if_is_matched_against_the_suffixed_gitdir_git_assigns
 sel_tests rk-containment 1 containment::process_start_time_reads_a_live_child_and_nothing_for_an_exited_one
-sel_tests rk-cli 11 run_worktree::a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries run_worktree::the_run_worktree_is_created_under_dot_redkiln_worktrees run_worktree::no_redkiln_reader_sees_a_planted_run_worktree run_worktree::creation_carries_worktreeinclude_files_and_runs_setup run_worktree::a_failed_setup_refuses_by_name run_worktree::the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves run_worktree::a_leftover_reference_tree_without_rk_base_is_refused_and_kept init::init_writes_the_redkiln_runtime_exclude_block_once init::init_leaves_the_operators_exclude_lines_untouched run::ac438_table_driven_exit_codes_over_fixtures_binary_arm cost::cost_after_a_real_run_renders_low_sample_through_the_binary
+sel_tests rk-cli 13 run_worktree::a_run_tree_locked_by_a_live_process_refuses_the_next_run_by_name run_worktree::git_lfs_skip_smudge_in_runs_environment_refuses_creation_by_name run_worktree::a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries run_worktree::the_run_worktree_is_created_under_dot_redkiln_worktrees run_worktree::no_redkiln_reader_sees_a_planted_run_worktree run_worktree::creation_carries_worktreeinclude_files_and_runs_setup run_worktree::a_failed_setup_refuses_by_name run_worktree::the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves run_worktree::a_leftover_reference_tree_without_rk_base_is_refused_and_kept init::init_writes_the_redkiln_runtime_exclude_block_once init::init_leaves_the_operators_exclude_lines_untouched run::ac438_table_driven_exit_codes_over_fixtures_binary_arm cost::cost_after_a_real_run_renders_low_sample_through_the_binary
 nd_check "named selections" || exit 1
 
 # ---- (3) CODE-LINE FLOORS beneath section 8d-ii.8's behavioural tests — never the assertion.
@@ -2349,7 +2469,9 @@ code=$(printf '%s\n' "$raw" | grep -vE "$LINE_ONLY" | grep .)
 # ---- 46 -> 50; D21-48 floor propagation, 2026-09-24: was 901 + 50 = 951, before s8c 78 and s8d 62). Replace it by a dated edit before the first run.
 # ---- (dated 2026-09-27, s8d-ii build, package D2188) re-derived from the same recorded 971: 971 + 53 = 1024, D21-88
 # ---- ruling 2 adding three tests (section 8d-ii.8's count). It read FLOOR=1021 before.
-FLOOR=1024
+# ---- (dated 2026-09-28, s8d-ii build, package R1FIX-8dii) re-derived from the same recorded 971: 971 + 61 = 1032,
+# ---- refuting round 1's eight tests (section 8d-ii.8's count). It read FLOOR=1024 before.
+FLOOR=1032
 tally() { printf '%s\n' "$1" | awk '/^test result:/ { p += $4; f += $6; i += $8; n += 1 } END { print p+0, f+0, i+0, n+0 }'; }
 # CONTROL: a run of zero tests tallies below the floor, and a failed count is read.
 read -r cp cf ci cn <<< "$(tally 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out')"
@@ -2434,7 +2556,8 @@ else
     out=$(nodispatch env RK_CP_NESTED=1 "$@" 2>&1); rc=$?
   }
 
-  # (7a) CHECKPOINT 8d, the entry gate, whole. s8d's block honours RK_CP_NESTED=1 and skips its own re-runs of 8c and 7g.
+  # (7a) CHECKPOINT 8d, the entry gate, whole. s8d's block honours RK_CP_NESTED=1 and skips its own re-runs of 8c, 8b,
+  # 7g, 7a and 5 (dated 2026-09-28, s8d-ii build, package R1FIX-8dii: this read "of 8c and 7g").
   ext runbook/phase-1/s8d-step-grain-and-resolver.md 'echo "CP8D-END-OF-BLOCK reached"' "$scratch/cp8d.sh"
   replay bash "$scratch/cp8d.sh"
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8d, re-run whole, exited $rc — this stage's entry gate no longer holds"; printf '%s\n' "$out" | tail -30; exit 1; }

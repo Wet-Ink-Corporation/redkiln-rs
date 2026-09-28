@@ -260,7 +260,10 @@ out=$(cd "$clone" && "$rk_bin" init 2>&1); rc=$?
 runs_before=$(ls "$clone/.git/redkiln/runs" 2>/dev/null | wc -l)
 out=$(cd "$clone" && "$rk_bin" run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?
 [ "$rc" -ne 127 ] || { echo "FAIL: the run did not execute (rc=127)"; rm -rf "$c7f"; exit 1; }
-printf '%s\n' "$out" | grep -qE 'contains a cycle|RankTie' && { echo "FAIL: the run still refuses at catalog LOAD:"; printf '%s\n' "$out" | head -3; exit 1; }
+# [amended 2026-09-28, s8d-ii build, package R1FIX-8dii; s8d-ii refuting round 1] The catalog-LOAD failure line removes
+# the throwaway directory before it exits, as every other failure line after the clone does; it left the clone, its
+# run tree and any pnpm install in the temporary directory. Nothing else in this block moves.
+printf '%s\n' "$out" | grep -qE 'contains a cycle|RankTie' && { echo "FAIL: the run still refuses at catalog LOAD:"; printf '%s\n' "$out" | head -3; rm -rf "$c7f"; exit 1; }
 # THE POSITIVE HALF. The guard above is a NEGATIVE assertion over a string that is EMPTY in the
 # passing case (a successful run prints 0 bytes on both streams, rc=0), so on its own it is also
 # satisfied by a nonexistent item id, an invalid --lane, and a missing .redkiln/ entirely — each

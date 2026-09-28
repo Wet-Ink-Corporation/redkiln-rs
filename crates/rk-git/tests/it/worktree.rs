@@ -794,9 +794,20 @@ fn commit_path_of_len(fx: &crate::support::Fixture, repo: &std::path::Path, len:
     p
 }
 
+/// The worst-case bound's fixed terms for `item_len`, spelled out as §8d-ii.6 states them and
+/// NEVER read from `worktree::path_bound`, the function under test: `/.redkiln/worktrees/` is 20,
+/// `.review-ref` is 11, and the `/` before the tracked path is 1. A fixture sized from `path_bound`
+/// itself moves with any term a mutant drops (round-1 finding, `R1FIX-PB-SUFFIX` and
+/// `R1FIX-PB-PLUS1`). *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
+fn fixed_terms(root: &std::path::Path, item_len: usize) -> usize {
+    utf16_len(root) + 20 + item_len + 11 + 1
+}
+
 /// §8d-ii.6: creation refuses by name when root + 20 + item + 11 + 1 + the longest path at the
 /// fork commit exceeds 259 and `core.longpaths` is not `true`; at exactly 259 it is admitted, and
-/// with `core.longpaths=true` it is admitted.
+/// with `core.longpaths=true` it is admitted. The fixture and the expected bound are computed from
+/// the formula's literal terms (`fixed_terms`), never from `path_bound`. *(dated 2026-09-28, s8d-ii
+/// build, package R1FIX-8dii: it read `worktree::path_bound(utf16_len(&root), item.len(), 0)`.)*
 #[test]
 fn creation_refuses_a_path_past_the_platform_limit_by_name() {
     let fx = crate::support::Fixture::new();
@@ -805,11 +816,12 @@ fn creation_refuses_a_path_past_the_platform_limit_by_name() {
 
     let over = ignored_repo(&fx, "over");
     let root = worktree::main_worktree(&exec, &over).expect("main worktree");
-    let fixed = worktree::path_bound(utf16_len(&root), item.len(), 0);
+    let fixed = fixed_terms(&root, item.len());
     let long = commit_path_of_len(&fx, &over, 260 - fixed);
     assert_eq!(
-        worktree::path_bound(utf16_len(&root), item.len(), long.len()),
-        260
+        fixed + long.len(),
+        260,
+        "the fixture is not a 260 worst case"
     );
     let r = refused(
         "a 260-character worst case",
@@ -829,10 +841,17 @@ fn creation_refuses_a_path_past_the_platform_limit_by_name() {
     // CONTROL: exactly 259 is within the limit.
     let edge = ignored_repo(&fx, "edge");
     let root = worktree::main_worktree(&exec, &edge).expect("main worktree");
-    let fixed = worktree::path_bound(utf16_len(&root), item.len(), 0);
+    let fixed = fixed_terms(&root, item.len());
     commit_path_of_len(&fx, &edge, 259 - fixed);
     worktree::prepare_creation(&exec, &edge, item, "HEAD")
         .unwrap_or_else(|e| panic!("CONTROL: a 259-character worst case was refused: {e:?}"));
+
+    // The formula's terms, pinned on literal inputs: 10 + 20 + 6 + 11 + 1 + 100.
+    assert_eq!(
+        worktree::path_bound(10, 6, 100),
+        148,
+        "path_bound's terms moved"
+    );
 }
 
 /// The control for S8D-II-M18 (D21-47): the bound is computed on the ACTUAL item. A short item
@@ -844,10 +863,12 @@ fn the_length_rule_reads_the_actual_item_length() {
     let exec = exec_for(&fx);
     let main = ignored_repo(&fx, "actual");
     let root = worktree::main_worktree(&exec, &main).expect("main worktree");
-    let fixed64 = worktree::path_bound(utf16_len(&root), 64, 0);
+    // *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii)* sized from the literal terms, not from
+    // `path_bound` (it read `worktree::path_bound(utf16_len(&root), 64, 0)`).
+    let fixed64 = fixed_terms(&root, 64);
     let long = commit_path_of_len(&fx, &main, 260 - fixed64);
     assert!(
-        worktree::path_bound(utf16_len(&root), 64, long.len()) > 259,
+        fixed64 + long.len() > 259,
         "the fixture root is not too long for a 64-character item"
     );
     worktree::prepare_creation(&exec, &main, "a", "HEAD").unwrap_or_else(|e| {
@@ -2332,4 +2353,396 @@ fn a_committed_pointer_that_the_driver_smudges_creates_silently() {
             .starts_with(b"version https://git-lfs"),
         "the driver did not smudge the checkout"
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// s8d-ii round 1, D21-89 (the operator, 2026-09-28): *"On the existing-branch path: (1) the filter
+// read, the pointer scan's path set and the length rule read the **commit being checked out** (the
+// run branch's tip, read before the add); (2) `RK_BASE` records **`merge-base(start HEAD,
+// run-branch tip)`** — the point the branch forked. First creation is unchanged (fork = start's
+// HEAD)."* And two round-1 minors: a re-entry whose discard is incomplete releases the run's own
+// lock, and read (3) matches `gitdir:` against the admin dir git will assign (git suffixes a
+// basename collision). ADR-0180, proposed. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
+// ---------------------------------------------------------------------------------------------
+
+/// A repository whose `rk-run/<ITEM>` branch forks at `fork`, carries one commit (`tip`) that adds
+/// `attributes` and `files` (committed with no filter configured, so each blob holds the bytes
+/// given), and whose checkout then moves on to a third commit (`head`) that selects nothing. No
+/// tree is registered: the existing-branch arm (`Creation::OnExistingBranch`) is the one taken.
+/// Returns `(main, fork, tip, head)`.
+fn run_branch_ahead(
+    fx: &crate::support::Fixture,
+    name: &str,
+    attributes: &str,
+    files: &[(&str, &[u8])],
+) -> (std::path::PathBuf, String, String, String) {
+    let main = lifecycle_repo(fx, name, &[]);
+    let fork = sha(fx, &main, "HEAD");
+    fx.git(
+        &main,
+        &["switch", "--quiet", "-c", &format!("rk-run/{ITEM}")],
+    );
+    if !attributes.is_empty() {
+        std::fs::write(main.join(".gitattributes"), attributes.as_bytes())
+            .expect("write attributes");
+        fx.git(&main, &["add", ".gitattributes"]);
+    }
+    for (path, bytes) in files {
+        let p = main.join(path);
+        if let Some(parent) = p.parent() {
+            std::fs::create_dir_all(parent).expect("mkdir");
+        }
+        std::fs::write(&p, bytes).expect("write a fixture file");
+        fx.git(&main, &["add", path]);
+    }
+    fx.git(
+        &main,
+        &[
+            "commit",
+            "--quiet",
+            "--allow-empty",
+            "-m",
+            "run work on the branch",
+        ],
+    );
+    let tip = sha(fx, &main, "HEAD");
+    fx.git(&main, &["switch", "--quiet", "-"]);
+    std::fs::write(main.join("moved.txt"), b"HEAD moved on\n").expect("write");
+    fx.git(&main, &["add", "moved.txt"]);
+    fx.git(&main, &["commit", "--quiet", "-m", "the checkout moves on"]);
+    let head = sha(fx, &main, "HEAD");
+    assert!(
+        fork != tip && tip != head && fork != head,
+        "PREMISE: fork, tip and HEAD are three commits"
+    );
+    (main, fork, tip, head)
+}
+
+/// D21-89 ruling 1, V1 on the existing-branch arm: the run branch's TIP selects a driver no scope
+/// declares, and start's `HEAD` selects nothing. Creation refuses before the add, naming the tip's
+/// path, and the branch is untouched.
+///
+/// Red while the read runs over start's `HEAD`: the tree is created on the branch with a pointer
+/// file in it and no refusal (round 1's probe, `R1SPEC tree holds a.bin pointer: true`).
+#[test]
+fn an_existing_run_branch_whose_tip_selects_an_ineffective_driver_refuses() {
+    let fx = crate::support::Fixture::new();
+    let exec = filter_exec(&fx, "tipnodrv", "", "");
+    let (main, _fork, tip, head) = run_branch_ahead(
+        &fx,
+        "tipnodrv",
+        "*.bin filter=nodrv\n",
+        &[("assets/a.bin", POINTER)],
+    );
+    let id = ItemId::parse(ITEM).expect("id");
+    // PREMISE: start's HEAD selects nothing, so only a read of the tip can refuse.
+    let at_head = worktree::check_filters(&exec, &main, &id, &head, None)
+        .unwrap_or_else(|e| panic!("PREMISE: the read over start's HEAD refused: {e:?}"));
+    assert!(
+        at_head.selected.is_empty(),
+        "PREMISE: start's HEAD selects a driver: {at_head:?}"
+    );
+    let refusal = refused(
+        "the tip selects `nodrv`, declared at no scope; start's HEAD selects nothing",
+        worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None),
+    );
+    assert!(
+        matches!(&refusal, WorktreeRefusal::FilterDriverNotEffective { driver, path, .. }
+            if driver == "nodrv" && path == "assets/a.bin"),
+        "not the no-effective-driver refusal naming the tip's `nodrv` and `assets/a.bin`: {refusal:?}"
+    );
+    assert_not_created(&fx, &main, "after the refusal");
+    assert_eq!(
+        sha(&fx, &main, &format!("rk-run/{ITEM}")),
+        tip,
+        "the run branch moved"
+    );
+}
+
+/// D21-89 ruling 1, X2 on the existing-branch arm: the TIP selects a driver that is effective (so
+/// the read admits it) whose command does not exist, and `a.bin` at the tip holds pointer bytes.
+/// The scan reads the tip's path set, refuses by name and rolls the fresh tree back, keeping the
+/// branch at its tip.
+///
+/// Red while the path set is start's `HEAD`'s (which selects nothing): the tree is created holding
+/// the pointer file.
+#[test]
+fn an_existing_run_branch_whose_tip_leaves_a_pointer_is_scanned_refused_and_rolled_back() {
+    let fx = crate::support::Fixture::new();
+    let exec = filter_exec(&fx, "tipptr", BROKEN_FX, "");
+    let (main, _fork, tip, head) =
+        run_branch_ahead(&fx, "tipptr", "*.bin filter=fx\n", &[("a.bin", POINTER)]);
+    let id = ItemId::parse(ITEM).expect("id");
+    let at_head = worktree::check_filters(&exec, &main, &id, &head, None)
+        .unwrap_or_else(|e| panic!("PREMISE: the read over start's HEAD refused: {e:?}"));
+    assert!(
+        at_head.selected.is_empty(),
+        "PREMISE: start's HEAD selects a driver: {at_head:?}"
+    );
+    // PREMISE: at the tip the read ADMITS `fx` (effective), so the scan, not the read, refuses.
+    let at_tip = worktree::check_filters(&exec, &main, &id, &tip, None).unwrap_or_else(|e| {
+        panic!("PREMISE: the read over the tip refused, so the scan is not what refuses: {e:?}")
+    });
+    assert!(
+        at_tip
+            .selected
+            .iter()
+            .any(|d| d.driver == "fx" && d.effective.is_some()),
+        "PREMISE: the read does not see `fx` selected and effective at the tip: {at_tip:?}"
+    );
+    let refusal = refused(
+        "a pointer file at a path the tip selects",
+        worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None),
+    );
+    let text = refusal.to_string();
+    match &refusal {
+        WorktreeRefusal::PointerFilesAfterCheckout(h) => {
+            assert_eq!(
+                (h.driver.as_str(), h.hits, h.first.as_str()),
+                ("fx", 1, "a.bin"),
+                "{text}"
+            );
+            assert!(
+                h.removed,
+                "the refusal says the fresh tree was kept: {text}"
+            );
+        }
+        other => {
+            panic!("not the post-checkout pointer refusal over the tip's paths: {other:?} ({text})")
+        }
+    }
+    let t = run_tree_of(&main);
+    assert!(
+        !t.exists(),
+        "the fresh tree `{}` is still on disk",
+        t.display()
+    );
+    assert!(
+        record_of(&fx, &main, &t).is_none(),
+        "the fresh tree is still registered after the refusal"
+    );
+    assert_eq!(
+        sha(&fx, &main, &format!("rk-run/{ITEM}")),
+        tip,
+        "the run branch does not stand at its tip"
+    );
+}
+
+/// D21-89 ruling 1, the length rule on the existing-branch arm: the TIP tracks a path that makes
+/// the worst case exactly 260 (sized from the formula's literal terms), and start's `HEAD` tracks
+/// nothing long. Creation refuses by name before the add, `bound: 260`.
+///
+/// Red while the rule reads start's `HEAD`: admitted (the checkout itself fits, 11 + 1 short of
+/// the bound, but its review reference tree would not).
+#[test]
+fn an_existing_run_branch_whose_tip_is_past_the_path_limit_refuses() {
+    let fx = crate::support::Fixture::new();
+    let exec = exec_for(&fx);
+    let main = lifecycle_repo(&fx, "tiplong", &[]);
+    let branch = format!("rk-run/{ITEM}");
+    fx.git(&main, &["switch", "--quiet", "-c", &branch]);
+    let root = worktree::main_worktree(&exec, &main).expect("main worktree");
+    let long = commit_path_of_len(&fx, &main, 260 - fixed_terms(&root, ITEM.len()));
+    let tip = sha(&fx, &main, "HEAD");
+    fx.git(&main, &["checkout", "--quiet", "-f", "-"]);
+    std::fs::write(main.join("moved.txt"), b"HEAD moved on\n").expect("write");
+    fx.git(&main, &["add", "moved.txt"]);
+    fx.git(&main, &["commit", "--quiet", "-m", "the checkout moves on"]);
+    assert!(
+        fx.git(&main, &["ls-tree", "-r", "--name-only", "HEAD"])
+            .stdout_trimmed()
+            .lines()
+            .all(|p| p.len() < 20),
+        "PREMISE: start's HEAD tracks a long path"
+    );
+    let r = refused(
+        "the tip's worst case is 260; start's HEAD's is short",
+        worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None),
+    );
+    assert!(
+        matches!(&r, WorktreeRefusal::PathPastLimit { bound: 260, limit: 259, longest, longest_path, .. }
+            if *longest == long.len() && *longest_path == long),
+        "not the length refusal over the tip's longest path: {r:?}"
+    );
+    assert_not_created(&fx, &main, "after the refusal");
+    assert_eq!(sha(&fx, &main, &branch), tip, "the run branch moved");
+}
+
+/// D21-89 ruling 2: a tree created on an existing run branch records `merge-base(start HEAD, tip)`
+/// in `RK_BASE`, the point the branch forked, and `Entered::fork` agrees: neither start's moved
+/// `HEAD` nor the tip. A first creation still records start's `HEAD` (the control).
+///
+/// Red while `RK_BASE` records start's `HEAD` (the pre-ruling form, §8d-ii.8's P3 note).
+#[test]
+fn a_tree_created_on_an_existing_run_branch_records_the_merge_base_as_its_fork() {
+    let fx = crate::support::Fixture::new();
+    let exec = exec_for(&fx);
+    let (main, fork, tip, head) =
+        run_branch_ahead(&fx, "mbase", "", &[("run.txt", &b"run work\n"[..])]);
+    let e = worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None)
+        .unwrap_or_else(|err| panic!("creation on the existing branch was refused: {err:?}"));
+    assert!(
+        matches!(e.created, Creation::OnExistingBranch),
+        "PREMISE: the existing-branch arm: {:?}",
+        e.created
+    );
+    let base = worktree::read_rk_base(&exec, &e.tree.path)
+        .expect("read RK_BASE")
+        .expect("RK_BASE present");
+    assert_eq!(
+        base.fork, fork,
+        "RK_BASE records {} and not the merge-base {fork} of start's HEAD {head} and the tip {tip} \
+         (D21-89 ruling 2)",
+        base.fork
+    );
+    assert_eq!(e.fork, fork, "Entered::fork is not the merge-base");
+    assert_eq!(
+        sha(&fx, &e.tree.path, "HEAD"),
+        tip,
+        "the tree is not at the tip"
+    );
+    // CONTROL: a first creation (no branch) still records start's HEAD.
+    let first = lifecycle_repo(&fx, "mbase-first", &[]);
+    let first_head = sha(&fx, &first, "HEAD");
+    let f = worktree::enter(&exec, &first, ITEM, &owner(1), &|_| None, None).expect("first");
+    assert!(matches!(f.created, Creation::New), "{:?}", f.created);
+    assert_eq!(
+        f.fork, first_head,
+        "a first creation's fork is not start's HEAD"
+    );
+}
+
+/// Round-1 minor (ADR-0180 decision 6, *"taken at every run start and released at the run's
+/// end"*): a re-entry whose discard leaves a residue refuses `DiscardIncomplete` by name, keeps
+/// the tree, and releases the lock it took, so no refusal leaves the run's own lock behind. The
+/// residue is a nested repository, which `clean -fd` (one `-f`) never removes.
+///
+/// Red while the refusal returns with the lock still held.
+#[test]
+fn a_reentry_whose_discard_is_incomplete_releases_its_own_lock_and_keeps_the_tree() {
+    let fx = crate::support::Fixture::new();
+    let exec = exec_for(&fx);
+    let main = lifecycle_repo(&fx, "residue", &[]);
+    let e = created_and_released(&fx, &exec, &main);
+    let nested = e.tree.path.join("nested");
+    std::fs::create_dir_all(&nested).expect("mkdir nested");
+    fx.git(&nested, &["init", "--quiet"]);
+    std::fs::write(nested.join("n.txt"), b"nested\n").expect("write nested file");
+    let r = refused(
+        "a re-entry whose discard leaves a nested repository",
+        worktree::enter(&exec, &main, ITEM, &owner(2), &|_| None, None),
+    );
+    assert!(
+        matches!(&r, WorktreeRefusal::DiscardIncomplete { remaining, .. }
+            if remaining.iter().any(|p| p.starts_with("nested"))),
+        "not the incomplete-discard refusal naming `nested`: {r:?}"
+    );
+    assert_kept(&fx, &main, &e.tree.path, "after the refused re-entry");
+    assert_eq!(
+        lock_of(&fx, &main, &e.tree.path),
+        None,
+        "the refused re-entry left the run's own lock on the tree"
+    );
+    // CONTROL: the reading sees a lock when one is held.
+    let held = worktree::lock_reason(&ItemId::parse(ITEM).expect("id"), &owner(3));
+    fx.git(
+        &main,
+        &[
+            "worktree",
+            "lock",
+            "--reason",
+            &held,
+            e.tree.path.to_str().expect("utf-8"),
+        ],
+    );
+    assert_eq!(lock_of(&fx, &main, &e.tree.path), Some(held));
+}
+
+/// Round-1 minor: read (3) matches a `gitdir:` condition against the admin directory git WILL
+/// assign the run tree. Git names it after the path's basename and adds a number on a collision
+/// (`item-1`, then `item-11`), so a tree registered elsewhere with basename `item-1` pushes the run
+/// tree's gitdir to `…/worktrees/item-11`. Two repositories: an include on `item-11` (the run
+/// tree's) skipping the smudge refuses naming the included file; an include on `item-1` (the
+/// other tree's) is not folded, and creation proceeds. Git's own `rev-parse --git-dir` and config
+/// read inside the created tree confirm both premises.
+///
+/// Red while the read assumes `worktrees/<item>`: the first repository is refused by the scan
+/// (the read missed the include), the second by the read (it folded the other tree's include).
+#[test]
+fn an_include_if_is_matched_against_the_suffixed_gitdir_git_assigns() {
+    let fx = crate::support::Fixture::new();
+    for (name, pattern, refuses) in [
+        ("sfxown", format!("gitdir:**/.git/worktrees/{ITEM}1"), true),
+        (
+            "sfxother",
+            format!("gitdir:**/.git/worktrees/{ITEM}"),
+            false,
+        ),
+    ] {
+        let included = format!("{name}-skip.cfg");
+        std::fs::write(fx.path().join(&included), SKIPPING_FX.as_bytes()).expect("write");
+        let system = format!("{WORKING_FX}[includeIf \"{pattern}\"]\n\tpath = {included}\n");
+        let exec = filter_exec(&fx, name, &system, "");
+        let main = filter_repo(&fx, name, "*.bin filter=fx\n", &[("a.bin", POINTER)]);
+        // Another tree whose basename is the item takes `worktrees/<item>` first.
+        let other = fx.sub(&format!("{name}-elsewhere")).join(ITEM);
+        let other_s = other.to_str().expect("utf-8").to_string();
+        fx.git(
+            &main,
+            &["worktree", "add", "--quiet", "--detach", &other_s, "HEAD"],
+        );
+        assert!(
+            main.join(".git").join("worktrees").join(ITEM).is_dir(),
+            "PREMISE: the other tree does not hold `worktrees/{ITEM}`"
+        );
+        let r = worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None);
+        if refuses {
+            let refusal = refused(
+                &format!("`{pattern}` skipping the smudge for the run tree"),
+                r,
+            );
+            let text = refusal.to_string();
+            match &refusal {
+                WorktreeRefusal::SmudgeSkipped { driver, origin, .. } => {
+                    assert_eq!(driver, "fx", "{text}");
+                    assert!(
+                        origin.replace('\\', "/").ends_with(&included),
+                        "`{pattern}`: the refusal does not name `{included}`: {text}"
+                    );
+                }
+                other => panic!(
+                    "`{pattern}` (the run tree's suffixed gitdir): not the skipped-smudge \
+                     refusal: {other:?} ({text})"
+                ),
+            }
+            assert_not_created(&fx, &main, &pattern);
+        } else {
+            let e = assert_created(
+                &fx,
+                &main,
+                r,
+                &format!("`{pattern}` (another tree's gitdir)"),
+            );
+            let gitdir = gitdir_of(&fx, &e.tree.path);
+            assert!(
+                gitdir
+                    .to_string_lossy()
+                    .replace('\\', "/")
+                    .ends_with(&format!("worktrees/{ITEM}1")),
+                "PREMISE: git did not suffix the run tree's gitdir: {}",
+                gitdir.display()
+            );
+            let smudge = rk_git::git_exec::run_with_env(
+                &e.tree.path,
+                ["config", "--get", "filter.fx.smudge"],
+                fixture_env(&fx, name),
+            )
+            .expect("read the smudge in the run tree")
+            .stdout_trimmed();
+            assert_eq!(
+                smudge, "tr a-z A-Z",
+                "PREMISE: git applied `{pattern}` to the run tree"
+            );
+        }
+    }
 }
