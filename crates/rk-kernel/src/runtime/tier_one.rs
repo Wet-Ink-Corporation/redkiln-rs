@@ -775,6 +775,50 @@ pub fn close_act(last_stage: &str) -> Act {
     )
 }
 
+/// **The one slice validator.**
+///
+/// Every refusal ADR-0160's first bullet names, by name, shared by the mint ([`seal_act`]) and the
+/// lane's entry check (`rk-cli`'s `run`, D21-94 / D21-95), so the two sitings cannot disagree.
+/// *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; the slice record as amended,
+/// proposed.)*
+///
+/// `declared` is the item record's `slice`, `project` its `[project] name`, `stages` the pack's
+/// `stage_order`. The order of the checks is the mint's: absent (or empty), whitespace, the item
+/// id, the project, a stage. An ABSENT project skips only the project comparison: that absence is
+/// ADR-0159's `NoProject`, refused at the mint and never at entry (*"a run that mints no trailer is
+/// not affected by the key's absence"*). Returns the declared slice.
+///
+/// # Errors
+/// [`TierOneError::SliceRefused`] for each value ADR-0160 names.
+pub fn validate_slice<'a>(
+    declared: Option<&'a str>,
+    item: &str,
+    project: Option<&str>,
+    stages: &[String],
+) -> Result<&'a str, TierOneError> {
+    let refuse = |reason: SliceRefusal| TierOneError::SliceRefused {
+        item: item.to_owned(),
+        slice: declared.map(ToOwned::to_owned),
+        reason,
+    };
+    let Some(slice) = declared.filter(|s| !s.trim().is_empty()) else {
+        return Err(refuse(SliceRefusal::Absent));
+    };
+    if slice.chars().any(char::is_whitespace) {
+        return Err(refuse(SliceRefusal::Whitespace));
+    }
+    if slice == item {
+        return Err(refuse(SliceRefusal::ItemId));
+    }
+    if project == Some(slice) {
+        return Err(refuse(SliceRefusal::Project));
+    }
+    if let Some(named) = stages.iter().find(|s| s.as_str() == slice) {
+        return Err(refuse(SliceRefusal::Stage(named.clone())));
+    }
+    Ok(slice)
+}
+
 /// **A review outcome's seal, as one act.**
 ///
 /// `Slice-Verdict: <project>/<slice> <verdict>` and its one `slice_sealed` row, or a refusal at the mint (`s8e` §8e.8; D21-41 e; the slice record,
@@ -797,27 +841,11 @@ pub fn seal_act(
     stage: &str,
     verdict: Verdict,
 ) -> Result<Act, TierOneError> {
-    let refuse = |reason: SliceRefusal| TierOneError::SliceRefused {
-        item: item.to_owned(),
-        slice: declared.map(ToOwned::to_owned),
-        reason,
-    };
-    let Some(slice) = declared.filter(|s| !s.trim().is_empty()) else {
-        return Err(refuse(SliceRefusal::Absent));
-    };
-    if slice.chars().any(char::is_whitespace) {
-        return Err(refuse(SliceRefusal::Whitespace));
-    }
-    if slice == item {
-        return Err(refuse(SliceRefusal::ItemId));
-    }
+    // *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94, D21-95.)* The refusals
+    // are the ONE validator the lane's entry check calls too, so the entry and this backstop
+    // cannot disagree. `[project] name`'s absence stays ADR-0159's, sited here at the mint.
+    let slice = validate_slice(declared, item, project, stages)?;
     let project = project.ok_or(TierOneError::NoProject)?;
-    if slice == project {
-        return Err(refuse(SliceRefusal::Project));
-    }
-    if let Some(named) = stages.iter().find(|s| s.as_str() == slice) {
-        return Err(refuse(SliceRefusal::Stage(named.clone())));
-    }
     Ok(Act::marked(
         Mark::Seal {
             slice: slice.to_owned(),

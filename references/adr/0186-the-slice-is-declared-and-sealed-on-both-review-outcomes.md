@@ -63,9 +63,28 @@ exists — would be invisible.
 
 ### Option — refuse an undeclared slice at entry, before the lane runs
 
-It would stop a fix lane without a slice before it dispatches anything. Rejected for now: ADR-0159 decision 2 sites
+It would stop a fix lane without a slice before it dispatches anything. ~~Rejected for now: ADR-0159 decision 2 sites
 the `<project>` refusal at the mint for the stated reason that a run minting no trailer must not be refused, and the
-same holds here — a lane that never reaches its review mints no seal. The cost is stated in decision 2.
+same holds here — a lane that never reaches its review mints no seal. The cost is stated in decision 2.~~
+
+*(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; `spikes/DECISIONS-2026-09-21.md` D21-94 and D21-95.)*
+**Taken, beside the mint's refusal, which stays as the backstop.** D21-94: *"**The refusal moves to the lane's entry,
+before any dispatch**, for a lane that will reach a review stage (the fix lane always does): an undeclared slice there
+is a certain failure, and it must not be paid for. The mint keeps its refusal as the backstop."* Three readings:
+- **A divergence from ADR-0159 decision 2's siting, for this key only.** ADR-0159 decision 2 (*"The refusal is at the
+  mint, not at startup: a run that mints no trailer is not affected by the key's absence"*) is cited, not superseded:
+  its reason is kept by scoping the entry refusal to a lane that WILL mint a seal, so a lane that reaches no sealing
+  stage is still not refused for a key it never needs. The `<project>` key stays at the mint unchanged: an absent
+  `[project] name` is ADR-0159's `NoProject`, refused by `seal_act` and never at entry.
+- **"Will reach a review stage" is read from declared `provides`, never from a stage name** (D21-95 item 1: *"At entry
+  it walks the stage order from the current stage through `Pack::successor`, skipping forbidden stages, and refuses by
+  name, through the one validator `seal_act` also calls, when any stage reached has a catalog activity for that stage
+  whose `provides` first is `Findings`. No stage-name literal; ADR-0162 stands whole."*). The key is the one
+  `review_pass` selects its committed activation by (`review_pass::FINDINGS_SCHEMA`), so ADR-0162's forbids bullet
+  (*"matching `resolved.stage` against a string literal to find the review stage"*) is honoured. D21-94's parenthetical
+  *"(the fix lane always does)"* is read, per D21-95, as the operator's expectation and not as the test.
+- **One validator, two sitings.** The refusals of decision 2 are one kernel function, `tier_one::validate_slice`, which
+  `seal_act` and the entry check both call, so the entry and the mint cannot disagree.
 
 ### Option — derive the slice from the item id when none is declared
 
@@ -90,9 +109,29 @@ names, and every refusal is taken before any git call:
 
 **The run id cannot be declared.** It is `format!("{}-{}", stage, &digest[..16])`, computed from inputs the item
 record cannot know and carrying a digest, so a declared slice never equals it; no refusal is written for a value that
-cannot occur, and this sentence is the record of why. **The cost of the mint siting, stated:** a fix lane with no
+cannot occur, and this sentence is the record of why. ~~**The cost of the mint siting, stated:** a fix lane with no
 slice walks to its review stage, dispatches its review, and only then refuses (exit 3, nothing committed). ADR-0159's
-siting applies unchanged: a lane that never reaches its review is not refused for a key it never needs.
+siting applies unchanged: a lane that never reaches its review is not refused for a key it never needs.~~
+
+*(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94, D21-95.)* **The refusal is taken at the lane's
+ENTRY, before any dispatch, and the mint keeps it as the backstop.** The refusals above are one function,
+`rk_kernel::runtime::tier_one::validate_slice(declared, item, project, stage_order)`, and `seal_act` calls it first.
+`rk-cli`'s `run`, after the closed-item read and before the store, the run tree, any commit or any harness, walks the
+stage order from the current stage through `Pack::successor` (a `forbidden` current stage is skipped too; the walk is
+bounded by the order's length), and when a stage reached has a catalog activity for that stage whose `provides` first
+is `Findings`, it calls the same validator and refuses by name: exit 3, AC-172's one `reconcile_started` row, nothing
+committed, zero dispatches. A lane that reaches no such stage is not refused at entry (ADR-0159's reason, kept). An
+absent `[project] name` is not an entry refusal: `validate_slice` skips only the project comparison when the project is
+absent, and `seal_act` then refuses `NoProject` at the mint as before. One consequence of the shared order, stated: a
+`slice` equal to a stage, with no `[project] name`, is now refused as `Stage(..)` rather than `NoProject`; both are
+refusals by name, before any git call. If the pack or the catalog does not load, the entry check decides nothing and
+the path that loads them refuses by name; the mint is the backstop there too.
+
+**The stated gap (D21-95 item 2).** Measured by a `tomllib` census over `.redkiln/catalog/*.toml`: **0** shipped
+activities declare `provides` first `Findings`; the shipped `code-review` provides `["ReviewVerdict"]`. So on the
+shipped packs **both the entry check and the seal are inert** until `s8g` lands the shipped `Findings` producer, or
+keys `review_pass` on what the shipped review provides, by a record there; `s8e` closes on its fixtures, and a dated
+receiver note in `s8g`'s file owes it.
 
 **3. The seal sits on the review stage's exit outcome.** `review_pass`'s outcome is the producer: `blocked.is_empty()`
 seals `approved`, and the blocking path seals `changes-requested` **before** it returns `Exit::FindingsBlock`. Both go
@@ -159,7 +198,11 @@ is re-stated (decision 7); ADR-0161 decisions 1–2 and ADR-0159 decision 2 are 
 - The ARMED lint runs on every commit, and it counts call sites of the boundary, not a spelling a reader can supply.
 
 **Negative**
-- A fix lane without a slice fails late, at its review (decision 2).
+- ~~A fix lane without a slice fails late, at its review (decision 2).~~ *(dated 2026-09-28, `s8e` build, package
+  S8E-D2194-ENTRY; D21-94.)* A lane that will reach a `Findings` stage without a slice fails at entry, before any
+  dispatch; one whose `Findings` producer is not declared first in `provides` still fails only at the mint.
+- *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-95 item 2.)* On the shipped packs the entry check and
+  the seal are both inert: 0 shipped activities provide `Findings` first, so no shipped lane reaches either until `s8g`.
 - A healed or rebuilt approved seal is scoped less exactly than a live one (decision 4's residual).
 - Three earlier checkpoints are provisional until Checkpoint 8e re-runs them.
 
@@ -168,6 +211,10 @@ is re-stated (decision 7); ADR-0161 decisions 1–2 and ADR-0159 decision 2 are 
   value carrying whitespace; a default slice of any kind.
 - A seal committed outside the kernel's tier-1 boundary, or a `slice_sealed` row written before its commit.
 - Sealing only one of the two review outcomes.
+- *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94, D21-95.)* Dispatching anything on a lane that
+  will reach a stage whose catalog activity provides `Findings` first while its slice is undeclared; a second slice
+  validator beside `tier_one::validate_slice`; deciding "will reach a review stage" by a stage name; and refusing at
+  entry a lane that reaches no such stage.
 - `terminal()` reading `Sealed` for a fold that has left the stage the seal was made in.
 - Counting a construction under `crates/rk-cli/src/doctor/` or inside `runtime/tier_one.rs` as a producer.
 - Claiming the review gate is guarded against false approval (ADR-0101 clause 5).
@@ -180,3 +227,16 @@ is re-stated (decision 7); ADR-0161 decisions 1–2 and ADR-0159 decision 2 are 
 "approved" }` at a release gate), then green; mutants S8E-M7, M8, M45 (two variants) and M50 killed for their stated
 reasons. **Not measured, and named:** the shipped tree's review stage stays unreachable (ADR-0156), so no shipped item
 has been sealed. This record is `proposed` and flips only on the operator's dated ledger line.
+
+*(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94, D21-95.)* **Measured**: `lane_e2e::
+an_undeclared_slice_is_refused_at_entry_before_any_dispatch` red first (*"the lane dispatched 2 time(s) before
+refusing … left: 2, right: 0"*, the mint's refusal after `implement` and `review`), then green: exit 3, zero dispatches,
+zero harness builds, no run tree, no commit, no tier-1 row, and the binary's stderr names the undeclared slice and the
+entry siting. Its control `lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice`
+(no `Findings` activity installed, no `slice`) dispatches once and exits 0. `slice_verdict::
+the_mint_refuses_an_undeclared_slice_as_the_backstop` pins the mint and the validator to the same refusal for every
+named value. Mutants **S8E-M53** (the entry check dropped), **S8E-M54** (the walk reads the current stage only) and
+**S8E-M55** (the validator's call dropped from `seal_act`) are each killed for the stated reason;
+`slice_verdict::an_absent_slice_is_refused_by_name` stays green, and green under S8E-M53, because the mint's backstop
+refuses the same absence. **Not measured, and named:** no shipped lane reaches the check (D21-95's census, 0 of the
+shipped activities).

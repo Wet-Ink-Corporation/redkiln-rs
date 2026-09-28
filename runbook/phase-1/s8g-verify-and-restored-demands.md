@@ -342,6 +342,26 @@ their stage files fit (each by a dated receiver note), and `bisect`'s registry r
   owners are D21-75's: `confirmation-test`, `bdd-scenarios`, `docs-update`, `smoke-test` and `rolling-deploy` here, and
   `debt-logging` and `closure-record` at `s8f`.
 
+*(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-95
+item 2.)* **The shipped catalog's missing `Findings` producer is owed here.** D21-95 item 2: *"the shipped review
+activity and `review_pass`'s schema key must agree (either `code-review` provides `Findings`, or the pass keys on what
+the shipped review provides), decided by a record there, so a shipped lane reaches the seal. `s8e` closes on its
+fixtures and states the gap in ADR-0186."* Measured at `s8e` by a `tomllib` census over `.redkiln/catalog/*.toml`:
+**102** activities, **0** whose `provides` first is `Findings` (and 0 naming `Findings` anywhere in `provides`); the
+shipped `code-review` (`stage = "review"`) provides `["ReviewVerdict"]`. `rk-cli`'s `review_pass` selects its committed
+activation by `review_pass::FINDINGS_SCHEMA` (`"Findings"`), and since D21-94 `run`'s entry check reads the same key
+off each reached stage's catalog activities (`provides` first), through `tier_one::validate_slice`, the one validator
+`seal_act` also calls (ADR-0186 as amended, `proposed`). So on the shipped packs **both the entry check and the
+`Slice-Verdict:` seal are inert** until this stage decides, by a record, one of the two routes D21-95 names:
+- **`code-review` provides `Findings`** — a catalog edit under ADR-0072 (its `@version` moves), with `Findings` as the
+  exported schema its step validates against; or
+- **`review_pass` keys on what the shipped review provides** — `FINDINGS_SCHEMA` and the entry check move together to
+  that key, because they are one constant and must not diverge.
+
+Either route is built red-first with a shipped-lane measurement (a lane whose walk reaches the shipped review stage is
+refused at entry without a `slice`, and seals with one), and the record states which of ADR-0162's and ADR-0186's
+sentences it moves. This note adds no test to this stage's count until that record names them.
+
 **The re-runs are bounded**, because nested re-runs cost hours. (12) re-runs the entry gate, 8f, and the provisional
 rows above, each whole, with `RK_CP_NESTED=1` and without `REDKILN_LAUNCH_RECORD` in its environment, under the
 trap (D21-46), and with a fake `claude` first on `PATH` that prints the pin (D21-47: *"Every checkpoint replay runs

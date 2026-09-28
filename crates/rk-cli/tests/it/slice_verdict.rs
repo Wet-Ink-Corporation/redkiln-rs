@@ -18,6 +18,10 @@
 //!   no `slice`, and one whose `slice` is the item id. Each is exit `3`, the refusal is named on
 //!   stderr, and no `Slice-Verdict:` reaches the ref. The first names the ABSENCE, not the item-id
 //!   rule, so a mint that defaulted an absent slice to the item id (S8E-M8) is red here.
+//!   *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94, D21-95.)* Both refusals are
+//!   now met at the lane's entry, before any dispatch, through the validator the mint shares; the
+//!   mint's refusal stays as the backstop and is pinned in process by
+//!   `the_mint_refuses_an_undeclared_slice_as_the_backstop`.
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -212,6 +216,12 @@ fn changes_requested_is_sealed_on_the_findings_block_path() {
 /// **An absent `slice` refuses the seal by name** (ADR-0160: *"any value not declared as a
 /// slice"*). The refusal names the absence — a mint that defaulted it to the item id would name
 /// the item-id rule instead (S8E-M8).
+///
+/// *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94, D21-95.)* The refusal this
+/// run meets is now the lane's ENTRY check, before any dispatch, through the same validator the
+/// mint calls: `review-1` sits at `review`, whose `review-min` provides `Findings`. The assertions
+/// hold unchanged (exit `3`, the absence named, nothing committed). The mint's own refusal is pinned
+/// in process by `the_mint_refuses_an_undeclared_slice_as_the_backstop`.
 #[test]
 fn an_absent_slice_is_refused_by_name() {
     let repo = support::pack_min_repo(PackVariant::Review);
@@ -235,6 +245,67 @@ fn an_absent_slice_is_refused_by_name() {
     assert!(
         seal_rows(root).is_empty(),
         "and writes no t1_slice_seal row"
+    );
+}
+
+/// **The mint keeps its refusal as the backstop** (D21-94: *"The mint keeps its refusal as the
+/// backstop"*). *(Added 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; ADR-0186 as amended,
+/// proposed.)*
+///
+/// Since D21-94 the two binary tests above meet the lane's ENTRY refusal first (`review-1` sits at
+/// `review`, whose `review-min` provides `Findings`), so no fixture run reaches the mint with an
+/// undeclared slice any more. This pin calls the mint itself, `tier_one::seal_act`, for every value
+/// ADR-0160 names, and asserts each refusal is the one the shared validator gives the entry check
+/// (`tier_one::validate_slice`), so the two sitings cannot disagree. Green at entry by design; red
+/// under S8E-M55 (the validator's call dropped from `seal_act`).
+#[test]
+fn the_mint_refuses_an_undeclared_slice_as_the_backstop() {
+    use rk_kernel::runtime::tier_one::{SliceRefusal, TierOneError, seal_act, validate_slice};
+    let stages = vec!["triage".to_owned(), "review".to_owned()];
+    let cases: [(Option<&str>, SliceRefusal); 6] = [
+        (None, SliceRefusal::Absent),
+        (Some("  "), SliceRefusal::Absent),
+        (Some("a fix"), SliceRefusal::Whitespace),
+        (Some(ITEM), SliceRefusal::ItemId),
+        (Some(PROJECT), SliceRefusal::Project),
+        (Some("review"), SliceRefusal::Stage("review".to_owned())),
+    ];
+    for (declared, want) in cases {
+        let minted = seal_act(
+            declared,
+            ITEM,
+            Some(PROJECT),
+            &stages,
+            "review",
+            rk_git::trailer::grammar::Verdict::Approved,
+        );
+        match minted {
+            Err(TierOneError::SliceRefused { reason, .. }) => assert_eq!(
+                reason, want,
+                "the mint refused {declared:?} for the wrong reason"
+            ),
+            Err(other) => panic!("the mint refused {declared:?} as {other:?}, not by name"),
+            Ok(_) => panic!("the mint accepted {declared:?}: its backstop is gone"),
+        }
+        match validate_slice(declared, ITEM, Some(PROJECT), &stages) {
+            Err(TierOneError::SliceRefused { reason, .. }) => assert_eq!(
+                reason, want,
+                "the entry's validator and the mint disagree on {declared:?}"
+            ),
+            other => panic!("the entry's validator did not refuse {declared:?}: {other:?}"),
+        }
+    }
+    assert!(
+        seal_act(
+            Some(SLICE),
+            ITEM,
+            Some(PROJECT),
+            &stages,
+            "review",
+            rk_git::trailer::grammar::Verdict::Approved,
+        )
+        .is_ok(),
+        "CONTROL: the declared slice `{SLICE}` mints"
     );
 }
 

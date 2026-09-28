@@ -157,6 +157,11 @@ pub struct ItemRecord {
     /// ADR-0160's route), and **optional here** so the refusal names the item, as `stage` is: an
     /// absent slice refuses the seal at the mint (`tier_one::seal_act`), not at startup. A fix-lane
     /// item declares exactly one (D21-41 e: *"one per fix-lane item"*).
+    ///
+    /// *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94, D21-95.)* ~~not at
+    /// startup~~: for a lane that will reach a stage whose catalog activity provides `Findings`
+    /// first, `run` refuses it at the lane's ENTRY, before any dispatch, through the same
+    /// validator (`tier_one::validate_slice`); the mint's refusal stays as the backstop.
     #[serde(default)]
     pub slice: Option<String>,
 }
@@ -199,6 +204,8 @@ pub struct Resolved {
     pub project: Option<String>,
     /// *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8.)* The item record's declared
     /// `slice`, read verbatim; `tier_one::seal_act` refuses it by name at the review pass's seal.
+    /// *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; D21-94.)* And `run`'s entry
+    /// check refuses it first, before any dispatch, when the lane will reach a `Findings` stage.
     pub slice: Option<String>,
     /// **The stage this one was entered FROM, for `RuntimeContext::entered_from` (ADR-0152).**
     ///
@@ -300,6 +307,37 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         ));
     }
 
+    // ---- THE SLICE, REFUSED AT THE LANE'S ENTRY (D21-94, D21-95; ADR-0186 as amended, proposed).
+    // *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY.)* A lane that will reach a stage
+    // whose catalog activity provides `Findings` first mints a `Slice-Verdict:` there, so an
+    // undeclared slice is a certain failure and must not be paid for: it is refused HERE, before
+    // any tree, commit or dispatch, through the validator the mint calls too. A lane that reaches
+    // no such stage is not refused for a key it never needs; the mint's refusal stays the backstop.
+    if let Some(reached) = findings_stage_reached(&resolved)
+        && let Err(e) = rk_kernel::runtime::tier_one::validate_slice(
+            resolved.slice.as_deref(),
+            resolved.item.id(),
+            resolved.project.as_deref(),
+            &reached.stage_order,
+        )
+    {
+        eprintln!(
+            "redkiln: the lane of `{}` will reach `{}`, whose activity `{}` provides `{}` and is \
+             sealed under the item's declared slice, so the slice is checked at entry, before any \
+             dispatch, and refused: {e} (D21-94, D21-95)",
+            resolved.item.id(),
+            reached.stage,
+            reached.activity,
+            crate::review_pass::FINDINGS_SCHEMA
+        );
+        return Ok(refuse_after_reconcile(
+            &resolved.exec,
+            &resolved.worktree,
+            &resolved.config,
+            Exit::ConfigError,
+        ));
+    }
+
     // ---- (5) the store. AC-413's identity check is inside `open`. ------------------------------
     let opened = match rk_adapter_sqlite::SqliteStore::open(&resolved.exec, &resolved.worktree) {
         Ok(store) => store,
@@ -359,6 +397,69 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         remove_closed_tree(&release_exec, &release_start, &release_item);
     }
     lane
+}
+
+/// The first stage the lane will reach whose catalog activity provides `Findings` first, for the
+/// entry check above (D21-95 item 1).
+struct FindingsStage {
+    /// The stage the walk reached.
+    stage: String,
+    /// The activity for that stage whose `provides` first is `Findings`.
+    activity: String,
+    /// The pack's `stage_order`, which the validator refuses a slice against.
+    stage_order: Vec<String>,
+}
+
+/// **Will the lane reach a stage that seals a slice?** *(dated 2026-09-28, `s8e` build, package
+/// S8E-D2194-ENTRY; D21-95 item 1: "At entry it walks the stage order from the current stage
+/// through `Pack::successor`, skipping forbidden stages, and refuses by name … when any stage
+/// reached has a catalog activity for that stage whose `provides` first is `Findings`.")*
+///
+/// The walk starts at the CURRENT stage (seeded from git) and follows `Pack::successor`, which
+/// skips every `forbidden` entry; a current stage that is itself `forbidden` is skipped too. A
+/// stage is read by its catalog activities' declared `provides`, never by its name: the key is
+/// `review_pass::FINDINGS_SCHEMA`, the one the review pass selects its committed activation by, and
+/// no stage is compared to a string literal (ADR-0162's forbids). The walk is bounded by the
+/// declared order's length.
+///
+/// `None` also when the pack or the catalog does not load: this check decides nothing it cannot
+/// read, the path that loads them refuses by name later, and the mint's refusal is the backstop.
+fn findings_stage_reached(resolved: &Resolved) -> Option<FindingsStage> {
+    let pack = rk_kernel::select::Pack::from_toml(
+        &format!("{}.toml", resolved.pack_name),
+        &resolved.pack_src,
+    )
+    .ok()?;
+    let sources = catalog_sources(Path::new(resolved.worktree.as_str())).ok()?;
+    let borrowed: Vec<(&str, &str)> = sources
+        .iter()
+        .map(|(n, s)| (n.as_str(), s.as_str()))
+        .collect();
+    let catalog = rk_kernel::catalog::Catalog::from_sources(&borrowed).ok()?;
+    let bound = pack.stage_order().len() + 1;
+    let mut at = Some(resolved.stage.as_str());
+    let mut walked = 0_usize;
+    while let Some(stage) = at {
+        if walked >= bound {
+            break;
+        }
+        walked += 1;
+        if pack.rigor(stage) != Some(rk_kernel::rigor::Rigor::Forbidden)
+            && let Some(activity) = catalog.activities().iter().find(|a| {
+                a.stage == stage
+                    && a.provides.first().map(String::as_str)
+                        == Some(crate::review_pass::FINDINGS_SCHEMA)
+            })
+        {
+            return Some(FindingsStage {
+                stage: stage.to_owned(),
+                activity: activity.id.clone(),
+                stage_order: pack.stage_order().to_vec(),
+            });
+        }
+        at = pack.successor(stage);
+    }
+    None
 }
 
 /// **The removal trigger** (`s8e` §8e.6): `rk_git::worktree::remove_landed` over the item whose lane

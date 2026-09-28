@@ -2010,3 +2010,161 @@ fn run_binds_the_review_routes_for_a_shallow_clone_step() {
         clone.display()
     );
 }
+
+// ------------------------------------------------- D21-94 / D21-95: the slice is refused at entry
+
+/// Delete `item`'s one `slice` line from its INSTALLED record, asserting exactly one was there.
+fn drop_slice(root: &Path, item: &str) {
+    let path = root
+        .join(".redkiln")
+        .join("items")
+        .join(format!("{item}.toml"));
+    let src = std::fs::read_to_string(&path).expect("the item record reads");
+    let kept: Vec<&str> = src
+        .lines()
+        .filter(|l| !l.trim_start().starts_with("slice"))
+        .collect();
+    assert_eq!(
+        src.lines().count() - kept.len(),
+        1,
+        "PREMISE: the installed record of `{item}` carries exactly one `slice` line"
+    );
+    std::fs::write(&path, kept.join("\n") + "\n").expect("the item record rewrites");
+}
+
+/// **D21-94 / D21-95: an undeclared slice is refused at the lane's ENTRY, before any dispatch,
+/// when a stage the lane will reach has a catalog activity whose `provides` first is `Findings`.**
+/// *(Added 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; ADR-0186 as amended, proposed.)*
+///
+/// `lane-2` sits at `triage`, whose own plan is empty: only the WALK forward (`triage`, the
+/// `forbidden` `discovery` skipped, `implement`, `review`) reaches `review-min`'s `Findings`. So a
+/// check that read the current stage alone would let the lane dispatch `implement` and fail at the
+/// mint instead. The in-process run reads the seam: exit `3`, ZERO dispatches and zero harness
+/// builds, no run tree, no commit on `rk-run/lane-2`, no tier-1 row. The binary run over the same
+/// repository reads the refusal BY NAME on stderr, which an in-process run cannot capture. Red
+/// under S8E-M53 (the entry check dropped: `implement` is dispatched) and S8E-M54 (the walk reads
+/// the current stage only: `triage` has no `Findings` activity, so the lane runs).
+#[test]
+fn an_undeclared_slice_is_refused_at_entry_before_any_dispatch() {
+    let repo = lane_repo();
+    let root = repo.path();
+    drop_slice(root, THROUGH_ITEM);
+    assert!(
+        declared_lane(root).iter().any(|s| s == "review"),
+        "PREMISE: the fixture lane declares a `review` stage"
+    );
+
+    let factory = ScriptedFactory::new(through());
+    let exit = ran(
+        rk_cli::verbs::run::run(
+            &cli(root, THROUGH_ITEM),
+            &args(THROUGH_ITEM),
+            &support::clean_env(),
+            seam(&factory),
+        ),
+        THROUGH_ITEM,
+    );
+    assert_eq!(
+        factory.dispatches(),
+        0,
+        "the lane dispatched {} time(s) before refusing an undeclared slice it would need at \
+         `review` (exit {exit:?}); D21-94 refuses it at entry, before any dispatch",
+        factory.dispatches()
+    );
+    assert_eq!(
+        exit,
+        Exit::ConfigError,
+        "an undeclared slice on a lane that reaches a `Findings` stage is exit 3 at entry"
+    );
+    assert_eq!(
+        factory.builds(),
+        0,
+        "a harness was built before the refusal"
+    );
+    assert!(
+        !crate::run_tree(root, THROUGH_ITEM).path.exists(),
+        "the refused run entered a run tree"
+    );
+    assert_eq!(
+        ref_sha(root, THROUGH_ITEM),
+        None,
+        "the refused run committed on rk-run/{THROUGH_ITEM}"
+    );
+    let tier_one = support::store_rows(root)
+        .iter()
+        .filter(|e| e.kind.tier() == rk_types::event_kind::Tier::One)
+        .count();
+    assert_eq!(tier_one, 0, "the refused run wrote a tier-1 row");
+
+    // BY NAME: the binary over the same repository, whose stderr is readable.
+    let out = spawn_run_replaying(root, THROUGH_ITEM);
+    let err = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert_eq!(out.status.code(), Some(3), "the binary refuses too:\n{err}");
+    assert!(
+        err.contains(&format!("`{THROUGH_ITEM}` declares no `slice`")),
+        "the refusal names the undeclared slice of `{THROUGH_ITEM}`:\n{err}"
+    );
+    assert!(
+        err.contains("before any dispatch") && err.contains("`review`"),
+        "the refusal names the entry siting and the `Findings` stage the lane reaches:\n{err}"
+    );
+    assert_eq!(
+        ref_sha(root, THROUGH_ITEM),
+        None,
+        "the binary's refusal committed on rk-run/{THROUGH_ITEM}"
+    );
+}
+
+/// **The control: a lane that reaches NO `Findings` stage is not refused at entry for a slice it
+/// never needs** (D21-95 item 1; ADR-0159 decision 2's reason, kept for every other lane).
+/// *(Added 2026-09-28, `s8e` build, package S8E-D2194-ENTRY.)*
+///
+/// `pack.toml` declares no `stage_order` and installs only `emit-report` (`ImplReport`), and
+/// `bug-1` declares no `slice`. The run dispatches `implement` once and exits 0. A check that
+/// refused every undeclared slice, whatever the lane reaches, is red here.
+#[test]
+fn a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice() {
+    let repo = support::pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+    let record = std::fs::read_to_string(root.join(".redkiln").join("items").join("bug-1.toml"))
+        .expect("the item record reads");
+    assert!(
+        !record.lines().any(|l| l.trim_start().starts_with("slice")),
+        "PREMISE: `bug-1` declares no `slice`"
+    );
+    let catalog_dir = root.join(".redkiln").join("catalog");
+    let findings = std::fs::read_dir(&catalog_dir)
+        .expect("the catalog reads")
+        .filter_map(Result::ok)
+        .filter(|e| {
+            std::fs::read_to_string(e.path())
+                .unwrap_or_default()
+                .contains("\"Findings\"")
+        })
+        .count();
+    assert_eq!(
+        findings, 0,
+        "PREMISE: no installed activity names `Findings`"
+    );
+
+    let factory = ScriptedFactory::new(vec![implement()]);
+    let exit = ran(
+        rk_cli::verbs::run::run(
+            &cli(root, "bug-1"),
+            &args("bug-1"),
+            &support::clean_env(),
+            seam(&factory),
+        ),
+        "bug-1",
+    );
+    assert_eq!(
+        exit,
+        Exit::Success,
+        "a lane that never reaches a `Findings` stage was refused (or failed) with no slice"
+    );
+    assert_eq!(
+        factory.dispatches(),
+        1,
+        "the control lane did not dispatch its one `implement` activity"
+    );
+}
