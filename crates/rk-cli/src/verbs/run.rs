@@ -288,10 +288,13 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
     let release_exec = resolved.exec.clone();
     let release_start = PathBuf::from(resolved.worktree.as_str());
     let release_item = resolved.item.id().to_owned();
-    // W3's carry, at creation only (§8d-ii.4): a reused tree kept its ignored files.
+    // W3's carry, at creation only (§8d-ii.4): a reused tree kept its ignored files. A FRESH tree
+    // whose carry or setup failed is rolled back before the run refuses (D21-88 ruling 2), so the
+    // next run creates it anew and re-carries.
     if entered.created != rk_git::worktree::Creation::Reused
         && let Err(exit) = carry_at_creation(&resolved, env, &entered)
     {
+        roll_back_run_worktree(&release_exec, &release_start, &entered, &owner);
         release_run_worktree(&release_exec, &release_start, &release_item, &owner);
         return Ok(exit);
     }
@@ -2606,6 +2609,36 @@ fn carry_at_creation(
         })
         .map_err(|e| refuse(format!("{e:?}")))?;
     Ok(())
+}
+
+/// **Roll back the FRESH run tree whose carry or `setup` failed** (D21-88 ruling 2; ADR-0180
+/// decisions 9 and 11, proposed). *(dated 2026-09-27, `s8d-ii` build, package D2188.)*
+///
+/// `rk_git::worktree::roll_back_fresh` removes the tree this run just created, unforced, after
+/// unlinking its untracked links, and keeps the branch; a reused tree, or one this run did not
+/// lock, is kept. The outcome is named on stderr and does not change the run's exit, which is
+/// the carry's or `setup`'s own refusal. The caller then releases the lock, which is a no-op
+/// once the rollback released it.
+fn roll_back_run_worktree(
+    exec: &GitExec,
+    start: &Path,
+    entered: &rk_git::worktree::Entered,
+    owner: &rk_git::worktree::LockOwner,
+) {
+    let path = entered.tree.path.display();
+    match rk_git::worktree::roll_back_fresh(exec, start, entered, owner) {
+        Ok(rk_git::worktree::Rollback::Removed) => eprintln!(
+            "redkiln: the fresh run tree {path} was rolled back (its carry or setup failed); the \
+             next run creates it anew and re-carries"
+        ),
+        Ok(rk_git::worktree::Rollback::Kept { reason, .. }) => eprintln!(
+            "redkiln: the fresh run tree {path} could not be rolled back and is kept: {reason}"
+        ),
+        Err(e) => eprintln!(
+            "redkiln: the fresh run tree {path} could not be rolled back and is kept: {}",
+            git_refusal_text(&e)
+        ),
+    }
 }
 
 /// **Release the run's own lock at the run's end** (W1; ADR-0180 decision 6, proposed). A lock

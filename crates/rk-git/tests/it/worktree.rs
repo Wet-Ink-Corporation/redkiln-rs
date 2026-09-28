@@ -1651,6 +1651,117 @@ fn removal_never_follows_a_junction() {
     );
 }
 
+/// **D21-88 ruling 2 (ADR-0180 decisions 9 and 11, proposed): a FRESH tree whose carry or
+/// `setup` failed is rolled back** — unlocked from this run's own lock, every untracked link
+/// unlinked without being followed (ruling 1's pre-unlink path), then git's unforced `worktree
+/// remove`; nothing is left on disk, the registration is gone, and the branch is kept.
+/// *(dated 2026-09-27, s8d-ii build, package D2188.)*
+///
+/// Red while `roll_back_fresh` is a stub that keeps the tree. Red under `S8D-II-M28` (the
+/// pre-unlink skipped): git's unforced removal exits 0 and leaves the junctions on disk (D21-88's
+/// finding-17 measurement), so the rollback reports the residue and keeps.
+#[test]
+fn a_fresh_tree_whose_carry_failed_is_rolled_back_with_its_links_unlinked() {
+    let fx = crate::support::Fixture::new();
+    let exec = exec_for(&fx);
+    let main = lifecycle_repo(&fx, "rollback", &["linked", "nm/"]);
+    let e = worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None).expect("created");
+    assert!(
+        matches!(e.created, Creation::New),
+        "PREMISE: a fresh tree: {:?}",
+        e.created
+    );
+    let sentinel = fx.sub("rb-sentinel");
+    std::fs::create_dir_all(&sentinel).expect("mkdir sentinel");
+    std::fs::write(sentinel.join("keep.txt"), b"precious\n").expect("write sentinel");
+    let kind = dir_link(&e.tree.path.join("linked"), &sentinel);
+    let pnpm = e.tree.path.join("nm").join(".pnpm").join("pkg");
+    std::fs::create_dir_all(&pnpm).expect("mkdir pnpm store");
+    std::fs::write(pnpm.join("index.js"), b"x\n").expect("write dep");
+    dir_link(&e.tree.path.join("nm").join("pkg"), &pnpm);
+    let tip = sha(&fx, &main, &e.tree.branch);
+
+    let rolled = worktree::roll_back_fresh(&exec, &main, &e, &owner(1)).expect("rollback");
+    assert_eq!(
+        std::fs::read(sentinel.join("keep.txt")).ok().as_deref(),
+        Some(&b"precious\n"[..]),
+        "the rollback FOLLOWED the {kind} and deleted the sentinel's contents outside the tree"
+    );
+    assert!(
+        matches!(rolled, worktree::Rollback::Removed),
+        "the fresh tree was not rolled back: {rolled:?}"
+    );
+    assert!(
+        std::fs::symlink_metadata(&e.tree.path).is_err(),
+        "a residue of the rolled-back tree is left on disk"
+    );
+    assert!(
+        record_of(&fx, &main, &e.tree.path).is_none(),
+        "the rolled-back tree is still registered"
+    );
+    assert_eq!(
+        sha(&fx, &main, &e.tree.branch),
+        tip,
+        "the rollback moved or deleted the run branch; it is kept"
+    );
+    // The next entry creates it anew, on the existing branch.
+    let again = worktree::enter(&exec, &main, ITEM, &owner(2), &|_| None, None).expect("again");
+    assert!(
+        matches!(again.created, Creation::OnExistingBranch),
+        "after the rollback the next entry did not create the tree anew: {:?}",
+        again.created
+    );
+}
+
+/// **D21-88 ruling 2's other half: a reused tree is never rolled back, nor a fresh tree whose
+/// lock is not this run's.** Both are kept, registered, on disk, with their lock as it was.
+/// *(dated 2026-09-27, s8d-ii build, package D2188.)*
+///
+/// Red under `S8D-II-M29` (the `Reused` guard dropped): the reused tree is removed.
+#[test]
+fn a_reused_tree_or_one_this_run_did_not_lock_is_never_rolled_back() {
+    let fx = crate::support::Fixture::new();
+    let exec = exec_for(&fx);
+    let main = lifecycle_repo(&fx, "noroll", &[]);
+    created_and_released(&fx, &exec, &main);
+    let reused = worktree::enter(&exec, &main, ITEM, &owner(2), &|_| None, None).expect("reused");
+    assert!(
+        matches!(reused.created, Creation::Reused),
+        "PREMISE: a reused tree: {:?}",
+        reused.created
+    );
+    match worktree::roll_back_fresh(&exec, &main, &reused, &owner(2)).expect("rollback") {
+        worktree::Rollback::Kept { reason, .. } => assert!(
+            reason.contains("reused"),
+            "a reused tree was kept for the wrong reason: {reason}"
+        ),
+        worktree::Rollback::Removed => panic!("a REUSED tree was rolled back"),
+    }
+    assert_kept(&fx, &main, &reused.tree.path, "a reused tree");
+    assert!(
+        lock_of(&fx, &main, &reused.tree.path).is_some_and(|r| r.contains("pid 2 ")),
+        "the reused tree's lock was touched"
+    );
+
+    // A fresh-looking Entered whose lock is someone else's: kept, lock untouched.
+    let pretend = worktree::Entered {
+        created: Creation::New,
+        ..reused.clone()
+    };
+    match worktree::roll_back_fresh(&exec, &main, &pretend, &owner(3)).expect("rollback") {
+        worktree::Rollback::Kept { reason, .. } => assert!(
+            reason.contains("lock"),
+            "a tree this run did not lock was kept for the wrong reason: {reason}"
+        ),
+        worktree::Rollback::Removed => panic!("a tree locked by ANOTHER run was rolled back"),
+    }
+    assert_kept(&fx, &main, &reused.tree.path, "a tree another run locked");
+    assert!(
+        lock_of(&fx, &main, &reused.tree.path).is_some_and(|r| r.contains("pid 2 ")),
+        "another run's lock was released"
+    );
+}
+
 // ---------------------------------------------------------------------------------------------
 // s8d-ii §8d-ii.5 and §8d-ii.6 (D21-45 W4; D21-46 R8; D21-47 V1; D21-48 X2; ADR-0180 decisions
 // 12 and 13, proposed): the filter-driver refusal, read from the fork commit at every scope, and

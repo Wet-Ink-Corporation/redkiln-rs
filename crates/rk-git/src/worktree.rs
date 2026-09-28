@@ -1878,6 +1878,86 @@ pub fn remove_landed(exec: &GitExec, start: &Path, item: &str) -> Result<Removal
     Ok(Removal::Removed)
 }
 
+/// [`roll_back_fresh`]'s outcome.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Rollback {
+    /// The fresh tree was deregistered and nothing of it is left on disk. The branch is kept.
+    Removed,
+    /// The tree is kept, and why: it was not this run's fresh tree, or git refused the unforced
+    /// removal. It is never forced.
+    Kept { path: PathBuf, reason: String },
+}
+
+/// **Roll back a FRESH run tree whose carry or `setup` failed** (D21-88 ruling 2; ADR-0180
+/// decisions 9 and 11, proposed). *(dated 2026-09-27, s8d-ii build, package D2188.)*
+///
+/// D21-88: *"when a FRESH tree's carry or `setup` fails, the tree is removed (unforced, through
+/// the same pre-unlink path) before the run refuses by name, as D21-48 X2's pointer scan already
+/// does, so the next run creates it anew and re-carries. A reused tree is still not re-carried."*
+///
+/// Only the tree [`enter`] has just created for this run is touched: `entered.created` is not
+/// [`Creation::Reused`], the tree is registered at its derived path, its `RK_BASE` names this
+/// item and `entered.fork`, and it holds **this** run's own lock. Anything else is kept, and its
+/// lock is left as it is. Then the lock is released, every untracked link is unlinked without
+/// being followed (`remove_landed`'s pre-unlink, D21-88 ruling 1), and git's `worktree remove`
+/// runs **without `--force`**. The branch is kept, so the next run checks it out anew
+/// ([`Creation::OnExistingBranch`]) and re-carries. If git refuses, or a residue is left, the
+/// tree is kept and named, unlocked, never forced.
+///
+/// # Errors
+/// [`GitError::WorktreeRemoveFailed`] when a link cannot be unlinked; wrapper errors.
+pub fn roll_back_fresh(
+    exec: &GitExec,
+    start: &Path,
+    entered: &Entered,
+    owner: &LockOwner,
+) -> Result<Rollback, GitError> {
+    let path = entered.tree.path.clone();
+    let kept = |reason: String| {
+        Ok(Rollback::Kept {
+            path: path.clone(),
+            reason,
+        })
+    };
+    if entered.created == Creation::Reused {
+        return kept("it is a reused tree, which is never rolled back or re-carried".to_string());
+    }
+    let main = main_worktree(exec, start)?;
+    let main_at = WorktreePath::new(&main)?;
+    let tree = derive(&main, &entered.tree.item);
+    if fold_path(&tree.path) != fold_path(&entered.tree.path) {
+        return kept("it is not the item's derived run-tree path".to_string());
+    }
+    let records = worktree_records(exec, &main_at)?;
+    let Some(rec) = record_at(&records, &tree.path) else {
+        return kept(KeepReason::NotRegistered.to_string());
+    };
+    match read_rk_base(exec, &tree.path)? {
+        Some(base) if base.item == tree.item.as_str() && base.fork == entered.fork => {}
+        _ => return kept(KeepReason::Unmarked.to_string()),
+    }
+    let ours = lock_reason(&tree.item, owner);
+    if rec.locked.as_deref() != Some(ours.as_str()) {
+        return kept(format!(
+            "its lock is not this run's ({}), so this run did not just create it",
+            rec.locked.as_deref().unwrap_or("unlocked")
+        ));
+    }
+    let at = WorktreePath::new(&tree.path)?;
+    exec.run(
+        GitOp::WorktreeUnlock,
+        &main_at,
+        ["worktree", "unlock", at.as_str()],
+    )?;
+    unlink_untracked_links(exec, &at, &tree.path)?;
+    let (removed, why) = remove_fresh(exec, &main_at, &tree)?;
+    if removed {
+        Ok(Rollback::Removed)
+    } else {
+        kept(why)
+    }
+}
+
 // ---- W4: the filter-driver refusal and the post-checkout pointer scan ----
 //
 // s8d-ii §8d-ii.5 and §8d-ii.6 (D21-45 W4; D21-46 R8; D21-47 V1; D21-48 X2; ADR-0180 decisions

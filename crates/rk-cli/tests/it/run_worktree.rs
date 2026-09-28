@@ -501,6 +501,14 @@ fn carry_repo(installable: bool) -> tempfile::TempDir {
     );
     crate::git(root, &["commit", "--quiet", "-m", "the carry fixture"]);
     std::fs::write(root.join(".env"), b"SECRET=carried\n").expect("the ignored .env writes");
+    write_setup_registry(root, SETUP_PROJECT);
+    repo
+}
+
+/// The carry fixture's `.redkiln/registry.toml`: the `setup` verb row, and `[toolchain.rust]`
+/// declaring `setup_projects = [project]` with a `setup_timeout`. It lives in the operator's
+/// checkout, which `run` reads it from, so a test can re-point it between runs.
+fn write_setup_registry(root: &Path, project: &str) {
     let pin = "0123456789abcdef0123456789abcdef01234567";
     std::fs::write(
         root.join(".redkiln").join("registry.toml"),
@@ -509,11 +517,10 @@ fn carry_repo(installable: bool) -> tempfile::TempDir {
              \"setup_timeout\", inputs = [\"projects\"], route = \"toolchain\", side_effecting = \
              false }}\n[toolchain.rust]\nsetup_timeout = {{ secs = 60, measured = [30], rule = \
              \"r\", pin = \"{pin}\", command = \"c\" }}\nsetup_projects = {{ value = \
-             [\"{SETUP_PROJECT}\"], source = \"the carry fixture's one project\" }}\n"
+             [\"{project}\"], source = \"the carry fixture's one project\" }}\n"
         ),
     )
     .expect("the registry writes");
-    repo
 }
 
 /// **D21-45 W3 / ADR-0180 decision 11: creation carries the `.worktreeinclude` files and runs the
@@ -593,11 +600,117 @@ fn a_failed_setup_refuses_by_name() {
         !stderr.contains("the dispatch of"),
         "the run dispatched after its setup failed; stderr:\n{stderr}"
     );
-    let record = worktree_record(root, &crate::run_tree(root, "bug-1").path);
+    // *(dated 2026-09-27, s8d-ii build, package D2188.)* This asserted that the fresh tree stayed
+    // registered and unlocked after the refusal. D21-88 ruling 2 reverses it: the fresh tree is
+    // rolled back before the run refuses, so it is neither registered nor on disk.
+    let tree = crate::run_tree(root, "bug-1").path;
+    let record = worktree_record(root, &tree);
     assert!(
-        record
-            .as_ref()
-            .is_some_and(|r| !r.iter().any(|l| l.starts_with("locked"))),
-        "after the refusal the tree is not registered, or its lock was not released: {record:?}"
+        record.is_none() && std::fs::symlink_metadata(&tree).is_err(),
+        "after the refusal the fresh tree was not rolled back (D21-88 ruling 2): registered \
+         {record:?}, on disk {}; stderr:\n{stderr}",
+        tree.exists()
+    );
+}
+
+/// The project a rollback fixture's first `setup` fails on: a `package.json` with a dependency
+/// and no lockfile, which a frozen install refuses before any fetch.
+const FAILING_PROJECT: &str = "broken";
+
+/// **D21-88 ruling 2 (ADR-0180 decisions 9 and 11, proposed): a FRESH tree whose `setup` failed is
+/// rolled back before the run refuses, so the next run creates it anew and re-carries; a reused
+/// tree is still not re-carried.** *(dated 2026-09-27, s8d-ii build, package D2188.)*
+///
+/// [`carry_repo`]'s installable fixture plus a committed failing project. The first run declares
+/// the failing project: `setup` refuses by name (exit 3), and the tree is neither registered nor on
+/// disk, while `rk-run/bug-1` is kept. The operator then fixes the declaration (the registry is
+/// read from the checkout) and edits the carried `.env`: the second run creates the tree anew on
+/// the existing branch, re-carries the NEW `.env`, and `setup` installs. The control: a third run
+/// reuses that tree and does not re-carry the `.env` edited again.
+///
+/// Red at entry to package D2188 because the failed tree stays registered, and the second run
+/// re-enters it as reused: no carry, no `setup`. Red under `S8D-II-M27` (the rollback skipped).
+#[test]
+fn a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries() {
+    let repo = carry_repo(true);
+    let root = repo.path();
+    std::fs::create_dir_all(root.join(FAILING_PROJECT)).expect("the failing project is made");
+    std::fs::write(
+        root.join(FAILING_PROJECT).join("package.json"),
+        b"{ \"name\": \"broken\", \"version\": \"0.0.0\", \"private\": true, \"dependencies\": { \"left-pad\": \"1.3.0\" } }\n",
+    )
+    .expect("the failing project's package.json writes");
+    crate::git(root, &["add", FAILING_PROJECT]);
+    crate::git(
+        root,
+        &["commit", "--quiet", "-m", "a project whose install fails"],
+    );
+    write_setup_registry(root, FAILING_PROJECT);
+    let tree = crate::run_tree(root, "bug-1").path;
+
+    // (1) setup fails: refused by name, and the fresh tree is rolled back; the branch is kept.
+    let first = crate::run::spawn_run(root, "bug-1", None);
+    let stderr = String::from_utf8_lossy(&first.stderr);
+    assert!(
+        first.status.code() == Some(3)
+            && stderr.contains("setup")
+            && stderr.contains(&format!("`{FAILING_PROJECT}`")),
+        "PREMISE: the first run's setup was not refused by name with exit 3 (exit {:?}); \
+         stderr:\n{stderr}",
+        first.status.code()
+    );
+    let record = worktree_record(root, &tree);
+    assert!(
+        record.is_none() && std::fs::symlink_metadata(&tree).is_err(),
+        "the fresh tree whose setup failed was not rolled back: registered {record:?}, on disk \
+         {}; stderr:\n{stderr}",
+        tree.exists()
+    );
+    assert_eq!(
+        git_rc(
+            root,
+            &[
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                "refs/heads/rk-run/bug-1"
+            ]
+        ),
+        Some(0),
+        "the rollback deleted the run branch; it is kept"
+    );
+
+    // (2) the declaration is fixed and the carried file changed: the next run re-creates and
+    // re-carries, and setup installs.
+    write_setup_registry(root, SETUP_PROJECT);
+    std::fs::write(root.join(".env"), b"SECRET=second\n").expect("the .env edits");
+    let second = crate::run::spawn_run(root, "bug-1", None);
+    let stderr = String::from_utf8_lossy(&second.stderr);
+    assert_eq!(
+        std::fs::read(tree.join(".env")).ok().as_deref(),
+        Some(&b"SECRET=second\n"[..]),
+        "the next run did not re-carry into a re-created tree; stderr:\n{stderr}"
+    );
+    let installed = tree
+        .join(SETUP_PROJECT)
+        .join("node_modules")
+        .join(".modules.yaml");
+    assert!(
+        installed.is_file(),
+        "the next run did not run setup in the re-created tree; stderr:\n{stderr}"
+    );
+
+    // (3) CONTROL: a reused tree is not re-carried.
+    std::fs::write(root.join(".env"), b"SECRET=third\n").expect("the .env edits again");
+    let third = crate::run::spawn_run(root, "bug-1", None);
+    assert_eq!(
+        std::fs::read(tree.join(".env")).ok().as_deref(),
+        Some(&b"SECRET=second\n"[..]),
+        "a reused tree was re-carried; stderr:\n{}",
+        String::from_utf8_lossy(&third.stderr)
+    );
+    assert!(
+        worktree_record(root, &tree).is_some(),
+        "the reused tree is no longer registered"
     );
 }

@@ -200,10 +200,25 @@ checkout by existing fails AC-518's instrument on a correct run.
    - **Removal** happens only when the tree is clean, landed, marked and unlocked, by `git worktree remove` **without
      `--force`**. Anything else is kept with a reason in Claude Code's form (*"N changed file(s) would be lost"*).
      Removal never follows a junction: a link inside the tree is removed, never its target. A `node_modules` junction
-     skeleton a removal leaves (`s8c` §8c.12 item 3) is therefore a link to be removed, never a path to walk. The one
-     removal of a tree that is not landed is decision 13's rollback of the tree the current call has just created,
-     and it is unforced too. The trigger for removal is `s8e`'s, keyed to the lane's `closed` mark; removal is by run
+     skeleton a removal leaves (`s8c` §8c.12 item 3) is therefore a link to be removed, never a path to walk. ~~The one~~
+     *One* removal of a tree that is not landed is decision 13's rollback of the tree the current call has just
+     created, and it is unforced too; the other is the carry-or-`setup` rollback below *(dated 2026-09-27, s8d-ii
+     build, D21-88 ruling 2)*. The trigger for removal is `s8e`'s, keyed to the lane's `closed` mark; removal is by run
      state, never by age (D21-45: *"there is no `cleanupPeriodDays` analogue"*).
+     *(dated 2026-09-27, s8d-ii build, D21-88 ruling 1.)* The pre-unlink is kept as built: every UNTRACKED symlink or
+     junction inside the tree is unlinked without being followed, then git's unforced `git worktree remove` runs, and
+     any residue refuses as `WorktreeRemoveFailed`. Measured on git 2.55.0.windows.3: after `setup` ran `pnpm install`
+     in a run tree, git's own unforced removal deregistered it but left 114 dangling junctions on disk;
+     `rk_git::worktree::remove_landed` left nothing (see the evidence).
+   - **A fresh tree whose carry or `setup` fails is rolled back** *(dated 2026-09-27, s8d-ii build, D21-88 ruling 2)*:
+     *"when a FRESH tree's carry or `setup` fails, the tree is removed (unforced, through the same pre-unlink path)
+     before the run refuses by name, as D21-48 X2's pointer scan already does, so the next run creates it anew and
+     re-carries. A reused tree is still not re-carried."* `rk_git::worktree::roll_back_fresh` touches only the tree the
+     current run has just created: not `Reused`, registered at the derived path, its `RK_BASE` naming the item and this
+     creation's fork, and holding this run's own lock. It releases that lock, unlinks the untracked links, and runs the
+     unforced removal; the branch is kept, so the next run checks it out anew on the existing branch and re-carries. If
+     git refuses, or a residue is left, the tree is kept and named, never forced. This is the second removal of a tree
+     that is not landed, beside decision 13's.
    - **Landed**, defined. Phase 1 has no integration ref, so a tree is **landed** when (a) its `HEAD` is symbolic on
      `rk-run/<item>` and equals the tip, (b) its status is empty, and (c) the tip's `Story:` trailer is the lane's
      terminal `closed` mark. Every change the tree holds is then on the ref the operator merges, and the lane has ended.
@@ -242,7 +257,9 @@ checkout by existing fails AC-518's instrument on a correct run.
     the lock is released to the run, creation calls `s8c`'s `.worktreeinclude` reader (ignored ∩ matched, symlinks
     skipped, escapes refused) and copies what it returns, then runs `s8c`'s per-toolchain `setup` verb. A `setup`
     failure is `s8c`'s by-name refusal, and the run surfaces it and stops. `settings.local.json` is not copied, no
-    `node_modules` symlink is made, and a reused tree is not re-carried.
+    `node_modules` symlink is made, and a reused tree is not re-carried. *(dated 2026-09-27, s8d-ii build, D21-88
+    ruling 2.)* A carry or `setup` failure on a fresh tree rolls the tree back first (decision 9), so a tree whose
+    carry did not complete is never re-entered as reused.
 
 12. **The filter check refuses only when pointer files would result** (D21-47 V1, refining D21-46 R8). Before `git
     worktree add`, creation reads: (1) the paths that select a filter **at the fork commit**, by `git check-attr
@@ -344,7 +361,13 @@ checkout by existing fails AC-518's instrument on a correct run.
   reason.
 - `git worktree remove` on Windows can leave a pnpm `node_modules` junction skeleton behind under the removed path
   (`s8c` §8c.12 item 3). Removal never follows it, but the skeleton is not a registration, so `git worktree list`
-  cannot see it.
+  cannot see it. *(dated 2026-09-27, s8d-ii build, D21-88 ruling 1.)* That is git's own unforced removal; the run
+  tree's removal and the carry-or-`setup` rollback unlink every untracked link first and leave nothing (measured).
+- *(dated 2026-09-27, s8d-ii build, D21-88 ruling 2.)* A carry-or-`setup` rollback that git refuses (a failed `setup`
+  that left an untracked, unignored file in the tree) keeps the tree registered and names it; the next run then
+  re-enters it as reused, discards the untracked file, and does not re-carry. The rollback is never forced, so that
+  case is named on stderr rather than repaired (read from the code and git's documented unforced-removal rule; not
+  measured).
 - The worst-case bound holds a four-character margin for a 64-character item on this repository (255 of 259), and a
   target repository with a longer root or deeper paths has less.
 - `init`'s first run after this record on a repository initialised before it changes a file, which ADR-0107 decision 2
@@ -369,6 +392,9 @@ checkout by existing fails AC-518's instrument on a correct run.
   driver that is effective at no scope or whose smudge is skipped.
 - Forbids reading filter attributes from the working tree rather than the fork commit.
 - Forbids the post-checkout scan judging or removing a tree the current call did not create.
+- Forbids leaving a fresh tree whose carry or `setup` failed registered for the next run to reuse, and forbids that
+  rollback touching a reused tree, a tree this run does not hold the lock of, or anything by `--force`
+  *(dated 2026-09-27, s8d-ii build, D21-88 ruling 2)*.
 - Forbids `init` writing `.gitignore`, touching a line the operator wrote in `info/exclude`, or appending the block
   twice.
 - Forbids computing the path bound on anything but the item being created.
@@ -393,6 +419,19 @@ checkout by existing fails AC-518's instrument on a correct run.
   `skills`, `catalog`, `processes`) or a directory it is handed; `init`'s `preexisting_rk_names` is top level only.
   `init.rs`'s module doc reads *"It does exactly two things"* and *"installs no hook (AC-412)"*, and the only `#
   redkiln-hook` in code is `doctor`'s `const MARKER`.
+- [measured 2026-09-27, `s8d-ii` build, git 2.55.0.windows.3; D21-88 ruling 1] after `setup` ran `pnpm install` in
+  a run tree, git's own unforced `git worktree remove` exited 0 and deregistered it, and left **114 dangling
+  junctions** on disk (0 files, 60 directories); `rk_git::worktree::remove_landed`, which unlinks every untracked
+  link without following it and then runs the same unforced removal, left **nothing**. Recorded in `s8d-ii`
+  §8d-ii.9 finding 17. The same shape in miniature: with the pre-unlink removed from the rollback (`S8D-II-M28`),
+  `worktree::a_fresh_tree_whose_carry_failed_is_rolled_back_with_its_links_unlinked` reads *"git reported the removal
+  done and the tree is still on disk"*.
+- [built 2026-09-27, `s8d-ii` build, D21-88 ruling 2] the fresh-tree rollback, red first: `run_worktree::a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries`
+  (the first run refuses and leaves no registered tree, the second re-creates and re-carries, a third reuses and does
+  not), `run_worktree::a_failed_setup_refuses_by_name` (amended), and `rk-git`'s
+  `worktree::a_fresh_tree_whose_carry_failed_is_rolled_back_with_its_links_unlinked` and
+  `worktree::a_reused_tree_or_one_this_run_did_not_lock_is_never_rolled_back`; mutants `S8D-II-M27` to `S8D-II-M30`
+  killed.
 - [documented, `references/adr/0105`, `0107`, `0137`, `0162`, `0018`] each sentence superseded or cited is quoted
   above from its own file, as read 2026-09-27.
 - [documented, `crates/rk-containment/src`] `is_alive`'s *"Test support"* status and its Windows arm's 259 note.
