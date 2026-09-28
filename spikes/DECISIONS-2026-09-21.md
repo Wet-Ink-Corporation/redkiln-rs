@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-95), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-96), and what they license
 
 *(Title moved 2026-09-28 at `s8d-ii`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-89)"**, true when package R2FIX-8dii corrected it; `D21-90` and `D21-91` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 91, the last `D21-91`.)*
 
@@ -3928,3 +3928,23 @@ ADR-0162's rule no shipped lane reaches the seal, and `Slice-Verdict:` is minted
    shipped review activity and `review_pass`'s schema key must agree (either `code-review` provides `Findings`, or the
    pass keys on what the shipped review provides), decided by a record there, so a shipped lane reaches the seal.
    `s8e` closes on its fixtures and states the gap in ADR-0186.
+
+---
+
+## D21-96 · A tier-1 `answered` row stores the gate's bound tree, as its `Gate:` mark does; the answer's observed tree stays in the tier-2 void row
+
+**Taken 2026-09-28 by the operator, in the session executing `s8e`, on package R1FIX-8e's blocker (defect (c)), four
+grounded options and a recommendation (the writer side).**
+
+**Why.** Walking `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows`'s lane through a void fails the AC-184
+differential: only-recorded `t1_gate_transition|63d28550…|answered|70566bf3…`, only-rebuilt `…|answered|e9ead599…`.
+`rk-store`'s tier-one derivation takes the `answered` row's `tree_hash` from the `gate_answered` payload, which is the
+answer's observed tree; ADR-0184 decision 1 fixes the `Gate:` value's `<tree_hash>` as *"the gate's bound tree (ADR-0105
+clause 4), the same on every mark for the token"*, and the rebuild fills that. ADR-0181 decision 11 claims a rebuilt
+row is *"the row the live act anchored to that commit"*; over a void it is not. For an applied answer the two trees are
+equal, which is why nothing caught it.
+
+**Ruled.** The live `answered` row of `t1_gate_transition` carries the gate's **bound** tree, taken from the gate record,
+so the tier-1 row equals what its mark carries and a rebuild reproduces it byte for byte. The answer's observed tree is
+not lost: it stays in the anchored tier-2 `gate_answer_void` row. ADR-0181 (`proposed`) is amended by dated text;
+built red-first on the `ac184` lane extended through a void, with a mutant (the observed tree restored) killed.
