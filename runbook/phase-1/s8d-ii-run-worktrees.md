@@ -146,7 +146,7 @@ corrected and extended by D21-46 (its two corrections, R8, and the flag on the i
 refusal; X2, the post-checkout pointer scan; X14, W3's owner), are all in `spikes/DECISIONS-2026-09-21.md`. They are written as one record at this stage. It takes **the next free id at
 writing**, and this file assigns none. Where the record moves a `## Decision` sentence or a forbids bullet of an
 accepted record, it is a supersession in part (ADR-0092 rule 1), never an erratum. It is written `proposed` and flips
-only on the operator's dated ledger line.
+only on the operator's dated ledger line. *(dated 2026-09-28, `s8d-ii` close: ADR-0180 flipped `accepted` on D21-91, on its own dated line under D21-64 ruling 10.)*
 
 **What this step owns:**
 - **D21-44** whole, including its *"Consequences"*. The ledger says *"owned by `s8e`"*, and D21-46 R1 moves them here.
@@ -261,7 +261,7 @@ configuration read cannot see is closed by D21-48 X2's post-checkout scan (§8d-
   pass 2026-09-24);
 - the back-links (`superseded_by`) on ADR-0105, ADR-0107 and ADR-0137 are **not** written with the record. They move in
   the flip commit, as `s8h` Checkpoint 8h holds its own (*"the link moves in the flip commit"*), and Checkpoint 8d-ii
-  asserts whichever state the record's status requires.
+  asserts whichever state the record's status requires. *(dated 2026-09-28, `s8d-ii` close: they moved in ADR-0180's flip commit, on D21-91; `0180` is appended to each `superseded_by`.)*
 
 ### 8d-ii.0 Stage-open measurements — re-taken at Checkpoint 8d's close, before any code
 
@@ -1965,7 +1965,7 @@ The adversarial review of 2026-09-24 (D21-47) found the following:
     so it goes to the orchestrator for a ruling, with the built behaviour as the most reversible option. ~~*Open.*~~
     *(dated 2026-09-27, s8d-ii build, package D2188.)* *Closed by D21-88 ruling 1:* *"**(17) Keep the pre-unlink as built:** a link inside the tree is
     removed, never its target, then git's unforced removal runs, and any residue refuses as `WorktreeRemoveFailed`."*
-    The measurement is in ADR-0180 decision 9 and its evidence (proposed), and D21-88 ruling 2's rollback uses the
+    The measurement is in ADR-0180 decision 9 and its evidence (proposed) *(dated 2026-09-28, `s8d-ii` close: accepted on D21-91)*, and D21-88 ruling 2's rollback uses the
     same pre-unlink.
 18. *(dated 2026-09-27, s8d-ii build, P6.)* **A tree whose `setup` failed is not set up again on re-entry.** The run
     refuses by name and releases the lock, and the fresh tree stays registered (no rule removes a tree that is not
@@ -1976,7 +1976,7 @@ The adversarial review of 2026-09-24 (D21-47) found the following:
     fresh tree back unforced on a carry failure as X2 does. ~~*Open; reported, not chosen.*~~
     *(dated 2026-09-27, s8d-ii build, package D2188.)* *Closed by D21-88 ruling 2:* *"**(18) Roll back on failure:** when a FRESH tree's carry or `setup`
     fails, the tree is removed (unforced, through the same pre-unlink path) before the run refuses by name"*. Built
-    red first (§8d-ii.4, §8d-ii.8's D2188 note), recorded in ADR-0180 decisions 9 and 11 (proposed). What remains: a
+    red first (§8d-ii.4, §8d-ii.8's D2188 note), recorded in ADR-0180 decisions 9 and 11 (proposed) *(dated 2026-09-28, `s8d-ii` close: accepted on D21-91)*. What remains: a
     rollback git refuses keeps the tree, named, and the next run reuses it without a carry (ADR-0180's consequences).
 19. *(dated 2026-09-27, s8d-ii build, P6.)* **Checkpoint 7d's absence check on the old root is now vacuous.** `s7d`'s
     block asserts `test ! -d "$TMP1/.git/redkiln/worktrees"` after a refused run; the root is no longer there, so the
@@ -2195,7 +2195,7 @@ formal reading).** The block's lines were run as follows; every reading passed.
 **D21-49, the flip-stop assertions.** None of this block's lines requires `status: accepted`. (9) reads the status and
 branches on it: while the record is proposed, no back-link may exist; once it is accepted, all three must. The replays
 (8d and 7f) assert no record status either, as a grep of their blocks for `status` and `accepted` shows. So the block
-passes before the flip and again after it.
+passes before the flip and again after it. *(dated 2026-09-28, `s8d-ii` close: it passed before the flip, the formal reading at `497266b` with the record `proposed` (D21-90); ADR-0180 flipped `accepted` on D21-91, and the block is re-run after the flip commit.)*
 
 **Older checkpoints' guard lines, run READ-ONLY; no line's result moved.**
 - **Sieve.** Every `grep`, `rk_absent` and `rk_control` pattern in the blocks of Checkpoints 5, 6, 7a–7i and 8a–8d

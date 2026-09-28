@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-89), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-91), and what they license
+
+*(Title moved 2026-09-28 at `s8d-ii`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-89)"**, true when package R2FIX-8dii corrected it; `D21-90` and `D21-91` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 91, the last `D21-91`.)*
 
 *(Title corrected 2026-09-28 at `s8d-ii`'s build, package R2FIX-8dii (refuting round 2's minor): it read **"2026-09-21 … 2026-09-27 (D21-1 … D21-86)"** while the file carried **D21-89**, three entries and one date stale: `D21-87` … `D21-89` were appended during `s8d-ii` without moving it, and `D21-89` is dated 2026-09-28. No entry is added with this correction. Measured: `grep -c '^## D21-'` over this file → 89, the last `D21-89`.)*
 
@@ -3655,3 +3657,185 @@ the base choice for *"the reference-tree package"*).
 **commit being checked out** (the run branch's tip, read before the add); (2) `RK_BASE` records
 **`merge-base(start HEAD, run-branch tip)`** — the point the branch forked. First creation is unchanged (fork = start's
 HEAD). Built red-first in `s8d-ii`, stated in ADR-0180 (`proposed`).
+
+---
+
+## D21-90 · `s8d-ii` closes: the run-owned worktree lives at `.redkiln/worktrees/<item>` under the main worktree, is reused on re-entry and never force-removed, and is guarded
+
+**Taken 2026-09-28 by the session executing `s8d-ii`, at the stage's close.** It records and cites. It re-takes no
+ruling and writes no go-ahead line. The stage's one record, ADR-0180, flips under D21-64 ruling 10 by its own dated
+ledger line (D21-91), not by this entry. `s8d-ii` names no D-entry section of its own, so this entry takes D21-78's
+form, and what it records is what `s8d-ii`'s records table, §8d-ii.0, §8d-ii.7, §8d-ii.8, §8d-ii.9, §8d-ii.10 and
+§8d-ii.11 record. Every figure below is quoted from the stage file's recorded readings, the tree or the committed
+records; none is new here.
+
+Record: ADR-0180, located by `REC_WT=0180` (D21-47: *"Records are located by the id recorded at write time"*).
+
+**Recorded — the record, and how it flips.** The id was recorded at write time by D21-87 and by the dated `REC_WT`
+line in Checkpoint 8d-ii's block (package P1-RECORD); the record is `status: proposed` at `497266b`, in ADR-0085's
+`### Option — <name>` form, and `check-adr-options.py` scanned 17 records from 0164 and flagged 0 (§8d-ii.11's
+guard-sweep note). The README's next free number reads **`0181`**.
+- **ADR-0180**: *the run-owned worktree lives at `.redkiln/worktrees/<item>` under the main worktree, is reused on
+  re-entry and never force-removed, and is guarded*. It executes D21-44, D21-45 W1, W2, W4 and W3's carry, D21-46's
+  two corrections and R8, D21-47 V1 and its clause-5 rule, and D21-48 X1, X2 and X14.
+- **Supersedes in part**, each quoted in the record: ADR-0137 decision 3's path literal,
+  *"`<common-dir>/redkiln/worktrees/<item>`"* (its rule, *"**`project_root` is the run-owned worktree**"*, stands);
+  ADR-0105 clause 6, *"A worktree is **re-created**, never reused, per run"*, and the *"a reused worktree"* member of
+  its forbids bullet, **for the run-owned worktree only** (`redkiln-migrate`'s worktree keeps clause 6, as AC-522
+  verifies); ADR-0105 clause 5's closed list for the **writes** lock, unlock, the `RK_BASE` marker, `reset --hard
+  HEAD` and `clean -fd`, the reads superseding nothing; and ADR-0107 decision 2, *"a second `init` on an initialised
+  repository changes nothing and exits 0"*, for the first `init` after the record on a repository initialised before
+  it. **Cited and not superseded:** ADR-0018 and ADR-0162 decision 10.
+- **Amended before acceptance**, in place while it bound nothing: by D21-88 rulings 1 and 2 (decisions 9 and 11, the
+  junction measurement in its evidence), by D21-89 (decisions 5, 9, 10, 12, 13, 15 and 16, a forbids bullet and an
+  evidence line), and by refuting rounds 1 and 2's record fixes (ADR-0127 in `related` and `source`; ADR-0162's bold
+  on **unlike** restored; decision 12's *"read (1)"*; the merge-base reads in decisions 12 and 16; the title naming
+  D21-88 and D21-89).
+- **The back-links were not written with the record.** The records table: the `superseded_by` links on ADR-0105,
+  ADR-0107 and ADR-0137 *"are **not** written with the record. They move in the flip commit"*. Checkpoint 8d-ii (9)
+  asserts none while the record is `proposed` and all three once it is `accepted` (§8d-ii.11's D21-49 paragraph: *"So
+  the block passes before the flip and again after it."*).
+- **It flips at this close under D21-64 ruling 10:** *"Standing authority for the rest of this session (`s8d`
+  onward): each stage's own records flip at that stage's close under the same two conditions, each with its own dated
+  ledger line citing this entry."* The conditions are ruling 9's, read for this stage: the formal Checkpoint 8d-ii
+  passes whole, and a refuting round finds no blocker or major. Refuting round 2 was dry (below); the formal reading
+  is the last paragraph of this entry. One dated line follows the ruling's letter.
+
+**Recorded — the entries and rulings this stage carries.** D21-87 (the record entry: ADR-0180 written `proposed`
+under the operator's AFK rule, named with the id it took; not a ruling); D21-88 (the operator's rulings on findings
+17 and 18: *"(17) Keep the pre-unlink as built"* and *"(18) Roll back on failure"*); D21-89 (the operator's ruling on
+refuting round 1's findings 24 and 25: on the existing-branch path the filter read, the pointer scan's path set and
+the length rule read the run branch's tip, and `RK_BASE` records `merge-base(start HEAD, run-branch tip)`).
+
+**Recorded — what was built** (`38c7544` P1–P7, `d74b6de` D2188, `b1565c2` R1FIX-8dii and `497266b` R2FIX-8dii; the
+ledger lines `7dc127d` and `948a68c`; the tracker row `101f22e`).
+- **One derivation (P2).** `rk_git::worktree::derive(main, &item)` returns the run tree at
+  `<main>/.redkiln/worktrees/<item>`, `<item>.review-ref` beside it and `rk-run/<item>`; the root is the first
+  `worktree list --porcelain` record and a bare repository is refused by name; the item id is validated once; linked
+  segments, a case-fold collision, an unignored root and a path past the limit each refuse by name.
+- **The lifecycle (P3).** `enter` creates, reuses or refuses (`Creation::{New, OnExistingBranch, Reused}`), with an
+  `RK_BASE` marker, a pid-and-start-time lock whose liveness `rk-cli` injects, a re-entry check, and an explicit
+  discard that returns each path; `remove_landed` removes only a clean, landed, marked, unlocked tree, unforced, and
+  keeps anything else with its reason.
+- **The filter refusal and the pointer scan (P4).** V1's configuration read refuses only when pointer files would
+  result; D21-48 X2's post-checkout scan refuses by name and removes the fresh tree.
+- **`init`'s exclude block (P5)** and **the `rk-cli` root move (P6).** `init` appends the `# redkiln-runtime` block
+  once; `recreate_run_worktree` is deleted and `run` enters the tree; the carry and `setup` run at creation; every
+  fixture repository a run reaches carries the ignore row; Checkpoint 7f's run arm moved to a throwaway clone.
+- **The guard sweep (P7).** *"All twenty-six mutants were re-applied to the FINAL tree and each is killed by its
+  named test for its named reason"* (*"KILLED 26 of 26"*); older checkpoints' guard lines were run read-only and no
+  line's result moved.
+- **D21-88 ruling 2 (D2188).** A fresh tree whose carry or `setup` fails is rolled back, unforced and through the
+  pre-unlink, before the run refuses by name; *"KILLED 4 of 4"* (`S8D-II-M27`–`M30`).
+- **Round 1's fixes (R1FIX-8dii).** D21-89's two rulings in `create`, literal `path_bound` expectations, an
+  incomplete discard unlocks, the `gitdir:` admin-dir prediction, two `rk-cli` pins and 7f's clone cleanup on a
+  catalog-load failure; *"KILLED 9 of 9"*, and the ledger re-killed, *"KILLED 22 of 22"* and *"KILLED 3 of 3"*.
+- **Round 2's minors (R2FIX-8dii).** On the existing-branch arm the length rule and V1's read also cover the
+  merge-base the reference tree checks out; the merge-base fixture tells a merge-base from `tip^` and `HEAD^`;
+  *"KILLED 4 of 4"*, and round 1's four re-killed.
+- **The count** (§8d-ii.8): *"66 names, `rk-git` 52, `rk-containment` 1, `rk-cli` 13, and 63 new"*, so the suite
+  gains 63 over Checkpoint 8d's recorded 971: `FLOOR=1034`.
+
+**Recorded — the records this stage wrote beside ADR-0180.** Dated register notes on AC-518, AC-522, AC-529 and
+AC-531, each inside its own criterion's block; design §5's `reconcile_started` row and §6's GitOps write-set row
+notes; `s7d` §7d.5's two table notes; the rigged stub's doc in `rk-fixture-toolchain.rs`; the README index row; and
+the ledger entries D21-87 … D21-89. Checkpoint 8d-ii (9) asserts each of them.
+
+**Recorded — the checkpoints this stage amended or re-runs.**
+- **Checkpoint 7f**: four dated amendments in `s7f` §7f.5 (§8d-ii.7, *"Four amendments, not three"*): the run arm in
+  a `mktemp -d` clone, the forced-removal line deleted, the `git worktree prune` line deleted, and the catalog-load
+  failure line removing the clone. Re-run whole inside Checkpoint 8d-ii (7b). PROGRESS row 7f's *"checkpoint passed
+  `bf12a1c`, re-run pending"* is the tracker's to clear.
+- **Checkpoint 8d** (the entry gate): not amended; re-run whole inside Checkpoint 8d-ii (7a), its own nested re-runs
+  of 8c, 8b, 7g, 7a and 5 skipped under `RK_CP_NESTED=1` (they *"ran at Checkpoint 8d's own close"*).
+- **Checkpoint 7d**: not amended beyond `s7d` §7d.5's two table notes and not re-run; its absence check on the old
+  root is now vacuous (finding 19). **Checkpoints 7h and 7i**: not amended; their witnesses are the two existing tests
+  selected in (2).
+- **Checkpoint 6's workspace-wide `Command::new("git")` line and `ci.yml`'s one-wrapper step** were red at `83cf836`
+  and this stage adds three test-helper hits to them (finding 22). Neither is amended: *"The narrowing belongs to
+  whoever discharges row 6's mark."*
+
+**Recorded — the refuting rounds (§8d-ii.9).** Two rounds, each with five finders and two refuters per blocker or
+major.
+- **Round 1: findings, fixed** (`b1565c2`). Finding 24, filed a blocker and held a major by both refuters: on the
+  existing-branch arm the filter read, the scan's path set and the length rule read start's `HEAD`, not the tip the
+  tree checks out (*"A probe created a tree holding a pointer file with no refusal."*). Finding 25, a major:
+  `RK_BASE` recorded start's moved `HEAD`. The operator ruled both by D21-89. Finding 26, a major: the platform-limit
+  tests sized their fixtures with `path_bound` itself. Finding 27's eight minors, (a) to (h), each fixed or recorded.
+- **Round 2: dry** — *"no blocker and no major"*. Its eight minors (findings 28 to 35) were fixed or recorded in
+  `497266b`.
+
+**Recorded — open residuals, each named and not closed.**
+- **The existing-branch arm's races** (R1FIX-8dii): *"the tip is read, then the tree is added by the branch name, so
+  a branch moved between the read and the add would be checked out unread"*; *"`admin_dir_name` predicts git's name
+  before the add and nothing re-reads the gitdir after it, the same race, with X2's scan as the backstop"*; and
+  (R2FIX-8dii) *"the merge-base is read before the add, so the race the tip read has … applies to it too"*.
+- **The reference tree's reads** (R2FIX-8dii): *"the second filter read resolves drivers as the **run** tree does"*,
+  and *"D21-48 X2's scan covers the run tree only"*.
+- **A refused rollback** (finding 18): *"a rollback git refuses keeps the tree, named, and the next run reuses it
+  without a carry"* (ADR-0180's consequences: *"read from the code and git's documented unforced-removal rule; not
+  measured"*).
+- **ADR-0180's negative consequences**: the discard is reported on stderr, not journalled, until `s8e`; `is_alive`'s
+  exit-code-259 ambiguity can keep a stale lock held; removal has no trigger until `s8e` mints the `closed` mark; the
+  worst-case bound's margin is four characters for a 64-character item on this repository.
+- **P6's recorded design choices**: the carry copies from the main worktree; `setup` re-runs `choose_toolchain`, so
+  its deferral lines can print twice per first run; `Entered::filter_notes` is printed nowhere, so *"debug level
+  only"* holds vacuously; `is_alive` keeps its `#[doc(hidden)]`.
+- **What the evidence does not license** (ADR-0180): *"claiming that a real run has edited a run tree at the new
+  root: N1b was a probe, and the first real dispatch is `s8i`'s"*.
+
+**Recorded — owed forward, each to its named owner.**
+- **`s8e`**: the `worktree_assigned { …, reused, discarded }` row that journals the discard, the removal trigger keyed
+  to the lane's `closed` mark, and the `lane_e2e` half of S8E-M20. **AC-518 and AC-529 are owed to `s8e`**: *"Both are
+  claimed at `s8e` (`s8e` §8e.14)"*; §8d-ii.10 claims none as met here and names AC-518, AC-529, AC-531 and AC-522 as
+  contributed to.
+- **`s8h`**: the live probe's edit inside `.redkiln/worktrees/<probe>` and the protected-segment limit. **`s8i`**: the
+  first real dispatch. **`s8j`**: re-pointing or retiring the legacy `rk-fix-doctor-test-count` tree (D21-44: *"its
+  re-point is s8j's"*), and `s8-exit-criterion.md`'s `grep -r … .redkiln/` lines, which must exclude `worktrees/`.
+- The tracker's §1 rows for `s8d-ii` and 7f.
+
+**The floor.** Checkpoint 8d-ii (4)'s FLOOR is **1034** (971, Checkpoint 8d's recorded count, + 63 by dated edit), at
+least 44 result lines. The next stage's floor is re-derived from the formal reading below.
+
+Checkpoint 8d-ii: **passed whole at `497266b`**, the formal reading, extracted from
+`runbook/phase-1/s8d-ii-run-worktrees.md`'s own bytes (§8d-ii.11's fenced block, 536 lines, sha256
+`d2ec84a8216fa0def189eb551e040d721d3fb6b43e7886c24ebeafaa2842334c`), run from the main checkout under D21-47's
+no-dispatch wrapper (`runbook/tools/nodispatch.sh`, which the block sources at (00)) at `CARGO_BUILD_JOBS=2
+RUST_TEST_THREADS=2` on 2026-09-28, 07:15 to 07:32 local: rc 0, 0 `FAIL`, `CP8D-II-END-OF-BLOCK reached`. Its
+sections read ok, among them: (0b) the worst-case run-tree path **255 here and 246 in 7f's clone**, limit 259 without
+`core.longpaths`; (0c) filters selected at `HEAD` 0; (0d) the pointer scan 0, its controls firing; (4) the whole suite
+**1034 passed / 0 failed / 10 ignored over 44 result lines** (FLOOR 1034); (7a) Checkpoint 8d re-run whole as the
+entry gate, its nested re-runs skipped under `RK_CP_NESTED=1`, ok; (7b) Checkpoint 7f as amended, re-run whole in its
+clone, ok; (8) `rk-run/rk-fix-doctor-test-count` unchanged at `73c087a` with its worktree, and the store's sha256
+unchanged (`e83d295e…`); (9) the record at `proposed` with no back-link. Checkpoint 8d-ii is re-run after the flip
+commit, when (9) reads all three back-links (§8d-ii.11's D21-49 paragraph).
+
+---
+
+## D21-91 · ADR-0180 flips to `accepted` — the run-owned worktree lives at `.redkiln/worktrees/<item>` under the main worktree, is reused on re-entry and never force-removed, and is guarded
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8d-ii`, under D21-64 ruling 10.** ADR-0180
+(`s8d-ii`'s record, D21-87) flips `proposed → accepted`, `date: 2026-09-27` unchanged. It was written `proposed` at
+`s8d-ii`'s build and revised in place during that stage while it bound nothing (D21-88, D21-89 and refuting rounds 1
+and 2). The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8d-ii.
+
+Both conditions hold. The formal Checkpoint 8d-ii passed whole at `497266b` (D21-90, its last paragraph: rc 0, 0
+`FAIL`, `CP8D-II-END-OF-BLOCK reached`, the extracted block 536 lines; (4)'s whole suite 1034 passed / 0 failed / 10
+ignored over 44 result lines). Refuting round 2 (`s8d-ii` §8d-ii.9, findings 28 to 35) was dry: no blocker, no major.
+
+The text that flips is the one at `497266b`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. The supersession in part of ADR-0137 decision 3's path literal,
+*"`<common-dir>/redkiln/worktrees/<item>`"* (its rule, *"**`project_root` is the run-owned worktree**"*, stands), of
+ADR-0105 clause 6's *"A worktree is **re-created**, never reused, per run"* and the *"a reused worktree"* member of
+its forbids bullet, for the run-owned worktree only (`redkiln-migrate`'s worktree keeps clause 6 whole), of ADR-0105
+clause 5's closed write list for the writes lock, unlock, the `RK_BASE` marker, `reset --hard` and `clean -fd` (the
+reads supersede nothing), and of ADR-0107 decision 2 for the first `init` after this record on a repository
+initialised before it, is now in force; all three stay `accepted`. **The flip commit writes the three `superseded_by`
+back-links**, `0180` appended to ADR-0105's, ADR-0107's and ADR-0137's lists, as `s8d-ii`'s records table requires
+(*"They move in the flip commit"*). ADR-0018 and ADR-0162 decision 10 are cited and not superseded. D21-88 rulings 1
+and 2 and D21-89 are the rulings it carries. **Checkpoint 8d-ii is re-run after this flip commit**, and its (9) then
+asserts all three back-links.
