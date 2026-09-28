@@ -948,7 +948,7 @@ same reason, the item that `exit/findings-block/` runs gains a `slice`, or its s
   it. That is the register's *"which fails on a store row with no matching commit"*.
 
 *(dated 2026-09-27, `s8d` build, package F3-D2174; receiver note; `spikes/DECISIONS-2026-09-21.md` D21-74 ruling 2;
-R2 = ADR-0173 decision 9 as amended, proposed.)* **Owed here: the run path's run-branch binding.** `verbs::run::run`
+R2 = ADR-0173 decision 9 as amended, proposed.)* *(dated 2026-09-27, `s8d` close: accepted on D21-80)* **Owed here: the run path's run-branch binding.** `verbs::run::run`
 binds `change_deriver::RunBranchDiff` into the routing with `ToolRouting::with_run_branch`, and `"affected"` inside
 `Changeset`'s own producer (`tdd-red-green-refactor`'s `green-verify`) reads it. `s8d` proves the reader
 (`change_deriver::the_run_branch_reader_reads_the_items_changeset_paths_through_rk_git`) and the kernel's use of it
@@ -959,7 +959,7 @@ removed) SURVIVED all 140 `rk-cli` tests (`s8d` §8d.10's F3-D2174 note). Once t
 exists, one `lane_e2e` test whose fixture lane reaches a `selection = "affected"` step inside `Changeset`'s producer
 kills MF3j: the step must reach the port with the run branch's paths, and must not refuse *"no run-branch reader is
 bound"*.
-*(dated 2026-09-27, `s8d` build, package R2FIX-8d; receiver note; refuting round 2's tests-mutants finding.)* **Also owed here: `run()`'s review-routes binding** (`with_review_routes`, R5 = ADR-0177 decision 2, proposed). It has MF3j's shape, and no `rk-cli` test reaches its call site. **Discharged in `s8d` and not owed here:** `run()`'s `sca_scan` database binding (R8 = ADR-0179 decision 4). `adapter_selection::run_binds_sca_scans_advisory_databases_before_the_step_reaches_the_port` kills its mutant R2-A without a dispatch. Its fixture activity opens with a zero-agent `tool` step, and the exit code tells a kernel input refusal (19) from the handler's own refusal (10). The same shape may reach both bindings owed here before the `HarnessFactory` seam exists. A zero-agent fixture activity's first `tool` step would take `selection = "affected"` for MF3j, or `toolchain:shallow_clone` for the review routes. That is a route this section may take, not a claim that it works: `s8d` did not build either.
+*(dated 2026-09-27, `s8d` build, package R2FIX-8d; receiver note; refuting round 2's tests-mutants finding.)* **Also owed here: `run()`'s review-routes binding** (`with_review_routes`, R5 = ADR-0177 decision 2, proposed *(dated 2026-09-27, `s8d` close: accepted on D21-84)*). It has MF3j's shape, and no `rk-cli` test reaches its call site. **Discharged in `s8d` and not owed here:** `run()`'s `sca_scan` database binding (R8 = ADR-0179 decision 4). `adapter_selection::run_binds_sca_scans_advisory_databases_before_the_step_reaches_the_port` kills its mutant R2-A without a dispatch. Its fixture activity opens with a zero-agent `tool` step, and the exit code tells a kernel input refusal (19) from the handler's own refusal (10). The same shape may reach both bindings owed here before the `HarnessFactory` seam exists. A zero-agent fixture activity's first `tool` step would take `selection = "affected"` for MF3j, or `toolchain:shallow_clone` for the review routes. That is a route this section may take, not a claim that it works: `s8d` did not build either.
 
 ### 8e.12 Named tests, red first, and the mutants
 

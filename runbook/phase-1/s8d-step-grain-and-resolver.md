@@ -212,7 +212,7 @@ takes a dated correction at open, before code.
 
 **Records.** Each is written `proposed` in the form ADR-0164 uses (`### Option — ` headings, D21-42 24a), with the
 next free id **at writing** — several stages write records in the same window, so no number is assigned here — and
-flips only on the operator's dated ledger line. Each record's id is recorded at write time, by a dated line in this
+flips only on the operator's dated ledger line *(dated 2026-09-27, `s8d` close: R1–R8, ADR-0172 … ADR-0179, flipped `accepted` on D21-79 … D21-86, each on its own dated line under D21-64 ruling 10)*. Each record's id is recorded at write time, by a dated line in this
 table, and every later reference finds the record by that id. It is never found by title phrase or by an *"exactly
 one superseding X"* count (D21-47). Two records can supersede the same ADR: R1 and `s8c`'s record B both supersede
 ADR-0140 in part.
@@ -239,7 +239,7 @@ literal `null` only (`in` stands), and both carry `0172` in `superseded_by`. The
 row, two supersession rows, next-free sentence, status census) and `runbook/00-preamble.md` (next free **`0173`** by a
 dated correction line; the records census at 172) moved in the same change, and Checkpoint 8a's record-census lines
 pass standalone over them. It landed with its evaluator change and test before any §8d.3 `check` evaluation code;
-§8d.3a (a) records the build. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
+§8d.3a (a) records the build. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line. *(dated 2026-09-27, `s8d` close: it flipped `accepted` on D21-79, under D21-64 ruling 10.)*
 
 *(dated 2026-09-26, `s8d` build, package P2.)* **R2 is ADR-0173**, `references/adr/0173-the-complete-reference-resolver.md`, written `proposed` in ADR-0164's
 form (`check-adr-options.py` scans 10 records from 0164 and flags 0). It supersedes in part ADR-0042's Decision and
@@ -255,7 +255,7 @@ by a dated correction line; the records census at 173) moved in the same change,
 lines pass standalone over them (`ok: census n=173 last=0173 next=0174`). R2 states the resolver's decisions for the
 packages that build it (§8d.3's table, iteration, `check`, `emit`, the read seam, test selection); what package P2
 built is its decision 2 (the licence lint) and decision 10 (the carrier, and AC-303's move onto it). It flips at this
-stage's close under D21-64 ruling 10, on its own dated ledger line.
+stage's close under D21-64 ruling 10, on its own dated ledger line. *(dated 2026-09-27, `s8d` close: it flipped `accepted` on D21-80, under D21-64 ruling 10.)*
 
 *(dated 2026-09-26, `s8d` build, package P3.)* **R1 is ADR-0174**, `references/adr/0174-step-grain-commits.md`, written `proposed` in ADR-0164's
 form (`check-adr-options.py` scans 11 records from 0164 and flags 0). It supersedes in part, each quoted in its Decision clause 10:
@@ -275,7 +275,7 @@ the register with R1's flip, not before (the register is untouched here). One re
 completion row carries a THIRD payload member, `completion: true`, because the fold holds no catalog and must tell the completion
 row from an agent step's; the two members this row names, `step_id` and `iteration_path`, are on every step row as written. A
 second reading: a transcribed list with no `emit` step (fixture catalogs only; every shipped activity ends in one) completes where
-its walk ends, on its last step's id. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
+its walk ends, on its last step's id. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line. *(dated 2026-09-27, `s8d` close: it flipped `accepted` on D21-81, under D21-64 ruling 10.)*
 
 *(dated 2026-09-27, `s8d` build, package R1FIX-8d; the refuting round's records finding.)* **R1's supersession of ADR-0140 is widened, for agent steps.**
 ADR-0174 decision 9 makes each agent step's per-step spec carry that step's declared `timeout_secs` (`rk-cli`'s
@@ -336,7 +336,7 @@ next free **`0176`**, the `0175` index row, *"The set is 175 records over `0001`
 and `runbook/00-preamble.md` (next free **`0176`** by a dated correction line; the records census at 175) moved in the same change.
 *(dated 2026-09-27, `s8d` build, package R1FIX-8d: the next sentence was written at the end of the P6 paragraph below, and is P5's.)* Checkpoint 8a's record-census
 lines pass standalone over them (`ok: census n=175 last=0175 next=0176`); as a control, HEAD's README and preamble fail the 175
-census and the next-free `0176` line. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
+census and the next-free `0176` line. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line. *(dated 2026-09-27, `s8d` close: it flipped `accepted` on D21-82, under D21-64 ruling 10.)*
 *(dated 2026-09-26, `s8d` build, package P6.)* **R4 is ADR-0176**, `references/adr/0176-the-kernel-writes-the-error-row-and-the-breaker-refuses-from-it.md`,
 written `proposed` in ADR-0164's form (`check-adr-options.py` scans 13 records from 0164 and flags 0). It supersedes nothing, so no
 `superseded_by` moves and no supersession row is added. Its decision 4 states `at` and `family` as **members added to ADR-0095 decision
@@ -353,7 +353,7 @@ n=176 last=0176 next=0177`, and FAILED (*"does not name 0177 as the next free nu
 ~~Checkpoint 8a's record-census lines pass standalone over them (`ok: census n=175 last=0175 next=0176`); as a control, HEAD's README
 and preamble fail the 175 census and the next-free `0176` line.~~ *(dated 2026-09-27, `s8d` build, package R1FIX-8d: P5's sentence, moved to the P5 paragraph above.)* It flips at
 this stage's close under D21-64 ruling 10, on its own dated
-ledger line. ADR-0173 (R2) and ADR-0174 (R1) each take a dated P5 evidence line, so their text stays true to what is built.
+ledger line. *(dated 2026-09-27, `s8d` close: it flipped `accepted` on D21-83, under D21-64 ruling 10.)* ADR-0173 (R2) and ADR-0174 (R1) each take a dated P5 evidence line, so their text stays true to what is built.
 
 *(dated 2026-09-26, `s8d` build, package P7.)* **R5 is ADR-0177**, `references/adr/0177-two-review-verb-rows-and-the-question-registry.md`,
 and **R6 is ADR-0178**, `references/adr/0178-the-change-deriver-in-build-item-and-change-at-triage.md`, both written `proposed` in
@@ -370,7 +370,7 @@ lane's first stage, and binds the answer from `gate_answered`; its AC-079 readin
 and `runbook/00-preamble.md` (next free **`0179`** by a dated correction line; the records census at 178) moved in the same change.
 Checkpoint 8a's record-census lines, run standalone, read `ok: census n=178 last=0178 next=0179`; as a control, over HEAD's README and
 preamble they FAIL (*"does not name 0179 as the next free number"*). Both flip at this stage's close under D21-64 ruling 10, each on its
-own dated ledger line.
+own dated ledger line. *(dated 2026-09-27, `s8d` close: they flipped `accepted` on D21-84 and D21-85, under D21-64 ruling 10.)*
 
 *(dated 2026-09-27, `s8d` build, package F2-D2173; `spikes/DECISIONS-2026-09-21.md` D21-73 option (C).)* **R8 is ADR-0179**,
 `references/adr/0179-selection-chooses-by-rank-one-node-per-activity-binds-rigor-and-row-inputs-are-supplied.md`, written `proposed` in
@@ -384,7 +384,7 @@ off disk, every link reciprocated). The README (purpose count 179, the forbids c
 **`0180`**, the `0179` index row, `0170`'s status cell, *"The set is 179 records over `0001`–`0179`"*, and the proposed census naming
 `0172`–`0179`, measured accepted 167 / superseded 4 / proposed 8) and `runbook/00-preamble.md` (next free **`0180`** by a dated correction
 line; the records census at 179) moved in the same change. Checkpoint 8a's record-census lines, run standalone, read `ok: census n=179
-last=0179 next=0180`. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
+last=0179 next=0180`. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line. *(dated 2026-09-27, `s8d` close: it flipped `accepted` on D21-86, under D21-64 ruling 10.)*
 
 *(dated 2026-09-27, `s8d` build, package F3-D2174; `spikes/DECISIONS-2026-09-21.md` D21-74 rulings 1 and 2.)* **Two dated
 amendments, and no new record.** D21-74 amends two records this stage wrote, and both stay `proposed`. **R8 (ADR-0179) decision

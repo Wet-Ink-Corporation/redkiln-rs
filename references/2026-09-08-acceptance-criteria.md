@@ -427,6 +427,20 @@ asserting digest equality and zero re-dispatch.
 the 65-min arm, the 24-h arm and all three controls are unrun. The kernel test generalises to N what the spike
 measured at 1.
 
+*(Amended in place 2026-09-26 at `s8d` under ADR-0174 (R1), landing with its flip; D15-2's form, not an erratum.)*
+**A committed step is a committed step activation.** *"no committed step re-executes"* reads at step-activation
+grain: a step activation is identified by R1's commit key `(item, activity_id@version, step_id, iteration path)`,
+and an activation whose walk committed some of its steps before the kill resumes at its first uncommitted step,
+serving every committed one from the journal with its digest unchanged. A record written before R1, whose
+`activity_committed` rows carry no `step_id`, has one step activation per activation, so the criterion reads as it
+did. *Verified by (amended):* `cross_process::kill_and_resume_n_step` over ONE activation with three agent steps —
+two commit, the process dies inside the third's dispatch, a different process re-enters, the two are served with
+byte-identical digests and the third dispatches once — and `cross_process::kill_and_resume_n_activation`, the
+activation-grain body it replaced, over three activations. The **PROVISIONAL** label and its P8 reason are
+unchanged.
+*(Landed 2026-09-27 with ADR-0174's flip, `spikes/DECISIONS-2026-09-21.md` D21-81; the draft above is
+ADR-0174 decision 14's, verbatim.)*
+
 ### 2.3 The content-addressed memo key (D21)
 
 **AC-014** — `rk-kernel::memo` · evidence: proposal §4.2 [documented] · decisions: ADR-0021, ADR-0022

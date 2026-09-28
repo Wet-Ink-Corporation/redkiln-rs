@@ -53,6 +53,11 @@ pub struct ActivitySpec {
     pub schema: SchemaId,
     /// The adapter's declared per-activity timeout (AC-223) — the in-band cancel of ADR-0099
     /// clause 1.
+    ///
+    /// *(Corrected 2026-09-27 at `s8d`'s close, with ADR-0174's flip, its decision 10.)* For a
+    /// per-step spec (ADR-0174 decision 9) this is the agent step's own bound,
+    /// `min(step, budget.wall_clock_secs)`, and the in-band cancel is that step's; an
+    /// activation's own spec keeps the per-activity value.
     pub timeout_secs: u64,
     /// The activity's inputs, as assembled.
     pub inputs: Vec<(String, serde_json::Value)>,

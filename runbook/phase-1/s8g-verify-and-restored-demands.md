@@ -325,7 +325,7 @@ their stage files fit (each by a dated receiver note), and `bisect`'s registry r
   names it only as a rank or a ceiling), so D21-73's *"the stage that owns its verb"* falls here, as the stage that owns
   the verify verbs. It moves no lane count: after R8 (ADR-0179) step 4 chooses `root-cause`, rank 10, for the fix lane's
   `RootCause`, and `bisect` is selected on neither lane.
-- **`package_binaries` is already written** (D21-73 item 5; R8 = ADR-0179 decision 4, `proposed`, superseding ADR-0170
+- **`package_binaries` is already written** (D21-73 item 5; R8 = ADR-0179 decision 4, `proposed` *(dated 2026-09-27, `s8d` close: accepted on D21-86)*, superseding ADR-0170
   decision 9 in part at *"(`s8g` writes this repository's set)"*). `[toolchain.rust]` carries `package_binaries =
   ["redkiln", "redkiln-migrate"]`, §8g.6's set with its warrant. `rk-cli`'s `tool_routing` binds it as `package.binaries`.
   §8g.6 and this stage's R4 **cite** the row and do not write it; `demands::build_artifact_carries_release_digests` and M9
@@ -886,7 +886,7 @@ passing result emits, and a result that does not pass opens the gate and emits n
 - **The declared set is this stage's data.** `package_binaries`, in the Rust row of `s8c`'s per-toolchain table, is
   `redkiln` and `redkiln-migrate`, with its warrant (AC-441: the migrator is *"a separate binary"*). *(dated 2026-09-27, `s8d` build, package
   F2-D2173: the row is WRITTEN at `s8d` under D21-73 item 5, R8 = ADR-0179, `proposed`, with exactly this set. This stage
-  cites it and does not write it; see §8g.1's receiver note.)* A release build
+  cites it and does not write it; see §8g.1's receiver note.)* *(dated 2026-09-27, `s8d` close: accepted on D21-86)* A release build
   also links `rk-fixture-child-cli`, `rk-fixture-toolchain` and `rk-fixture-child-claude`, and none of them is the
   release.
 - **The `built` check is now live.** N25 widens `build` to an outcome report. So the check *"`report.status ==

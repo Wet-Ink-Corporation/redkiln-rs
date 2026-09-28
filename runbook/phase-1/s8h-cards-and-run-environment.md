@@ -562,7 +562,7 @@ refuse on an unbound `lint` output. If `s8g` gives `lint` a typed output, `LintR
 agent-step `value:` kind, so the rule above does not enumerate it; it joins `EXPORTED` only if a card or a binder reads it
 by name. (b) `confirmation-test`'s `emit` composes `ConfirmationResult` from `${before.outputs.selection}` and `.sha`, which
 record T's `TestOutcome` does not carry. Whatever `s8g` settles, this section's `ConfirmationResult` type must match it. Nothing
-here moves until `s8g` lands. Selection itself changed under `s8d`'s R8 (ADR-0179, `proposed`: lowest rank, one node per
+here moves until `s8g` lands. Selection itself changed under `s8d`'s R8 (ADR-0179, `proposed` *(dated 2026-09-27, `s8d` close: accepted on D21-86)*: lowest rank, one node per
 activity, `rigor` bound). This section's universe is a closure over `requires`, not a selection run, so R8 does not move
 the 24.
 
