@@ -1106,6 +1106,13 @@ fn loop_back_exhaustion_refuses_as_step_failed_after_commit_and_committed_steps_
 
 /// **`"continue"` proceeds; `"fail"` refuses** — as `StepFailedAfterCommit` after a commit, and as
 /// a plain refusal when nothing committed (ADR-0103 clause 6's keyword forms).
+///
+/// *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9's tests-mutants and
+/// checkpoint minors.)* A `continue` route continues the walk, so its `false` is JOURNALED (D21-77
+/// ruling 1; ADR-0174 decision 7's D2177-8d paragraph): a `check`'s `on_false = "continue"`, and a
+/// `repeat`'s `until` exhausted at `max` into `on_exhausted = "continue"`. Routing alone cannot see
+/// either row (`true` and a `continue` `false` both run on), so the journal is read directly.
+/// Mutants MC1 and MC2 (§8d.10) die here.
 #[test]
 fn continue_proceeds_and_fail_refuses() {
     let rig = Rig::new(vec![serde_json::json!({"ok": false})], Vec::new());
@@ -1116,6 +1123,36 @@ fn continue_proceeds_and_fail_refuses() {
         refusal(&report)
     );
     assert_eq!(rig.harness.dispatches(), 1, "and loops back to nothing");
+    assert_eq!(
+        rig.decisions(),
+        vec![decided("verify", "root", "check", false)],
+        "a `check`'s `false` routed to `continue` continues the walk and is journaled (MC1)"
+    );
+
+    // A `repeat` exhausted at `max` = 1 into `on_exhausted = "continue"`: `g` answers `failing`,
+    // the walk proceeds to `emit`, and the exhausted `until`'s `false` is journaled.
+    let rig = Rig::new(vec![serde_json::json!({"status": "failing"})], Vec::new());
+    let steps = vec![
+        repeating(
+            agent("g", &[]),
+            "${g.outputs.status} == 'passing'",
+            1,
+            Some("continue"),
+            None,
+        ),
+        step("emit", StepKind::Emit),
+    ];
+    let report = rig.walk(&steps);
+    assert!(
+        report.completed() && report.step_error().is_none() && rig.harness.dispatches() == 1,
+        "PREMISE (repeat): the one pass fails and `on_exhausted = \"continue\"` proceeds: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![decided("g", "repeat:1", "until", false)],
+        "an `until` exhausted into `continue` continues the walk and is journaled (MC2)"
+    );
 
     let rig = Rig::new(vec![serde_json::json!({"ok": false})], Vec::new());
     let report = rig.walk(&draft_verify(Some(serde_json::json!("fail"))));

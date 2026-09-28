@@ -565,7 +565,9 @@ loop-back, a `repeat` pass, an escalation. A `false` routed to a refusal is **no
 it"*. Built as **not journaled**: a `check`'s `false` whose `on_false` refuses (`"fail"`, none, an exhausted loop-back,
 `deviate`) and an `until` exhausted into a refusal leave no row, so a refused activation re-verifies them on its next
 run and a tree fixed between runs completes. A `null` `until` or gate `when` is not a decision and is not journaled
-either (ADR-0174 decision 7, now true of all three kinds). A decision row still takes the activation's next attempt
+either (ADR-0174 decision 7, now true of all three kinds). *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9.)* A re-entered walk therefore
+re-evaluates such a `null` wherever it sits, even before a later journaled decision; that residual is named in
+ADR-0174 decision 7 and §8d.13. A decision row still takes the activation's next attempt
 (AC-011), but `retry::decide` is handed the key at the activation's **dispatch ordinal** (its `dispatch` rows), so the
 cap counts dispatch attempts only. §8d.10's D2177-8d note carries the tests and mutants.
 
@@ -2421,6 +2423,8 @@ dated text:
 Each mutant ran over the six new tests and D21-76's three, with the count asserted at 9. All thirteen were KILLED:
 - R1 (a refusing `false` journaled): arm (a).
 - R1f (a continuing `false` not journaled): the crash test, arm (c) and the loop-back arm of the cap test.
+  *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9.)* All three are loop-backs. The `continue` routes are MC1 and MC2 (the PRECP-8d note
+  below), which survived all of these tests.
 - R1u (a refusing `until` journaled): arm (d).
 - N1 (a `null` `until` journaled) and N2 (a `null` gate `when` journaled): the null test.
 - G (a gate `when`'s `false` not journaled; round 8's mutant): the gate test.
@@ -2434,6 +2438,33 @@ Zero survivors. The whole `rk-kernel` crate reads 355 passed / 0 failed / 6 igno
 
 **Counts.** 6 names are added and none removed: **94 net**. Checkpoint 8d (5) names all six, and its `want` moves from
 22 to 28. (11)'s floor is 877 + 94 = **971**, by dated edit.
+
+*(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9.)* **The two `continue` arms are pinned; mutants MC1 and MC2 are killed.** Round 9
+found that no test read the journal after a `continue` route. D21-77 ruling 1 journals such a route because it
+continues the walk: *"Only a `false` whose route continues the walk — a loop-back within `max`, or `"continue"` — is
+journaled"* (this section's build note). Routing cannot see the row, because a `true` and a `continue` `false` both run
+on. `on_false_exec::continue_proceeds_and_fail_refuses` gains two assertions. After `verify` decides `false` into
+`on_false = "continue"`, `rig.decisions()` must equal `[decided("verify", "root", "check", false)]`. A new arm then
+has a `repeat` (`max` = 1, `on_exhausted = "continue"`) whose one pass answers `failing`. The walk must complete,
+and `rig.decisions()` must equal `[decided("g", "repeat:1", "until", false)]`. **Mutants**, from
+`scratchpad/s8d/precp8d_mutants.py`. The anchor was asserted once, each write went through tmp + `os.replace`, and the
+file was restored in `finally` with its sha256 re-checked. Each mutant ran over the whole `on_false_exec::` module,
+with the count asserted at 20:
+- MC1 (`if !matches!(flow, Flow::Halt(_))` becomes `if matches!(flow, Flow::Jump(_))`: a `continue` `false` is not
+  journaled, and a loop-back still is). **Before**, it SURVIVED: *"20 passed; 0 failed"* (round 9 measured the whole
+  `it` binary at *"355 passed; 0 failed; 6 ignored"*). **After**, it is KILLED by the new check assertion: *"a
+  `check`'s `false` routed to `continue` continues the walk and is journaled (MC1)"*.
+- MC2 (the `until` journal guard gains `&& !(tri != Tri::True && w.loops.repeat.is_none() &&
+  repeating.on_exhausted.as_deref() == Some("continue"))`: an `until` exhausted into `continue` is not journaled).
+  **Before**, it SURVIVED: *"20 passed; 0 failed"*. **After**, it is KILLED by the repeat arm: *"an `until` exhausted
+  into `continue` continues the walk and is journaled (MC2)"*.
+
+The red of the new assertions is the mutant's; on this tree they are green (*"20 passed; 0 failed"*). **Counts.** No
+test name is added or removed. The test is already in Checkpoint 8d (5), so (5)'s `want` stays 28 and (11)'s floor
+stays **971**. The round's records minors are fixed by dated text: ADR-0175 decision 6 (the order of the journal and
+`on_false`, and the `until` routes), ADR-0174 decision 7 (*"journals what it decided"* qualified, and the `null`
+residual named), and design §5's `activity_committed` row (only a continuing decision is a row, and the cap does not
+read it).
 
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
@@ -2635,8 +2666,12 @@ processes are `s8e`'s; rendering and landing are `s8f`'s; the verify record and 
 - **`on_false` iterates**, bounded, and exhaustion refuses as `StepFailedAfterCommit` with committed steps standing.
 - *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-76 and D21-77.)* **A re-entered walk replays its journaled
   control decisions** — a `check`'s verdict, a `repeat`'s `until` and a `gate` step's `when` — from decision rows on
-  `activity_committed`, which are not commits. It decides fresh only past the last journaled one, so an answered
-  escalate gate resumes into its escalating step. Only a decision whose route continues the walk is journaled. A
+  `activity_committed`, which are not commits. ~~It decides fresh only past the last journaled one, so an answered
+  escalate gate resumes into its escalating step.~~ *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9.)* It decides fresh wherever nothing is
+  journaled, so an answered escalate gate resumes into its escalating step. That includes a `null` `until` or gate
+  `when` that sits before a later journaled decision: a `null` is never journaled, so it is re-evaluated, and over
+  re-executed tool output it can route differently before the last journaled decision. **Residual, named**
+  (ADR-0174 decision 7's PRECP-8d note; §8d.13), not asserted by (5). Only a decision whose route continues the walk is journaled. A
   `false` routed to a refusal and a `null` leave no row, so a refused activation re-verifies them on the next run and
   a fixed tree completes. Decision rows draw nothing from AC-029's retry cap, which counts dispatches only. (5) asserts
   it.
@@ -3243,3 +3278,88 @@ echo "CP8D-END-OF-BLOCK reached"
 ```
 
 ---
+
+### 8d.13 The refuting rounds, and the minors they leave named *(dated 2026-09-27, `s8d` build, package PRECP-8d)*
+
+Nine adversarial refuting rounds ran over this stage's work, on the model of `s8c` §8c.13. Each round had five finder
+dimensions: spec conformance, tests and mutants, records, the checkpoint, and cross-file safety. Every blocker or major
+went to two refuters. The stopping rule is `s8c`'s: *until a round finds no blocker or major, with the remaining minors
+recorded as named findings*. The cap was eight rounds. Round 8 still found majors, so D21-77 ruled *"One focused
+refuting round (9) past the cap of 8, over this fix's diff only, before the formal Checkpoint 8d"*. Round 9 found no
+blocker or major, and the rounds stop there.
+
+The confirmed blockers and majors are listed by round. A defect reported by several dimensions counts once. A
+finding is counted as confirmed when at least one refuter held its grade. Where the refuters split, the row says so.
+The fix commits come from `git log --oneline d46b2eb..HEAD`. D21-72 to D21-75 were taken during the build, before
+round 1, which ran at `cbd7cc8`. D21-76 and D21-77 came out of rounds 7 and 8.
+
+| round | confirmed | the defect | fixed at |
+| --- | --- | --- | --- |
+| 1 | 1 blocker, 1 major | ADR-0174 made the kernel read an agent step's declared `timeout_secs`, but did not supersede the agent-step half of accepted ADR-0140 (d1, d4, forbids-2). The refuters split, blocker and major. Separately, Checkpoint 8d (11)'s FLOOR stood at 942 (877 + 65) and left out the 11 tests F2-D2173 and F3-D2174 had added, none of them in any selection. Four dimensions reported this. | `429177d` |
+| 2 | 1 blocker, 2 majors (split) | ADR-0174's per-step `ActivitySpec.timeout_secs` was forbidden by accepted ADR-0171, and 0174 did not supersede it. A bare `${<step>}` resolved to a marker, not to the bound output, and it is now an evidence pointer (ADR-0036). No test covered `run()`'s `sca_scan` advisory-DB binding. The last two were split, major and minor. | `482906e` |
+| 3 | 1 major, 1 major (split) | P7's `"pnpm-lock.yaml"` literal tripped Checkpoint 7d's ADR-0100 d1 YAML ban, which `s8g`, `s8h` and `s8j` replay whole. That ban was amended by dated lines with controls. m14's per-frame charge was only partly built; the refuters split, major and minor. It was raised at `7561db4` and settled by accepted ADR-0122 at `290f0dd`. | `7561db4`, `290f0dd` |
+| 4 | 2 majors | A tool dispatch that reached the port and failed charged its pass nothing, and a failed walk with no commit dropped every charge. Round 3's fix commit `7561db4` also tracked a stray scratch tree (see *Incidents*). | `444e012`, `9a02f49` |
+| 5 | 1 major | A fan-out copy whose own dispatch halted the walk was never observed charging (MR4q). | `07f7057` |
+| 6 | 1 major, 1 major (split) | Three m14 charge mutants survived all of `rk-kernel`'s tests. An answered escalate gate's bare `${gate?}` evidence pointer was dropped; the refuters split, major and minor. A third finding, that ADR-0175 decision 7 contradicted accepted ADR-0122, was refuted by both refuters: ADR-0122 decision 5(e) reconciles it. | `a915534` |
+| 7 | **0** | The one major was refuted to minor by both refuters: after an answered gate, the re-entry re-ran `test` tool steps and re-decided checks, so a tdd escalation looped back into `red`. The operator ruled on it anyway (D21-76, `1bfde44`). | `888ddf2` |
+| 8 | 2 majors | Decision rows took activation attempts, which AC-029's retry cap compared, so journaled decisions spent a later agent step's retries. Three dimensions reported this. No test pinned a gate `when` deciding `false`. A third finding, that a replayed refusal left a refused activation unrecoverable, was graded minor by both refuters, and D21-77 ruled on it with the other two (`814d904`). | `c709ce6` |
+| 9 | **0** | Dry: a focused round over D21-77's diff, past the cap. Its minors are fixed in this package. | this package |
+
+Every blocker and major was fixed. The fix commits carry the red-first readings, and §8d.10 carries the kills.
+
+**Incidents.** Two, neither a code defect:
+- **Round 1: a stray `redkiln run` against the legacy fixture.** A finder told to execute older checkpoints'
+  non-cargo guards ran Checkpoint 7f's lines, outside the no-dispatch helper. Those lines include `redkiln run` against
+  the real repository and 7f's cleanup (`git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`).
+  Three things changed. The legacy fixture branch `rk-run/rk-fix-doctor-test-count` moved from `73c087a` to
+  `390441c`, with two gate commits. The legacy worktree registration was removed. The store gained three events. The
+  run stopped at an `unknown_facet:change` gate before any dispatch, so nothing was spent. It was restored with the
+  operator's go-ahead: the ref was set back to `73c087a` and the worktree was re-added. The store was kept, as `s8a`
+  keeps it. Every later round's prompt says READ-ONLY guard lines only, and never a `redkiln` binary or a
+  git-mutating line.
+- **Round 3: a stray scratch tree was committed.** `7561db4` tracked four refuting-round-3 scratch files under a
+  mangled absolute path rooted at `'C'` + U+F03A. That made the longest tracked path 168 characters and broke
+  Checkpoint 8d-ii (0b)'s MAX_PATH guard. `9a02f49` removed them, and §8d.11's R5FIX-8d note records it.
+
+**Round 9's minors, all fixed in this package** by source or dated text, with no ruling and no floor moved:
+- Nothing read the journal after a `continue` route, so mutants MC1 and MC2 survived. Both are now killed (§8d.10's
+  PRECP-8d note). Two dimensions reported this.
+- ADR-0175 decision 6 said a `check`'s `false` is journaled *before* its `on_false` is taken. It is now struck: the
+  row is appended once `on_false` returns a route that continues the walk. Two dimensions reported this.
+- ADR-0175 decision 6's `until` note named only the exhausted routes. It now names `true`, another pass, and at `max` a
+  `continue` or an escalation.
+- ADR-0174 decision 7's *"journals what it decided"* was unqualified. It is now struck and qualified.
+- Checkpoint 8d's D2177-8d bullet said the walk *"decides fresh only past the last journaled one"*. It is struck and
+  restated, and the `null` residual is named.
+- Design §5's `activity_committed` row overstated which control decisions become rows. It now has a dated D21-77
+  parenthetical.
+
+**Still open**, one line each, with the reason. None moves a checkpoint section, a ruling or a floor:
+- (round 9, spec conformance) A `null` `until` or gate `when` is never journaled. A re-entry therefore re-evaluates it
+  even when it sits before a later journaled decision, and over re-executed tool output it can route differently there.
+  Reason: D21-77's null rule leaves this to D21-76's letter, and whether a routing `null` should be journaled is owed
+  to the operator. It is named in ADR-0174 decision 7 and in Checkpoint 8d's bullet.
+- (rounds 6 and 7, cross-file safety) PROGRESS row 8d still says *"refuting round 6's fixes uncommitted at this edit"*
+  and FLOOR 962. It lists no interim commit after `07f7057`. Reason: the tracker row is the orchestrator's close edit,
+  and this package commits nothing.
+- (round 7, checkpoint) Checkpoint 8d (9)'s question-registry floor has no synthetic control, although the block's
+  header promises one for every guard that could only go green. Reason: a new guard line in the block, past the
+  stopping rule. (8)'s loader test is the behavioural check beneath it.
+- (round 5, cross-file safety; round 1 in part) `s8f`'s *"Handed to the walk table's owner"* paragraph, first bullet,
+  still says `s8d` §8d.9 *"now claims 11 of 15 walk"* and *"9 of 13 walk"*, with no dated note. The bullet after it
+  carries D21-75's 10 of 15 and 8 of 14. Reason: it is another stage's file and a historical reading of the
+  2026-09-24 consistency pass. It is a one-line dated note for whichever package next edits `s8f`.
+
+**Fixed earlier, not repeated here:**
+- Round 1's, at `429177d`: the `bind_nodes` doc, F2-D2173's *"seven new tests"*, the ADR README lifecycle census, P5's
+  census sentence, the 10/8 floor prose, `s8g`'s receiver note (split, minor) and the empty `p4`/`p5-clippy.locs`.
+- Round 2's, at `482906e`: memo component 6 (`with_kb_atoms`), ADR-0179's F2 readings, ADR-0175's `on_false` census,
+  design §5's commit-key amendment, ADR-0176's *"no error row"*, (6a)'s stale comments, the summary's walk claim, the
+  PROGRESS re-run marks on 7a, 7g and 8b, `verb_rows`' `git` site, and (13)'s advisory-DB bracket.
+- Round 3's, at `7561db4`: the `logfeed` case, `test_selection`'s `let _ = rows;`, and the inverted messages.
+- Round 4's, at `444e012`: the failed tool dispatch's charge.
+- Round 5's, at `07f7057`: design §5's `family`.
+- Round 6's, at `a915534`: PROGRESS row 8d is *"in progress"*.
+- Round 7's, at `888ddf2`: (2)'s running total of names.
+- Round 8's, at `c709ce6`: ADR-0174's `null` sentence, made true in code; `fsm.rs`'s `decision` row; mutants B, C and
+  D killed; the *"17 references on 15 gates"* comments; and Checkpoint 8d's D21-76 bullet.

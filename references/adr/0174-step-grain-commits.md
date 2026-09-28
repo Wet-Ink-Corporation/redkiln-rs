@@ -185,7 +185,9 @@ it had not yet decided). An answered escalate gate thus resumes into its escalat
   8's records minor); the D2177-8d paragraph below restates it for all three kinds, and the code now agrees with it.
 - **The replay.** A decision journaled under the key and kind the walk reaches is replayed: the `check` is not
   executed, and the `until` and the escalate `when` are not evaluated. Where none is journaled, the walk decides fresh
-  and journals what it decided. Replay is therefore bounded by what the prior walk journaled, and a crash re-entry
+  ~~and journals what it decided~~ *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9's records minor.)* and journals what it decided when its route
+  continues the walk and it is not `null` (the D2177-8d paragraph below). Replay is therefore bounded by what the
+  prior walk journaled, and a crash re-entry
   re-verifies whatever it had not decided. An answered escalate gate resumes into its escalating step (ADR-0175 decision
   6, as amended).
 - **Named, not closed.** A `when` guard on a step that is not a `gate`, and a `for_each` source, are still evaluated
@@ -218,7 +220,14 @@ attempts only), and a gate `when` deciding `false` is journaled and replayed und
 - **A `null` is not a decision, for all three kinds.** A `null` `check` refuses by name as an abstention and is not
   journaled (unchanged). A `null` `until` takes another pass, or at `max` its `on_exhausted`, as before, and a `null`
   gate `when` skips the gate, as before. Neither is journaled now, so a later walk evaluates it again. An error from
-  any of the three refuses by name and is not journaled.
+  any of the three refuses by name and is not journaled. *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9's records minor.)* **Residual, named:** a
+  re-entered walk decides fresh WHEREVER nothing is journaled, and that includes a `null` `until` or gate `when`
+  that sits before a later journaled decision (a `null` `until` at `repeat:1` under a journaled `true` at
+  `repeat:2`). Re-evaluated over re-executed tool output that is no longer `null`, it can route differently from
+  the first walk before the last journaled decision (end the repeat at pass 1, or ask a gate the first walk
+  skipped). D21-76 reads *"up to the last journaled decision it neither re-executes the deciding `check` nor
+  re-decides a loop"*; D21-77's null rule (not journaled) leaves this case to that reading's letter. No ruling
+  says whether a `null` that routes the walk should be journaled; the question is owed to the operator.
 - **A decision row draws nothing from AC-029's cap.** The row still takes the activation's next attempt (decision 4:
   no two rows of the activation share a number, and no decision row reuses a commit row's), and `RunState::next_attempt`
   still folds it. But `Runtime::run_activity_at` hands `retry::decide` the key at the activation's **dispatch

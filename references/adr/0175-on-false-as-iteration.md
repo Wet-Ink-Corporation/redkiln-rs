@@ -115,8 +115,10 @@ report.passed == 0`) no longer held, and the walk looped back into `red` instead
 round 7; D21-76's *Why*). D21-76 rules: *"The walk **journals its control decisions** — each `check` verdict and each
 loop-back or escalation decision — under the commit key of the frame that took it, and a re-entered walk **replays**
 them"*. ADR-0174 decision 7, as amended the same day, states the row and the replay. For this record's routes:
-- A `check`'s `false` is journaled before its `on_false` is taken (decision 2's loop-back, ~~decision 3's refusal~~
-  or decision 4's `continue`). A replayed `false` re-takes the same route over the loop counts the replay itself rebuilds,
+- A `check`'s `false` is ~~journaled before its `on_false` is taken~~ *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9's records minor.)* journaled once its
+  `on_false` has returned a route that continues the walk (`Runtime::one_step` calls `on_false` first; only
+  in-memory walk state changes between the two, so no crash window opens) (decision 2's loop-back, ~~decision 3's
+  refusal~~ or decision 4's `continue`). A replayed `false` re-takes the same route over the loop counts the replay itself rebuilds,
   so the same frames are re-entered and their commits are served. *(dated 2026-09-27, `s8d` build, package D2177-8d;
   D21-77 ruling 1.)* Decision 3's refusals are no longer journaled, so none is replayed: D21-77 rules *"Replay only decisions whose route continues the walk — a `true`, a loop-back, a `repeat` pass, an escalation. A `false` routed to a refusal is **not replayed**: the next run re-verifies it (the deciding `check` re-executes over re-executed tool output)"*.
   A `"fail"`, an absent `on_false` and an exhausted loop-back leave no row, and the next run re-executes the `check`
@@ -124,13 +126,18 @@ them"*. ADR-0174 decision 7, as amended the same day, states the row and the rep
 - A `repeat`'s `until` is journaled after each pass, under the repeating step's commit key at that pass's path. A
   replayed `false` at `max` re-takes the step's `on_exhausted`, so an `escalate` re-raises the same question.
   *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1; ADR-0174 decision 7.)* Only an `until` whose
-  route continues is journaled: an `on_exhausted` of `continue` or `escalate` (to a gate that asks its question). An
+  route continues is journaled: ~~an `on_exhausted` of `continue` or `escalate` (to a gate that asks its question)~~
+  *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9's records minor.)* a `true`, another pass, or at `max` an `on_exhausted` of `continue` or
+  `escalate` (to a gate that asks its question), as ADR-0174 decision 7's D2177-8d paragraph says. An
   `until` exhausted into a refusal leaves no row, and a `null` `until` is not journaled.
 - A `gate` step's `when` is journaled when it is decided, and a replayed `true` reaches the gate. The escalate
   re-entry of this decision's first paragraph then reads the same answered reach, re-enters the escalating step under
   a new loop-back frame, and dispatches it once.
 - Where the prior walk journaled no decision, the walk decides fresh and journals it. So a crash re-entry re-verifies
-  what it had not decided, and re-takes no loop it had not taken.
+  what it had not decided, and re-takes no loop it had not taken. *(dated 2026-09-27, `s8d` build, package PRECP-8d; refuting round 9's records minor.)* "Journals it" holds
+  for a route that continues the walk and is not `null` (above). A `null` `until` or gate `when` is re-evaluated
+  wherever it sits, including before a later journaled decision; the residual is ADR-0174 decision 7's (its
+  PRECP-8d note).
 
 **7. The attempt charge per frame (m14).** A pass is an iteration path with its `for_each` frames removed. Each
 loop-back frame and each `repeat` frame is a pass of its own for AC-021's per-pass count; a `for_each` counts once,
