@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-91), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-93), and what they license
 
 *(Title moved 2026-09-28 at `s8d-ii`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-89)"**, true when package R2FIX-8dii corrected it; `D21-90` and `D21-91` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 91, the last `D21-91`.)*
 
@@ -3839,3 +3839,41 @@ back-links**, `0180` appended to ADR-0105's, ADR-0107's and ADR-0137's lists, as
 (*"They move in the flip commit"*). ADR-0018 and ADR-0162 decision 10 are cited and not superseded. D21-88 rulings 1
 and 2 and D21-89 are the rulings it carries. **Checkpoint 8d-ii is re-run after this flip commit**, and its (9) then
 asserts all three back-links.
+
+---
+
+## D21-92 · A routing `null` is journaled when its route continues the walk; a `null` routed to a refusal is not
+
+**Taken 2026-09-28 by the operator, in the session executing `s8e` (Weigh-In `wi-a0f617`, option B), on a card with
+three grounded options and a recommendation.**
+
+**Why.** `s8d` §8d.13 left one question *"owed to the operator"*: *"A `null` `until` or gate `when` is never
+journaled. A re-entry therefore re-evaluates it even when it sits before a later journaled decision, and over
+re-executed tool output it can route differently there."* ADR-0174 decision 7 (accepted, D21-81) names the residual.
+
+**Ruled.** A `null` `until` or gate `when` is journaled on the same rule as a `true` or `false`: **when its route
+continues the walk**. A `null` routed to a refusal leaves no row, so a refused-then-fixed re-run still completes
+(D21-77). Built red-first with mutants in `s8e`, stated in a new record written `proposed` that supersedes ADR-0174
+decision 7 in part (its null sentence only); the test `a_null_until_or_gate_when_is_not_journaled` is replaced by
+tests for both arms, by dated edit to Checkpoint 8d's selection where it names it.
+
+---
+
+## D21-93 · An approved seal is scoped to the stage it was made in: `terminal()` reads `Sealed` only until the next stage transition
+
+**Taken 2026-09-28 by the operator, in the session executing `s8e`, on `s8e` §8e.0 item 8's STOP (option 3 of three,
+the recommendation).**
+
+**Why.** Package S8E-P0 measured, in the test binary: `fsm::terminal()` checks `sealed` first and nothing clears it,
+so `fold(review -> slice_sealed{approved} -> release -> gate_opened)` gives `awaiting_gate = Some(..)` but
+`terminal = {"terminal":"sealed","verdict":"approved"}`. `replay::fsm_residue` feeds the run verb's `run.json`
+`terminal_state`, folded over the whole prior journal, so every run after review would record `sealed`, one halted
+at a release gate included, and AC-008's terminal-state half could not tell a kernel idle after the seal from a
+working one. The shipped packs `bug-standard` and `story` both run release, operate and closeout after review.
+§8e.0 item 8 makes this a STOP until the slice record says how the fold scopes a seal.
+
+**Ruled.** The fold records the stage a seal was made in, and `terminal()` returns `Sealed` only until a later
+`stage_transition`; after it, `terminal()` falls through to gate, dispatch or complete. The `sealed` member keeps the
+verdict as history, so resume still reads all three axes (ADR-0109 decision 3). Stated in `s8e`'s slice record
+(`proposed`), built red-first with a mutant (the scope dropped) in §8e.8's package; no committed golden log moves (none
+contains `slice_sealed`, S8E-P0).
