@@ -770,6 +770,11 @@ impl Runtime {
     /// re-entry REPLAYS it and never re-decides it). The row takes the activation's next attempt,
     /// so `(item, activity_id@version, attempt)` stays unique across the log (AC-011).
     ///
+    /// *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 rulings 1 and 2a.)* The walk calls
+    /// this only for a decision whose route continues the walk: a `false` routed to a refusal and a
+    /// `null` are not journaled. The attempt the row takes draws nothing from AC-029's retry cap:
+    /// [`Self::run_activity_at`] checks the cap against the activation's `dispatch` rows only.
+    ///
     /// # Errors
     ///
     /// [`RuntimeError::Key`] for a malformed activation id; [`RuntimeError::Store`] from the port.
@@ -945,6 +950,14 @@ impl Runtime {
         // **AC-011.** The first attempt number comes from the fold, so a re-entry after two
         // recorded attempts resumes at three rather than restarting at one and reusing a number.
         let mut attempt = state.next_attempt(item, activity_id_at_version);
+        // 🛑 **D21-77 ruling 2a: THE RETRY CAP COUNTS DISPATCH ATTEMPTS ONLY.** *(dated 2026-09-27,
+        // `s8d` build, package D2177-8d; ADR-0174 decisions 4 and 7, `proposed`, amended.)* `attempt`
+        // above stays the activation's next number (AC-011), which every row the walk appends
+        // takes: a decision row, a side-effecting tool step's commit, the completion. None of those
+        // is a dispatch, so none may spend AC-029's `N`. `retry::decide` is handed the key at the
+        // activation's DISPATCH ordinal — the `dispatch` rows the journal holds for it before this
+        // loop, plus this loop's own — so its cap check and its backoff ceiling count dispatches.
+        let prior_dispatches = dispatches_of(&self.journal(item)?, item, activity_id_at_version);
 
         loop {
             // **R4 (ADR-0176 decision 4; AC-033..AC-035).** Before an agent step's dispatch, the
@@ -1008,7 +1021,11 @@ impl Runtime {
                 report.appended += 1;
             }
 
-            let decision = decide(&error, &key, cap);
+            let dispatch_key = IdempotencyKey {
+                attempt: prior_dispatches.saturating_add(report.dispatches),
+                ..key.clone()
+            };
+            let decision = decide(&error, &dispatch_key, cap);
             report.decisions.push(decision.clone());
 
             // **AC-030.** The mark, and then the run ends: no backoff (ADR-0095 forbids it on this
@@ -1415,6 +1432,23 @@ fn next_attempt_of(events: &[Event], item: &str, activity_id_at_version: &str) -
         .filter_map(|n| u32::try_from(n).ok())
         .max()
         .map_or(1, |a| a.saturating_add(1))
+}
+
+/// **D21-77 ruling 2a.** How many `dispatch` rows the journal holds for one activation — the count
+/// AC-029's cap is checked against, which no row that is not a dispatch moves.
+fn dispatches_of(events: &[Event], item: &str, activity_id_at_version: &str) -> u32 {
+    let n = events
+        .iter()
+        .filter(|e| e.kind == EventKind::Dispatch)
+        .filter(|e| {
+            e.payload.get("item").and_then(serde_json::Value::as_str) == Some(item)
+                && e.payload
+                    .get("activity_id_at_version")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(activity_id_at_version)
+        })
+        .count();
+    u32::try_from(n).unwrap_or(u32::MAX)
 }
 
 /// **AC-009's re-read.** The committed result for one activation, read back out of the journal.

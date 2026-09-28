@@ -728,7 +728,10 @@ fn report_digest<T: serde::Serialize>(report: &T) -> rk_types::digest::Digest {
 /// **ADR-0136.** Is this guard decidable on this tree, and does it hold?
 ///
 /// Returns `Ok(true)` to run the step, `Ok(false)` to skip it, and `Err` when the guard carries a
-/// reference the evaluator cannot resolve. A step with no `when` always runs.
+/// reference the evaluator cannot resolve. A step with no `when` always runs. *(dated 2026-09-27,
+/// `s8d` build, package D2177-8d; ADR-0174 decision 7.)* The value is the guard's truth value:
+/// `Tri::True` runs the step, and `Tri::False` and `Tri::Null` skip it. The walk tells the two
+/// apart because a `null` gate `when` is not a decision and is not journaled.
 ///
 /// # Errors
 ///
@@ -742,9 +745,9 @@ fn guard_holds(
     step: &Step,
     ctx: &predicate::Context,
     resolve_ref: &mut dyn FnMut(&str) -> Result<serde_json::Value, super::reference::RefError>,
-) -> Result<bool, StepError> {
+) -> Result<Tri, StepError> {
     let Some(src) = step.when.as_deref() else {
-        return Ok(true);
+        return Ok(Tri::True);
     };
     let parsed = predicate::parse(src).map_err(|e| StepError::Unsupported {
         capability: format!(
@@ -764,7 +767,7 @@ fn guard_holds(
             step.id
         ),
     })?;
-    Ok(outcome.value == Tri::True)
+    Ok(outcome.value)
 }
 
 /// **The `check` arm — a deterministic predicate in Rust, and it CANNOT DISPATCH.**
@@ -1276,6 +1279,13 @@ impl super::Runtime {
         // decision, the walk decides fresh, so a crash re-entry still re-verifies whatever it had
         // not yet decided. Idempotent tool steps still re-execute, and a later `${…}` binds their
         // re-executed values (ADR-0174 decision 7); only the decisions over them are replayed.
+        //
+        // *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1.)* Only a decision
+        // whose route CONTINUES the walk is journaled, so only such a decision is replayed: a
+        // `true`, a loop-back, a `repeat` pass, an escalation, a `continue`, a gate walked past. A
+        // `false` routed to a refusal (`"fail"`, no `on_false`, an exhausted loop-back, an `until`
+        // exhausted into a refusal) leaves no row, and the next run re-verifies it. A `null` is not
+        // a decision and leaves no row either.
         let mut w = Walk {
             report: ActivityReport::walk(now),
             scope: super::reference::Scope::new(steps),
@@ -1412,7 +1422,10 @@ impl super::Runtime {
         // re-executed: `true` runs on, `false` takes its `on_false` again — over the loop counts
         // the replay itself rebuilds, so the same route. A `gate` step's `when` is replayed the
         // same way. Where nothing is journaled the walk decides FRESH and journals what it decided,
-        // so a crash re-entry still re-verifies whatever it had not yet decided.
+        // so a crash re-entry still re-verifies whatever it had not yet decided. *(dated
+        // 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1.)* A journaled `false` is one
+        // whose route continued the walk (a loop-back or `continue`), so its replay re-takes a
+        // route that continues; a `false` routed to a refusal was never journaled.
         if step.kind == StepKind::Check
             && let Some(holds) =
                 super::activity::journaled_decision(&w.journal, &key, DecisionKind::Check)
@@ -1424,8 +1437,10 @@ impl super::Runtime {
             return Ok(self.on_false(w, steps, index));
         }
         // A `gate` step's `when` decides whether the walk asks the human — an escalate gate's
-        // decides the escalation — so it is journaled and replayed as a `check` is. 17 shipped
-        // gates guard on an idempotent tool step's output (a census over the catalog).
+        // decides the escalation — so it is journaled and replayed as a `check` is. ~~17 shipped
+        // gates~~ 17 `when` references on 15 shipped gates read an idempotent tool step's output
+        // (ADR-0174 decision 7's census; `sca-scan`'s `exception` holds three; corrected by dated
+        // note 2026-09-27, `s8d` build, package D2177-8d, refuting round 8's records minor).
         let gate_when = step.kind == StepKind::Gate && step.when.is_some();
         let replayed_when = if gate_when {
             super::activity::journaled_decision(&w.journal, &key, DecisionKind::When)
@@ -1445,11 +1460,13 @@ impl super::Runtime {
             };
             self.run_step(step, e.ctx, &w.scope, &site)?
         };
-        // D21-76: a decision taken FRESH is journaled under this step's commit key.
+        // D21-76: a decision taken FRESH is journaled under this step's commit key. *(dated
+        // 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1.)* A `check`'s `false` is
+        // journaled below, and only when its `on_false` route continues the walk. A `null` gate
+        // `when` is not a decision (ADR-0174 decision 7) and is not journaled.
         let fresh = match (step.kind, &run.verdict) {
-            (StepKind::Check, _) if run.held_false => Some((DecisionKind::Check, false)),
             (StepKind::Check, StepVerdict::Continue) => Some((DecisionKind::Check, true)),
-            (StepKind::Gate, StepVerdict::Skipped) if gate_when => {
+            (StepKind::Gate, StepVerdict::Skipped) if gate_when && !run.guard_null => {
                 Some((DecisionKind::When, false))
             }
             (StepKind::Gate, StepVerdict::Gate) if gate_when && replayed_when.is_none() => {
@@ -1475,7 +1492,26 @@ impl super::Runtime {
             w.dispatched = 1;
         }
         if run.held_false {
-            return Ok(self.on_false(w, steps, index));
+            // 🛑 **D21-77 ruling 1: A `false` ROUTED TO A REFUSAL IS NOT JOURNALED.** *(dated
+            // 2026-09-27, `s8d` build, package D2177-8d; ADR-0174 decision 7 and ADR-0175, both
+            // `proposed`, amended.)* Only a `false` whose route continues the walk — a loop-back
+            // within `max`, or `"continue"` — is journaled and replayed. A `"fail"`, an absent
+            // `on_false`, an exhausted loop-back or a refused form leaves no row, so the next run
+            // re-executes the `check` over re-executed tool output and a fixed tree completes.
+            let flow = self.on_false(w, steps, index);
+            if !matches!(flow, Flow::Halt(_)) {
+                self.commit_decision(
+                    item,
+                    activity_id_at_version,
+                    at,
+                    Decision {
+                        kind: DecisionKind::Check,
+                        holds: false,
+                    },
+                    e.now,
+                )?;
+            }
+            return Ok(flow);
         }
         match run.verdict {
             StepVerdict::Skipped => Ok(Flow::Next),
@@ -1985,35 +2021,30 @@ impl super::Runtime {
             family: None,
         };
         let key = at.commit_key(e.item, e.activity);
-        let holds = if let Some(holds) =
-            super::activity::journaled_decision(&w.journal, &key, DecisionKind::Until)
-        {
-            Ok(if holds { Tri::True } else { Tri::False })
-        } else {
-            let holds = self.with_env(&site, |env| {
-                until_holds(repeating, until, e.ctx, &mut |text: &str| {
-                    super::reference::resolve_text(
-                        env,
-                        &w.scope,
-                        &repeating.id,
-                        "repeat.until",
-                        text,
-                    )
+        let replayed = super::activity::journaled_decision(&w.journal, &key, DecisionKind::Until);
+        let holds = replayed.map_or_else(
+            || {
+                self.with_env(&site, |env| {
+                    until_holds(repeating, until, e.ctx, &mut |text: &str| {
+                        super::reference::resolve_text(
+                            env,
+                            &w.scope,
+                            &repeating.id,
+                            "repeat.until",
+                            text,
+                        )
+                    })
                 })
-            });
-            if let Ok(tri) = &holds {
-                self.commit_decision(
-                    e.item,
-                    e.activity,
-                    at,
-                    Decision {
-                        kind: DecisionKind::Until,
-                        holds: *tri == Tri::True,
-                    },
-                    e.now,
-                )?;
-            }
-            holds
+            },
+            |holds| Ok(if holds { Tri::True } else { Tri::False }),
+        );
+        // *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1; ADR-0174 decision 7.)*
+        // The `until` decided FRESH, journaled below only when it is not `null` and its route
+        // continues the walk.
+        let fresh = if replayed.is_none() {
+            holds.as_ref().ok().copied()
+        } else {
+            None
         };
         let exhausted = |why: String| {
             Err(Halt::Failed(StepError::Unsupported {
@@ -2024,11 +2055,11 @@ impl super::Runtime {
                 ),
             }))
         };
-        match holds {
-            Err(cause) => Ok(Err(Halt::Failed(cause))),
+        let route = match holds {
+            Err(cause) => Err(Halt::Failed(cause)),
             Ok(Tri::True) => {
                 w.loops.repeat = None;
-                Ok(Ok(index + 1))
+                Ok(index + 1)
             }
             Ok(_) if r.pass < r.max => {
                 w.scope.open_frame(r.start, r.end);
@@ -2036,48 +2067,71 @@ impl super::Runtime {
                     pass: r.pass + 1,
                     ..r
                 });
-                Ok(Ok(r.start))
+                Ok(r.start)
             }
             Ok(_) => {
                 w.loops.repeat = None;
-                match repeating.on_exhausted.as_deref() {
-                    Some("continue") => Ok(Ok(index + 1)),
-                    Some("escalate") => {
-                        let Some(question) = repeating.escalate_question.as_deref() else {
-                            return Ok(exhausted(
-                                "its `on_exhausted` is `escalate` and it declares no `escalate = \
-                                 { question }`"
-                                    .to_owned(),
-                            ));
-                        };
-                        // Schema item 15's documented pattern: *"an explicit `gate` step with
-                        // `when` over the looped step's status"*. Exhaustion proceeds to it, in
-                        // declaration order; with none to proceed to, it refuses by name.
+                match (
+                    repeating.on_exhausted.as_deref(),
+                    repeating.escalate_question.as_deref(),
+                ) {
+                    (Some("continue"), _) => Ok(index + 1),
+                    (Some("escalate"), None) => exhausted(
+                        "its `on_exhausted` is `escalate` and it declares no `escalate = \
+                         { question }`"
+                            .to_owned(),
+                    ),
+                    // Schema item 15's documented pattern: *"an explicit `gate` step with
+                    // `when` over the looped step's status"*. Exhaustion proceeds to it, in
+                    // declaration order; with none to proceed to, it refuses by name.
+                    (Some("escalate"), Some(question))
                         if !steps[index + 1..].iter().any(|s| {
                             s.kind == StepKind::Gate && s.question.as_deref() == Some(question)
-                        }) {
-                            return Ok(exhausted(format!(
-                                "its `on_exhausted` is `escalate` to the question `{question}`, and \
-                                 no `gate` step after its body asks that question"
-                            )));
-                        }
-                        w.loops.exhausted.insert(question.to_owned(), r.start);
-                        Ok(Ok(index + 1))
+                        }) =>
+                    {
+                        exhausted(format!(
+                            "its `on_exhausted` is `escalate` to the question `{question}`, and \
+                             no `gate` step after its body asks that question"
+                        ))
                     }
-                    Some("fail") => Ok(exhausted(
-                        "its `on_exhausted` is `fail`, which refuses by name".to_owned(),
-                    )),
-                    Some(other) => Ok(exhausted(format!(
+                    (Some("escalate"), Some(question)) => {
+                        w.loops.exhausted.insert(question.to_owned(), r.start);
+                        Ok(index + 1)
+                    }
+                    (Some("fail"), _) => {
+                        exhausted("its `on_exhausted` is `fail`, which refuses by name".to_owned())
+                    }
+                    (Some(other), _) => exhausted(format!(
                         "its `on_exhausted` is `{other}`, which is none of `escalate`, `fail` and \
                          `continue`"
-                    ))),
-                    None => Ok(exhausted(
+                    )),
+                    (None, _) => exhausted(
                         "it declares no `on_exhausted`, which refuses by name as `fail` does"
                             .to_owned(),
-                    )),
+                    ),
                 }
             }
+        };
+        // 🛑 **D21-77 ruling 1: only an `until` whose route CONTINUES the walk is journaled** — the
+        // end of the repeat, another pass, or at `max` a `continue` or an escalation. An `until`
+        // exhausted into a refusal leaves no row, so the next run re-evaluates it; a `null` is not
+        // a decision (ADR-0174 decision 7) and is evaluated again on a later walk.
+        if let Some(tri) = fresh
+            && tri != Tri::Null
+            && route.is_ok()
+        {
+            self.commit_decision(
+                e.item,
+                e.activity,
+                at,
+                Decision {
+                    kind: DecisionKind::Until,
+                    holds: tri == Tri::True,
+                },
+                e.now,
+            )?;
         }
+        Ok(route)
     }
 
     /// **R1: one agent step activation, at its own commit key** — the walk's `agent` arm, public so
@@ -2330,25 +2384,28 @@ impl super::Runtime {
                 inputs: BTreeMap::new(),
                 held_false: false,
                 dispatched: false,
+                guard_null: false,
             };
             // (1) THE GUARD, its `${…}` resolved through the scope (ADR-0136; R2).
             let mut resolve_ref =
                 |text: &str| super::reference::resolve_text(env, scope, &step.id, "when", text);
-            let held = site
-                .guard
-                .map_or_else(|| guard_holds(step, ctx, &mut resolve_ref), Ok);
+            let held = site.guard.map_or_else(
+                || guard_holds(step, ctx, &mut resolve_ref),
+                |replayed| Ok(if replayed { Tri::True } else { Tri::False }),
+            );
             match held {
-                Ok(false) => {
+                Ok(tri @ (Tri::False | Tri::Null)) => {
                     return Ok(StepRun {
                         verdict: StepVerdict::Skipped,
                         output: None,
                         inputs: BTreeMap::new(),
                         held_false: false,
                         dispatched: false,
+                        guard_null: tri == Tri::Null,
                     });
                 }
                 Err(e) => return Ok(refuse(e)),
-                Ok(true) => {}
+                Ok(Tri::True) => {}
             }
             // (2) THE INPUTS (R2 decision 1). A `check`'s refusal travels INTO its arm, so the arm
             // is the one place a `check` is decided or refused; every other kind refuses here.
@@ -2432,6 +2489,7 @@ impl super::Runtime {
                 inputs,
                 held_false,
                 dispatched,
+                guard_null: false,
             })
         })
     }
@@ -2464,6 +2522,10 @@ struct StepRun {
     /// one dispatch, which charges its pass (§8d.3 m14, ADR-0175 decision 7). A refusal before the
     /// call (the registry lookup, the selection, an unresolved input, the route) made none.
     dispatched: bool,
+    /// *(dated 2026-09-27, `s8d` build, package D2177-8d; ADR-0174 decision 7.)* The step was
+    /// skipped because its `when` evaluated `null`, which is not a decision: a gate's `null` `when`
+    /// is not journaled, and a later walk evaluates it again.
+    guard_null: bool,
 }
 
 // ---- R3 and R2 decision 5 (`s8d` package P5): the loop executor's state. ------------------------

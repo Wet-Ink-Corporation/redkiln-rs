@@ -1318,8 +1318,10 @@ fn red_loop() -> Vec<Step> {
 #[test]
 fn a_re_entry_past_an_answered_gate_replays_the_check_verdict_and_re_dispatches_nothing() {
     let mut steps = red_loop();
-    // The gate is guarded over `red-verify`'s output, as 17 shipped gates are guarded over a tool
-    // step's (a census over `.redkiln/catalog/*.toml`), and a `check` after it reads its answer:
+    // The gate is guarded over `red-verify`'s output, as ~~17 shipped gates are~~ 15 shipped gates
+    // are guarded over a tool step's, through 17 `when` references (a census over
+    // `.redkiln/catalog/*.toml`; corrected by dated note 2026-09-27, `s8d` build, package
+    // D2177-8d), and a `check` after it reads its answer:
     // re-evaluated over the changed answer, the guard would skip the gate and leave the answer
     // unbound. Its `when` is a journaled decision too, and is replayed.
     steps.push(gate(
@@ -1590,4 +1592,453 @@ fn a_crash_re_entry_replays_only_the_decisions_it_journaled_and_re_decides_the_r
             rig.decisions()
         );
     }
+}
+
+// ================================================================================================
+// D21-77: A JOURNALED REFUSAL IS NOT REPLAYED; DECISION ROWS DO NOT DRAW ON THE RETRY CAP
+// ================================================================================================
+//
+// *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 rulings 1 and 2; ADR-0174 decision 7
+// and ADR-0175, both `proposed`, amended by dated text.)* D21-77: *"Replay only decisions whose
+// route continues the walk — a `true`, a loop-back, a `repeat` pass, an escalation. A `false` routed
+// to a refusal is **not replayed**: the next run re-verifies it"*, and *"decision rows draw no
+// attempt from AC-029's cap (the retry cap counts dispatch attempts only), and a gate `when`
+// deciding `false` is journaled and replayed under a killing test."* Refuting round 8 measured both
+// defects: *"R8PROBE second completed=false tests_called=2"* and *"R8CAP probe(3 checks)
+// dispatches=2 completed=false"*.
+
+/// **D21-77 ruling 1: a `false` routed to a refusal is not journaled, so a refused-then-fixed
+/// re-run completes.** Refuting round 8's probe shape, in four arms, each refused on its first run
+/// and fixed before its second: (a) `on_false = "fail"`, (b) no `on_false`, (c) a `{ to, max }`
+/// loop-back exhausted after one loop-back, and (d) a `repeat` exhausted into `on_exhausted =
+/// "fail"`. Built as NOT JOURNALED (not journaled-and-skipped): the refusing decision leaves no row,
+/// so the next run decides it fresh over the re-executed tool answer. A decision whose route
+/// continued (arm (c)'s first loop-back) is still journaled and replayed.
+#[test]
+fn a_refused_decision_is_not_replayed_so_a_refused_then_fixed_re_run_completes() {
+    let tests = serde_json::json!({"tests": ["t1"]});
+    let emit = || step("emit", StepKind::Emit);
+    let rv = |on: &str| {
+        tool(
+            "rv",
+            "test",
+            &[("selection", &format!("${{{on}.outputs.tests}}"))],
+        )
+    };
+    let c = |on_false: Option<Json>| {
+        let inputs = [("report", "${rv.outputs}")];
+        on_false.map_or_else(
+            || check("c", &inputs, "report.failed == 0"),
+            |v| check_on_false("c", &inputs, "report.failed == 0", v),
+        )
+    };
+
+    // (a) and (b): the probe's walk, `red` → `rv` → `c` → `emit`, answers (0, 1) then (1, 0).
+    for (label, on_false) in [
+        ("fail", Some(serde_json::json!("fail"))),
+        ("no on_false", None),
+    ] {
+        let steps = vec![agent("red", &[]), rv("red"), c(on_false), emit()];
+        let rig = Rig::new(vec![tests.clone()], vec![(0, 1), (1, 0)]);
+        let first = rig.walk(&steps);
+        assert!(
+            first.step_error().is_some() && !first.completed(),
+            "PREMISE ({label}): `c` does not hold on (0, 1) and the walk refuses: {}",
+            refusal(&first)
+        );
+        let second = rig.walk(&steps);
+        assert!(
+            second.completed() && second.step_error().is_none(),
+            "({label}) the re-run re-verifies the refused `c` over the fixed tree and completes: {}",
+            refusal(&second)
+        );
+        assert_eq!(
+            (rig.harness.dispatches(), rig.tests.selections().len()),
+            (1, 2),
+            "({label}) `red` is served, `rv` re-executes once per run"
+        );
+        assert_eq!(
+            rig.decisions(),
+            vec![decided("c", "root", "check", true)],
+            "({label}) the refusing `false` left no row; the re-run journals the verdict it decided"
+        );
+    }
+
+    // (c) an exhausted loop-back: `a` → `rv` → `c` (`{ to = "a", max = 1 }`) → `emit`.
+    let steps = vec![
+        agent("a", &[]),
+        rv("a"),
+        c(Some(serde_json::json!({"to": "a", "max": 1}))),
+        emit(),
+    ];
+    let rig = Rig::new(
+        vec![tests.clone(), tests.clone()],
+        vec![(0, 1), (0, 1), (0, 1), (1, 0)],
+    );
+    let first = rig.walk(&steps);
+    assert!(
+        first.step_error().is_some() && !first.completed() && refusal(&first).contains("exhausted"),
+        "PREMISE (exhausted): one loop-back, then `c` refuses as exhausted: {}",
+        refusal(&first)
+    );
+    let second = rig.walk(&steps);
+    assert!(
+        second.completed() && second.step_error().is_none(),
+        "(exhausted) the re-run replays the loop-back, re-verifies the refused `c@loop_back:1` and \
+         completes: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.paths("a")),
+        (2, vec!["root".to_owned(), "loop_back:1".to_owned()]),
+        "(exhausted) both of `a`'s frames are served and no third frame is opened"
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![
+            decided("c", "root", "check", false),
+            decided("c", "loop_back:1", "check", true),
+        ],
+        "(exhausted) the loop-back's `false` continued the walk and is journaled; the exhausted \
+         one was not"
+    );
+
+    // (d) a `repeat` exhausted into `fail`: `g` (until `rv` passes, max 1) → `rv` → `emit`.
+    let steps = vec![
+        repeating(
+            agent("g", &[]),
+            "${rv.outputs.status} == 'passing'",
+            1,
+            Some("fail"),
+            None,
+        ),
+        rv("g"),
+        emit(),
+    ];
+    let rig = Rig::new(vec![tests], vec![(0, 1), (1, 0)]);
+    let first = rig.walk(&steps);
+    assert!(
+        first.step_error().is_some() && refusal(&first).contains("exhausted"),
+        "PREMISE (repeat): the one pass fails and `on_exhausted = \"fail\"` refuses: {}",
+        refusal(&first)
+    );
+    let second = rig.walk(&steps);
+    assert!(
+        second.completed() && second.step_error().is_none(),
+        "(repeat) the re-run re-evaluates the refused `until` over the fixed tree and completes: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.decisions()),
+        (1, vec![decided("g", "repeat:1", "until", true)]),
+        "(repeat) `g` is served; the refusing `until` left no row"
+    );
+}
+
+/// **D21-77 ruling 2a: journaled decisions draw nothing from AC-029's retry cap; the cap counts
+/// dispatch attempts only.** Refuting round 8's two probe shapes at the rig's `CAP` = 4:
+/// (i) `a` → `ta` → N `check`s over `ta` → `b` → `emit`, `b`'s first dispatch failing transiently,
+/// at N = 0 (the control) and N = 3; (ii) `draft` → `verify` (`{ to = "draft", max = 3 }`) →
+/// `emit`, answering `ok: false` twice, with its third dispatch failing transiently. Each retries
+/// and completes. The decision rows keep attempts of their own: no two `activity_committed` rows of
+/// the activation share one. CONTROL: three transient failures of `b` still reach the cap at the
+/// fourth dispatch, so the cap is counted, not dropped.
+#[test]
+fn journaled_decisions_draw_nothing_from_the_retry_cap() {
+    let tests = serde_json::json!({"tests": ["t1"]});
+    let shape = |n: usize| {
+        let mut steps = vec![
+            agent("a", &[]),
+            tool("ta", "test", &[("selection", "${a.outputs.tests}")]),
+        ];
+        for k in 0..n {
+            steps.push(check(
+                &format!("c{k}"),
+                &[("report", "${ta.outputs}")],
+                "report.failed == 0",
+            ));
+        }
+        steps.push(agent("b", &[]));
+        steps.push(step("emit", StepKind::Emit));
+        steps
+    };
+    let specs = per_step_specs(&["a", "b"]);
+    let attempts_unique = |rig: &Rig| {
+        let mut seen: Vec<u64> = journal(&rig.db)
+            .iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::ActivityCommitted)
+            .filter_map(|e| e.payload.get("attempt").and_then(Json::as_u64))
+            .collect();
+        let all = seen.len();
+        seen.sort_unstable();
+        seen.dedup();
+        all == seen.len()
+    };
+    for n in [0, 3] {
+        let rig = Rig::new(
+            vec![tests.clone(), serde_json::json!({"n": 1})],
+            vec![(1, 0)],
+        );
+        rig.harness.fail_transiently_at(2);
+        let report = rig.walk_specs(&shape(n), &specs);
+        assert!(
+            report.completed() && report.step_error().is_none(),
+            "({n} checks) `b`'s transient failure is retried under the cap and the walk completes: \
+             {}",
+            refusal(&report)
+        );
+        assert_eq!(
+            rig.who(),
+            vec!["a", "b", "b"],
+            "({n} checks) one retry of `b`, whatever the decisions journaled before it"
+        );
+        assert_eq!(
+            rig.decisions().len(),
+            n,
+            "PREMISE ({n} checks): each check journaled its verdict"
+        );
+        assert!(
+            attempts_unique(&rig),
+            "({n} checks) no two rows share an attempt"
+        );
+    }
+
+    // (ii) the loop-back shape: the third `draft` dispatch fails transiently and is retried.
+    let rig = Rig::new(
+        vec![
+            serde_json::json!({"ok": false}),
+            serde_json::json!({"ok": false}),
+            serde_json::json!({"ok": true}),
+        ],
+        Vec::new(),
+    );
+    rig.harness.fail_transiently_at(3);
+    let report = rig.walk(&draft_verify(Some(
+        serde_json::json!({"to": "draft", "max": 3}),
+    )));
+    assert!(
+        report.completed() && report.step_error().is_none(),
+        "(loop-back) the third frame's transient failure is retried and the walk completes: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.decisions().len()),
+        (4, 3),
+        "(loop-back) four dispatches, one of them the retry; three verdicts journaled"
+    );
+    assert!(
+        attempts_unique(&rig),
+        "(loop-back) no two rows share an attempt"
+    );
+
+    // CONTROL: the cap still counts dispatches. `b` fails at dispatches 2, 3 and 4; the fourth is
+    // the cap's (`attempt >= CAP`), so it is not retried.
+    let rig = Rig::new(vec![tests, serde_json::json!({"n": 1})], vec![(1, 0)]);
+    for d in [2, 3, 4] {
+        rig.harness.fail_transiently_at(d);
+    }
+    let report = rig.walk_specs(&shape(3), &specs);
+    assert!(
+        !report.completed() && refusal(&report).contains("LOOP-HARNESS TRANSIENT: dispatch 4"),
+        "CONTROL: the fourth dispatch is the cap's, and its failure is not retried: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        rig.harness.dispatches(),
+        4,
+        "CONTROL: exactly CAP = 4 dispatches"
+    );
+}
+
+/// **D21-77 ruling 2b: a gate `when` that decides `false` is journaled and replayed.** `a` → `t`
+/// (`toolchain:test`) → the gate `g`, guarded on `${t.outputs.failed} > 0` → an unguarded
+/// `approve` gate that cuts the walk → `emit`. The first walk's `t` reports (1, 0), so `g` is walked
+/// past and `approve` opens. The re-entry's `t` reports (0, 1): re-decided, `g`'s guard would now
+/// hold and open a gate the first walk walked past. Replayed, the walk passes `g` and completes.
+#[test]
+fn a_gate_when_that_decides_false_is_journaled_and_replayed() {
+    let steps = vec![
+        agent("a", &[]),
+        tool("t", "test", &[("selection", "${a.outputs.tests}")]),
+        gate("g", "a.escalate", Some("${t.outputs.failed} > 0")),
+        gate("approve", "a.approve", None),
+        step("emit", StepKind::Emit),
+    ];
+    let rig = Rig::new(
+        vec![serde_json::json!({"tests": ["t1"]})],
+        vec![(1, 0), (0, 1)],
+    );
+    let first = rig.walk(&steps);
+    assert!(
+        first.gate_opened().is_some() && first.step_error().is_none(),
+        "PREMISE: `g` is walked past and `approve` opens: {}",
+        refusal(&first)
+    );
+    rig.answer(&first, "approve");
+    let second = rig.walk(&steps);
+    assert!(
+        second.gate_opened().is_none() && second.completed() && second.step_error().is_none(),
+        "the re-entry replays `g`'s journaled `false` over the changed `t` answer, opens no gate and \
+         completes: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        (rig.tests.selections().len(), rig.harness.dispatches()),
+        (2, 1),
+        "PREMISE: `t` re-executed on the re-entry (ADR-0174 decision 7); `a` was served"
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![decided("g", "root", "when", false)],
+        "`g`'s `false` is journaled once; `approve`, with no `when`, journals nothing"
+    );
+}
+
+/// **A `null` `until` or gate `when` is not a decision: it is not journaled, and a later walk
+/// evaluates it again** (ADR-0174 decision 7: *"A `null` or an error is not a decision"*; refuting
+/// round 8's two records minors). (a) A `repeat`'s `until` over `${g.outputs.status}` reads `null` on
+/// pass 1 (the step answered `status: null`), so the walk takes pass 2, which holds. (b) A gate's
+/// `when` over the same `null` skips the gate. Each routes as the fresh path always did; only the
+/// journal differs.
+#[test]
+fn a_null_until_or_gate_when_is_not_journaled() {
+    let steps = vec![
+        repeating(
+            agent("g", &[]),
+            "${g.outputs.status} == 'passing'",
+            2,
+            Some("fail"),
+            None,
+        ),
+        step("emit", StepKind::Emit),
+    ];
+    let rig = Rig::new(
+        vec![
+            serde_json::json!({"status": null}),
+            serde_json::json!({"status": "passing"}),
+        ],
+        Vec::new(),
+    );
+    let report = rig.walk(&steps);
+    assert!(
+        report.completed() && report.step_error().is_none() && rig.harness.dispatches() == 2,
+        "PREMISE (until): a `null` `until` takes another pass, which holds: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![decided("g", "repeat:2", "until", true)],
+        "(until) the `null` of pass 1 is not journaled; the `true` of pass 2 is"
+    );
+
+    let steps = vec![
+        agent("a", &[]),
+        gate("g", "a.escalate", Some("${a.outputs.status} == 'stuck'")),
+        step("emit", StepKind::Emit),
+    ];
+    let rig = Rig::new(vec![serde_json::json!({"status": null})], Vec::new());
+    let report = rig.walk(&steps);
+    assert!(
+        report.completed() && report.gate_opened().is_none(),
+        "PREMISE (when): a `null` guard skips the gate: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        rig.decisions(),
+        Vec::new(),
+        "(when) the `null` guard is not journaled"
+    );
+}
+
+/// **A decision is appended at most once per commit key AND kind** (ADR-0174 decision 7:
+/// *"appended at most once per commit key and kind (`Runtime::commit_decision`)"*). The same
+/// `check` decision twice under one key appends one row; a `when` under the same key is a different
+/// kind and appends its own.
+#[test]
+fn a_decision_is_journaled_at_most_once_per_commit_key_and_kind() {
+    use rk_kernel::runtime::activity::{Decision, DecisionKind, StepAt};
+    let rig = Rig::new(Vec::new(), Vec::new());
+    let path = rk_kernel::workflow::idem::IterationPath::root();
+    let at_c = StepAt {
+        step_id: "c",
+        iteration_path: &path,
+        family: None,
+    };
+    let check_true = Decision {
+        kind: DecisionKind::Check,
+        holds: true,
+    };
+    for _ in 0..2 {
+        rig.rt
+            .commit_decision(ITEM, crate::runtime::AID, at_c, check_true, at(100))
+            .expect("appends");
+    }
+    assert_eq!(
+        rig.decisions(),
+        vec![decided("c", "root", "check", true)],
+        "the second `check` decision under the same key appends nothing"
+    );
+    rig.rt
+        .commit_decision(
+            ITEM,
+            crate::runtime::AID,
+            at_c,
+            Decision {
+                kind: DecisionKind::When,
+                holds: false,
+            },
+            at(100),
+        )
+        .expect("appends");
+    assert_eq!(
+        rig.decisions(),
+        vec![
+            decided("c", "root", "check", true),
+            decided("c", "root", "when", false),
+        ],
+        "a decision of another kind under the same key is its own row"
+    );
+}
+
+/// **A replayed `true` `check` is still marked run**, so a bare `${c}` evidence pointer on the
+/// `emit` resolves on the re-entry (ADR-0173 decision 1, as R6FIX-8d built it: the pointer
+/// *"resolves only once the step has run in this activation"*). `a` → `c` (holds) → `approve` (cuts
+/// the walk) → `emit` with evidence `${c}`. The re-entry replays `c` and completes with `c`'s
+/// pointer on the completion row.
+#[test]
+fn a_replayed_true_check_is_marked_run_for_the_emit_evidence() {
+    let mut emit = step("emit", StepKind::Emit);
+    emit.emit = Some(rk_kernel::catalog::EmitBinding {
+        artifacts: std::collections::BTreeMap::new(),
+        evidence: vec!["${c}".to_owned()],
+    });
+    let steps = vec![
+        agent("a", &[]),
+        check("c", &[("d", "${a.outputs}")], "d.ok == true"),
+        gate("approve", "a.approve", None),
+        emit,
+    ];
+    let rig = Rig::new(vec![serde_json::json!({"ok": true})], Vec::new());
+    let first = rig.walk(&steps);
+    assert!(
+        first.gate_opened().is_some(),
+        "PREMISE: `c` holds and `approve` opens: {}",
+        refusal(&first)
+    );
+    rig.answer(&first, "approve");
+    let second = rig.walk(&steps);
+    assert!(
+        second.completed() && second.step_error().is_none(),
+        "the re-entry replays `c`, marks it run, and the `emit`'s `${{c}}` resolves: {}",
+        refusal(&second)
+    );
+    let completion: Vec<Event> = journal(&rig.db)
+        .into_iter()
+        .filter(is_completion_row)
+        .collect();
+    assert_eq!(
+        completion.first().map(|e| e.payload["evidence"].clone()),
+        Some(serde_json::json!([{ "step": "c", "kind": "check" }])),
+        "the completion row carries `c`'s evidence pointer"
+    );
 }

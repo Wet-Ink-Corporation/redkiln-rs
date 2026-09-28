@@ -558,6 +558,17 @@ attempt and a `decision` member. That row is not a commit: `commit_key_of` and t
 `result`. The carrier and its reasons are ADR-0174 decision 7's dated text, and §8d.10's D2176-8d note carries the
 tests and mutants.
 
+*(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 rulings 1 and 2; ADR-0174 decisions 4 and 7 and ADR-0175
+decision 6, `proposed`, amended.)* **Only a decision whose route continues the walk is journaled, and decision rows draw
+nothing from AC-029's retry cap.** D21-77: *"Replay only decisions whose route continues the walk — a `true`, a
+loop-back, a `repeat` pass, an escalation. A `false` routed to a refusal is **not replayed**: the next run re-verifies
+it"*. Built as **not journaled**: a `check`'s `false` whose `on_false` refuses (`"fail"`, none, an exhausted loop-back,
+`deviate`) and an `until` exhausted into a refusal leave no row, so a refused activation re-verifies them on its next
+run and a tree fixed between runs completes. A `null` `until` or gate `when` is not a decision and is not journaled
+either (ADR-0174 decision 7, now true of all three kinds). A decision row still takes the activation's next attempt
+(AC-011), but `retry::decide` is handed the key at the activation's **dispatch ordinal** (its `dispatch` rows), so the
+cap counts dispatch attempts only. §8d.10's D2177-8d note carries the tests and mutants.
+
 **An activation's completion is its `emit`**, and `fsm::next_action`'s plan walk moves past a node only when the
 emit binding has committed — not when its first agent step has. **The row, named (R1; M5):** each agent step's
 commit is an `activity_committed` row carrying `step_id` and `iteration_path`, appended when **it** dispatches. The
@@ -2364,6 +2375,66 @@ refused=6`.
 **Counts.** 3 names are added and none removed: **88 net**. Checkpoint 8d (5) names all three, and its `want` moves
 from 19 to 22. (11)'s floor is 877 + 88 = **965**, by dated edit.
 
+*(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 rulings 1 and 2; ADR-0174 decisions 4 and 7 and ADR-0175
+decision 6, both `proposed`, amended.)* **Six new tests, and thirteen mutants killed.** Refuting round 8 found three
+things in D21-76's build. A journaled `false` whose route was a refusal was replayed on every later run (*"R8PROBE
+second completed=false tests_called=2"*). Decision rows spent AC-029's retry cap (*"R8CAP probe(3 checks) dispatches=2
+completed=false"*). And no test pinned a gate `when` deciding `false` (the mutant survived *"350 passed; 0 failed"*).
+D21-77 ruled on all three, and the round's four minors are fixed with them. All six tests are in `rk-kernel`'s
+`on_false_exec::`.
+- `a_refused_decision_is_not_replayed_so_a_refused_then_fixed_re_run_completes` covers ruling 1 in round 8's probe
+  shape, in four arms. Each is refused on its first run and fixed before its second: (a) `on_false = "fail"`, (b) no
+  `on_false`, (c) a loop-back exhausted after one pass, and (d) a `repeat` exhausted into `fail`. **RED** on the D21-76
+  build at arm (a): *"(fail) the re-run re-verifies the refused `c` over the fixed tree and completes:
+  Some(Unsupported { capability: "the `check` step `c` did not hold, and its `on_false` is the keyword `fail`, which
+  refuses by name (ADR-0103 clause 6; R3)" }) None"*. **GREEN**: each re-run completes. In arm (c) the loop-back's
+  `false` is journaled and replayed, and the exhausted one is not.
+- `journaled_decisions_draw_nothing_from_the_retry_cap` covers ruling 2a in both of round 8's probe shapes at the rig's
+  `CAP` = 4. The first is `a` → `ta` → N checks → `b`, with `b`'s first dispatch failing transiently, at N = 0 and
+  N = 3. The second is `draft`/`verify` with its third dispatch failing transiently. The CONTROL is three failures of
+  `b`, which still reach the cap at the fourth dispatch. **RED** on the D21-76 build: *"(3 checks) `b`'s transient
+  failure is retried under the cap and the walk completes: Some(Transport { kind: Io, detail: "LOOP-HARNESS TRANSIENT:
+  dispatch 2 scripted to fail" })"*. **GREEN**: every arm retries and completes, the control refuses at exactly 4
+  dispatches, and no two `activity_committed` rows share an attempt.
+- `a_gate_when_that_decides_false_is_journaled_and_replayed` covers ruling 2b. A gate guarded on `${t.outputs.failed}
+  > 0` is walked past, an unguarded gate cuts the walk, and the re-entry's `t` answer would open the first gate. It pins
+  behaviour that was already built, so its red is round 8's mutant G (next list).
+- `a_null_until_or_gate_when_is_not_journaled` fixes the records minor by changing code, not the record. **RED** on the
+  D21-76 build: *"left: [("g", "repeat:1", Object {"kind": String("until"), "holds": Bool(false)}), ("g", "repeat:2",
+  …)] right: [("g", "repeat:2", …)]"*. Its gate arm was red under mutant N2, which is the pre-fix gate code.
+- `a_decision_is_journaled_at_most_once_per_commit_key_and_kind` (round 8's mutants B and D) and
+  `a_replayed_true_check_is_marked_run_for_the_emit_evidence` (mutant C) close the tests-mutants minor.
+
+**The build.** In `runtime::step`, `one_step` journals a `check`'s `false` only after `on_false` returns a flow that
+is not `Flow::Halt`. `after_step` journals an `until` decided fresh only when it is not `Tri::Null` and its route is
+`Ok`. `guard_holds` returns the guard's `Tri`, and `StepRun::guard_null` keeps a `null` gate `when` unjournaled. In
+`runtime::activity`, `run_activity_at` hands `retry::decide` the key at the dispatch ordinal:
+`dispatches_of(journal) + report.dispatches`. `retry::decide` is unchanged. The comments and records were amended by
+dated text:
+- `fsm.rs`'s reading table lists `decision`.
+- The '17 shipped gates' comments now read 17 references on 15 gates.
+- ADR-0174 decisions 4 and 7 and ADR-0175 decision 6 carry the D2177-8d notes.
+- Checkpoint 8d gains a bullet stating D21-76's and D21-77's replay.
+
+**Mutants**, from `scratchpad/s8d/mut_D2177-8d.py`. The anchor was asserted once, each write went through tmp +
+`os.replace`, and the file was restored in `finally` with its sha256 re-checked (both files verified after the run).
+Each mutant ran over the six new tests and D21-76's three, with the count asserted at 9. All thirteen were KILLED:
+- R1 (a refusing `false` journaled): arm (a).
+- R1f (a continuing `false` not journaled): the crash test, arm (c) and the loop-back arm of the cap test.
+- R1u (a refusing `until` journaled): arm (d).
+- N1 (a `null` `until` journaled) and N2 (a `null` gate `when` journaled): the null test.
+- G (a gate `when`'s `false` not journaled; round 8's mutant): the gate test.
+- B (no at-most-once check in `commit_decision`) and D (`journaled_decision` ignoring the kind): the at-most-once test.
+- C (a replayed `true` not marked run): the evidence test, *"the step `c` has not run in this activation"*.
+- R2 (the cap read on the activation attempt, the pre-fix code), R2p (prior dispatches ignored), R2c (the cap never
+  reached) and R2k (`dispatches_of` counting commit rows): the cap test.
+
+Zero survivors. The whole `rk-kernel` crate reads 355 passed / 0 failed / 6 ignored in `it` and 12 in the lib. Both
+`lane_walk::` tests still read `LANE_WALK fix walked=10 refused=5` and `LANE_WALK story walked=8 refused=6`.
+
+**Counts.** 6 names are added and none removed: **94 net**. Checkpoint 8d (5) names all six, and its `want` moves from
+22 to 28. (11)'s floor is 877 + 94 = **971**, by dated edit.
+
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
 **Checkpoints it touches.** Checkpoint 8c names two tests whose premise is the resolver's absence —
@@ -2562,6 +2633,13 @@ processes are `s8e`'s; rendering and landing are `s8f`'s; the verify record and 
 - **`check`, `emit` and test selection** decide from resolved values; an unresolvable input is never read as false;
   a step after `emit` is refused, not dropped.
 - **`on_false` iterates**, bounded, and exhaustion refuses as `StepFailedAfterCommit` with committed steps standing.
+- *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-76 and D21-77.)* **A re-entered walk replays its journaled
+  control decisions** — a `check`'s verdict, a `repeat`'s `until` and a `gate` step's `when` — from decision rows on
+  `activity_committed`, which are not commits. It decides fresh only past the last journaled one, so an answered
+  escalate gate resumes into its escalating step. Only a decision whose route continues the walk is journaled. A
+  `false` routed to a refusal and a `null` leave no row, so a refused activation re-verifies them on the next run and
+  a fixed tree completes. Decision rows draw nothing from AC-029's retry cap, which counts dispatches only. (5) asserts
+  it.
 - **One error row per failed dispatch**, written by the kernel under either harness, carrying what the breaker folds;
   the breaker refuses from the store.
 - **The two verb rows route**, the nine lane questions and N3's `facet.change` load, `answer` validates against
@@ -2648,6 +2726,8 @@ if printf '%s\n' 'test result: ok. 1 passed; 0 failed; 0 ignored' | grep -qE "te
 # (dated 2026-09-27, s8d build, package D2176-8d) The running total above was not moved by R2FIX, M14, R4FIX or R6FIX
 # (refuting round 7's checkpoint minor). Counted from this block's bytes after D2176-8d's three names: 117 `--test it`
 # names, 98 in rk-kernel and 19 in rk-cli, plus (4e)'s 2 `--lib` names. ~~105 `--test it` names in all~~.
+# (dated 2026-09-27, s8d build, package D2177-8d) D2177-8d adds six rk-kernel names to (5): 123 `--test it` names, 104
+# in rk-kernel and 19 in rk-cli, plus (4e)'s 2 `--lib` names. ~~117 `--test it` names~~.
 if printf '%s\n' 'test result: ok. 12 passed; 0 failed; 0 ignored' | grep -qE "test result: ok\. 2 passed; 0 failed"; then echo "FAIL: synthetic control — the exact-count grep admits 12 for 2"; exit 1; fi
 
 # ---- (3) BULLETS 1-2: STEP GRAIN, RE-ENTRY ACROSS A REAL KILL, AND DEFECT 2.
@@ -2770,7 +2850,17 @@ run_lib_named rk-kernel "step5 in-crate" \
 # ---- and a `repeat` (mutants A, B and C; section 8d.10's R6FIX-8d note). `want` moves from 18 to 19 with it.
 # ---- (dated 2026-09-27, s8d build, package D2176-8d) Three names added by dated edit, D21-76's replay of journaled
 # ---- control decisions on re-entry (section 8d.10's D2176-8d note). `want` moves from 19 to 22 with them.
+# ---- (dated 2026-09-27, s8d build, package D2177-8d) Six names added by dated edit, D21-77's rulings and refuting
+# ---- round 8's minors: a refusal is not replayed, decisions draw nothing from the retry cap, a gate `when`'s false is
+# ---- replayed, a null is not journaled, at most once per key and kind, and a replayed true is marked run (section
+# ---- 8d.10's D2177-8d note). `want` moves from 22 to 28 with them.
 run_named rk-kernel "on_false, telemetry, breaker" \
+  on_false_exec::a_refused_decision_is_not_replayed_so_a_refused_then_fixed_re_run_completes \
+  on_false_exec::journaled_decisions_draw_nothing_from_the_retry_cap \
+  on_false_exec::a_gate_when_that_decides_false_is_journaled_and_replayed \
+  on_false_exec::a_null_until_or_gate_when_is_not_journaled \
+  on_false_exec::a_decision_is_journaled_at_most_once_per_commit_key_and_kind \
+  on_false_exec::a_replayed_true_check_is_marked_run_for_the_emit_evidence \
   on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path \
   on_false_exec::a_re_entry_past_an_answered_gate_replays_the_check_verdict_and_re_dispatches_nothing \
   on_false_exec::a_tdd_shaped_escalate_re_entry_dispatches_green_not_red_after_the_answer \
@@ -2999,7 +3089,10 @@ n=$(printf '%s\n' "$hit" | grep -c 'fn selection_of')
 # ---- (dated 2026-09-27, s8d build, package D2176-8d) RE-DERIVED from the same recorded 877. The package adds three
 # ---- executing rk-kernel tests (section 8d.10's D2176-8d note) and removes none. Net executing: 85 + 3 = 88.
 # ---- FLOOR = 877 + 88 = 965. ~~FLOOR=962~~.
-FLOOR=965
+# ---- (dated 2026-09-27, s8d build, package D2177-8d) RE-DERIVED from the same recorded 877. The package adds six
+# ---- executing rk-kernel tests (section 8d.10's D2177-8d note) and removes none. Net executing: 88 + 6 = 94.
+# ---- FLOOR = 877 + 94 = 971. ~~FLOOR=965~~.
+FLOOR=971
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

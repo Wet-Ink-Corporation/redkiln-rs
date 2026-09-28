@@ -116,7 +116,10 @@ on `step_error` (`done.with_step_failure(cause)`, ADR-0144's shape; §8d.8 defec
 iteration path is a stack of frames, outermost first — a `for_each` index, a `repeat` count, a loop-back count — and is
 empty outside any loop; two iterations of one step never share a key. `IdempotencyKey` stays `(item,
 activity_id@version, attempt)`, and `attempt` stays strictly increasing across the whole activation (AC-011): every row
-the walk appends takes the next attempt of the activation, so the triple stays unique across the log. ADR-0097's memo
+the walk appends takes the next attempt of the activation, so the triple stays unique across the log. *(dated
+2026-09-27, `s8d` build, package D2177-8d; amended while `proposed`; D21-77 ruling 2.)* That number is not AC-029's
+retry count: the cap is checked against the activation's `dispatch` rows only (decision 7's D2177-8d paragraph), so a
+row that is not a dispatch spends none of the pack's `N`. ADR-0097's memo
 key is untouched; its component 7 is fed from the innermost frame of the iteration path, `0` outside a loop.
 **Residual, named (`s8d` §8d.1 S5):** two nested paths that share an innermost counter share component 7.
 
@@ -171,11 +174,15 @@ it had not yet decided). An answered escalate gate thus resumes into its escalat
   `result`). It is appended at most once per commit key and kind (`Runtime::commit_decision`), under the same lock as
   the read that checks it.
 - **The decisions.** (i) A `check`'s verdict: `true` runs on, and `false` takes its `on_false`, so a replayed `false`
-  re-takes the same loop-back, or the same exhaustion, over the loop counts the replay itself rebuilds. (ii) A
+  re-takes the same loop-back, ~~or the same exhaustion,~~ over the loop counts the replay itself rebuilds.
+  *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1.)* An exhaustion is a refusal and is no longer
+  journaled, so it is never replayed. (ii) A
   `repeat`'s `until` after each pass, keyed by the repeating step at that pass's path: another pass, the end of the
   repeat, or at `max` its `on_exhausted`, whose `escalate` is the escalation decision. (iii) The `when` of a `gate` step,
   which decides whether the walk asks the human, and for an escalate gate whether it escalates. A
-  `null` or an error is not a decision: it refuses by name, as before, and is evaluated again on a later walk.
+  ~~`null` or an error is not a decision: it refuses by name, as before, and is evaluated again on a later walk.~~
+  *(dated 2026-09-27, `s8d` build, package D2177-8d.)* The struck sentence was true of a `check` only (refuting round
+  8's records minor); the D2177-8d paragraph below restates it for all three kinds, and the code now agrees with it.
 - **The replay.** A decision journaled under the key and kind the walk reaches is replayed: the `check` is not
   executed, and the `until` and the escalate `when` are not evaluated. Where none is journaled, the walk decides fresh
   and journals what it decided. Replay is therefore bounded by what the prior walk journaled, and a crash re-entry
@@ -187,7 +194,40 @@ it had not yet decided). An answered escalate gate thus resumes into its escalat
   skips an answered gate and leaves its answer unbound. Measured by a `tomllib` census over `.redkiln/catalog/*.toml`
   (`scratchpad/s8d/census_when_D2176-8d.py`): 63 `when` references name a step, and 19 of them read a `tool` step's
   output. 17 of the 19 sit on `gate` steps, whose `when` is now replayed. 2 sit on `tool` steps and are re-evaluated:
-  `canary-release`'s `deploy-full` reads `rollback`, and `rolling-deploy`'s `rollback` reads `smoke`.
+  `canary-release`'s `deploy-full` reads `rollback`, and `rolling-deploy`'s `rollback` reads `smoke`. *(dated
+  2026-09-27, `s8d` build, package D2177-8d; refuting round 8's records minor.)* The 17 are references; they sit on
+  **15** distinct gates, because `sca-scan`'s `exception` holds three (the same census, re-run unchanged).
+
+*(dated 2026-09-27, `s8d` build, package D2177-8d; amended while `proposed`; D21-77 rulings 1 and 2.)* Refuting round 8
+measured two consequences of the paragraph above. A journaled `false` whose route was a refusal was replayed on every
+later run, so a refused activation could not complete after its tree was fixed (*"R8PROBE second completed=false
+tests_called=2"*). And each decision row took an attempt that `retry::decide` compared against the pack's AC-029 cap,
+so journaled decisions spent a later agent step's retries (*"R8CAP probe(3 checks) dispatches=2 completed=false"*).
+D21-77 rules: *"Replay only decisions whose route continues the walk — a `true`, a loop-back, a `repeat` pass, an escalation. A `false` routed to a refusal is **not replayed**: the next run re-verifies it (the deciding `check` re-executes over re-executed tool output)"*, and *"decision rows draw no attempt from AC-029's cap (the retry cap counts dispatch
+attempts only), and a gate `when` deciding `false` is journaled and replayed under a killing test."* Built so:
+- **A refusal is NOT JOURNALED** — the ruling left open whether a refusal is not journaled or journaled and skipped
+  on replay; this build takes *not journaled*. A `check`'s `false` is journaled only when its `on_false` continues
+  the walk: a loop-back within `max`, or `"continue"`. `"fail"`, no `on_false`, an exhausted loop-back, `{ to =
+  "deviate" }` and a form outside ADR-0103 clause 6's set leave no row. A `repeat`'s `until` is journaled only when its
+  route continues: `true`, another pass, or at `max` a `continue` or an escalation to a later gate that asks its
+  question. An `until` exhausted into a refusal leaves no row. A gate's `when` always continues (the gate is reached
+  or walked past), so its `true` and its `false` are journaled. The next run therefore re-executes the refusing
+  decision over re-executed tool output, and a tree fixed between runs completes. *Journaled and skipped* was not
+  taken: the skipped row would stand under the same key and kind, and the at-most-once rule would then refuse the
+  fresh verdict's row, so the journal would keep a `false` the walk no longer obeys.
+- **A `null` is not a decision, for all three kinds.** A `null` `check` refuses by name as an abstention and is not
+  journaled (unchanged). A `null` `until` takes another pass, or at `max` its `on_exhausted`, as before, and a `null`
+  gate `when` skips the gate, as before. Neither is journaled now, so a later walk evaluates it again. An error from
+  any of the three refuses by name and is not journaled.
+- **A decision row draws nothing from AC-029's cap.** The row still takes the activation's next attempt (decision 4:
+  no two rows of the activation share a number, and no decision row reuses a commit row's), and `RunState::next_attempt`
+  still folds it. But `Runtime::run_activity_at` hands `retry::decide` the key at the activation's **dispatch
+  ordinal**: the activation's `dispatch` rows in the journal before the retry loop, plus the loop's own. So the cap
+  check and the backoff ceiling count dispatches only. The parenthetical *"the retry cap counts dispatch attempts
+  only"* also takes R1's other non-dispatch rows off the cap: a side-effecting tool step's commit and the completion.
+  The jitter draw is `JitterDraw::from_key` over that same key, still a content hash of recorded values (AC-002).
+- **The gate `when`'s `false` is pinned.** It was journaled and replayed as built; round 8 found that no test failed
+  when it was not (*"350 passed; 0 failed"* under the mutant). One does now.
 
 **8. Side-effecting tool steps (D21-47 M8).** Every row of `.redkiln/registry.toml`'s `[verb]` table declares a sixth
 column, `side_effecting`, and a row without a boolean value refuses the registry at load. A `tool` step whose verb is
@@ -332,6 +372,13 @@ form, not an erratum; `s8d` §8d.1 m17). The draft, verbatim:
   per control decision it takes fresh. So a count of `activity_committed` rows is not a count of commits: a reader that
   wants commits skips rows carrying `decision`. `ledger::fold_executed` still counts them, which is a reading this
   amendment leaves unchanged and names here.
+- *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77.)* A refused activation re-executes its refusing `check`
+  or `until` on every later run, over re-executed tool output, until it holds or the activity version changes. The
+  loop-backs it took before the refusal are replayed. The activation's attempt number and its dispatch count now
+  differ whenever the walk appended a row that is not a dispatch, and only the dispatch count meets the cap.
+  **Residual, named:** the refusal is kept out of the journal when it is written, and replay does not check it. A
+  journal written by the D21-76 build (`888ddf2`) that already holds a refusing `false` still replays that `false`
+  until the activity version changes.
 
 **What this forbids**
 
@@ -350,6 +397,8 @@ form, not an erratum; `s8d` §8d.1 m17). The draft, verbatim:
 - *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76.)* Forbids re-executing a `check`, or re-deciding a
   `repeat`'s `until` or a `gate` step's `when`, whose decision is journaled under the key the walk reaches. Forbids
   replaying a decision where none was journaled, and forbids reading a decision's row as a commit.
+- *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77.)* Forbids journaling a `false` whose route is a
+  refusal, or a `null`, and forbids any row that is not a `dispatch` counting toward AC-029's cap.
 
 ## Evidence and confidence
 
@@ -376,6 +425,20 @@ form, not an erratum; `s8d` §8d.1 m17). The draft, verbatim:
   runs on, fresh decisions left unjournaled, and a decision's row read as a commit by the fold or by `commit_key_of`.
   `step_grain::an_activation_with_no_agent_step_walks_to_its_emit_and_completes` counts the decision's row apart from
   the completion row, by dated note. Both `lane_walk::` readings are unchanged (fix 10, story 8).
+- [measured 2026-09-27 at `s8d`'s build, package D2177-8d, through the no-dispatch helper] decision 7's D2177-8d
+  paragraph and decision 4's dated note. Six `on_false_exec::` tests are added (`s8d` §8d.10's D2177-8d note). Three
+  were RED on the D21-76 build:
+  `a_refused_decision_is_not_replayed_so_a_refused_then_fixed_re_run_completes` (*"(fail) the re-run re-verifies the
+  refused `c` over the fixed tree and completes: Some(Unsupported { capability: "the `check` step `c` did not hold,
+  and its `on_false` is the keyword `fail`…"*), `journaled_decisions_draw_nothing_from_the_retry_cap` (*"(3 checks)
+  `b`'s transient failure is retried under the cap and the walk completes: Some(Transport { … "LOOP-HARNESS
+  TRANSIENT: dispatch 2 scripted to fail" })"*) and `a_null_until_or_gate_when_is_not_journaled` (*"left:
+  [("g", "repeat:1", … "until" … false), ("g", "repeat:2", … true)] right: [("g", "repeat:2", … true)]"*). The other
+  three pin behaviour that was already built. `a_gate_when_that_decides_false_is_journaled_and_replayed`,
+  `a_decision_is_journaled_at_most_once_per_commit_key_and_kind` and
+  `a_replayed_true_check_is_marked_run_for_the_emit_evidence` were each shown red under the round-8 mutant it kills
+  (G; B and D; C respectively). Thirteen mutants were KILLED and none survived. All six are GREEN, the whole `rk-kernel` `it`
+  binary reads 355 passed / 0 failed / 6 ignored, and both `lane_walk::` readings are unchanged (fix 10, story 8).
 - **What this evidence does not license.** No shipped activity completes against a real harness here; cards, schemas
   and models are `s8h`'s. The memo is consulted by nothing. Iteration frames are pushed only by the loop executors
   `0173` and `s8d`'s R3 build, so the walk's own path is empty at this record's writing; the commit key's

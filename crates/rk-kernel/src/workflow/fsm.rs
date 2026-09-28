@@ -207,7 +207,7 @@
 //! | `gate_answered` | 1 | `token`, `tree_hash`, `verdict` | the answer's `tree_hash` differs from the gate's → **void** (AC-039); else answered |
 //! | `gate_expired` | 1 | `token` | remove from the open set, record the expiry |
 //! | `slice_sealed` | 1 | `verdict` | the run is sealed |
-//! | `activity_committed` | 2 | `item`, `activity_id_at_version`, `attempt`; *(2026-09-27, `s8d` build, R2FIX-8d; R1 = ADR-0174 decision 6, proposed)* and, when present, `step_id` with `iteration_path` (a row carrying `step_id` without a readable `iteration_path` is malformed) and `completion` | ~~the activation is committed~~ a row with `step_id` commits that step activation (`is_step_committed`); the activation is COMPLETE on a completion row or a pre-R1 row (`is_committed`) |
+//! | `activity_committed` | 2 | `item`, `activity_id_at_version`, `attempt`; *(2026-09-27, `s8d` build, R2FIX-8d; R1 = ADR-0174 decision 6, proposed)* and, when present, `step_id` with `iteration_path` (a row carrying `step_id` without a readable `iteration_path` is malformed) and `completion`; *(dated 2026-09-27, `s8d` build, D2177-8d; D21-76, ADR-0174 decision 7)* and `decision`, whose presence alone is read | ~~the activation is committed~~ a row with `step_id` commits that step activation (`is_step_committed`); the activation is COMPLETE on a completion row or a pre-R1 row (`is_committed`); a row carrying `decision` folds its attempt only — not a commit and not a completion |
 //! | `dispatch` | 2 | the same three | the activation was dispatched; the attempt high-water mark moves |
 //! | `gate_answer_void` | 2 | `token` | the mirror of the void decision, for a run whose voiding was already recorded |
 //! | `step_refused` | 2 | `class` | a recorded halt (ADR-0095 decision 2's refusal arm) |
@@ -1561,6 +1561,9 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             // `decision` is a control decision the walk journaled (a `check`'s verdict, a
             // `repeat`'s `until`, a `gate` step's `when`), not a commit: it takes its attempt
             // (so the triple stays unique) and moves nothing else. The walk replays it on re-entry.
+            // *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 2a.)* The attempt it
+            // takes moves `next_attempt`, which numbers rows; AC-029's retry cap does not read it
+            // (`run_activity_at` counts the activation's `dispatch` rows).
             if event.payload.get("decision").is_some() {
                 return Ok(());
             }

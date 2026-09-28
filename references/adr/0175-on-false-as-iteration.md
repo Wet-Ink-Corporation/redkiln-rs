@@ -115,11 +115,17 @@ report.passed == 0`) no longer held, and the walk looped back into `red` instead
 round 7; D21-76's *Why*). D21-76 rules: *"The walk **journals its control decisions** — each `check` verdict and each
 loop-back or escalation decision — under the commit key of the frame that took it, and a re-entered walk **replays**
 them"*. ADR-0174 decision 7, as amended the same day, states the row and the replay. For this record's routes:
-- A `check`'s `false` is journaled before its `on_false` is taken (decision 2's loop-back, decision 3's refusal or
-  decision 4's `continue`). A replayed `false` re-takes the same route over the loop counts the replay itself rebuilds,
-  so the same frames are re-entered and their commits are served.
+- A `check`'s `false` is journaled before its `on_false` is taken (decision 2's loop-back, ~~decision 3's refusal~~
+  or decision 4's `continue`). A replayed `false` re-takes the same route over the loop counts the replay itself rebuilds,
+  so the same frames are re-entered and their commits are served. *(dated 2026-09-27, `s8d` build, package D2177-8d;
+  D21-77 ruling 1.)* Decision 3's refusals are no longer journaled, so none is replayed: D21-77 rules *"Replay only decisions whose route continues the walk — a `true`, a loop-back, a `repeat` pass, an escalation. A `false` routed to a refusal is **not replayed**: the next run re-verifies it (the deciding `check` re-executes over re-executed tool output)"*.
+  A `"fail"`, an absent `on_false` and an exhausted loop-back leave no row, and the next run re-executes the `check`
+  over re-executed tool output. A tree fixed between runs completes.
 - A `repeat`'s `until` is journaled after each pass, under the repeating step's commit key at that pass's path. A
   replayed `false` at `max` re-takes the step's `on_exhausted`, so an `escalate` re-raises the same question.
+  *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1; ADR-0174 decision 7.)* Only an `until` whose
+  route continues is journaled: an `on_exhausted` of `continue` or `escalate` (to a gate that asks its question). An
+  `until` exhausted into a refusal leaves no row, and a `null` `until` is not journaled.
 - A `gate` step's `when` is journaled when it is decided, and a replayed `true` reaches the gate. The escalate
   re-entry of this decision's first paragraph then reads the same answered reach, re-enters the escalating step under
   a new loop-back frame, and dispatches it once.
@@ -187,7 +193,10 @@ halts charges its pass once for the copies it dispatched (AC-022).
   `${…}` binds the re-executed value while the route stays the journaled one. A step's input can therefore carry a
   tool answer that the replayed decision was not taken over. A `when` on a step that is not a `gate`, and a `for_each`
   source, are still re-evaluated (ADR-0174 decision 7's *Named, not closed*). Each fresh decision also appends one
-  `activity_committed` row that is not a commit.
+  `activity_committed` row that is not a commit. *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77.)* A
+  refused activation is not replayed into its refusal: each later run re-executes the refusing decision, so it pays
+  that `check`'s tool calls again on every run until it holds. The rows draw nothing from AC-029's retry cap (ADR-0174
+  decision 7's D2177-8d paragraph).
 - The re-entry count is per walk: a loop-back and an escalate re-entry share one counter, so a frame's number says in
   what order re-entries happened, not which construct took it.
 - The pass charges are reported and folded, not yet gated: no runtime budget gate reads them on the run path at this
@@ -205,6 +214,8 @@ halts charges its pass once for the copies it dispatched (AC-022).
   ADR-0046's.
 - Forbids a fourth frame form, and forbids a `for_each` element being charged as a pass of its own.
 - Forbids a new exit row for any refusal this record makes.
+- *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77.)* Forbids replaying a refusal: a `false` or an
+  exhausted `until` whose route refuses is not journaled.
 
 ## Evidence and confidence
 
@@ -253,6 +264,12 @@ halts charges its pass once for the copies it dispatched (AC-022).
   changed `test` answer and re-dispatches nothing. `a_crash_re_entry_replays_only_the_decisions_it_journaled_and_re_
   decides_the_rest` re-decides only what the cut journal never recorded. Each was RED first. The mutants that ignore the
   `until` and gate `when` replays, or read an absent decision as `true`, are KILLED (`s8d` §8d.10's D2176-8d note).
+- [measured 2026-09-27 at `s8d`'s build, package D2177-8d, through the no-dispatch helper] decision 6's D2177-8d notes.
+  `on_false_exec::a_refused_decision_is_not_replayed_so_a_refused_then_fixed_re_run_completes` walks four refusals —
+  `"fail"`, no `on_false`, an exhausted loop-back and a `repeat` exhausted into `fail` — each refused and then fixed
+  between runs, and each re-run completes. It was RED on the D21-76 build at its first arm. The mutants that journal a
+  refusing `false`, journal a refusing `until`, or stop journaling a continuing `false` are KILLED (`s8d` §8d.10's
+  D2177-8d note).
 - **What this evidence does not license.** The walks are over fixture step lists and fake harnesses; no shipped
   activity's loop is run against a real harness here, and the lane walk table is `s8d` §8d.9's. ADR-0046's route is
   owed and unbuilt. This record flips at `s8d`'s close under D21-64 ruling 10, on its own dated ledger line, only if
