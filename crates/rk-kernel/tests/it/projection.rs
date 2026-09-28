@@ -126,6 +126,15 @@ fn project(events: &[Event]) -> (Vec<Event>, usize) {
 /// the round trip must really re-serialise; the journal must really span both tiers; a `Rewrite`
 /// event must really be excluded by the tier filter rather than by its absence; and a different
 /// journal must give a different answer.
+///
+/// *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.9; D21-42 8c.)* **The ROUTE is now
+/// measured, in `rk-cli`:** `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` runs a
+/// fixture lane, takes the `t1_*` rows whose anchors are reachable from the repository's refs,
+/// deletes the store, runs `doctor --rebuild` (which writes through `rk-adapter-sqlite`'s
+/// `open_at` / `Capability::Rebuild`), and compares the two projections, an unreachable adversarial
+/// row falling outside both. This test keeps its name and its half — the equality over tier-1
+/// rows — and `s8` (2)'s filter still selects it; adding the anchored test to `s8` (2)'s own block
+/// is `s8j`'s instrument amendment.
 #[test]
 fn rebuild_differential() {
     let events = journal();

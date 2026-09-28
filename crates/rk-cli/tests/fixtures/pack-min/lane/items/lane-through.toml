@@ -1,0 +1,12 @@
+# The lane fixture's THROUGH item (`s8e` §8e.11). *(Added 2026-09-28, `s8e` build, package S8E-P2.)*
+#
+# It enters the lane at `triage` and DECLARES `has_repro`, so no gate opens: a lane over it walks
+# every stage the order admits, dispatching `emit-report` at `implement` and `review-min` at
+# `review`, and ends at the lane's terminal mark.
+id    = "lane-2"
+kind  = "bug"
+stage = "triage"
+slice = "lane-2-fix"
+
+[facets]
+has_repro = true

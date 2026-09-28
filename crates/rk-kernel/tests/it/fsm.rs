@@ -387,7 +387,7 @@ fn ac039_gate_record_and_the_void_answer() {
     // budget-extension gate's carrier — rather than the question never being asked.
     assert_eq!(
         EventKind::ALL.len(),
-        38,
+        41,
         // DECIDED HERE 2026-09-17 (ADR-0123, 29 -> 31; ADR-0124, 31 -> 36 — the review and verify
         // gates' five rows; ADR-0125, 36 -> 37 — `stage_exit_refused`, which opens no gate either:
         // AC-357's gate is what FOLLOWS a refusal): `gate_answer_spent` records a refused
@@ -399,7 +399,10 @@ fn ac039_gate_record_and_the_void_answer() {
         // arm (decision 5), which `tests/it/dispatch_completed.rs::
         // adr0126_dispatch_completed_moves_nothing_in_the_fsm` asserts over a fold rather than
         // states here — so the budget-extension gate's carrier is still `gate_opened`.
-        "EventKind is closed at 38 (ADR-0116: `the kind is minted by record or not at all`; \n         ADR-0123 minted the two beyond 29, ADR-0124 the five beyond 31, ADR-0125 the one beyond 36, ADR-0126 the one beyond 37)"
+        // DECIDED AGAIN 2026-09-28 (`s8e` build, package S8E-P5; the three-kinds record, `s8e` §8e.4, proposed; 38 -> 41): `worktree_assigned`, `stage_empty` and `git_op` are tier-2 rows, and none
+        // opens a gate: the FSM folds all three in its no-state-change arm, so the budget-extension
+        // gate's carrier is still `gate_opened`.
+        "EventKind is closed at 41 (ADR-0116: `the kind is minted by record or not at all`; \n         ADR-0123 minted the two beyond 29, ADR-0124 the five beyond 31, ADR-0125 the one beyond 36, ADR-0126 the one beyond 37, s8e's three-kinds record the three beyond 38)"
     );
 }
 
@@ -1044,5 +1047,241 @@ fn gate_answered_after_expiry_is_void_and_the_fold_continues() {
         0,
         "a gate that was never open must not appear in `expired_gates` — `gates_expired` has one \
          writer and this is the guard on it"
+    );
+}
+
+/// **Every item-scoped kind carries the interim `item` key** (D21-43 N5; ADR-0182 decision 3;
+/// `s8e` §8e.10). The record's list, verbatim, against `EventKind::ALL`: every kind is named in
+/// exactly one of the three lists and `EventKind::item_key()` agrees with it, so a kind added later
+/// without a decision fails here (and at `item_key`'s exhaustive match). Then each carried kind,
+/// keyed to one item, is read by that item's journal and never by another's, through the kernel's
+/// own selector (`runtime::journal_query`, `ByItem`) over the fake store.
+///
+/// RED at entry: no `item` member — `Event::with_item` and `EventKind::item_key` do not exist.
+#[test]
+fn every_item_scoped_kind_carries_the_interim_item_key() {
+    use rk_ports::event_store::EventStore;
+    use rk_ports::fakes::VecStore;
+    use rk_types::event_kind::ItemKey;
+
+    // ADR-0182 decision 3, verbatim.
+    const CARRIED: [&str; 33] = [
+        "stage_transition",
+        "gate_opened",
+        "gate_answered",
+        "gate_expired",
+        "slice_sealed",
+        "reconcile_started",
+        "gate_answer_void",
+        "gate_answer_spent",
+        "gate_resumed",
+        "review_block",
+        "quarantine_granted",
+        "quarantine_removed",
+        "quarantine_expired",
+        "selection_ineffective",
+        "stage_exit_refused",
+        "dag_assembled",
+        "dag_amended",
+        "activity_committed",
+        "dispatch",
+        "dispatch_completed",
+        "step_failed",
+        "step_cancelled",
+        "step_refused",
+        "rate_limited",
+        "degraded",
+        "structured_drift",
+        "drift_advisory",
+        "review_class_drift",
+        "artifact.read",
+        "artifact.write",
+        // *(dated 2026-09-28, `s8e` build, package S8E-P5; the three-kinds record decision 5,
+        // proposed.)* The three kinds that record mints are item-scoped and carried, beside ADR-0182's
+        // thirty.
+        "worktree_assigned",
+        "stage_empty",
+        "git_op",
+    ];
+    // ADR-0163's payload member stays where it put it; no second source beside it.
+    const IN_PAYLOAD: [&str; 1] = ["rate_limit_reading"];
+    // Not item-scoped, each with the record's reason.
+    const NOT_ITEM_SCOPED: [(&str, &str); 7] = [
+        (
+            "memo_hit",
+            "the memo is keyed by content and shared across items (ADR-0097 d1)",
+        ),
+        (
+            "memo_miss",
+            "the memo is keyed by content and shared across items (ADR-0097 d1)",
+        ),
+        (
+            "memo_evicted",
+            "the memo is keyed by content and shared across items (ADR-0097 d1)",
+        ),
+        (
+            "rewrite",
+            "old_sha -> new_sha is a fact about the repository",
+        ),
+        (
+            "advisory_created",
+            "the advisory sink is store-wide (AC-310's invariant)",
+        ),
+        (
+            "advisory_retired",
+            "the advisory sink is store-wide (AC-310's invariant)",
+        ),
+        (
+            "advisory_dismissed",
+            "the advisory sink is store-wide (AC-310's invariant)",
+        ),
+    ];
+
+    assert_eq!(
+        CARRIED.len() + IN_PAYLOAD.len() + NOT_ITEM_SCOPED.len(),
+        EventKind::ALL.len(),
+        "the record's three lists name every kind"
+    );
+    for kind in EventKind::ALL {
+        let wire = kind.wire_name();
+        let named: Vec<ItemKey> = [
+            CARRIED.contains(&wire).then_some(ItemKey::Carried),
+            IN_PAYLOAD.contains(&wire).then_some(ItemKey::InPayload),
+            NOT_ITEM_SCOPED
+                .iter()
+                .any(|(w, _)| *w == wire)
+                .then_some(ItemKey::NotItemScoped),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        assert_eq!(
+            named.len(),
+            1,
+            "`{wire}` must be named in exactly one of ADR-0182's lists: {named:?}"
+        );
+        assert_eq!(
+            kind.item_key(),
+            named[0],
+            "`{wire}`: EventKind::item_key() disagrees with ADR-0182 decision 3"
+        );
+    }
+
+    let mut carried = 0;
+    for kind in EventKind::ALL {
+        if kind.item_key() != ItemKey::Carried {
+            continue;
+        }
+        let mut store = VecStore::default();
+        store
+            .append(Event::new(kind, serde_json::json!({ "n": 1 })).with_item("item-a"))
+            .expect("append a");
+        store
+            .append(Event::new(kind, serde_json::json!({ "n": 2 })).with_item("item-b"))
+            .expect("append b");
+        let mine = store
+            .query(rk_kernel::runtime::journal_query("item-a"))
+            .expect("the kernel's read");
+        assert_eq!(
+            mine.iter().map(Event::item).collect::<Vec<_>>(),
+            vec![Some("item-a")],
+            "`{}`: the kernel's journal for item-a must carry item-a's row alone",
+            kind.wire_name()
+        );
+        carried += 1;
+    }
+    assert_eq!(carried, CARRIED.len(), "every carried kind was exercised");
+}
+
+/// **D21-93 — an approved seal is scoped to the stage it was made in** (`s8e` §8e.8; §8e.0 item 8;
+/// the slice record, proposed). *(Added 2026-09-28, `s8e` build, package S8E-P7.)*
+///
+/// S8E-P0 measured the defect in the test binary: `terminal()` read `sealed` first and nothing
+/// cleared it, so a journal `review -> slice_sealed{approved} -> release -> gate_opened` folded to
+/// `awaiting_gate = Some(..)` and `terminal = sealed`. The ruling: the fold records the stage a seal
+/// was made in, and `terminal()` returns `Sealed` only while the fold is still in that stage; after
+/// a later `stage_transition` it falls through to gate, dispatch or complete. The `sealed` member
+/// keeps the verdict as history (ADR-0109 decision 3).
+///
+/// Three arms. (1) The seal made in `review`, journaled AFTER the advance into `release` (the order
+/// `run` writes it: the kernel's advance is inside `resume`, the review pass after it), then a gate
+/// at `release`: `AwaitingGate`, with `sealed()` still `approved`. (2) The same seal and no later
+/// transition, the fold in `review`: `Sealed`. (3) A stage-less seal row (a rebuilt or healed row,
+/// whose trailer carries no stage) is scoped to the stage it folds in: `Sealed` there, and not after
+/// a later transition. Red under the scope dropped (S8E-M50).
+#[test]
+fn an_approved_seal_reads_sealed_only_until_the_next_stage_transition() {
+    let seal = |stage: Option<&str>| {
+        let mut payload = serde_json::json!({
+            "project": "demo",
+            "slice": "sl-1",
+            "verdict": "approved",
+        });
+        if let Some(stage) = stage {
+            payload["stage"] = serde_json::Value::from(stage);
+        }
+        Event::new(EventKind::SliceSealed, payload)
+    };
+
+    // (1) the lane moved on: a gate at `release` is what the run awaits.
+    let moved_on = vec![
+        transition("implement", "review"),
+        transition("review", "release"),
+        seal(Some("review")),
+        gate_opened("budget_extension", TREE_A, 1_700),
+    ];
+    let state = fold(ITEM, "implement", &moved_on).expect("the journal folds");
+    assert!(
+        state.awaiting_gate().is_some(),
+        "PREMISE: a gate is open at `release`"
+    );
+    assert_eq!(
+        state.sealed(),
+        Some("approved"),
+        "the seal is kept as history (ADR-0109 decision 3)"
+    );
+    assert_eq!(
+        state.terminal().as_str(),
+        "awaiting_gate",
+        "D21-93: a seal made in `review` must not read as the terminal state of a lane that went \
+         on to `release` and halted at its gate: {:?}",
+        state.terminal()
+    );
+
+    // (2) the fold is still in the stage the seal was made in.
+    let at_review = vec![transition("implement", "review"), seal(Some("review"))];
+    assert_eq!(
+        fold(ITEM, "implement", &at_review)
+            .expect("folds")
+            .terminal(),
+        TerminalState::Sealed {
+            verdict: "approved".to_owned()
+        },
+        "a seal made in the fold's current stage is the terminal state"
+    );
+
+    // (3) a stage-less seal row is scoped to the stage it folds in.
+    let stageless = vec![transition("implement", "review"), seal(None)];
+    assert_eq!(
+        fold(ITEM, "implement", &stageless)
+            .expect("folds")
+            .terminal()
+            .as_str(),
+        "sealed",
+        "a stage-less seal folds as made in the fold's stage at that row"
+    );
+    let stageless_then_on = vec![
+        transition("implement", "review"),
+        seal(None),
+        transition("review", "release"),
+        gate_opened("budget_extension", TREE_A, 1_700),
+    ];
+    assert_eq!(
+        fold(ITEM, "implement", &stageless_then_on)
+            .expect("folds")
+            .terminal()
+            .as_str(),
+        "awaiting_gate",
+        "a later stage_transition ends a stage-less seal's scope"
     );
 }

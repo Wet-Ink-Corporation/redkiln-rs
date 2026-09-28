@@ -25,8 +25,12 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   `doctor_journal::unread_reads_a_null_run_as_an_unknown_run_never_a_match` (`s8f` §8f.5). At Checkpoint 8e the rule's
   `run_of` is still `as_i64`, which reads `null` as no run. No count moves: this stage stays at **74**.
 - *D21-48 (2026-09-24), floor propagation:* the predecessors now state `s8c` **78**, `s8d` **62** and `s8d-ii` **50**, so Checkpoint 8d-ii's expected
-  count is 740 + 9 + 25 + 78 + 62 + 50 = **964**, and this stage's floor is 964 + 74 = **1038** (§8e.0 item 7,
+  count is 740 + 9 + 25 + 78 + 62 + 50 = **964**, and this stage's floor is ~~964 + 74 = **1038**~~ (§8e.0 item 7,
   Checkpoint 8e (8)). The 947 + 74 = 1021 of the final consistency pass is superseded.
+- *(dated 2026-09-28, s8e build)* **The floor is re-derived at stage open from Checkpoint 8d-ii's RECORDED count** (`runbook/PROGRESS.md` row 8d-ii: *"whole suite **1034 passed / 0 failed / 10 ignored over 44**"*, Checkpoint 8d-ii passed whole at `497266b`, re-run green after `be32cda`): 1034 + 74 = **1108**. The chain's expected 964 is superseded by the recorded 1034; the recorded count governs. The owed-in `lane_e2e` test(s) for MF3j and for `run()`'s review-routes binding (§8e.11's two receiver notes) are **outside** the 74, so when they are named the floor, Checkpoint 8e (2)'s `sel rk-cli 30` and §8e.12's count move again by dated edit.
+- *(dated 2026-09-28, s8e build, package S8E-P2)* **The two owed-in tests are named, and the floor moves again** (§8e.11's two receiver notes): `lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer` (MF3j) and `lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step` (`run()`'s review-routes binding). Both are new, so §8e.12's count moves to 82 names (~~80~~) and **75** new (~~73~~), the suite gains **76** (~~74~~), and the floor is 1034 + 76 = **1110** (~~1108~~). Checkpoint 8e (2) reads `sel rk-cli 32` (~~`sel rk-cli 30`~~) and (8) reads `FLOOR=1110` (~~`FLOOR=1108`~~).
+- *(dated 2026-09-28, s8e build, package S8E-P6)* **One more kernel test, and the floor moves by one.** `tier_one::a_closed_mark_heals_as_the_lanes_end_transition` is new: the heal's `closed` arm (§8e.6) is a branch no `lane_e2e` fixture reaches, because a closed item's `run` returns before the heal. So §8e.12's count moves to **83** names (~~82~~) and **76** new (~~75~~), the suite gains **77** (~~76~~), and the floor is 1034 + 77 = **1111** (~~1110~~). Checkpoint 8e (2) reads `sel rk-kernel 25` (~~`sel rk-kernel 24`~~) and (8) reads `FLOOR=1111` (~~`FLOOR=1110`~~).
+- *(dated 2026-09-28, s8e build, package S8E-P7)* **D21-93's test, and the floor moves by one.** The operator's ruling on §8e.0 item 8's STOP (`spikes/DECISIONS-2026-09-21.md` D21-93: *"built red-first with a mutant (the scope dropped) in §8e.8's package"*) adds `fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition`, which §8e.12's list did not carry. So §8e.12's count moves to **84** names (~~83~~), `rk-kernel` **26** (~~25~~), and **77** new (~~76~~); the suite gains **78** (~~77~~), and the floor is 1034 + 78 = **1112** (~~1111~~). Checkpoint 8e (2) reads `sel rk-kernel 26` (~~`sel rk-kernel 25`~~) and (8) reads `FLOOR=1112` (~~`FLOOR=1111`~~). Measured at the package's diagnostic whole-suite run: **1112 passed / 0 failed / 9 ignored over 44 results** (the ARMED lint's `#[ignore]` deleted: 10 → 9 ignored).
 
 *Final consistency pass 2026-09-24* (the pass brief after D21-47's fix round; each edit dated on its own line):
 - *Final consistency pass 2026-09-24:* the floor is re-derived once on the final chain: 740 + 9 (8a) + 25 (8b) + 69
@@ -250,6 +254,12 @@ the ones this file found beyond the ledger's list.
   `re-run pending` (D21-47: the stage that moves an earlier checkpoint's premise amends its guard in the same commit);
 - a ledger entry.
 
+*(dated 2026-09-28, s8e build, package S8E-P4)* **Two records written, both `proposed`:** the stage-location row is **ADR-0183** (`references/adr/0183-the-stage-lives-on-the-run-ref-a-stage-bearing-story-mark-at-every-boundary.md`; supersedes in part `0105`, `0155`, `0157` and `0161`, every supersession this table lists, the `0161` bullet only once §8e.11's tests pass) and the `Gate:` row is **ADR-0184** (`references/adr/0184-the-gate-value-carries-kind-reach-and-state-with-an-integer-deadline.md`; supersedes in part `0105` clause 3's `Gate:` delegation, plus the two design rows by dated line). Neither supersedes ADR-0109: decision 3 is honoured (D21-42 8d), and decision 2's list is read as illustrative with the fallback stated. Back-links and the README Supersessions-table rows move in each flip commit, as `0181`'s do. README and preamble census: 184 records, 176 accepted / 4 superseded / 4 proposed, next free id **0185**, 82 supersession links from 56 records with 75 reciprocated, forbids blocks 170/11/3 (measured by script). Attendant edits made in this package: design §5.4's `Story:` and `Gate:` rows, design §5's `gate_answer_void` and `gate_expired` rows, the AC-444 register note, and the `s7h` §7h.2 re-amendment. No ledger entry was written (the next id, D21-94, is left to the orchestrator so parallel packages do not collide).
+
+*(dated 2026-09-28, s8e build, package S8E-P7)* **The slice row is written, `proposed`: ADR-0186** (`references/adr/0186-the-slice-is-declared-and-sealed-on-both-review-outcomes.md`). It supersedes nothing, as the row says: ADR-0160's first bullet is honoured in full (five values refused by name at the mint, the run id stated as undeclarable), decision 6's *"at the review stage's boundary"* is read as *"at the review stage's exit outcome"* with the fallback supersession stated, ADR-0162 decision 2 is re-stated with Checkpoint 7h guards (6)/(7) and 8a guard (7) as amended here, and the S-SUBTLE-CB non-claim is named. It also states D21-93's fold scoping of a seal (decision 4) and its residual (a healed or rebuilt seal carries no `stage`). ADR-0181 gains dated notes on decision 11 (the `Snapshot` row, the append-only `rebuild`, the rebuild's rows being the heal's) and on its evidence. README and preamble census, measured by script: 186 records, 176 accepted / 4 superseded / 6 proposed, next free id **0187**, forbids blocks 172/11/3, supersession links unchanged. Attendant edits made in this package: design §5's `slice_sealed` row and §3.3's `EventStore` row (dated), the AC-161 and AC-163 register re-point notes and a line on AC-518, the dated amendments to Checkpoints 7h, 8a and 7f with their prose, and `PROGRESS.md` §1's 7h, 8a and 7f rows set `re-run pending`. No ledger entry was written (the next id is the orchestrator's to assign).
+
+*(dated 2026-09-28, s8e build, package S8E-P5)* **The three-kinds row is written, `proposed`: ADR-0185** (`references/adr/0185-worktree-assigned-stage-empty-and-git-op-three-tier-two-kinds.md`). It supersedes nothing, as the row says. It fixes `stage_empty`'s tier (2) and closed reason set (one member, `no_applicable_activity`, `rk_types::event_kind::STAGE_EMPTY_REASONS`), the deleted-database reading for `worktree_assigned` (a tier-2 disposal: `answer` refuses fail-closed and the next `run` re-enters and writes it again, so no next action of `run` changes), and RT-47's disposition (**kept** as tier-2 context that no reader resolves ownership from; `answer`'s `recorded_ownership` is deleted, and design §5.4 carries the dated note). Design §5.4's event table gains the three rows. README and preamble census, measured by script: 185 records, 176 accepted / 4 superseded / 5 proposed, next free id **0186**, supersession links unchanged (82 from 56 records, 75 reciprocated), forbids blocks 171/11/3. The AC-518 register re-point note is written (§8e.14). No ledger entry was written (the next id is the orchestrator's to assign, so parallel packages do not collide).
+
 ### 8e.0 Stage-open measurements — re-taken at Checkpoint 8d-ii's close, before any code
 
 Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and the stage does not choose around it.
@@ -287,16 +297,138 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
 7. **The whole-suite floor.** The expected value is **re-derived at stage open from Checkpoint 8d-ii's recorded
    count**, plus this stage's **74**: 73 new tests, plus the one ARMED lint un-ignored. Computed once, on the final
    chain: 740 (ADR-0164's evidence, `992d257`) + 9 (8a) + 25 (8b) + 78 (8c) + 62 (8d) + 50 (8d-ii) = 964 at
-   Checkpoint 8d-ii, so 964 + 74 = **1038**. Replace 1038 in Checkpoint 8e's `FLOOR=` line with Checkpoint 8d-ii's
+   Checkpoint 8d-ii, so ~~964 + 74 = **1038**~~. Replace ~~1038~~ the value in Checkpoint 8e's `FLOOR=` line with Checkpoint 8d-ii's
    recorded count plus 74, by a dated edit, before the block's first run. It is never lowered to make a red run
    green. *(Earlier drafts read 931, 944, 984 and 991 over stale chains. The adversarial review of 2026-09-24 moved
    this stage's own share from 67 to 74, and the final consistency pass of 2026-09-24 re-derived the chain.
    *D21-48 (2026-09-24), floor propagation:* it read 947 + 74 = 1021 before `s8c`'s 78, `s8d`'s 62 and `s8d-ii`'s 50.)*
+   *(dated 2026-09-28, s8e build)* **The floor is re-derived at stage open from Checkpoint 8d-ii's RECORDED count** (`runbook/PROGRESS.md` row 8d-ii: *"whole suite **1034 passed / 0 failed / 10 ignored over 44**"*, Checkpoint 8d-ii passed whole at `497266b`, re-run green after `be32cda`): 1034 + 74 = **1108**. The chain's expected 964 is superseded by the recorded 1034; the recorded count governs. The owed-in `lane_e2e` test(s) for MF3j and for `run()`'s review-routes binding (§8e.11's two receiver notes) are **outside** the 74, so when they are named the floor, Checkpoint 8e (2)'s `sel rk-cli 30` and §8e.12's count move again by dated edit. Checkpoint 8e (8) now reads ~~`FLOOR=1108`~~ `FLOOR=1110` *(dated 2026-09-28, s8e build, package S8E-P2)*: §8e.11's two owed-in tests are named, `lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer` and `lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step`, and 1034 + 76 = **1110**. *(dated 2026-09-28, s8e build, package S8E-P7: ~~`FLOOR=1110`~~ ~~`FLOOR=1111`~~ `FLOOR=1112` — S8E-P6's kernel test (1111), then D21-93's `fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition` (1034 + 78 = **1112**).)*
 8. **Every reader of `fsm::RunState::terminal()`, and what it makes of a lane that continued past review** (§8e.8).
    At `fc80687` two code lines read it: `replay.rs`'s comparison (`state.terminal().canonical_bytes()`) and
    `RunState`'s own JSON (`"terminal": self.terminal().to_json()`). Record every caller of that JSON as well. For
    each reader, record whether an `approved` seal at `review` followed by later stages reads as `Sealed`, and whether
    that misleads it. 🛑 If one does, the slice record says how the fold scopes a seal before §8e.8's producer lands.
+
+**Stage-open readings** *(dated 2026-09-28, s8e build, package S8E-P0; HEAD `766854c` on `build/phase-0-to-1`,
+before any code. Store backed up first: `.git/redkiln/store.sqlite3`, its `-wal` (0 B) and `-shm`, and the
+`rebuilt` sidecar, copied to `target/store-backups/s8e-open-766854c/`, with sha256 matching:
+`e83d295e37a786d98db17a981696cfe1f2d9c6eb9983cf65eb453cfe86721130` for the main file. Every cargo run went
+through the no-dispatch helper inside a private `git worktree add --detach target/wt-s8e-p0 HEAD`. That tree held
+three throwaway probe tests, was never committed, and was removed afterwards.)*
+
+- **Item 1.** `git worktree list` →
+  `D:/repos/redkiln-rs/.git/redkiln/worktrees/rk-fix-doctor-test-count 73c087a [rk-run/rk-fix-doctor-test-count]`.
+  The legacy registration is **still present**, beside the main checkout and `D:/repos/redkiln-rs.swt 8b64201
+  [spike/s-h1b-s-wt]`. `git rev-parse rk-run/rk-fix-doctor-test-count` → `73c087a82245b342811208655323ae4f49bf879b`.
+  `git log -1 --format=%B rk-run/rk-fix-doctor-test-count | grep '^Story:'` →
+  `Story: redkiln-rs/rk-fix-doctor-test-count`. `git for-each-ref refs/heads/rk-run/` lists that one ref only.
+- **Item 2 (🛑, CLEARED).** `git ls-files '*.sqlite3'` → empty. The shipped store was read through Python
+  `sqlite3` with `mode=ro`, and its sha256 did not change across the read. `rk_identity` →
+  `(id 1, root_commit cc5a2589450a5a08136692b0b4fd03cfd5be54d3, common_dir D:/repos/redkiln-rs/.git,
+  schema_version 1)`. Row counts: `t1_stage_transition` 0, `t1_gate` 0, `t1_slice_seal` 0, `t2_event` **11**,
+  `t2_memo` 0, `t2_usage` 0. Per `t2_event` kind: `dag_assembled` 1, `gate_opened` 1, `reconcile_started` **7**,
+  `stage_transition` 2. Every row has `anchor_sha` NULL. **No `t1_*` row exists anywhere, so the STOP does not fire.**
+  **Drift from the recorded state:** the six rows recorded at `c5d19d7` are now eleven, adding four
+  `reconcile_started` and one tokened `gate_opened` (ids 5–11). So the "six tier-2 rows" that §8e.2 says the
+  migration's rebuild drops must be re-counted when that rebuild runs, and the record lists what is present then.
+- **Item 3 (baseline).** There is one golden log under `CORPUS_PIN`: `redkiln-corpus` at
+  `61f590e51cbb00301c310e46aab615563a7787b8` holds `golden-logs/implement-bf1d8cec3b22d288/` only. Its
+  `events.jsonl` is the same git blob, `c2da0225807ff925d37f330eb79fe0e91da34035`, as the committed
+  `crates/rk-kernel/tests/fixtures/logs/implement-bf1d8cec3b22d288/events.jsonl`. **The canonical digest was printed
+  from inside the `rk-kernel` test binary** as `rk_types::digest::sha256(read_run(dir).canonical_events())`, over
+  both copies. Both read
+  `canonical_events_sha256=73f7553df2f84cc7b931a39b276fcfdb0b36371bb93ea461a9b10ca8a47e4e90 lines=8 bytes=2450`,
+  which equals the raw file's sha256, so the committed file is already canonical. Rows per kind in it:
+  `activity_committed` 2, `dag_amended` 1, `dag_assembled` 1, `dispatch` 2, `gate_opened` 1, `stage_transition` 1.
+  There is no `slice_sealed`. The per-kind counts of the other `-text`-pinned event fixtures, read from `HEAD`'s
+  blobs, all with zero CR:
+  - `doctor/`: `RK-D-ADVISORY-LEDGER` advisory_created 2 / advisory_retired 2; `RK-D-CREDENTIAL-RETAINED`
+    dispatch_completed 1; `RK-D-HEADROOM-MARGIN` rate_limit_reading 3; `RK-D-QUARANTINE-LIVE` quarantine_granted 2 /
+    quarantine_removed 1; `RK-D-REVIEW-REEXEC` review_block 2; `RK-D-SINK-COUNT` advisory_created 1 / artifact.write
+    1 / review_block 1; `RK-D-UNREAD` artifact.read 51 / artifact.write 102; `clean` activity_committed 1.
+  - `cost/`, 22 `rows.jsonl`: `dispatch`, `dispatch_completed` and `rate_limit_reading` only, plus `memo_miss` 1 in
+    `empty-counts-dispatch-rows-only`. `own-noise-kinds` also holds activity_committed 2, dag_assembled 1,
+    memo_miss 1, reconcile_started 2 and stage_transition 1.
+  - `exit/*/frames.jsonl` and `cost/run-frames.jsonl` are stream-json frames, not events.
+- **Item 4.** `t1_*` = 0 in the shipped store (item 2's reading), and 0 in the only other store this stage creates,
+  the fixture below.
+- **Item 5.** Checkpoint 7f, as `s8a` and `s8d-ii` left it, reads three lines.
+  - The literal (`s7f` block):
+    `grep -qE 'test result: ok\. 2 passed; 0 failed; 1 ignored'`.
+  - The ARMED line:
+    `grep -qF 'test conformance::conformance_every_trailer_key_has_a_producer ... ignored, ARMED: Slice-Verdict has 0 producers'`.
+  - The reason regex: `grep -vE 'discharged by s8e'`, with an armed count of exactly 1.
+
+  The run arm is the throwaway clone: `clone="$c7f/c"`, then
+  `git clone --quiet --no-local . "$clone"`, then `init` and `run rk-fix-doctor-test-count --lane fix` with the clone
+  as the working directory, ending `rm -rf "$c7f"`. Checkpoint 8a guard (7) reads:
+  `grep -qF 'test conformance::conformance_every_trailer_key_has_a_producer ... ignored, ARMED: Slice-Verdict has 0 producers'`,
+  `grep -qF 'discharged by s8e'` and `grep -qE 'test result: ok\. 0 passed; 0 failed; 1 ignored'`.
+  `crates/rk-kernel/tests/it/conformance.rs` carries
+  `#[ignore = "ARMED: Slice-Verdict has 0 producers; Gate and Story are both minted as of s7h.2; discharged by s8e"]`.
+- **Item 6.** The new modules are free: `rk-kernel` `tests/it/tier_one.rs` and `rk-cli` `tests/it/lane_e2e.rs`,
+  `slice_verdict.rs` and `worktree_assigned.rs` are absent, and no `main.rs` declares them. The modules to extend
+  exist and are declared: `rk-git` `trailers`, `rk-store` `store`, `rk-kernel` `replay`, `lane_order` and `fsm`, and
+  `rk-cli` `answer`, `doctor` and `root`. **One finding for §8e.10:** `crates/rk-kernel/tests/it/replay.rs` opens
+  with `#![cfg(feature = "corpus")]`, so the whole module compiles only under `--features corpus`. A test named
+  `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` would therefore run zero times under
+  Checkpoint 8e (2)'s unfeatured `sel rk-kernel 24`, which asserts its `... ok` line, and zero times under (8)'s
+  unfeatured whole suite. The name and the placement cannot both stand as written.
+- **Item 7.** 1034 + 74 = **1108**, by the dated edits above and in Checkpoint 8e (8). *(dated 2026-09-28, s8e build, package S8E-P2)* Moved to 1034 + 76 = **1110** once §8e.11's two owed-in tests were named. *(dated 2026-09-28, s8e build, package S8E-P6)* Moved to 1034 + 77 = **1111** (~~1110~~) once `tier_one::a_closed_mark_heals_as_the_lanes_end_transition` was named.
+- **Item 8 (🛑, RAISED; not cleared).** Two code lines read `terminal()`:
+  - `replay.rs`'s `fsm_residue` (`as_text(state.terminal().canonical_bytes()?)?`);
+  - `RunState::to_json` (`"terminal": self.terminal().to_json()`).
+
+  The JSON member's only reader is `RunState::canonical_bytes()`. That has no caller under `crates/*/src/` besides
+  `fsm.rs`'s own unit test, and its test callers (`gates.rs`, `fsm.rs`) compare two folds of one journal.
+  `fsm_residue` feeds both `replay::record` and `replay::resume`. The `run` verb persists the resume's value through
+  `replay::write_run` as `run.json`'s `terminal_state`. The resume folds the store's whole prior journal, not just
+  this run's rows.
+
+  **Measured in-binary** by folding `review → slice_sealed{approved} → release`, with four arms:
+  - no gate: `terminal={"terminal":"sealed","verdict":"approved"}`;
+  - an open gate at `release`: `awaiting_gate=Some(d2d32e9a…)` **but** `terminal={"terminal":"sealed",…}`;
+  - a further `release → operate`: `sealed`;
+  - control, the same gate with no seal: `terminal={"terminal":"awaiting_gate",…}`.
+
+  So an `approved` seal at `review` reads as `Sealed` in both readers for every later stage, and it shadows an open
+  gate. It misleads the `fsm_residue` reader: every post-review run's persisted `terminal_state` says `sealed`,
+  including a run halted at an open gate. AC-008's terminal-state half also cannot tell a kernel that does nothing
+  after the seal from one that works, because both sides compute `sealed`. The shipped packs reach this:
+  `bug-standard` and `story` both order `release`, `operate` and `closeout` after `review`. No product code
+  reads the persisted `terminal_state` today (`explain` does not render it), and §8e.7's `terminal_read` reads
+  `awaiting_gate()`, which the probe shows is correct past a seal. Per this item's STOP, the fold's scoping of a seal
+  is put to the operator before §8e.8's producer lands, and this package does not choose it.
+- **Terminators, byte-counted** (Python `bytes.count`, not grep). Every file this stage patches is **LF with 0 CR**
+  in both the working tree and the index blob:
+  - runbook: this file, `runbook/PROGRESS.md`, and the `s7h`, `s8a` and `s7f` stage files;
+  - records and design: `references/2026-09-08-architecture-design.md`, `references/2026-09-08-acceptance-criteria.md`
+    (the register), `spikes/decisions-2026-09-14-drafts/C-register-amendments.md`, `spikes/DECISIONS-2026-09-21.md`,
+    `references/adr/README.md` and `.gitattributes`;
+  - code: `rk-store/src/conn.rs`, `rk-cli/src/verbs/run.rs`, `rk-cli/src/verbs/answer.rs`,
+    `rk-cli/tests/it/answer.rs`, `rk-cli/src/doctor/rebuild.rs`, `rk-kernel/tests/it/conformance.rs`,
+    `rk-kernel/src/workflow/fsm.rs` and `rk-kernel/tests/it/fsm.rs`.
+
+  Patches write LF.
+- **AC-180's version-1 fixture (§8e.2), minted on the entry tree before `0002` exists.**
+  `crates/rk-store/tests/fixtures/store-v1.sqlite3` is 40,960 B, sha256
+  `603d60041fc41e0788deb8cc80957c330dd3d8101b2cdadb887fbfd42f055dd3`, git blob
+  `9796718ca4ff7b415bc8609b29fae6bd86db9f93` (`hash-object` is equal with and without filters). It was minted
+  through `rk-store` alone, in `SqliteStore::open_over_registry`'s order:
+  - `Writer::open`, then in one transaction `identity::read` (none), every `schema_lint::all()` migration unchanged,
+    and `identity::initialise`;
+  - then three rows through the adapter's own `INSERT INTO t2_event (kind, payload, anchor_sha) VALUES (?1, ?2,
+    NULL)`.
+
+  It stamps `schema_version` **1** with a path-neutral identity: `root_commit ac180ac180ac180ac180ac180ac180ac180ac180`,
+  `common_dir /fixture/store-v1/.git`. Read back with `immutable=1`: `t1_stage_transition` 0, `t1_gate` 0,
+  `t1_slice_seal` 0, `t2_event` 3 (`reconcile_started` 1, `stage_transition` 2), `t2_memo` 0, `t2_usage` 0. The
+  writer closed before the copy and left no WAL content.
+
+  `identity::check` compares `root_commit` **before** `schema_version`. So a test that wants the migration refusal
+  opens against that same root, or checks the read stamp against an opening identity that carries it.
+  `.gitattributes` gains `crates/rk-store/tests/fixtures/*.sqlite3 binary`, and `git check-attr` reads
+  `binary: set`, `text: unset`, `diff: unset` and `merge: unset`.
 
 ### 8e.1 L3 first — the writer mutex halts, and is never recovered (D21-42 24b)
 
@@ -405,6 +537,71 @@ the third takes D21-46 R2's migration:
      `mode=ro` probe, so the rebuild makes 7i provisional, and Checkpoint 8e re-runs it (§8e.13).
    - **The record states that `answered` is never written again**, because the column no longer exists. Design §5
      carries no `t1_*` column list, so the note is the record's and the migration header's.
+
+*(dated 2026-09-28, s8e build, package S8E-P3)* **§8e.2 built, uncommitted, at `766854c`; its record is
+ADR-0181 (proposed).** What landed, and the choices the section left to the record, each stated there:
+- **The port.** `EventStore::append_tier1(&mut self, event: Event, anchor: &TierOneAnchor)` is the fifth method
+  (`crates/rk-ports/src/event_store.rs`); `TierOneAnchor` carries the trailer commit's sha, its tree and, for a gate
+  opening only, the opening run's `stage` and `run_id` (`with_opening_run`). `event_store_port::ac364_…` asserts
+  **five** and names `append_tier1`. The five test doubles under `crates/*/tests` that implement the port gained the
+  method as a plain `append` (stated in each).
+- **The SQL.** `rk-store` gains `tier_one` (`insert_stage_transition`, `insert_gate_transition`, `insert_slice_seal`,
+  and `append`, the one-transaction body), `events` (the `t2_event` insert and the selector's `SELECT`, now the one
+  copy of each) and `migrate` (the runner and the one opening transaction). `SqliteStore::append`,
+  `append_tier1` and `query` call them; the adapter names no `t1_` table. The kind → table mapping is ADR-0181
+  decision 3's closed table: a `stage_transition` without `from` (a lane entry) writes the anchored `t2_event` row only
+  (friction 2); `gate_answer_void` maps to `voided` although design §5 still lists it tier 2 (N6; §8e.7 moves the row);
+  a missing `NOT NULL` member refuses as `StoreError::TierOne` and the transaction leaves zero rows.
+- **R2's migration.** `migrations/0002_gate_transitions.{sql,keys}`, listed by `schema_lint::all()`:
+  `t1_gate_transition` (`UNIQUE (token, state)`, `state` by `CHECK`, `option_id` for the answered form's option,
+  nullable descriptive columns — the answered, expired and void payloads do not carry every member), `DROP TABLE
+  t1_gate`, `ALTER TABLE t2_event ADD COLUMN item` plus an index; `SCHEMA_VERSION` = **2**. **A choice the section did
+  not foresee, taken in the record (decision 6):** `0002` adds a column and cannot re-run, while the opener re-ran
+  every migration on every open, so `rk_store::migrate::apply` counts applied migrations in the store's own
+  `PRAGMA user_version` and runs each once. `doctor --rebuild`'s staging store goes through the same runner
+  (`crates/rk-cli/src/doctor/rebuild.rs`, a two-line dated edit; its INSERT, §8e.9's to retire, is unchanged).
+- **AC-180.** `store::a_checked_in_version_one_store_is_refused_and_its_bytes_are_unchanged` opens a copy of the
+  P0 fixture through `rk_store::migrate::open` against the fixture's own root, reads the refusal *"A migration from 1
+  to 2 is required"*, and compares the copy's sha256 with `603d6004…`. `store::an_older_schema_is_refused_and_no_migration_happens`
+  moved to version 1 with no edit and is green.
+- **Red, then green** (each run by module-qualified name with `--exact` through `nd.sh`; counts `1 passed`/`1 failed`
+  read per run). Compile-stage reds on the entry tree: `rk-store` E0433 *"cannot find `tier_one` in `rk_store`"* and
+  *"cannot find `migrate`"*; `rk-ports` E0432 *"unresolved import `rk_ports::event_store::TierOneAnchor`"* and E0599
+  *"no method named `append_tier1`"* / *"`with_item`"*; `rk-adapter-sqlite` the same plus E0432 on the `TIER_ONE_*`
+  constants; `rk-kernel` E0432 *"unresolved import `rk_types::event_kind::ItemKey`"*. Behavioural reds against a
+  skeleton (the port method appending as `append`, the selector ignored, `SCHEMA_VERSION` 1, no `0002`):
+  `event_store_port::ac364_…` `left: 4 right: 5`; `store::t1_gate_transition_…` *"no such table:
+  t1_gate_transition"*; `store::migration_0002_…` *"R2's migration stamps schema version 2 / left: 1 right: 2"*;
+  `store::a_checked_in_version_one_store_…` *"the version-1 fixture OPENED under schema version 1"*;
+  `fake_behaviour::vec_store_append_tier1_…` BySha returned two rows; `fake_behaviour::vec_store_query_by_item_…`
+  *"ByItem(item-a) … never item-b's"* with item-b's row present; `conformance::sqlite_store_conforms_including_the_tier_one_arm`
+  the arm's BySha returned the unanchored core row; `store::append_tier1_…` *"no such column: item"*;
+  `store::query_by_item_…` every row returned, keys dropped. `store::tier_one_statements_…` was red only at compile
+  (*"no statement exists"*). All twelve named tests, the AC-160 pin `tier_ui::a_state_field_without_a_tier_is_a_compile_error`
+  and `store::an_older_schema_…` are green.
+- **Mutants** (`scratchpad/s8e/s8e_p3_mutants.py`: anchor asserted once, tmp + `os.replace`, restored in `finally`,
+  sha256 verified): **S8E-M4** (store half; the `t1_stage_transition` insert dropped) reddens
+  `store::append_tier1_…` *"the t1_stage_transition row is written beside it … left: []"*; **S8E-M25** (store half; the
+  SQL `WHERE` ignores the item) reddens `store::query_by_item_…` *"never item-b's"*, and its fake variant reddens
+  `fake_behaviour::vec_store_query_by_item_…`; **S8E-M34** (an `UPDATE` per token before the insert) reddens
+  `store::t1_gate_transition_…` at *"a second `opened` row for one token is refused (UNIQUE (token, state))"* — the
+  update path accepted it; **S8E-M40** (the opening identity stamped in its own transaction before the check) reddens
+  `store::a_checked_in_version_one_store_…` *"the version-1 fixture OPENED under schema version 2"*. **A variant that
+  survived, recorded as unobservable:** a *no-op* re-stamp (`UPDATE rk_identity SET common_dir = common_dir`) committed
+  before the refusal leaves the main file's bytes identical in WAL mode — the checkpoint copies back an identical page
+  and the header change counter does not move — so AC-180's bytes criterion holds under it by construction. M4's
+  `doctor::ac184_…` half and M25's `lane_e2e` half are §8e.9's and §8e.10's kernel half's, and are owed there.
+- **The shipped store is NOT rebuilt (deferred operator gate).** It still stamps version 1 (sha256 `e83d295e…`,
+  unchanged across this package), so every `SqliteStore::open` over this repository now refuses it by name, and
+  Checkpoint 8e (7b)'s last line stays red until the operator runs the rebuild. Prepared, not run:
+  `b=target/store-backups/s8e-migration-$(git rev-parse --short HEAD); mkdir -p "$b" && cp .git/redkiln/store.sqlite3 .git/redkiln/store.sqlite3-wal .git/redkiln/store.sqlite3-shm .git/redkiln/rebuilt "$b"/ && sha256sum "$b"/*`,
+  then the before counts (`python -c` over `file:.git/redkiln/store.sqlite3?mode=ro`: `schema_version`, and `count(*)`
+  per table and per `t2_event` kind; at `766854c`: version 1, `t2_event` 11, `t1_*` 0), then the go-ahead line
+  **`! bash -c '. runbook/tools/nodispatch.sh && nd_setup "$PWD/target/nd-operator" && nodispatch target/debug/redkiln doctor --rebuild; nd_check operator'`**
+  (the operator's `!` line, from the repository root, after `cargo build -p rk-cli` through the same wrapper), then the after counts, which must read version 2; both sets go in the
+  migration commit's body. Until §8e.9 lands, that rebuild writes the anchored `t2_event` rows only (no `t1_*` row and
+  no interim key), so running it after §8e.9 re-derives more; the section's *"in the migration's commit"* is the
+  orchestrator's to schedule.
 
 ### 8e.3 Git-first, owned by the kernel (D21-42 8a; D21-43 N6, N7 and N10's seam)
 
@@ -516,6 +713,8 @@ each get their own git-first test, because *a fixture per function is not a fixt
 `tier_one::a_gate_void_is_committed_before_its_row`, beside `rk-cli`'s `answer::a_failed_answer_commit_leaves_zero_rows`
 over the real verb.
 
+*(dated 2026-09-28, s8e build, package S8E-P5)* **Built, and what the build read into this section.** `crates/rk-kernel/src/runtime/tier_one.rs` holds the one boundary function, `tier_one::commit_act(git: &mut GitOps, recorder, store, target, act)`, in this section's order: authorise (live only), commit through the journalled seam (`GitOps::commit_with_trailers`, a new method in `rk-git`'s `trailer/write.rs` whose argv is `commit_with_trailers`'s byte for byte), re-read `HEAD` and `HEAD^{tree}` through the seam, then `append_tier1` for every row of the act and one `git_op` row per invocation, all anchored to the one commit. `tier_one::Boundary` owns the seam for a stage and `Runtime::with_boundary` binds it; `replay::resume_routed` gains `boundary: Option<Boundary>` and `rk-cli`'s `run` binds one per stage. Routed through it: the lane entry (`resume_routed`'s first `stage_transition`, with a stage-bearing `Story:` mark), the advance (`Runtime::step`'s `AdvanceStage` arm), the opening (`Runtime::step`'s `OpenGate` arm, the walk's `gate` step in `runtime/step.rs`, and `run`'s derived-facet gates), the answer (both rows of a void, each its own act: `answered <option>` then `voided`), and the expiry (in `run` and in `answer`). `story_trailer` and `terminal_read`'s commit are deleted; `answer`'s direct commit is deleted. The `closed` mark (§8e.6) and the seal (§8e.8) are not built here; `tier_one::Mark::Closed` and `Mark::Seal` exist for their producers. The heal runs at `run`'s entry after the `worktree_assigned` row and at `answer`'s after its ownership read. Readings the build took, each named for the adversarial pass: (a) **the unbound machinery seam** — `Runtime::new` binds no boundary, and an unbound runtime keeps the store-only tier-1 arms for the kernel suites, `replay::resume` (which passes `None`), `rk-cli`'s in-process `run_with` and the golden-log recorder `replay::record`; no production path is unbound (ADR-0185 decision 9); (b) **a failed act writes no `git_op` row** — its invocations are dropped with the error, because AC-162's *"zero store rows"* binds harder (ADR-0185 decision 6); (c) **the heal re-derives `Story:` stage marks and `Gate:` marks only**, skipping `closed` and `Slice-Verdict:` marks by name until §8e.6/§8e.8 fix their rows; (d) **`status` and `cost` read the whole store through `ByRun`** (inert, every row), because `ByItem("")` stops returning the rows the boundary now keys — ADR-0182 decision 4's owed whole-store selector, taken as a reading; (e) `tier_one::every_run_commit_resolves_through_the_worktree_resolver` reads the boundary's single `commit_with_trailers(` call site after its `authorise_tier1_write(`, which is why the replay arm shares the one call site rather than having its own. The §8e.12 table names **17** `tier_one::` tests (the package brief said 18; `sel rk-kernel 24` = 17 + 7 is consistent with 17). All 17 are green after a recorded red (the module's absence, `E0432`, then an entry-shaped boundary, store first); mutants S8E-M3, M5, M6, M12, M26 (kernel variant), M29, M43 (tier_one half), M44 and M46 are killed for their stated reasons.
+
 ### 8e.4 The run-owned worktree is read from the store (D21-42 8d; AC-529; R-63)
 
 **The decision:** *"A `worktree_assigned` row is written at run start. Every tier-1 write is checked against it and
@@ -560,6 +759,8 @@ A derivation is still a convention, so no reader may resolve ownership from it.
   3. A test asserts that the resolution reads the store, and a mutant that resolves by convention kills it. That test
      gives the fixture a `worktree_assigned` row whose path **differs** from the convention path. With equal paths the
      mutant is unobservable (the lesson of a fixture per branch).
+
+*(dated 2026-09-28, s8e build, package S8E-P5)* **Built.** `run` writes `worktree_assigned { item, worktree, branch, reused, discarded }` (ADR-0185) at every start, after the invocation's `reconcile_started` row, from `rk_git::worktree::enter`'s `Entered` (`created == Reused`, `discarded`); the stderr lines stay as the operator's echo. The one resolver is `rk_cli::verbs::run::assigned_ownership` over `rk_kernel::runtime::tier_one::assigned_ownership`, through `ByItem`; `run` builds each stage's boundary from it, and `answer` reads it first and refuses, fail-closed and by name, when there is none. RT-47's pair is **kept** on `reconcile_started` as tier-2 context with no reader. The five `worktree_assigned::` tests and `answer::a_failed_answer_commit_leaves_zero_rows` are green after a recorded red (no row kind; `answer` reads `reconcile_started`; `answer` appends first); S8E-M9 (the resolver by convention, in `answer`), M26 (`rk-cli` variant), M41 and M42 are killed. The first test's foreign write is driven through the kernel boundary with the foreign tree as target and the store's ownership, and reads `GitError::ForeignWorktree` with all four values. `answer::ac406_…`'s assertion (3), *"no trailer commit"* for a void, is re-pointed by dated note to exactly two trailer commits (`answered`, then `voided` at the tip), by D21-43 N6.
 
 ### 8e.5 The stage lives in git: a stage-bearing `Story:` at every boundary (D21-41 a; D21-43 N7)
 
@@ -606,6 +807,20 @@ seeding `through_step_seven` so `run` and `answer` both see it."* N7 adds *"The 
 **does** progress once this lands, and §8e.11's tests exist to contradict the second. Under ADR-0092 rule 1, moving
 either one is a supersession, and the stage-location record takes both.
 
+*(dated 2026-09-28, s8e build, package S8E-P4)* **Built (grammar, fold, reservation; ADR-0183, proposed).**
+- `rk-git`: `ParsedTrailer::Story` gains `stage: Option<StoryStage>` (`Stage(String)` or `Closed`); `classify_story` splits on whitespace first (zero or one token: the pre-widening reading exactly; two: a stage-bearing or `closed` mark; three or more, a stage token with `/`, or a two-token value with no `project/` form: `MalformedReason::MalformedStoryValue` → `unparsable_trailer` drift). `CLOSED_STAGE_TOKEN = "closed"`. `ProjectState` gains `story_marks` (the identity set for `DuplicateStoryTrailer`) and `stages: slug → StageMark { stage, commit }`, latest wins oldest-first, a stage-less mark never sets or resets it. `ParsedTrailer::to_trailer` is the one renderer, checked by parsing its own output, so a producer refuses what does not round-trip.
+- `rk-kernel`: `Pack::from_toml` refuses a stage named `closed` in `policy.stages`, `policy.stage_order` or a `[stage.closed]` table, naming it reserved.
+- The order assumption is stated in ADR-0183 decision 4 and on `read_commits`' doc comment; `--topo-order` is not added (it would reorder the F12 corpus read AC-444 pins).
+- Existing producers moved only as far as the value: `story_trailer` takes the advanced stage and writes `<project>/<item> <stage>` through the renderer, still once per item (the idempotence read, the seed and the mint at every boundary are §8e.3's and this section's seed bullet, not built here). `doctor --rebuild` takes `to` from a stage-bearing mark, anchored on its commit, keeps the item-record rule for a stage-less mark, and lists a `closed` mark (§8e.6 rebuilds it).
+- Re-pointed, none deleted: `story_axis::adr0155_the_emitted_story_value_parses_as_a_qualified_story`, `story_axis::adr0155_a_second_identical_story_mark_is_drift_not_a_transition` and `story_axis::adr0159_an_empty_project_degrades_to_a_bare_story_and_records_no_transition` (the last forced by `story_value`'s new stage parameter: an empty project's `/<item> <stage>` is now surfaced drift, and the stage-less arm stays as the legacy fixture); `doctor::ac427_…`'s synthetic repository now carries `demo/s-1 review` and `demo/s-2 implement`, the stages its item records name.
+- Red first, then green: the seven `Story:` `trailers::` rows and `lane_order::a_pack_stage_named_closed_is_refused_at_load` (each red line is in the package report). Mutants S8E-M16 and S8E-M17 each redden their row and were restored (sha256 checked).
+
+*(dated 2026-09-28, s8e build, package S8E-P6)* **Built: the seed and the mint (ADR-0183 decisions 5, 6 and dated decision 10, proposed).**
+- **The seed.** `through_step_seven` keeps its reconcile `Outcome` (~~`let _ = startup`~~). `rk_cli::verbs::run::seeded_stage` reads the item's latest mark from `State.projects[<project>].stages[<item>]`. A stage-bearing mark is `resolved.stage`. A `closed` mark sets `Resolved::lane_closed` (§8e.6). The record's `stage` is the fallback, taken only when git seeds nothing: no `[project] name`, no mark, or only the legacy stage-less mark. RT-50's refusal fires only when neither git nor the record gives a stage. `answer` resolves through the same function, so it folds at the seeded stage too.
+- **The mint, idempotent per `(item, stage)`.** The read is inside the boundary function: `tier_one::stage_already_marked` (live arm, reads only) finds the commit on `rk-run/<item>` that already carries this `(project, item, stage)` mark. If there is one, the act commits nothing and writes no row (`Committed::AlreadyMarked`), and a missing row is the heal's to restore. `replay::resume_routed` also takes the entry act only for a stage its journal has not ENTERED. Before, it took the act whenever the journal held no `dag_assembled`. After a deleted store, the heal restores the entry row from the mark, and the plan's rows are appended without a second entry. ADR-0161's `stages_entered` guard is unchanged (`lane_order::adr0161_a_stage_the_lane_has_entered_is_not_entered_again`, re-run green).
+- **What the build found and did not change:** a stage entered by an ADVANCE never gets its plan's own `dag_assembled` row. `plan_assembled` still reads the item's journal as a whole, so only the lane's first stage records one. This predates `s8e`. It is named here and not changed, because the two-items test needs only the item key (§8e.10).
+- **Green after S8E-P2's recorded red:** `lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane` (red: *"invocation 2 did not cross `implement -> review`"*) and `lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted` (red: *"PREMISE: hop 2 must cross into `review`"*). S8E-M1 (the seed from the record) reddens both, and S8E-M2 (the read restored to *"item already committed"*) reddens `lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order`, each for its stated reason (sha256 restored).
+
 ### 8e.6 Every stage the lane may enter is entered and trailered; an empty one says so; the end is marked (D21-42 7; D21-43 N9)
 
 **The decision:** *"Every `stage_order` stage whose rigor is not `forbidden` is entered and carries its trailer. An
@@ -640,6 +855,13 @@ empty stage records `stage_empty { reason }`."*
   lane's own trailer commits"*. That amendment is `s8j`'s. This stage proves the property over a fixture lane
   (`lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order`), with no pack literal: the
   expected list is computed from the fixture pack's own `stage_order` and `stages`, followed by `closed`.
+
+*(dated 2026-09-28, s8e build, package S8E-P6)* **Built (ADR-0183 dated decision 10; ADR-0185 decision 4 and a dated residual; all proposed).**
+- **`stage_empty`.** `replay::resume_routed` records `stage_empty { stage, reason: "no_applicable_activity" }` once per `(item, stage)` when the stage's plan holds no node. On the entry `resume_routed` takes itself (the lane's first stage), the row is a second row of the entry act, anchored to its commit. On a stage entered by an advance, the row is appended beside it, unanchored: the advance's act is taken before that stage's plan is selected. ADR-0185 states this as a residual.
+- **The `closed` mark and its row.** The kernel reports the lane's end (`RecordedRun::lane_ended`: `Done` with no successor supplied). `run`'s lane loop then mints `tier_one::close_act(<last stage>)` through the stage's boundary, but only after the stage's review pass has not blocked. The act is `Story: <project>/<item> closed`, with the empty content arm, anchoring one tier-1 row: `stage_transition { from: <last stage>, to: "closed" }`. `closed` is reserved, so the row names no stage. The heal re-derives it (the new `tier_one::a_closed_mark_heals_as_the_lanes_end_transition`; red with the arm disabled: *"the `closed` mark was not healed after its stage mark"*). A pack with no `stage_order` has a one-stage lane, and its end is marked too.
+- **A closed item.** `run` reports *"`<item>` is closed"*, writes the invocation's one `reconcile_started` row (AC-172) and exits 0. It does not enter the run tree, commit, dispatch or write a tier-1 row.
+- **The removal trigger.** When the invocation minted the mark, `run` calls `rk_git::worktree::remove_landed` AFTER it releases the run's lock (the rule removes only an unlocked tree). A kept tree's `s8d-ii` reason goes to stderr. A refused removal is named on stderr, the tree is kept, and the lane's exit stands. This last point is a reading, named for the adversarial pass.
+- **Green after S8E-P2's recorded red:** `every_non_forbidden_stage_is_entered_and_trailered_in_declared_order`, `an_empty_stage_records_stage_empty_with_its_reason`, `the_lane_end_mints_a_terminal_closed_mark`, `a_closed_item_reruns_as_done_and_mints_nothing`, `a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one`, `the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it`. S8E-M14, M28, M37 (clean arm) and M38 (a forced removal: dirty arm) each redden their named test for its stated reason.
 
 ### 8e.7 `Gate:` carries kind, reach and state (D21-42 8b; D21-43 N6, N8), and `terminal_read` reads the awaited gate (D21-42 24c)
 
@@ -713,6 +935,25 @@ deleted database, and AC-161's *"the gate records the trailers carry"* has nothi
   So is the stage advance's refusal on an unanswered `render.structured-drift` gate (`s8f` §8f.5): `s8f` specifies
   and tests it on the advance this stage makes git-first.
 
+*(dated 2026-09-28, s8e build, package S8E-P4)* **Built (grammar and fold; ADR-0184, proposed).** Each record-owned choice this section left free is stated in ADR-0184:
+- **Whether `answered` carries the option: YES**, by the deleted-database test — `gate::answered_facet` binds an answered `unknown_facet` gate's verdict as the facet value, and `runtime::step`'s `gate_answer_at` routes a gate step on it. The answered form is `… answered <option>`, so **the state is the SIXTH token, not the last**.
+- **An extension this section did not raise, taken by the same test and named for the adversarial pass (and for the operator):** an `expired` mark carries its terminal action — `expired fail`, `expired escalate` or `expired auto-decide <verdict>` — because `fail` halts and `auto-decide` answers. `opened` and `voided` carry nothing. So a value has six to eight tokens.
+- **ADR-0109 decision 2's parenthetical is read as illustrative**; the record does not supersede it and states the fallback (supersede the parenthetical in part) if the adversarial pass judges it enumerative.
+- **Token grammar:** tree 40-hex; deadline unsigned decimal unix seconds (an RFC 3339, signed or fractional deadline is `MalformedGateValue` → `unparsable_trailer` drift); kind and option without whitespace; reach a positive integer. A value whose token count is not 6-8 — the old triple included — is `LegacyGateValue` legacy drift.
+- `reconcile`'s `GateRecord` carries `deadline: i64`, `kind`, `reach`, the latest `state` and `commit`, and a `history` of every transition (oldest first) for the rebuild.
+- `EventKind::trailer_axis()` maps `GateExpired` **and** `GateAnswerVoid` to `Gate`; `GateAnswerVoid`'s tier is `One`. `rk-types`' `event_kinds::exactly_five_kinds_are_tier_one` (now six) and `event_kinds::the_trailer_axes_belong_to_the_tier_one_kinds` (the `GateExpired` exception removed) are re-pointed, red then green. Design §5's `gate_answer_void` row moves to tier 1 with the kernel at entry as producer, and the `gate_expired` row names its trailer, by dated line.
+- `rk-git`'s `grammar::a_gate_trailer_carries_the_triple`, which fed `Gate: tok-1 {sha} 2026-09-13T00:00:00Z`, is re-pointed to the widened value with an integer deadline (name kept).
+- The existing producers write the widened value through `ParsedTrailer::to_trailer`: `terminal_read` (`… <kind> <reach> opened`, from the row's `kind` and `reach`) and `answer` (`… answered <option>`, from the gate record). Nothing else in them moved; §8e.3 deletes both writes.
+- `lane_e2e` (S8E-P2's, still red) is re-pointed in three places for the sixth-token state: `m.len() == 6 && m[5] == state` → `m.len() >= 6`, `m.len() != 6` → `m.len() < 6`, and `m.last() == Some(&state)` → `m.get(5) == Some(&state)`.
+- Red first, then green: the four `Gate:` `trailers::` rows. Mutant S8E-M13's `rk-git` half, run in two variants (the renderer drops kind and reach; the parser drops them), reddens `trailers::the_widened_gate_value_carries_kind_reach_and_state` both times; its `doctor::` half is §8e.9's.
+- **AC-444's F12 replay, measured under both grammars** (`cargo test -p rk-git --features corpus`, `CORPUS_PIN` `61f590e5`, entry grammar in a detached worktree at `d80609b`): every asserted property holds (74 slices, 15 ever rejected, legacy `Gate:` drift > 0, no coerced gate); bare story ids 31 → 22, legacy `Gate:` drift 15 → 14, total drift 45 → 54. The register note records it.
+
+*(dated 2026-09-28, s8e build, package S8E-P6)* **Built: the runtime half.**
+- **`terminal_read` only reports, and only the awaited gate.** It folds the recorded journal and prints the token `fsm::awaiting_gate()` returns. That token is never an answered, void or expired one. ~~The latest tokened `gate_opened` row, unfiltered.~~ The commit went with §8e.3.
+- **Every transition is git-first.** The opening (`OpenGate`, carrying the opening run's `stage` and `run_id`), the answer, the void and the expiry go through the boundary (§8e.3, S8E-P5). This package added nothing there beyond the seed that `answer` now resolves through.
+- **The void, and the reading taken.** §8e.3 says reconcile *"keeps observing the void"* and the entry path mints it. On this tree, the void is decided by the kernel (`gate::answer`, comparing the gate's bound tree with the tree at the answer) at `answer`'s entry, which reconciled. It is committed git-first as `answered <option>` then `voided` (S8E-P5). `reconcile` observes it as the token's `voided` state, and the heal restores its rows. No path produces a void that git has observed and the store has not, other than the heal's case. So no separate entry-path mint is built, and `rk-git`'s reconcile computes no tree comparison. This is a reading, named for the adversarial pass and for the operator.
+- **Green after S8E-P2's recorded red:** `lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer`, `lane_e2e::terminal_read_reports_only_an_awaited_gate` (its answered arm was red on *"printed the dead token … as open"*), `lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered` and `lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child`. S8E-M10 (the old filter) reddens the terminal-read test, S8E-M27 (the answer's mark written `opened`) the deleted-store test, and S8E-M47 (the `opened` row's `run_id` null) the first test.
+
 ### 8e.8 `Slice-Verdict:` — the slice is declared, and sealed on both review outcomes (D21-41 e, first half)
 
 **The identity is declared, not derived** (ADR-0159's pattern; ADR-0160's route).
@@ -767,6 +1008,26 @@ deleted database, and AC-161's *"the gate records the trailers carry"* has nothi
 - 🛑 **No document claims the review gate is guarded against false approval** (ADR-0101 clause 5; S-SUBTLE-CB is
   UNRUN). A seal records a verdict. It says nothing about the verdict's calibration.
 
+*(dated 2026-09-28, s8e build, package S8E-P7; ADR-0186, proposed.)* **Built as written, with four readings for the
+adversarial pass:**
+- **The siting.** The refusals are at the mint, in `rk_kernel::runtime::tier_one::seal_act`, before any git call;
+  `rk-cli`'s `review_pass` calls it on both outcomes and hands the act to a SIBLING of the stage's boundary
+  (`Boundary::sibling`), because `resume` has already taken the stage's own. A refused seal is exit 3, named on stderr
+  (*"the item `review-1` declares no `slice`"*, *"… which is the item id"*), and commits nothing.
+- **D21-93's scope, built.** `slice_sealed`'s payload is `{ project, slice, stage, verdict }`; the fold records the
+  stage (`RunState::sealed_stage`, not serialised) and `terminal()` reads `Sealed` only while the fold is in it.
+  `fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition` (rk-kernel) is the test; mutant **S8E-M50** (the scope dropped) is its red. A healed or rebuilt seal
+  carries no `stage` and is scoped to the stage it folds in: ADR-0186 decision 4 states the residual.
+- **The lint's spelling moved, so the lint is re-pointed as well as un-ignored.** After §8e.3, `TrailerKey::` appears on
+  no code line of `rk-cli/src/` or `rk-kernel/src/` (the renderer is `rk-git`'s `ParsedTrailer::to_trailer`), and the
+  old pattern failed at its own anchor with all three axes produced. The lint now counts calls of the boundary's act
+  constructors — `Mark::Stage(` / `close_act(` (Story), `Act::gate(` / `Act::gate_opened(` (Gate), `seal_act(`
+  (Slice-Verdict) — outside `runtime/tier_one.rs`, whose definitions are its anchor, with `rk-cli/src/doctor/` dropped.
+  S8E-M45 is run in two variants (`TrailerKey::SliceVerdict`, and `seal_act(`, each named in `doctor/rebuild.rs`
+  with the seal deleted); the lint stays red on both.
+- **The unbound seam seals nothing**, as it mints no `closed` mark (ADR-0185's residual): `run_with` passes no
+  boundary. `rk-git`'s renderer gains the `Slice-Verdict` arm, round-trip checked like the other two.
+
 ### 8e.9 The rebuild moves into `rk-adapter-sqlite`, and criterion (2) is re-measured (D21-42 8c)
 
 **The decision:** *"Moves into rk-adapter-sqlite (`open_at` / `Capability::Rebuild`, the [s7d] §7d.18 RAISED item).
@@ -819,6 +1080,39 @@ bracketed `[s7d]` is inserted into the quotation here: the ledger's bare referen
   The kernel test keeps its name. `s8` (2)'s filter selects it (`cargo test -p rk-kernel -- rebuild_differential`),
   and its header gains a dated line naming the anchored test as the half that measures the route. Adding the anchored
   test to `s8` (2)'s own block is `s8j`'s instrument amendment, and it is listed there rather than made here.
+
+*(dated 2026-09-28, s8e build, package S8E-P7; ADR-0181 decision 11 and its dated note, proposed.)* **Built, with the
+choices it took named:**
+- **`open_at` is called from the root.** Checkpoint 7d's D-10 ban forbids `SqliteStore::open` — a prefix of
+  `SqliteStore::open_at` — on any code line under a `doctor` module path, so `doctor/rebuild.rs` calls
+  `crate::adapters::open_rebuild_target`, which calls `SqliteStore::open_at(<staging>, identity)`. The identity is
+  derived from git; the repository's old store is never opened (S8E-M36 opens it first and turns the version-1 test
+  red with *"A migration from 1 to 2 is required"*).
+- **The rebuild's rows are the heal's.** `tier_one::marked_commits` (new, shared by the heal and the rebuild) walks each
+  item's `rk-run/<item>` ref; the rebuild anchors every row to its commit and that commit's tree and hands the
+  `Snapshot` to `EventStore::rebuild`. A mark no run ref reaches is listed unresolvable (AC-165). The legacy stage-less
+  rule stays in `rk-cli` for an item whose ref carries no stage-bearing mark. `rebuild` is append-only (a store whose
+  rows are a prefix of the snapshot's gains the rest), so the conformance round trip is identity and no `UPDATE` or
+  `DELETE` exists. The conformance body's round trip now runs AFTER the tier-1 arm.
+- **Re-pointed, none deleted:** `doctor::ac427_…`'s synthetic repository puts each item's marks on its own
+  `rk-run/<slug>` ref and keys its pre-delete rows by the interim `item`; `doctor::ac429_…` and `ac427_…`'s
+  `stage_actions` read the whole store through `ByRun` (~~`ByItem("")`~~, which misses keyed rows — S8E-P5's route for
+  `support::store_rows`); `registry::ac489_capability_registry_dated` pins both rows recorded.
+- **Two tests were green at their first run, recorded honestly.** `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record`
+  is a pin by design (S8E-M18 reddens it). `doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two`
+  was green at its first run because S8E-P3 had already routed the staging file through `migrate::apply` with a
+  git-derived identity; §8e.12's red reason (*"`SCHEMA_VERSION` is 1"*) was stale, and S8E-M36 is its red.
+- **What `ac184_…`'s lane carries, and two findings it measured.** The lane (`Lane` variant, `lane-1`) writes its
+  boundaries, an opening and an answer, the review's seal and the `closed` mark; the planted unreachable row falls
+  outside the projection. It does NOT carry `voided` or `expired` (`rebuild_recovers_every_gate_state_from_the_widened_gate_value`
+  rebuilds every state from synthetic marks), because driving a void inside the lane measured two defects, reported for
+  the operator and NOT repaired here: (a) `answer` presents `open_gates().filter(..).last()` — the LAST token in token
+  order — so after a void and a fresh gate it presents the spent token about half the time (*"has already been
+  answered"*); (b) `run`'s gate binds the user checkout's tree (`prepare_inputs` hashes `resolved.worktree`) while
+  `answer` hashes the run-owned tree, so once the run tree moves every later answer is void too.
+- **`projection::rebuild_differential`'s header gains its dated line**, naming
+  `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` as the half that measures the route; the kernel test
+  is unchanged and pins green.
 
 ### 8e.10 The interim `item` key, outside the canonical digest, and `query` honours `ByItem` (D21-43 N5; D21-46 R3)
 
@@ -875,6 +1169,34 @@ runs a fix item **and** a story item in one repository.
     the bullet as a supersession in part, for the interim carrier alone.
 - `lane_e2e::two_items_in_one_store_do_not_fold_together` runs two items' lanes in one fixture repository and one
   store. It asserts each item's stage, gates and `stages_entered` are its own.
+
+*(dated 2026-09-28, s8e build, package S8E-P3)* **§8e.10's store and type half built, uncommitted; its record is
+ADR-0182 (proposed).** `rk_types::event::Event` gains a private `item: Option<Box<str>>` (`with_item`, `item`) —
+`Box<str>`, not `String`, because a `String` pushed `verify::exit::ExitRefused` past `clippy::result_large_err`'s 128
+bytes; `EventKind::item_key()` → `ItemKey::{Carried, InPayload, NotItemScoped}`, total and pinned by
+`fsm::every_item_scoped_kind_carries_the_interim_item_key` (30 carried, `rate_limit_reading` in its payload, seven
+not item-scoped, each with its reason). `query` honours `ByItem` in `rk_store::events::select` and in `VecStore`.
+**The record-level choices, each taken in ADR-0182 and named for the operator:**
+- **`ByItem` on an item-less row: included, as the interim** (decision 4) — the section *recommends* exclusion plus a
+  `doctor` finding, and this package does not take it, because no producer sets the key yet, every reader goes through
+  `ByItem` (`rk_kernel::runtime::journal_query`, and `cost`/`status` through `journal_query("")`), and exclusion would
+  empty every one of those reads. Exclusion is a one-clause change once the producers key; the `doctor` finding is
+  owed. **This departs from the section's recommendation and is put to the operator.**
+- `BySha` selects by anchor (ADR-0181 decision 12; the conformance arm's port-level observation); `ByRun` stays inert.
+- `rate_limit_reading` keeps ADR-0163's payload member and does not carry the key beside it (one source).
+- ADR-0131 decision 8 is argued, not dismissed; a supersession in part for the carrier alone is the fallback.
+
+**The replay test's placement (§8e.0 item 6's finding), fixed without a rename.** `crates/rk-kernel/tests/it/replay.rs`'s
+module-wide `#![cfg(feature = "corpus")]` became one `#[cfg(feature = "corpus")]` on each of its 69 items (a dated note
+in the file says why), so `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` runs in the
+unfeatured suite under Checkpoint 8e (2)'s `sel rk-kernel 24` and (8), and nothing else in the module does:
+`cargo test -p rk-kernel --test it -- --list` selects 0 names matching `golden_log_replay|ac161_ac164_delete_db_replay`
+unfeatured (Checkpoint 7b's differential) and 1 `replay::` name; with `--features corpus` it lists 14 and the test's
+corpus arm (the `CORPUS_PIN` copy is the committed copy's bytes at `CORPUS_SHA`) passes. Arm 1 pins
+`73f7553d…4e90`; arm 2 is killed by **S8E-M35** (the key written into `payload`: *"arm 2: carrying the interim key
+moved … left: 251601bc…"*).
+
+*(dated 2026-09-28, s8e build, package S8E-P6)* **`lane_e2e::two_items_in_one_store_do_not_fold_together` is green** (red at S8E-P2/P5: *"the gate item's own marks … left: [implement]"*). The first item's unkeyed `dag_assembled` row read as the second item's under the interim inclusive reading, so the second item's entry was skipped. The fix is producer keying on the kernel's side: `Runtime::with_item` keys every row `Runtime::append` writes, and `replay::resume_routed` binds the run's item. The executor's own guard appends in `runtime/activity.rs` and every harness-appended row stay item-less, on ADR-0182's residual (its dated note). S8E-M25's lane half (`rk_store::events::select` ignoring `ByItem`) reddens the test for its stated reason.
 
 ### 8e.11 The first end-to-end tests of `verbs::run::run` (D21-42 24c; D21-40 decision 2)
 
@@ -961,6 +1283,18 @@ kills MF3j: the step must reach the port with the run branch's paths, and must n
 bound"*.
 *(dated 2026-09-27, `s8d` build, package R2FIX-8d; receiver note; refuting round 2's tests-mutants finding.)* **Also owed here: `run()`'s review-routes binding** (`with_review_routes`, R5 = ADR-0177 decision 2, proposed *(dated 2026-09-27, `s8d` close: accepted on D21-84)*). It has MF3j's shape, and no `rk-cli` test reaches its call site. **Discharged in `s8d` and not owed here:** `run()`'s `sca_scan` database binding (R8 = ADR-0179 decision 4). `adapter_selection::run_binds_sca_scans_advisory_databases_before_the_step_reaches_the_port` kills its mutant R2-A without a dispatch. Its fixture activity opens with a zero-agent `tool` step, and the exit code tells a kernel input refusal (19) from the handler's own refusal (10). The same shape may reach both bindings owed here before the `HarnessFactory` seam exists. A zero-agent fixture activity's first `tool` step would take `selection = "affected"` for MF3j, or `toolchain:shallow_clone` for the review routes. That is a route this section may take, not a claim that it works: `s8d` did not build either.
 
+*(dated 2026-09-28, s8e build, package S8E-P2)* **Both owed bindings are discharged here, through the seam, and the route above is the one taken.** Each test drives `rk_cli::verbs::run::run(` over `pack-min` with a ZERO-AGENT `implement` activity, the stub `cargo` as the one Rust candidate (`support::install_review_toolchain`), a scripted factory that is never asked to dispatch, and an environment of `clean_env` plus the process-start keys the toolchain adapters refuse to run without (`PATH`, `PATHEXT`, `SystemRoot`, `SystemDrive`, `TMP`, `TEMP`; no credential):
+- `lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer` (MF3j). The activity produces `Changeset`, and its first step is `toolchain:test` with `selection = "affected"`. The exit code is the channel, as in `adapter_selection`'s R2-A test. The CONTROL runs with an empty `HEAD..rk-run/bug-1` and must read 19 (the kernel's `carries no change` refusal, before the port). The CASE plants one commit changing `src/lib.rs` on `rk-run/bug-1` before the run and must read anything but 19. Measured: control `Unsupported` (19), case `NonZero` (14), the stub's `cargo metadata` answer reaching the adapter. Under MF3j (`with_run_branch` removed) the case reads 19, *"no run-branch reader is bound"*, and the test is red.
+- `lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step` (the review routes). The activity's first step is `toolchain:shallow_clone` at `HEAD`'s sha. The observation is the clone: `<common-dir>/redkiln/clones/bug-1/<sha>/README`. Measured: exit 0 and the clone present. With `with_review_routes` removed the run exits 19 and no clone exists, and the test is red.
+
+*(dated 2026-09-28, s8e build, package S8E-P2)* **Instrument notes for the fifteen, each a reading of this section rather than a change to it.**
+- **Stdout is not readable in process.** `run`'s stdout is the test harness's captured stream, so `run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer` cannot read *"the re-run's stdout reports no open gate"*. It asserts the git and store halves, and `terminal_read_reports_only_an_awaited_gate` reads stdout: each of its three arms opens `gate-1`'s gate in process and re-runs as the binary over the fixture child. After §8e.7 `terminal_read` commits nothing, so S8E-M10 is observable only on stdout, and that arm is the one that carries it.
+- **The void arm reads the dead token, not every open line.** After a void answer the kernel's next act is a fresh gate (AC-252), which is awaited and may be printed. The arm asserts that no *"is open"* line and no new opening names the VOID token. Measured at the build: the answered and expired arms are red (the old filter re-commits and re-prints the dead token), and the void arm is already green, because the latest tokened opening is the fresh one.
+- **The gate stage's gate is the abstention gate.** The fixture lane's `implement` opens `unknown_facet:has_repro` from its `require` row over an item that omits `has_repro`, the gate every `pack-min` gate test opens, rather than a catalog `gate` step, which would need a `.redkiln/processes/` question.
+- **The removal trigger's two arms run in two repositories.** One store holding both items would make the test read §8e.10's `ByItem` before the trigger. Measured: in one repository the second item's lane stalled on the first item's `stages_entered` and never dispatched.
+- **The reuse test runs over `gate-1`** (`PackVariant::Base`, one stage), so its second invocation awaits the same gate on today's binary and on the stage's. It plants its ignored file under the run tree's `.redkiln/worktrees/`, which `info/exclude`'s run-root row ignores in every worktree of the repository. Green at the build, and red under S8E-M20.
+- **`[project] name` and `slice` landed with the tests, ahead of the mint that forces them.** `pack-min/config.toml` declares `name = "rk-fixture"`, and `items/review-item.toml` (the item `exit/findings-block/` runs) declares `slice = "review-1-fix"`. Both are inert until §8e.6 and §8e.8 mint. AC-438's table, `cost`'s run and `exit/findings-block/` keep their exits (measured green after the edit). `change_deriver`'s fixture had appended its own `[project]` table, which is now a duplicate key, so it asserts the shared one instead.
+
 ### 8e.12 Named tests, red first, and the mutants
 
 **Every test of a NEW behaviour is written before the code it covers and watched RED for the reason in its row.** A
@@ -1029,6 +1363,7 @@ Each test is selected in Checkpoint 8e by its module-qualified name with `--exac
 | `rk-kernel` | `tier_one::replay_serves_the_boundary_from_its_git_op_rows` | no `git_op` kind |
 | `rk-kernel` | `tier_one::a_journal_without_git_op_rows_replays_as_no_git_writes` | no boundary on replay |
 | `rk-kernel` | `tier_one::every_run_commit_resolves_through_the_worktree_resolver` | `run.rs` and `answer.rs` call `commit_with_trailers` directly |
+| `rk-kernel` | `tier_one::a_closed_mark_heals_as_the_lanes_end_transition` *(dated 2026-09-28, s8e build, package S8E-P6)* | the heal skips a `closed` mark by name |
 | `rk-kernel` | `conformance::conformance_every_trailer_key_has_a_producer` (un-ignored) | `#[ignore]`, and 0 seals |
 | `rk-kernel` | `projection::rebuild_differential` | green — the kernel half; its dated header line is new |
 | `rk-kernel` | `projection::stage_level_next_action` | green — AC-161's kernel half, a pin re-run for the claim |
@@ -1036,7 +1371,10 @@ Each test is selected in Checkpoint 8e by its module-qualified name with `--exac
 | `rk-kernel` | `lane_order::a_pack_stage_named_closed_is_refused_at_load` | `closed` is an ordinary name |
 | `rk-kernel` | `fsm::every_item_scoped_kind_carries_the_interim_item_key` | no `item` member |
 | `rk-kernel` | `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` | no key carrier; its first arm alone is a pin, and its second cannot be written |
+| `rk-kernel` | `fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition` *(dated 2026-09-28, s8e build, package S8E-P7; D21-93)* | `terminal()` reads `Sealed` at a release gate after a seal made in review |
 | `rk-cli` | the fifteen `lane_e2e::…` tests in §8e.11 | `verbs::run::run(` has no FakeHarness seam |
+| `rk-cli` | `lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer` *(dated 2026-09-28, s8e build, package S8E-P2)* | `verbs::run::run(` has no FakeHarness seam; green once it exists, red under MF3j |
+| `rk-cli` | `lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step` *(dated 2026-09-28, s8e build, package S8E-P2)* | `verbs::run::run(` has no FakeHarness seam; green once it exists, red under S8E-M49 |
 | `rk-cli` | `slice_verdict::approved_is_sealed_on_the_advance_path` | no seal |
 | `rk-cli` | `slice_verdict::changes_requested_is_sealed_on_the_findings_block_path` | no seal |
 | `rk-cli` | `slice_verdict::an_absent_slice_is_refused_by_name` | no key |
@@ -1060,6 +1398,12 @@ suite gains **74** passed (§8e.0 item 7). The adversarial review of 2026-09-24 
 the removal trigger, the AC-163 replay, the AC-180 fixture, the registry flip, the AC-518 commit lint, and the two
 `worktree_assigned` rows. Before it the count was 70 names and 66 new. The earlier count was 97 names. The 30
 run-worktree names, one of them a rename, moved to `s8d-ii` (`s8d-ii` §8d-ii.8), and R2 and R3 added three.
+
+*(dated 2026-09-28, s8e build, package S8E-P2)* **82 names** (~~80~~): `rk-cli` **32** (~~30~~), the other crates unchanged. §8e.11's two owed-in tests are new, so **75** are new (~~73~~) and the suite gains **76** (~~74~~). The floor is 1034 + 76 = **1110** (§8e.0 item 7).
+
+*(dated 2026-09-28, s8e build, package S8E-P6)* **83 names** (~~82~~): `rk-kernel` **25** (~~24~~), with `tier_one::a_closed_mark_heals_as_the_lanes_end_transition` added for the heal's `closed` arm (§8e.6). So **76** are new (~~75~~), the suite gains **77** (~~76~~), and the floor is 1034 + 77 = **1111**.
+
+*(dated 2026-09-28, s8e build, package S8E-P7)* **84 names** (~~83~~): `rk-kernel` **26** (~~25~~), with D21-93's `fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition`. So **77** are new (~~76~~), the suite gains **78** (~~77~~), and the floor is 1034 + 78 = **1112**. Measured at the package's diagnostic whole-suite run: 1112 passed / 0 failed / 9 ignored over 44. **Also re-pointed in this package, none deleted:** `doctor::ac427_…`, `doctor::ac429_…` (§8e.9's note), `registry::ac489_…`, and `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit`, which reads ids as text (its premise failed on its own SQL read) and gains an EXPIRY arm over `pack.gate-1s.toml`, because the fixture lane lets no gate expire and S8E-M43's lane half was otherwise a missing fixture branch.
 
 The existing `story_axis::adr0155_…` tests and `doctor::ac427_…`'s synthetic repository are **re-pointed** in the
 record's commit, and none is deleted. `story_value` gains the stage, and the old single-mark assertions become the
@@ -1112,6 +1456,9 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M46 | an `rk-cli` code line calls `EventStore::append_tier1(…)` in path form | `tier_one::the_tier_one_writer_is_called_only_from_the_boundary` |
 | S8E-M47 | the `opened` transition row written with a null `run_id` | `lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer` |
 | S8E-M48 | the rebuild fills a re-derived `opened` row's `run_id` from the `Gate:` commit's `Story:` stage and digest, in place of null (D21-48 X11) | `doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value` |
+| MF3j | `run()`'s `routing.with_run_branch(..)` binding removed (`s8d` §8d.10's name, kept; *(dated 2026-09-28, s8e build, package S8E-P2)*) | `lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer` |
+| S8E-M50 *(dated 2026-09-28, s8e build, package S8E-P7; D21-93)* | the seal's stage scope dropped: `terminal()` reads `Sealed` whenever a seal was folded | `fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition` |
+| S8E-M49 | `run()`'s `routing.with_review_routes(..)` binding removed (`s8d` R2FIX-8d's review-routes mutant; *(dated 2026-09-28, s8e build, package S8E-P2)*) | `lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step` |
 
 A mutant that survives is not waved through. It is either an **unobservable property**, which moves to a source lint
 with its reason written down, as `projection.rs`'s tier filter did, or a **missing fixture branch**. Both are recorded
@@ -1267,6 +1614,17 @@ moved to `s8d-ii` §8d-ii.9 with the work they describe. The two that stay are r
     convention, 8a's block carries the four values as literals written by dated edit, and it refuses while a
     placeholder remains. A replay supplies nothing, so (10h)'s environment check is deleted.
 
+*(dated 2026-09-28, s8e build, package S8E-P7)* **The three amendments are made, in the Slice-Verdict commit's work.**
+Checkpoint 7h guard (6) runs the lint by its module-qualified name and requires its `... ok` line and `1 passed; 0
+failed; 0 ignored`; guard (7) requires the ARMED string absent from `conformance.rs` with grep's `rc` exactly 1; the
+Slice-Verdict bullet is dated ✅; guard (10a)'s FAIL message lost its two backticks and nothing else. Checkpoint 8a guard
+(7) requires the same `... ok` line, `1 passed; 0 failed; 0 ignored` and the absent string. Checkpoint 7f's literal is
+all three lints `... ok`, `3 passed; 0 failed; 0 ignored`, none ignored, the ARMED string absent. **In each bash block
+the superseded lines are REPLACED, not struck**, with a dated comment saying what they asserted: a struck line would
+still carry the ARMED string, which Checkpoint 8e (10h) asserts absent from 8a's extracted block, and (7c) asserts the
+old 7h FAIL message absent. The amended lines were exercised read-only over `nd.sh` output (each passes; the old armed
+output shape fails each, a control). `PROGRESS.md` §1's 7h, 8a and 7f rows read `re-run pending`.
+
 ### 8e.14 Acceptance set
 
 **Claimed: AC-160, AC-161, AC-162, AC-163, AC-184 (re-measured), AC-529, AC-174 (reconcile still writes nothing to
@@ -1311,6 +1669,10 @@ register note in the commit that makes it true (the attendant edits):
   boundary function rather than routing around it (`s8f` §8f.1), so its own writes, `commit-tree` and `update-ref`,
   also sit in `runtime/tier_one.rs`. `s8f` brings them under this lint in the commit that adds them (final
   consistency pass 2026-09-24).
+
+*(dated 2026-09-28, s8e build, package S8E-P7)* The AC-161 and AC-163 re-point notes are written in the register as
+the two bullets above state them (AC-163's replay also carries the expiry arm §8e.12's note names); AC-518's was
+S8E-P5's, and it gains one line that the seal's commit rides the same boundary. Nothing states any criterion met.
 
 **Contributed to, not claimed:**
 
@@ -1461,8 +1823,14 @@ sel rk-git 11 trailers::story_value_with_a_stage_parses_as_a_stage_bearing_mark 
 sel rk-store 6 store::writer_poison_is_a_halt_and_never_recovered store::tier_one_statements_insert_a_stage_transition_with_its_anchor_and_tree store::t1_gate_transition_appends_one_row_per_transition_and_is_never_updated store::migration_0002_adds_the_transitions_table_and_the_item_column_and_stamps_version_two store::a_checked_in_version_one_store_is_refused_and_its_bytes_are_unchanged tier_ui::a_state_field_without_a_tier_is_a_compile_error
 sel rk-ports 3 event_store_port::ac364_event_store_port_has_no_update_or_delete fake_behaviour::vec_store_append_tier1_is_queryable_with_its_anchor fake_behaviour::vec_store_query_by_item_returns_only_that_items_rows
 sel rk-adapter-sqlite 6 conformance::sqlite_store_conforms_including_the_tier_one_arm store::append_tier1_writes_the_t1_row_and_the_anchored_t2_row_in_one_transaction store::open_at_targets_a_staging_file_and_rebuild_writes_anchored_tier_one_rows store::query_by_item_returns_only_that_items_rows registry::ac489_capability_registry_dated registry::snapshot_and_rebuild_rows_carry_a_recorded_probe
-sel rk-kernel 24 tier_one::every_run_commit_resolves_through_the_worktree_resolver projection::stage_level_next_action tier_one::a_failed_commit_leaves_zero_store_rows tier_one::a_hook_rewriting_the_message_has_no_effect_on_the_trailer_commit tier_one::the_commit_exists_before_any_row_is_readable tier_one::the_tier_one_writer_is_called_only_from_the_boundary tier_one::replay_of_a_boundary_performs_zero_git_writes tier_one::a_commit_without_a_row_is_healed_at_entry tier_one::a_heal_writes_no_row_for_an_unreachable_anchor tier_one::a_gate_kind_with_whitespace_is_refused_at_the_mint tier_one::a_gate_answer_is_committed_before_its_row tier_one::a_gate_expiry_is_committed_before_its_row tier_one::a_gate_void_is_committed_before_its_row tier_one::a_boundary_anchors_every_row_of_the_act_to_its_commit tier_one::an_act_with_neither_trailer_nor_content_is_refused tier_one::the_boundary_journals_a_git_op_row_per_invocation tier_one::replay_serves_the_boundary_from_its_git_op_rows tier_one::a_journal_without_git_op_rows_replays_as_no_git_writes conformance::conformance_every_trailer_key_has_a_producer projection::rebuild_differential lane_order::adr0161_a_stage_the_lane_has_entered_is_not_entered_again lane_order::a_pack_stage_named_closed_is_refused_at_load fsm::every_item_scoped_kind_carries_the_interim_item_key replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key
-sel rk-cli 30 lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit worktree_assigned::a_reentry_records_reused_and_its_discard_list worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two root::adr0118_a_poisoned_writer_mutex_halts_exit_70
+# (dated 2026-09-28, s8e build, package S8E-P6) sel rk-kernel 25, was 24 (struck: sel rk-kernel 24): the heal's
+# closed arm (section 8e.6) has its own test, tier_one::a_closed_mark_heals_as_the_lanes_end_transition.
+# (dated 2026-09-28, s8e build, package S8E-P7) sel rk-kernel 26, was 25 (struck: sel rk-kernel 25): D21-93's
+# fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition is named.
+sel rk-kernel 26 fsm::an_approved_seal_reads_sealed_only_until_the_next_stage_transition tier_one::every_run_commit_resolves_through_the_worktree_resolver projection::stage_level_next_action tier_one::a_failed_commit_leaves_zero_store_rows tier_one::a_hook_rewriting_the_message_has_no_effect_on_the_trailer_commit tier_one::the_commit_exists_before_any_row_is_readable tier_one::the_tier_one_writer_is_called_only_from_the_boundary tier_one::replay_of_a_boundary_performs_zero_git_writes tier_one::a_commit_without_a_row_is_healed_at_entry tier_one::a_heal_writes_no_row_for_an_unreachable_anchor tier_one::a_gate_kind_with_whitespace_is_refused_at_the_mint tier_one::a_gate_answer_is_committed_before_its_row tier_one::a_gate_expiry_is_committed_before_its_row tier_one::a_gate_void_is_committed_before_its_row tier_one::a_boundary_anchors_every_row_of_the_act_to_its_commit tier_one::an_act_with_neither_trailer_nor_content_is_refused tier_one::the_boundary_journals_a_git_op_row_per_invocation tier_one::replay_serves_the_boundary_from_its_git_op_rows tier_one::a_journal_without_git_op_rows_replays_as_no_git_writes conformance::conformance_every_trailer_key_has_a_producer projection::rebuild_differential lane_order::adr0161_a_stage_the_lane_has_entered_is_not_entered_again lane_order::a_pack_stage_named_closed_is_refused_at_load fsm::every_item_scoped_kind_carries_the_interim_item_key replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key tier_one::a_closed_mark_heals_as_the_lanes_end_transition
+# (dated 2026-09-28, s8e build, package S8E-P2) sel rk-cli 32, was 30 (struck: sel rk-cli 30): section 8e.11's two
+# owed-in lane_e2e tests are named (MF3j; the review-routes binding).
+sel rk-cli 32 lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit worktree_assigned::a_reentry_records_reused_and_its_discard_list worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two root::adr0118_a_poisoned_writer_mutex_halts_exit_70 lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step
 nd_check "named selections" || exit 1
 
 # ---- (3) THE ARMED LINT IS DISCHARGED — its ignore reason is gone, not reworded (ADR-0160's bullet; D21-41 e).
@@ -1580,10 +1948,19 @@ hits=$(grep -nF 'a real `redkiln run` over the review fixture' runbook/phase-1/s
 [ "$rc" -eq 1 ] || { echo "FAIL: 7h guard (10a)'s FAIL message still carries backticks inside double quotes (grep rc=$rc):"; printf '%s\n' "$hits"; exit 1; }
 
 # ---- (8) THE WHOLE SUITE, no fail-fast, with a floor. Expected value, re-derived at stage open from Checkpoint 8d-ii's
-# ---- recorded count plus 74 (section 8e.0 item 7): 964 + 74 = 1038 on the final chain (D21-48 floor propagation,
+# ---- recorded count plus 74 (section 8e.0 item 7): ~~964 + 74 = 1038~~ on the final chain (D21-48 floor propagation,
 # ---- 2026-09-24: was 947 + 74 = 1021, before s8c 78, s8d 62 and s8d-ii 50). Replace it by a dated edit
 # ---- before the first run.
-FLOOR=1038
+# ---- (dated 2026-09-28, s8e build) RE-DERIVED: Checkpoint 8d-ii's RECORDED count 1034 (PROGRESS.md row 8d-ii) + 74
+# ---- = 1108, replacing the chain's 1038 (struck: FLOOR=1038). The owed-in MF3j and review-routes lane_e2e test(s)
+# ---- (section 8e.11's receiver notes) are OUTSIDE the 74; this line and sel rk-cli 30 move again when they are named.
+# ---- (dated 2026-09-28, s8e build, package S8E-P2) NAMED: both owed-in tests, so 1034 + 76 = 1110 (struck:
+# ---- FLOOR=1108), and (2) reads sel rk-cli 32.
+# ---- (dated 2026-09-28, s8e build, package S8E-P6) one more rk-kernel test (tier_one::a_closed_mark_heals_as_the_lanes_end_transition),
+# ---- so 1034 + 77 = 1111 (struck: FLOOR=1110), and (2) reads sel rk-kernel 25.
+# ---- (dated 2026-09-28, s8e build, package S8E-P7) D21-93's fsm test, so 1034 + 78 = 1112 (struck: FLOOR=1111), and (2)
+# ---- reads sel rk-kernel 26.
+FLOOR=1112
 tally() { printf '%s\n' "$1" | awk '/^test result:/ { p += $4; f += $6; i += $8; n += 1 } END { print p+0, f+0, i+0, n+0 }'; }
 # CONTROL: a run of zero tests tallies below the floor.
 read -r cp cf ci cn <<< "$(tally 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out')"

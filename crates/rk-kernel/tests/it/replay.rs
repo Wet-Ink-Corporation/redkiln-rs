@@ -164,38 +164,71 @@
 //! `rk_git::version::assert_at_startup`, the only way to mint the capability token `GitExec::new`
 //! demands), which is a second reason it does not belong in the unfeatured run.
 
-#![cfg(feature = "corpus")]
+// *(dated 2026-09-28, s8e build, package S8E-P3.)* The module-wide `#![cfg(feature = "corpus")]` that stood
+// here is now one `#[cfg(feature = "corpus")]` on every item below it, unchanged in effect for every
+// item that was here: an unfeatured build compiles none of them, and Checkpoint 7b's `--list`
+// differential still selects zero `golden_log_replay|ac161_ac164_delete_db_replay` without the
+// feature. The one ungated item is `golden_log_canonical_digests_are_unchanged_by_the_interim_item_key`
+// (ADR-0182 decision 6; s8e section 8e.10), whose first arm reads the COMMITTED copy of the golden log
+// and must run in the unfeatured suite: s8e section 8e.0 item 6 found that under the module-wide gate
+// the name would run zero times under Checkpoint 8e (2) and (8). It spawns no git.
 
+#[cfg(feature = "corpus")]
 use std::path::{Path, PathBuf};
+#[cfg(feature = "corpus")]
 use std::sync::atomic::AtomicU32;
+#[cfg(feature = "corpus")]
 use std::sync::{Arc, Mutex};
 
+#[cfg(feature = "corpus")]
 use rk_git::git_exec::{GitExec, GitOp};
+#[cfg(feature = "corpus")]
 use rk_git::gitops::{GitOps, Mode, VecJournal};
+#[cfg(feature = "corpus")]
 use rk_git::path::WorktreePath;
+#[cfg(feature = "corpus")]
 use rk_kernel::replay::{
     HiddenInput, RecordedSpec, ReplayError, ReplayPorts, RunInputs, RuntimeContext,
 };
+#[cfg(feature = "corpus")]
 use rk_kernel::workflow::fsm::{NextAction, StageAction, TerminalState, stage_action};
+#[cfg(feature = "corpus")]
 use rk_ports::docs_site::DocsSite;
+#[cfg(feature = "corpus")]
 use rk_ports::event_store::{EventStore, Query, Snapshot};
+#[cfg(feature = "corpus")]
 use rk_ports::fakes::{BoardTracker, FixtureToolchain, RecordingDocs};
+#[cfg(feature = "corpus")]
 use rk_ports::harness::{DispatchOutcome, Harness};
+#[cfg(feature = "corpus")]
 use rk_ports::root::Ports;
+#[cfg(feature = "corpus")]
 use rk_ports::toolchain::Toolchain;
+#[cfg(feature = "corpus")]
 use rk_ports::tracker::Tracker;
+#[cfg(feature = "corpus")]
 use rk_types::activity::{ActivitySpec, DispatchRecord};
+#[cfg(feature = "corpus")]
 use rk_types::digest::Digest;
+#[cfg(feature = "corpus")]
 use rk_types::error::StepError;
+#[cfg(feature = "corpus")]
 use rk_types::event::Event;
+#[cfg(feature = "corpus")]
 use rk_types::event_kind::{EventKind, Tier};
+#[cfg(feature = "corpus")]
 use rk_types::retention::Retained;
+#[cfg(feature = "corpus")]
 use rk_types::typed::{SchemaId, Typed};
+#[cfg(feature = "corpus")]
 use rk_types::usage::{CliVersion, Timings};
 
+#[cfg(feature = "corpus")]
 const DEVIATION: &str = include_str!("../fixtures/packs/incident-deviation.toml");
+#[cfg(feature = "corpus")]
 const ARTIFACTS: &str = include_str!("../fixtures/registries/artifacts/artifacts.toml");
 
+#[cfg(feature = "corpus")]
 const CATALOG: &[(&str, &str)] = &[
     (
         "impl-report.toml",
@@ -219,11 +252,14 @@ const CATALOG: &[(&str, &str)] = &[
     ),
 ];
 
+#[cfg(feature = "corpus")]
 const BANDS: [&str; 4] = ["low", "med", "high", "critical"];
 
 /// The item and the stage every fold below is keyed on. They are the values [`inputs`] builds, and
 /// they are named once so no assertion re-types one and silently keys a fold on a different run.
+#[cfg(feature = "corpus")]
 const ITEM: &str = "INC-1";
+#[cfg(feature = "corpus")]
 const STAGE: &str = "implement";
 
 /// **ADR-0105 clause 4's tree hash, SUPPLIED and recorded — never read from git here.**
@@ -232,16 +268,19 @@ const STAGE: &str = "implement";
 /// `rk_kernel::workflow::fsm::GateRecord::derive` hashes it and a shorter value would derive a
 /// token that no real gate could carry. It is an INPUT: it goes into `inputs/runtime.json` and
 /// into `run_id`, so a replay reads it back rather than being told it out of band.
+#[cfg(feature = "corpus")]
 const TREE_HASH: &str = "9f2c1ab4d6e80357bb41c0d9e2f7a85643c1908df5b2e7461ac30d98f5b1e2c7";
 
 /// The gate deadline, as a recorded value. **Not a clock reading** — `rk_types::time::Timestamp`
 /// *"has no `now()`, deliberately"*, and a deadline the replay computed would make two runs of
 /// identical inputs produce different bytes.
+#[cfg(feature = "corpus")]
 const DEADLINE: i64 = 1_760_000_000;
 
 /// The journaled instant every `activity_committed` this run writes carries. Same rule as
 /// [`DEADLINE`] and same reason: a clock reading here would make the recorded journal a different
 /// byte string on every run and turn AC-042's byte-identity into a comparison of clocks.
+#[cfg(feature = "corpus")]
 const RESULTS_AT: i64 = 1_759_900_000;
 
 /// The schema every recorded [`ActivitySpec`] demands, and the one the scripted responder returns.
@@ -249,6 +288,7 @@ const RESULTS_AT: i64 = 1_759_900_000;
 /// One id for all three bindings deliberately: the boundary's whole AC-031 check is
 /// `typed.schema == spec.schema`, and a script whose entries had to be matched to nodes by
 /// position would make this file's fixture depend on the plan's order rather than on the bindings.
+#[cfg(feature = "corpus")]
 const RECORDED_SCHEMA: &str = "RecordedResult/v1";
 
 /// **The dispatch bindings, as RECORDED INPUTS** — one per DAG node the amended plan carries.
@@ -264,12 +304,14 @@ const RECORDED_SCHEMA: &str = "RecordedResult/v1";
 /// `Activity::id_at_version` has three candidate homes and `workflow::fsm`'s header records that
 /// choosing one is a decision this stage may not take. The versions below are the ones the
 /// **committed catalog fixtures declare** (`version = 1` in each of the three), transcribed.
+#[cfg(feature = "corpus")]
 const BINDINGS: [(&str, &str, &str); 3] = [
     ("change-summary[node]", "change-summary@1", "ChangeSummary"),
     ("impl-report", "impl-report@1", "ImplReport"),
     ("implement-change[node]", "implement-change@1", "Changeset"),
 ];
 
+#[cfg(feature = "corpus")]
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -279,6 +321,7 @@ fn workspace_root() -> PathBuf {
 
 /// **The staging tree, named once.** `target/golden-logs-staging/` — untracked, so AC-465 holds,
 /// and stable, so the operator's move is a copy of a named directory rather than a search.
+#[cfg(feature = "corpus")]
 fn staging_root() -> PathBuf {
     workspace_root().join("target/golden-logs-staging")
 }
@@ -286,11 +329,13 @@ fn staging_root() -> PathBuf {
 /// Scratch for the perturbation case. **Deliberately NOT under [`staging_root`]**: the staging tree
 /// is what the operator's single `CORPUS_PIN` move copies, and a deliberately-corrupted run sitting
 /// in it would be copied into the corpus with the good ones.
+#[cfg(feature = "corpus")]
 fn scratch_root() -> PathBuf {
     workspace_root().join("target/golden-log-scratch")
 }
 
 /// The committed in-crate copies (§7b.12's `logs/` row).
+#[cfg(feature = "corpus")]
 fn committed_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/logs")
 }
@@ -300,6 +345,7 @@ fn committed_root() -> PathBuf {
 /// It is the **deviation** fixture deliberately: a run carrying `dag_assembled` **and**
 /// `dag_amended` is the only one that makes AC-064's second AND — *"the deviation record is part of
 /// the replay input set, so an amended DAG is not a hidden input"* — checkable at all.
+#[cfg(feature = "corpus")]
 fn inputs() -> RunInputs {
     let facets_src = std::fs::read_to_string(workspace_root().join("spikes/p9/facets.toml"))
         .expect("the shipped facet registry is readable");
@@ -361,6 +407,7 @@ fn inputs() -> RunInputs {
 
 /// A distinct, derived card digest per node. **Derived and not a constant**: three bindings sharing
 /// one digest would let a spec mixed up between two nodes reach the port unnoticed.
+#[cfg(feature = "corpus")]
 fn card_digest_hex(node: &str) -> String {
     rk_types::digest::sha256(node.as_bytes())
         .as_str()
@@ -373,16 +420,19 @@ fn card_digest_hex(node: &str) -> String {
 /// **replay** side, which is where the criterion's zero is asserted. A recording has to dispatch,
 /// so the fake bound here answers instead, and its counter is what makes *"N is not 0"* a reading.
 #[derive(Debug, Default)]
+#[cfg(feature = "corpus")]
 struct RecordingHarness {
     dispatches: AtomicU32,
 }
 
+#[cfg(feature = "corpus")]
 impl RecordingHarness {
     fn dispatches(&self) -> u32 {
         self.dispatches.load(std::sync::atomic::Ordering::SeqCst)
     }
 }
 
+#[cfg(feature = "corpus")]
 impl Harness for RecordingHarness {
     fn dispatch(&self, spec: &ActivitySpec, _store: &mut dyn EventStore) -> DispatchOutcome {
         self.dispatches
@@ -436,6 +486,7 @@ impl Harness for RecordingHarness {
 /// Every port bound, for the **recording**. The three this run never calls are `rk-ports`' own
 /// fakes; a `Runtime` cannot be constructed over four, which is what makes *"every port bound"* a
 /// type fact here as it is on the replay side.
+#[cfg(feature = "corpus")]
 fn recording_ports(harness: &Arc<RecordingHarness>) -> Ports {
     Ports {
         store: Arc::new(Mutex::new(CountingStore::default())) as Arc<Mutex<dyn EventStore>>,
@@ -448,6 +499,7 @@ fn recording_ports(harness: &Arc<RecordingHarness>) -> Ports {
 
 /// Record the one run this file is about, and hand back the fake that answered so its dispatch
 /// count is a **reading** rather than a number the recording printed about itself.
+#[cfg(feature = "corpus")]
 fn record_the_run() -> (rk_kernel::replay::RecordedRun, Arc<RecordingHarness>) {
     let harness = Arc::new(RecordingHarness::default());
     let recorded = rk_kernel::replay::record(&inputs(), recording_ports(&harness))
@@ -463,16 +515,19 @@ fn record_the_run() -> (rk_kernel::replay::RecordedRun, Arc<RecordingHarness>) {
 /// `ReplayHarness: Harness` supertrait any more: the dispatch counter is this fake's own
 /// `AtomicU32`, handed to the replay as `ReplayPorts::dispatches` and read there before and after.
 #[derive(Debug, Default)]
+#[cfg(feature = "corpus")]
 struct RefusingHarness {
     dispatches: AtomicU32,
 }
 
+#[cfg(feature = "corpus")]
 impl RefusingHarness {
     fn dispatches(&self) -> u32 {
         self.dispatches.load(std::sync::atomic::Ordering::SeqCst)
     }
 }
 
+#[cfg(feature = "corpus")]
 impl Harness for RefusingHarness {
     fn dispatch(&self, _spec: &ActivitySpec, _store: &mut dyn EventStore) -> DispatchOutcome {
         self.dispatches
@@ -489,14 +544,27 @@ impl Harness for RefusingHarness {
 /// borrow shape the replay can append through **and** the test can read afterwards, so this is the
 /// same thing with the events kept where the assertion can reach them.
 #[derive(Debug, Default)]
+#[cfg(feature = "corpus")]
 struct CountingStore {
     events: Vec<Event>,
 }
 
+#[cfg(feature = "corpus")]
 impl EventStore for CountingStore {
     fn append(&mut self, event: Event) -> Result<(), StepError> {
         self.events.push(event);
         Ok(())
+    }
+
+    /// *(dated 2026-09-28, s8e build; ADR-0181, proposed.)* The port's fifth method on this test
+    /// double. The anchor is not modelled here, so the row is appended exactly as `append`
+    /// appends it; the anchored behaviour is `VecStore`'s and `SqliteStore`'s, under test there.
+    fn append_tier1(
+        &mut self,
+        event: Event,
+        _anchor: &rk_ports::event_store::TierOneAnchor,
+    ) -> Result<(), StepError> {
+        self.append(event)
     }
 
     fn query(&self, _by: Query) -> Result<Vec<Event>, StepError> {
@@ -520,6 +588,7 @@ impl EventStore for CountingStore {
 /// [`GitExec::new`] demands, and it spawns `git --version` — which is the second reason this module
 /// is `corpus`-gated. This is the same `exec_for` shape `crates/rk-git/tests/it/gitops.rs`:15-18
 /// uses, and it is `rk-git`'s instrument rather than one this crate invented.
+#[cfg(feature = "corpus")]
 fn git_exec() -> GitExec {
     let root = workspace_root();
     let tc = rk_git::version::assert_at_startup(&root).expect("git at or above the floor");
@@ -541,6 +610,7 @@ fn git_exec() -> GitExec {
 /// is run once and the new bytes are reviewed in the diff.
 #[test]
 #[ignore = "writes the committed fixture; run deliberately when the recorded run changes"]
+#[cfg(feature = "corpus")]
 fn bless_the_committed_golden_log() {
     let (recorded, _harness) = record_the_run();
     let dir = rk_kernel::replay::write_run(&committed_root(), &recorded)
@@ -555,6 +625,7 @@ fn bless_the_committed_golden_log() {
 /// `tests/fixtures/logs/implement-a539b5a7b654d16f/run.json` at `7437a26` carried
 /// `"run_id":"implement-a539b5a7b654d16f"` beside `"schema":"rk-kernel/golden-log/v1"`, and the
 /// directory that name spells is the tree that stood before the bump.
+#[cfg(feature = "corpus")]
 const V1_RUN_ID: &str = "implement-a539b5a7b654d16f";
 
 /// The selection's own `inputs_digest` at that same commit — **and the discriminator.**
@@ -564,6 +635,7 @@ const V1_RUN_ID: &str = "implement-a539b5a7b654d16f";
 /// it must be byte-identical across the bump while the run id moves. Without it, *"the run id
 /// changed"* would be satisfied by anything at all changing under the derivation; with it, what
 /// moved is the schema string and nothing else.
+#[cfg(feature = "corpus")]
 const V1_INPUTS_DIGEST: &str = "3345ce0749d822cf08e28883d9dc18db36d1741fdf60cd94f04d1f91fd0a719c";
 
 /// **THE LAYOUT VERSION IS AN INPUT TO `run_id`, AND NOTHING CHECKED THAT IT WAS.**
@@ -613,6 +685,7 @@ const V1_INPUTS_DIGEST: &str = "3345ce0749d822cf08e28883d9dc18db36d1741fdf60cd94
 /// pins carry none — a record is owed for the reading — on
 /// `appetite_raise_from_an_activity_result_is_refused`'s precedent.
 #[test]
+#[cfg(feature = "corpus")]
 fn the_layout_version_reaches_the_run_id_derivation() {
     // ---- 1. the bump itself, pinned as a literal -------------------------------------------
     //
@@ -735,6 +808,7 @@ fn the_layout_version_reaches_the_run_id_derivation() {
 /// activities AC-008's GIVEN names at 4i**. What is still not claimed is named in the header's
 /// last 🛑 paragraph: these are a scripted fake's dispatches, not an adapter's.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay() {
     // ---- 1. produce the log. THIS RUN produces it; nothing here is hand-made ------------------
     let (recorded, recording_harness) = record_the_run();
@@ -1009,6 +1083,7 @@ fn golden_log_replay() {
 /// `golden_log_replay` is a second, weaker control that catches a fold which never moves but not
 /// one that moves wrongly. Both are named; neither is reported as the other.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay_terminal_state_mismatch_is_red() {
     let run_id = inputs()
         .run_id()
@@ -1094,6 +1169,7 @@ fn golden_log_replay_terminal_state_mismatch_is_red() {
 /// recomputed side is unchanged, so a replay that compares nothing returns `Ok` and this test goes
 /// red — which is exactly the state the mutation above put the tree in.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay_next_action_mismatch_is_red() {
     let run_id = inputs()
         .run_id()
@@ -1172,6 +1248,7 @@ fn golden_log_replay_next_action_mismatch_is_red() {
 /// It is also the control for the loop's termination: a replay that neither served nor refused
 /// would ask for the same activation for ever.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay_missing_result_is_red() {
     let run_id = inputs()
         .run_id()
@@ -1242,6 +1319,7 @@ fn golden_log_replay_missing_result_is_red() {
 /// The tamper is the mildest available: one `timeout_secs`, on one activation, in a value the
 /// selection never reads. It must still refuse, because the input set is hashed whole.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay_tampered_input_is_red() {
     // **AC-042's hidden input, on the RECORDED INPUT SET rather than on the journal.** Added
     // 2026-09-14: `replay()` read `inputs_digest` out of the manifest and compared it to nothing,
@@ -1337,6 +1415,7 @@ fn golden_log_replay_tampered_input_is_red() {
 /// **AC-164's `doctor`-classification half has no home at all** (residual 10l): it is in neither
 /// §7b.15's claimed list nor its ARMED table, and `doctor` is 7d's. AC-164 is **not** covered.
 #[test]
+#[cfg(feature = "corpus")]
 fn ac161_ac164_delete_db_replay() {
     let (recorded, _harness) = record_the_run();
 
@@ -1433,6 +1512,7 @@ fn ac161_ac164_delete_db_replay() {
 /// counter: a `Mode::Replay` `GitOps` is structurally incapable of reporting a write, and faking the
 /// number would put this control back where the 2026-09-13 repair started.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay_writing_fake_is_red() {
     let run_id = inputs()
         .run_id()
@@ -1483,6 +1563,7 @@ fn golden_log_replay_writing_fake_is_red() {
 /// The control is the git one's shape: a harness fake that reports **one** prior dispatch, and the
 /// replay must **refuse**.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay_dispatching_fake_is_red() {
     let run_id = inputs()
         .run_id()
@@ -1527,6 +1608,7 @@ fn golden_log_replay_dispatching_fake_is_red() {
 /// records no baseline and reports non-identical runs as a count, never as a percentage rounded to
 /// 100%** — so what this test asserts is the refusal, and the count is printed.
 #[test]
+#[cfg(feature = "corpus")]
 fn replay_reports_hidden_input_on_divergence() {
     let run_id = inputs()
         .run_id()
@@ -1576,6 +1658,7 @@ fn replay_reports_hidden_input_on_divergence() {
 /// alone**"*, so the logged inputs must be sufficient: the item reconstructed from the log must
 /// produce the same context digest as the one that was recorded.
 #[test]
+#[cfg(feature = "corpus")]
 fn the_logged_inputs_are_sufficient_to_rebuild_the_run() {
     let (recorded, _harness) = record_the_run();
     let dir = committed_root().join(recorded.run_id());
@@ -1596,6 +1679,7 @@ fn the_logged_inputs_are_sufficient_to_rebuild_the_run() {
 
 // ---------------------------------------------------------------------------- tree helpers
 
+#[cfg(feature = "corpus")]
 fn assert_identical_trees(a: &Path, b: &Path) {
     let mut left = list_files(a);
     let mut right = list_files(b);
@@ -1622,6 +1706,7 @@ fn assert_identical_trees(a: &Path, b: &Path) {
     }
 }
 
+#[cfg(feature = "corpus")]
 fn list_files(root: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
@@ -1641,6 +1726,7 @@ fn list_files(root: &Path) -> Vec<PathBuf> {
     out
 }
 
+#[cfg(feature = "corpus")]
 fn copy_tree(from: &Path, to: &Path) {
     let _ = std::fs::remove_dir_all(to);
     std::fs::create_dir_all(to).expect("creatable");
@@ -1683,6 +1769,7 @@ fn copy_tree(from: &Path, to: &Path) {
 /// a refusal below cannot be about a broken copy; and the swap is asserted to have actually changed
 /// the file's bytes, so it cannot be a no-op over a log with one activation.
 #[test]
+#[cfg(feature = "corpus")]
 fn golden_log_replay_swapped_activations_is_red() {
     let run_id = inputs()
         .run_id()
@@ -1816,4 +1903,94 @@ fn golden_log_replay_swapped_activations_is_red() {
         0,
         "AC-008: a refusal is not a licence to dispatch"
     );
+}
+
+/// **R3: the interim `item` key moves no golden log's canonical digest** (D21-46 R3; ADR-0182
+/// decision 6; `s8e` §8e.10). Ungated on purpose (the module note above).
+///
+/// - **Arm 1, a pin:** every committed golden log's canonical digest equals the value `s8e` §8e.0
+///   item 3 recorded at `766854c`, printed then from inside this binary as
+///   `rk_types::digest::sha256(read_run(dir).canonical_events())`. Under `--features corpus` the
+///   copy under `CORPUS_PIN` is asserted to be the same bytes at the pinned sha.
+/// - **Arm 2:** the same journal with the key set on every event has the same canonical digest. A
+///   carrier that wrote the key into `payload` (S8E-M35) reddens this arm.
+///
+/// RED at entry: no key carrier — `Event::with_item` does not exist (E0599), so arm 2 cannot be
+/// written; arm 1 alone is a pin, green before and after.
+#[test]
+fn golden_log_canonical_digests_are_unchanged_by_the_interim_item_key() {
+    const RECORDED: [(&str, &str); 1] = [(
+        "implement-bf1d8cec3b22d288",
+        "73f7553df2f84cc7b931a39b276fcfdb0b36371bb93ea461a9b10ca8a47e4e90",
+    )];
+    let logs = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/logs");
+    let mut on_disk: Vec<String> = std::fs::read_dir(&logs)
+        .expect("the committed golden logs read")
+        .filter_map(Result::ok)
+        .filter(|e| e.path().join("events.jsonl").is_file())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    on_disk.sort();
+    assert_eq!(
+        on_disk,
+        RECORDED
+            .iter()
+            .map(|(n, _)| (*n).to_owned())
+            .collect::<Vec<_>>(),
+        "PREMISE: every committed golden log has a digest recorded at stage open (a log added \
+         later needs its own recorded value)"
+    );
+    for (name, want) in RECORDED {
+        let mut run = rk_kernel::replay::read_run(&logs.join(name)).expect("the golden log reads");
+        let bytes = run.canonical_events().expect("canonical events");
+        assert_eq!(
+            rk_types::digest::sha256(&bytes).as_str(),
+            want,
+            "arm 1: {name}'s canonical digest moved from its recorded value"
+        );
+        assert!(!run.events.is_empty(), "PREMISE: {name} holds events");
+        run.events = run
+            .events
+            .iter()
+            .map(|e| e.clone().with_item("INC-1"))
+            .collect();
+        assert!(
+            run.events.iter().all(|e| e.item() == Some("INC-1")),
+            "PREMISE: every event now carries the interim key"
+        );
+        let keyed = run.canonical_events().expect("canonical events, keyed");
+        assert_eq!(
+            rk_types::digest::sha256(&keyed).as_str(),
+            want,
+            "arm 2: carrying the interim key moved {name}'s canonical digest — the key is inside \
+             `payload` or `event_json` (ADR-0131's forbids; D21-46 R3)"
+        );
+    }
+
+    #[cfg(feature = "corpus")]
+    {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let text = std::fs::read_to_string(root.join("CORPUS_PIN")).expect("CORPUS_PIN reads");
+        let get = |k: &str| -> String {
+            text.lines()
+                .find_map(|l| l.trim().strip_prefix(&format!("{k}=")))
+                .unwrap_or_else(|| panic!("CORPUS_PIN carries no {k}"))
+                .trim()
+                .to_owned()
+        };
+        let repo = std::path::PathBuf::from(get("CORPUS_REPO"));
+        let sha = get("CORPUS_SHA");
+        for (name, _) in RECORDED {
+            let shown = rk_git::git_exec::run(
+                &repo,
+                ["show", &format!("{sha}:golden-logs/{name}/events.jsonl")],
+            )
+            .expect("the corpus golden log reads at the pin");
+            let committed = std::fs::read(logs.join(name).join("events.jsonl")).expect("read");
+            assert_eq!(
+                shown.stdout, committed,
+                "the corpus copy of {name} at CORPUS_SHA is not the committed copy's bytes"
+            );
+        }
+    }
 }

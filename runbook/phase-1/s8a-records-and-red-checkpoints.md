@@ -580,6 +580,11 @@ the amendment to the stage that moves the premise, in the same commit. **`s8e`'s
 Checkpoint 8a guard (7) by dated line** to `1 passed` with the ARMED reason absent, and it lists 8a as
 provisional. This stage does not pre-empt that. A guard made conditional on the `#[ignore]` being present would
 pass whether or not the lint was ever discharged.
+*(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.13.)* **Done.** `s8e`'s Slice-Verdict commit deletes the
+lint's `#[ignore]` and amends guard (7) by dated line: the lint's `... ok` line, `1 passed; 0 failed; 0 ignored`, and
+the ARMED string absent from `conformance.rs` with grep's `rc` exactly 1. The three armed lines are replaced in the
+block rather than struck, because a struck line would still carry the string Checkpoint 8e (10h) asserts absent.
+Checkpoint 8a is `passed bf12a1c, re-run pending` in `PROGRESS.md` §1 until Checkpoint 8e (10h) re-runs it whole.
 
 **7f's block runs `redkiln run`, so its whole re-run is a dispatch hazard once the cards bind.** At this stage
 the hazard is closed. **0 of 8** shipped cards carry `permission_mode`, and `CardFile`'s load refuses before any
@@ -1396,12 +1401,17 @@ run_named redkiln-migrate 1 output::ac475_zero_change_summary_values_in_output
 # PINNED ARMED, and TIME-BOUND (D21-47; cross-file item 2): s8e's Slice-Verdict commit un-ignores this lint and, in that
 # same commit, amends THIS guard by dated line to "1 passed" with the ARMED reason absent and lists 8a as provisional.
 # Until then it stays pinned; a guard conditional on the #[ignore] would pass whether or not the lint was discharged.
+# [amended 2026-09-28, s8e build, package S8E-P7; s8e section 8e.13] DISCHARGED: the three lines that expected the lint
+# ignored and ARMED, its reason naming s8e, and 0 passed with 1 ignored are REPLACED (a struck line in this bash block
+# would still carry the string Checkpoint 8e's guard (10h) asserts absent). Now: the lint's ok line, exactly 1 passed with
+# 0 ignored, and the ARMED string absent from conformance.rs with grep's rc exactly 1.
 out=$(nodispatch cargo test -p rk-kernel --test it -- conformance::conformance_every_trailer_key_has_a_producer --exact 2>&1); rc=$?
-nd_check "the armed trailer lint's selection" || exit 1
-[ "$rc" -eq 0 ] || { echo "FAIL: the armed trailer lint's selection rc=$rc"; exit 1; }
-printf '%s\n' "$out" | grep -qF 'test conformance::conformance_every_trailer_key_has_a_producer ... ignored, ARMED: Slice-Verdict has 0 producers' || { echo "FAIL: the trailer lint is not ARMED naming Slice-Verdict"; exit 1; }
-printf '%s\n' "$out" | grep -qF 'discharged by s8e' || { echo "FAIL: the armed reason still names a stage that did not discharge it (ADR-0160)"; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 0 passed; 0 failed; 1 ignored' || { echo "FAIL: the armed selection did not report exactly one ignored"; exit 1; }
+nd_check "the trailer lint's selection" || exit 1
+[ "$rc" -eq 0 ] || { echo "FAIL: the discharged trailer lint's selection rc=$rc"; exit 1; }
+printf '%s\n' "$out" | grep -qxF 'test conformance::conformance_every_trailer_key_has_a_producer ... ok' || { echo "FAIL: the trailer lint did not report its ok line"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed; 0 ignored' || { echo "FAIL: the trailer lint's selection is not exactly 1 passed, 0 failed, 0 ignored"; exit 1; }
+hits=$(grep -nF 'ARMED: Slice-Verdict has 0 producers' crates/rk-kernel/tests/it/conformance.rs); rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: the ARMED reason is still present in conformance.rs, or unreadable (grep rc=$rc)"; printf '%s\n' "$hits"; exit 1; }
 
 # ---- (8) catalog-b REPAIRED, and the probe's three readings at rc 0; the committed JSON is what the probe writes.
 grep -qF "kind in [incident, 'security-vuln']" spikes/p9/catalog-b/blameless-postmortem.toml || { echo "FAIL: security-vuln is not quoted"; exit 1; }

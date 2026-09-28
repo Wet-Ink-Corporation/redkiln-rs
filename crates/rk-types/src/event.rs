@@ -57,15 +57,46 @@ pub enum ErrorEvent {
 /// per kind, is **OWED**; its earliest real consumer is the SQLite adapter at 7c; and it is
 /// reported as **ARMED, NOT DISCHARGED** — no assertion in Checkpoint 7a claims the payload is
 /// typed.
+///
+/// *(dated 2026-09-28, s8e build, §8e.10; ADR-0182, proposed.)* **The interim `item` key rides
+/// beside `kind` and `payload`, never inside them** (D21-43 N5; D21-46 R3: *"Carried outside the
+/// canonical digest, as ADR-0131 places its tag set"*). It is private so it has exactly one
+/// writer, [`Event::with_item`], and it is not a member of `payload`, so `rk-kernel`'s `event_json`
+/// and `canonical_events` stay `{kind, payload}` byte for byte (ADR-0131 decision 2 and its second
+/// forbids bullet). The store persists it in `t2_event.item`. Equality includes it: an event read
+/// back from a store equals the event appended, key and all. It moves to ADR-0131's reserved
+/// `item` tag when that wiring lands.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Event {
     pub kind: crate::event_kind::EventKind,
     pub payload: serde_json::Value,
+    // `Box<str>`, not `String`: the key is immutable once set, and the narrower carrier keeps every
+    // `Result` whose error carries an `Event` under `clippy::result_large_err`'s 128 bytes.
+    item: Option<Box<str>>,
 }
 
 impl Event {
+    /// An event with no interim `item` key.
     #[must_use]
     pub const fn new(kind: crate::event_kind::EventKind, payload: serde_json::Value) -> Self {
-        Self { kind, payload }
+        Self {
+            kind,
+            payload,
+            item: None,
+        }
+    }
+
+    /// The same event carrying the interim `item` key (ADR-0182 decision 1) — beside the payload,
+    /// which this never touches.
+    #[must_use]
+    pub fn with_item(mut self, item: impl Into<String>) -> Self {
+        self.item = Some(item.into().into_boxed_str());
+        self
+    }
+
+    /// The interim `item` key, when the producer set one (ADR-0182).
+    #[must_use]
+    pub fn item(&self) -> Option<&str> {
+        self.item.as_deref()
     }
 }

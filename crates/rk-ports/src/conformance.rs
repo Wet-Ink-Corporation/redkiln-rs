@@ -66,7 +66,7 @@ use rk_types::typed::{SchemaId, Typed};
 use rk_types::usage::CliVersion;
 
 use crate::docs_site::DocsSite;
-use crate::event_store::{EventStore, Query, Snapshot};
+use crate::event_store::{EventStore, Query, Snapshot, TierOneAnchor};
 use crate::harness::Harness;
 use crate::toolchain::{Classification, Selection, StepBound, TestOutcome, TestStatus, Toolchain};
 use crate::tracker::Tracker;
@@ -74,6 +74,9 @@ use rk_types::verb_output::BuildStatus;
 use rk_types::verify::BasisReason;
 
 /// The run key every body queries by.
+///
+/// *(dated 2026-09-28, s8e build; ADR-0182 decision 5, proposed: `ByRun` stays inert on both rows,
+/// while `ByItem` and `BySha` are now honoured — the tier-1 arm below asserts those two.)*
 ///
 /// The fake's `query` ignores the selector (its `Event` carries no run id yet — the typed-payload
 /// record is OWED, `s7a` §7a.5; ADR-0126 decision 6 leaves it so), so this is the same key on both
@@ -126,6 +129,9 @@ fn assert_unsupported<T: std::fmt::Debug>(
 /// `"snapshot"` and/or `"rebuild"`. For each token named, the call must answer
 /// `Err(Unsupported { capability })` with that token; a token not named takes the `Ok` path. The
 /// fake row passes `&[]`; the SQLite real row passes both (D17-9).
+/// *(dated 2026-09-28, `s8e` build, package S8E-P7; ADR-0181 decision 11, proposed: the SQLite row
+/// now passes `&[]` too — both registry rows carry a recorded probe, so the round trip runs over the
+/// real store.)*
 pub fn conform_event_store(store: &mut dyn EventStore, unsupported: &[&str]) {
     // ---- the core: append, then query, is identity on what was appended
     let event = Event::new(EventKind::ReconcileStarted, serde_json::json!({"n": 1}));
@@ -136,28 +142,90 @@ pub fn conform_event_store(store: &mut dyn EventStore, unsupported: &[&str]) {
         .expect("query by run");
     assert_eq!(
         back,
-        vec![event.clone()],
+        vec![event],
         "append then query must return what was appended"
     );
 
-    // ---- the capability arm: snapshot / rebuild, per the row's declaration
+    // ---- the tier-1 arm (ADR-0181 decisions 1 and 12; `s8e` §8e.2; dated 2026-09-28, s8e
+    // build): an anchored append is queryable as the event, keyed to its item (ADR-0182), and the
+    // row reports its anchor through the port — `BySha` selects it, and only it. Both rows run it.
+    // This is the one allow-listed caller of `append_tier1` outside the kernel's boundary
+    // (ADR-0181 decision 10): it exercises the port and applies no transition.
+    let boundary = Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({ "from": "triage", "to": "implement" }),
+    )
+    .with_item(TIER_ONE_ITEM);
+    store
+        .append_tier1(
+            boundary.clone(),
+            &TierOneAnchor::new(TIER_ONE_SHA, TIER_ONE_TREE),
+        )
+        .expect("append_tier1");
+    assert_eq!(
+        store
+            .query(Query::BySha(TIER_ONE_SHA.to_owned()))
+            .expect("query by sha"),
+        vec![boundary.clone()],
+        "the anchored row reports its anchor: BySha selects it and only it (ADR-0181 decision 12)"
+    );
+    let mine = store
+        .query(Query::ByItem(TIER_ONE_ITEM.to_owned()))
+        .expect("query by item");
+    assert_eq!(
+        mine.last(),
+        Some(&boundary),
+        "the anchored event is queryable as the event, with its interim key, by its item"
+    );
+    assert!(
+        !store
+            .query(Query::ByItem("another-item".to_owned()))
+            .expect("query by another item")
+            .contains(&boundary),
+        "a row keyed to one item is never returned to another (ADR-0182 decision 4)"
+    );
+
+    // ---- the capability arm: snapshot / rebuild, per the row's declaration. *(dated 2026-09-28,
+    // `s8e` build, package S8E-P7; ADR-0181 decision 11, proposed.)* Moved AFTER the tier-1 arm, so
+    // the round trip covers an anchored row too: a snapshot of the current state, rebuilt into the
+    // same store, is identity (the store's rows are the snapshot's whole prefix, so nothing is
+    // appended), and the snapshot carries the anchored row's anchor.
     let snapshot_unsupported = unsupported.contains(&"snapshot");
     let rebuild_unsupported = unsupported.contains(&"rebuild");
     if snapshot_unsupported {
         assert_unsupported("snapshot", store.snapshot(), "snapshot");
     }
     if rebuild_unsupported {
-        // A `Snapshot` is this crate's opaque newtype, so the body can hand the row one to refuse.
-        assert_unsupported("rebuild", store.rebuild(&Snapshot(())), "rebuild");
+        // `Snapshot` has a public constructor now; an empty one is the body's refusal probe.
+        assert_unsupported("rebuild", store.rebuild(&Snapshot::default()), "rebuild");
     }
     if !snapshot_unsupported && !rebuild_unsupported {
+        let before = store
+            .query(Query::ByRun(RUN.to_owned()))
+            .expect("query before snapshot");
         let snapshot = store.snapshot().expect("snapshot");
+        assert_eq!(
+            snapshot
+                .rows()
+                .iter()
+                .map(|r| r.event.clone())
+                .collect::<Vec<_>>(),
+            before,
+            "a snapshot is every row the store holds, in append order (ADR-0181 decision 11)"
+        );
+        assert!(
+            snapshot
+                .rows()
+                .iter()
+                .any(|r| r.anchor_sha.as_deref() == Some(TIER_ONE_SHA)),
+            "the snapshot carries the anchored row's anchor"
+        );
         store.rebuild(&snapshot).expect("rebuild");
         assert_eq!(
             store
                 .query(Query::ByRun(RUN.to_owned()))
                 .expect("query after rebuild"),
-            vec![event],
+            before,
             "rebuilding from a snapshot of the current state is identity"
         );
     }
@@ -169,6 +237,17 @@ pub fn conform_event_store(store: &mut dyn EventStore, unsupported: &[&str]) {
          the round-trip half of this body cannot run and the registry should say which it means"
     );
 }
+
+/// The tier-1 arm's item.
+///
+/// Public, with the anchor and tree below, so a real row can find in its own tables the rows the
+/// shared body wrote (`rk-adapter-sqlite`'s
+/// `conformance::sqlite_store_conforms_including_the_tier_one_arm`).
+pub const TIER_ONE_ITEM: &str = "conformance-item";
+/// The arm's anchor commit (a well-formed sha; the body makes no commit).
+pub const TIER_ONE_SHA: &str = "0123456789abcdef0123456789abcdef01234567";
+/// The arm's anchor tree.
+pub const TIER_ONE_TREE: &str = "89abcdef0123456789abcdef0123456789abcdef";
 
 /// `Harness`: `dispatch` blocks to completion and hands back **both** halves — the record on every
 /// termination (AC-360) and the step's own outcome as a decided value — for the spec the row

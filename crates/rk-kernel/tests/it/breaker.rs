@@ -555,7 +555,7 @@ fn breaker_ac033_ac035() {
     // is the breaker's carrier — rather than the gap quietly closing or quietly widening.
     assert_eq!(
         EventKind::ALL.len(),
-        38,
+        41,
         // DECIDED HERE 2026-09-17, when ADR-0123 minted the thirtieth and thirty-first: neither
         // `gate_answer_spent` (a refused duplicate answer) nor `gate_resumed` (resume telemetry)
         // is a breaker mark. AC-033's `written` half stays ARMED; only the count moved, 29 -> 31 -> 36 -> 37
@@ -568,7 +568,11 @@ fn breaker_ac033_ac035() {
         // `tests/it/dispatch_completed.rs::adr0126_dispatch_completed_is_not_a_breaker_mark`
         // folds a family-scoped row and reads the consecutive count unmoved. 37 -> 38; the
         // `written` half stays ARMED.
-        "`EventKind` is closed at 38 (29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126) and none of them is a breaker mark: AC-033's `written` half is \
+        // DECIDED AGAIN 2026-09-28 (`s8e` build, package S8E-P5; the three-kinds record, `s8e` §8e.4, proposed; 38 -> 41): `worktree_assigned`, `stage_empty` and `git_op` are tier-2 rows — the run-owned tree's
+        // assignment, an empty stage's reason, and one journalled git invocation. None is a
+        // breaker mark; the breaker fold routes all three to its no-state-change arm. The
+        // `written` half is unchanged by them.
+        "`EventKind` is closed at 41 (29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126, 38 until s8e's three-kinds record) and none of them is a breaker mark: AC-033's `written` half is \
          ARMED, NOT DISCHARGED, and no kind is minted at Slice 4d"
     );
 }

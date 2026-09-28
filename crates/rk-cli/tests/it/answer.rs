@@ -565,8 +565,10 @@ fn ac407_second_token_refused_one_gate_answered_event() {
 ///    would mean the gate was voided against the tree it was bound to, which is not a void at all.
 /// 2. the gate is STILL OPEN in the fold, and no `gate_answered` row stands alone as an applied
 ///    answer -- the kernel writes `gate_answered` AND `gate_answer_void` together for a void.
-/// 3. **no new `Gate:` trailer commit**: `rev-list --count` on the run-owned branch is unchanged
-///    ACROSS THE ANSWER (the test's own staging commit is counted before the answer, not after).
+/// 3. ~~**no new `Gate:` trailer commit**: `rev-list --count` on the run-owned branch is unchanged
+///    ACROSS THE ANSWER~~ *(re-pointed 2026-09-28, `s8e` build, package S8E-P5; D21-43 N6)*
+///    **exactly two new `Gate:` trailer commits**, `answered` then `voided` at the tip (the test's
+///    own staging commit is counted before the answer, not after).
 #[test]
 fn ac406_answer_after_commit_is_void_gate_stays_open() {
     let repo = repo_with_open_gate();
@@ -654,12 +656,23 @@ fn ac406_answer_after_commit_is_void_gate_stays_open() {
             .collect::<Vec<_>>()
     );
 
-    // ---- (3) NO TRAILER COMMIT. A void writes no `Gate:` trailer.
+    // ---- (3) ~~NO TRAILER COMMIT. A void writes no `Gate:` trailer.~~
+    //
+    // *(re-pointed 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3; D21-43 N6: "Every gate
+    // transition (opened, answered, expired, voided) is a git-first tier-1 event with a `Gate:`
+    // trailer carrying its state".)* §7d.6's *"NO trailer commit"* is overtaken: a void answer's
+    // two rows each ride their own act, so the run-owned branch gains EXACTLY two trailer commits —
+    // the `answered <option>` mark, then the `voided` mark at the tip — and the gate stays open
+    // (asserted in (2) above), because the latest state git carries is `voided`.
     assert_eq!(
         crate::support::commit_count(&owned),
-        owned_commits_before,
-        "a VOID answer made a commit on the run-owned branch. §7d.6: *\"`gate_answered` + \
-         `gate_answer_void` appended, NO trailer commit (the gate stays open -- AC-406)\"*"
+        owned_commits_before + 2,
+        "a VOID answer must commit its two transitions, answered then voided, and nothing else"
+    );
+    let tip = crate::support::head_message(&owned);
+    assert!(
+        tip.contains("Gate: ") && tip.trim_end().ends_with("voided"),
+        "the run-owned branch's tip is not the `Gate: … voided` mark:\n{tip}"
     );
 
     // ---- AC-518: the checkout the binary was spawned in is untouched.
@@ -1155,5 +1168,66 @@ fn ac410_admitted_attachment_stored_as_human_root() {
         payload.as_object().map(serde_json::Map::len),
         Some(4),
         "ADR-0116 decision 1's shape is exactly four members. payload: {payload:?}"
+    );
+}
+
+/// **`s8e` §8e.3, N6: a failed answer commit leaves ZERO answer rows** — over the real verb.
+///
+/// *(dated 2026-09-28, `s8e` build, package S8E-P5; the tier-1 writer record, proposed.)* The
+/// answer's `Gate: … answered` mark is committed through the kernel's tier-1 boundary BEFORE its
+/// `gate_answered` row, so a commit git refuses leaves no row at all. The commit is jammed by git's
+/// own `index.lock` in the run-owned tree's git directory (`commit` takes it, `--allow-empty`
+/// included). The verb refuses with exit 3; the store gains only the invocation's
+/// `reconcile_started` (AC-172's baseline); the run branch does not move. Red at entry because
+/// `answer` appends first. Red under S8E-M26.
+#[test]
+fn a_failed_answer_commit_leaves_zero_rows() {
+    let repo = repo_with_open_gate();
+    let root = repo.path();
+    let owned = owned_worktree(root, "gate-1");
+    let lock_path = {
+        let out = rk_git::git_exec::run(
+            &owned,
+            [
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-path",
+                "index.lock",
+            ],
+        )
+        .expect("git rev-parse runs");
+        std::path::PathBuf::from(out.stdout_trimmed())
+    };
+    let run_ref = "refs/heads/rk-run/gate-1";
+    let tip = |root: &std::path::Path| {
+        rk_git::git_exec::run(root, ["rev-parse", run_ref])
+            .expect("the run ref reads")
+            .stdout_trimmed()
+    };
+    let tip_before = tip(root);
+    let before = crate::support::store_rows(root);
+
+    std::fs::write(&lock_path, b"").expect("jam the run tree's commit");
+    let out = spawn_answer(root, "gate-1", "approve", &BOTH_FLAGS);
+    std::fs::remove_file(&lock_path).expect("unjam");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    assert_eq!(
+        out.status.code(),
+        Some(3),
+        "a failed answer commit is a refusal, exit 3. stderr:\n{stderr}"
+    );
+    assert_eq!(
+        tip(root),
+        tip_before,
+        "the run branch moved although the commit failed"
+    );
+    let after = crate::support::store_rows(root);
+    let added: Vec<rk_types::event_kind::EventKind> =
+        after[before.len()..].iter().map(|e| e.kind).collect();
+    assert_eq!(
+        added,
+        vec![rk_types::event_kind::EventKind::ReconcileStarted],
+        "the failed commit left rows beyond the invocation's baseline: {added:?}. stderr:\n{stderr}"
     );
 }

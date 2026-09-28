@@ -1,0 +1,85 @@
+# pack-min's LANE variant — the fixture lane of `s8e` §8e.11 (D21-42 24c; D21-40 decision 2).
+# *(Added 2026-09-28, `s8e` build, package S8E-P2.)*
+#
+# Regenerated from `pack.review.toml` with ONE delta: `[policy]` declares a `stage_order`, so the
+# lane loop in `verbs::run::run` has somewhere to go. Every other variant declares none, so
+# `Pack::successor` is `None` on each of them and no fixture before this one crossed a boundary.
+#
+# The four stages, each chosen for one thing a `lane_e2e` test reads:
+#   * `triage`    — `optional`, and NO activity carries `stage = "triage"`, so its plan is EMPTY
+#                   (`lane_e2e::an_empty_stage_records_stage_empty_with_its_reason`);
+#   * `discovery` — `forbidden`, so the lane skips it (`Pack::successor`'s filter) and no mark may
+#                   name it (`lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order`);
+#   * `implement` — the `[[stage.implement.require]]` row on the nullable `has_repro` facet opens the
+#                   abstention gate over an item that omits it (`lane/items/lane-gate.toml`), and
+#                   `emit-report` is dispatched over an item that decides it;
+#   * `review`    — `review-min` over `[stage.review]`, the stage ADR-0162's review pass reads.
+#
+# `stage_order` and `stages` must name the same key set or the pack refuses to load (ADR-0153).
+# `facets.toml` is the shared one and is NOT widened for `discovery`: a `forbidden` stage is skipped
+# by `Pack::successor` and recorded by selection as `forbidden_stage`, and no item ever sits at it
+# [measured 2026-09-28: the lane walks `triage -> implement -> review` over this file].
+gate_deadline_secs = 900
+
+[pack]
+id = "pack-min"
+applies = "kind == bug or kind == story"
+appetite = { points = 50, tokens = 200000 }
+
+# AC-029: DECLARED, never defaulted in code. It is 1 so a scripted `FakeHarness` element is consumed
+# once per dispatch and never retried into the next stage's element.
+[retry]
+attempts_cap = 1
+
+[breaker]
+consecutive_platform_failures = 3
+expiry_secs = 600
+
+# `discouraged` is RESERVED and refused by `read_rigor`; the five tokens are a closed set.
+[policy]
+stages = { triage = "optional", discovery = "forbidden", implement = "recommended", review = "mandatory" }
+# ADR-0153: the lane order, as an ARRAY, because an inline table comes back alphabetised.
+stage_order = ["triage", "discovery", "implement", "review"]
+
+[stage.implement]
+baseline = ["ImplReport"]
+
+# The abstention gate: an item that omits `has_repro` opens exactly one `unknown_facet:has_repro`
+# gate at `implement`, and an item that declares it opens none (see `pack.toml`'s note on this row).
+[[stage.implement.require]]
+when = "has_repro"
+artifacts = ["TestReport"]
+
+# The tier's one source (`Binder::bind` refuses a role declaring no model; see `pack.toml`).
+[role.implementer]
+family = "claude"
+model = "sonnet"
+effort = "medium"
+
+# --- read by rk-cli's PackExtras; the kernel's toml_subset walker ignores every key below ---
+
+# The review stage. `baseline` names the kind the activity provides, so the selection has
+# something to want; the activity's own `stage = "review"` is what puts it in this plan.
+[stage.review]
+baseline = ["Findings"]
+
+[margins]
+five_hour = 10
+seven_day = 10
+
+[cache]
+prompt_ttl = "1h"
+subagent_prompt_ttl = "1h"
+
+# The abstention gate's expiry row. The class is the full gate kind, carried as a VALUE (see
+# `pack.toml`'s note on this table).
+[[gate_expiry]]
+class = "unknown_facet:has_repro"
+action = "fail"
+
+# `timeout_secs` on EVERY activity (`BindRequest.timeout_secs`).
+[activity.emit-report]
+timeout_secs = 900
+
+[activity.review-min]
+timeout_secs = 900

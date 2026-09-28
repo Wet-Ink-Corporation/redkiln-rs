@@ -43,6 +43,27 @@
 //! `GitToolchain` only `rk_git::version::assert_at_startup` mints, which spawns `git --version`,
 //! so this crate never constructs one.
 //!
+//! *(dated 2026-09-28, s8e build; ADR-0181 and ADR-0182, proposed.)* **Five methods now, and the
+//! paragraph below is superseded where it says otherwise:** `append` and the fifth, `append_tier1`,
+//! write through `rk_store::events` and `rk_store::tier_one` (the anchored `t2_event` row, its interim
+//! `item` key, and the kind's `t1_*` row, in one transaction); `query` honours its selector in
+//! `rk-store`'s SQL (`ByItem` the item's rows plus, in the interim, the unkeyed ones; `BySha` by
+//! anchor; `ByRun` inert); and the open runs `rk_store::migrate::establish`, which applies each
+//! shipped migration once (`0002_gate_transitions`, schema version 2). ~~every selector returns
+//! everything~~.
+//!
+//! *(dated 2026-09-28, `s8e` build, package S8E-P7; ADR-0181 decision 11, proposed; D21-42 8c: the
+//! rebuild *"Moves into rk-adapter-sqlite (`open_at` / `Capability::Rebuild`, the [s7d] §7d.18
+//! RAISED item)"*.)* **`snapshot` and `rebuild` are implemented, and the paragraph below is
+//! superseded where it says they answer `Unsupported`.** `snapshot` reads every row in append
+//! order through `rk_store::tier_one::stored_rows`; `rebuild` writes a snapshot's rows append-only,
+//! in ONE transaction, through `rk_store::tier_one::rebuild` (the `t1_*` rows through the same
+//! closed mapping `append_tier1` uses). [`SqliteStore::open_at`] opens a store file under any root
+//! — the staging file `doctor --rebuild` writes and renames (ADR-0105 clause 7) — so `rk-cli`'s
+//! duplicated `INSERT` is retired. Both registry rows carry a recorded probe, and the methods still
+//! answer through their rows ([`registry::answer`]): a row that says `None` refuses, and a registry
+//! with no row is a decode failure, never a default.
+//!
 //! **What the four port methods do.** `append` inserts one `t2_event(kind, payload,
 //! anchor_sha)` row: the kind's wire name, the payload as JSON text, and `anchor_sha` **NULL** —
 //! `rk_types::event::Event` is `{ kind, payload }` and carries no anchor (the typed-payload
@@ -80,12 +101,11 @@ use std::path::{Path, PathBuf};
 
 use rk_git::git_exec::GitExec;
 use rk_git::path::WorktreePath;
-use rk_ports::event_store::{EventStore, Query, Snapshot};
+use rk_ports::event_store::{EventStore, Query, Snapshot, SnapshotRow, TierOneAnchor};
 use rk_store::conn::{Reader, StoreError, Writer};
 use rk_store::identity::Identity;
 use rk_types::error::{StepError, TransportKind};
 use rk_types::event::Event;
-use rk_types::event_kind::EventKind;
 
 pub mod identity;
 pub mod path;
@@ -236,20 +256,46 @@ impl SqliteStore {
             // against it. `read` is a SELECT; `establish` checks and returns the refusal as
             // `StoreError::Identity`, which `From` turns into `Refused` — and the `Err` rolls this
             // whole transaction back, which is the "nothing is written" (the crate doc).
-            let stamped = rk_store::identity::read(tx)?;
-            let fresh = identity::establish(stamped.as_ref(), &opening)?;
-            for (_name, sql, _keys) in rk_store::schema_lint::all() {
-                tx.execute_batch(sql)?;
-            }
-            if fresh {
-                rk_store::identity::initialise(tx, &opening)?;
-            }
+            //
+            // *(dated 2026-09-28, s8e build; ADR-0181 decision 6, proposed.)* The read, the check,
+            // the migrations and the stamp are `rk_store::migrate::establish`, in this order and
+            // in this one transaction: `0002_gate_transitions` adds a column and may run only once
+            // per store, so the runner counts applied migrations (`PRAGMA user_version`) rather
+            // than re-running every `CREATE … IF NOT EXISTS` on each open.
+            rk_store::migrate::establish(tx, &opening)?;
             Ok(())
         })?;
         Ok(Self {
             writer,
             common_dir,
             identity: opening,
+            registry,
+        })
+    }
+
+    /// **Open — or create — a store file under `root`, not the repository's** (`s8e` §8e.9; D21-42
+    /// 8c's `open_at`). The file is `<root>/redkiln/store.sqlite3`: with `root` the rebuild's
+    /// staging directory, that is the staging file `doctor --rebuild` writes and then renames over
+    /// the repository's store (ADR-0105 clause 7). It is established exactly as [`Self::open`]
+    /// establishes the store — the identity checked or stamped and the shipped migrations applied,
+    /// in one transaction (`rk_store::migrate::establish`) — under the `identity` the caller derived
+    /// from git, so **no existing store is read to open it**: a version-1 store at the repository's
+    /// path is never opened on the way to rebuilding it (S8E-M36). *(dated 2026-09-28, `s8e` build,
+    /// package S8E-P7; ADR-0181 decisions 6 and 11, proposed.)*
+    ///
+    /// # Errors
+    /// [`StoreOpenError::Registry`] when the shipped registry does not load;
+    /// [`StoreOpenError::Refused`] when a file already at that path is another repository's or at
+    /// another schema version; [`StoreOpenError::Store`] when the file refuses.
+    pub fn open_at(root: &Path, identity: &Identity) -> Result<Self, StoreOpenError> {
+        let registry = registry::rows().map_err(|e| StoreOpenError::Registry {
+            detail: e.to_string(),
+        })?;
+        let writer = rk_store::migrate::open(root, identity)?;
+        Ok(Self {
+            writer,
+            common_dir: root.to_path_buf(),
+            identity: identity.clone(),
             registry,
         })
     }
@@ -299,58 +345,85 @@ const fn io(detail: String) -> StepError {
 }
 
 impl EventStore for SqliteStore {
+    /// One `t2_event` row, `anchor_sha` NULL, carrying the event's interim `item` key.
+    /// *(dated 2026-09-28, s8e build: the statement is `rk_store::events::insert`'s now.)*
     fn append(&mut self, event: Event) -> Result<(), StepError> {
-        let payload = serde_json::to_string(&event.payload).map_err(|e| io(e.to_string()))?;
-        let kind = event.kind.wire_name();
         self.writer
-            .transaction(|tx| {
-                tx.execute(
-                    "INSERT INTO t2_event (kind, payload, anchor_sha) VALUES (?1, ?2, NULL)",
-                    (kind, &payload),
-                )?;
-                Ok(())
-            })
+            .transaction(|tx| rk_store::events::insert(tx, &event, None))
             .map_err(|e| io(e.to_string()))
     }
 
-    fn query(&self, _by: Query) -> Result<Vec<Event>, StepError> {
+    /// The anchored `t2_event` row and, where the kind has one, its `t1_*` row, in ONE transaction
+    /// through `rk_store::tier_one::append` (ADR-0181 decisions 3 and 4; dated 2026-09-28, s8e
+    /// build). A row the event cannot fill refuses as a transport fault naming the member, and the
+    /// transaction leaves zero rows.
+    fn append_tier1(&mut self, event: Event, anchor: &TierOneAnchor) -> Result<(), StepError> {
+        let anchor = rk_store::tier_one::Anchor {
+            sha: anchor.sha(),
+            tree: anchor.tree(),
+            opening_run: anchor.opening_run(),
+        };
+        self.writer
+            .transaction(|tx| rk_store::tier_one::append(tx, &event, &anchor))
+            .map_err(|e| io(e.to_string()))
+    }
+
+    /// *(dated 2026-09-28, s8e build; ADR-0181 decision 12 and ADR-0182 decisions 4 and 5,
+    /// proposed.)* The selector is honoured in `rk-store`'s SQL (`rk_store::events::select`):
+    /// `ByItem(x)` the rows keyed `x` plus, in the interim, the unkeyed rows; `BySha(s)` the rows
+    /// anchored to `s`; `ByRun` stays inert and reads every row. A kind this binary does not name
+    /// is a typed decode failure, never a row silently dropped.
+    fn query(&self, by: Query) -> Result<Vec<Event>, StepError> {
         // One reader per call (clause 7's "one per thread", read literally — see the crate doc);
         // it also sets `busy_timeout`, because readers can see `SQLITE_BUSY` too.
         let reader = Reader::open(&self.common_dir).map_err(|e| io(e.to_string()))?;
-        let mut stmt = reader
-            .conn()
-            .prepare("SELECT kind, payload FROM t2_event ORDER BY id")
-            .map_err(|e| io(e.to_string()))?;
-        let rows = stmt
-            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
-            .map_err(|e| io(e.to_string()))?;
-        let mut out = Vec::new();
-        for row in rows {
-            let (kind, payload) = row.map_err(|e| io(e.to_string()))?;
-            // A kind this binary does not know is a row a later binary wrote, or a corrupt one;
-            // either is a typed decode failure, never a row silently dropped from the journal.
-            let kind = EventKind::from_wire(&kind).ok_or_else(|| {
-                io(format!(
-                    "t2_event carries kind `{kind}`, which this binary's EventKind does not name"
-                ))
-            })?;
-            let payload = serde_json::from_str(&payload).map_err(|e| io(e.to_string()))?;
-            out.push(Event::new(kind, payload));
-        }
-        Ok(out)
+        let selector = match &by {
+            Query::ByItem(item) => rk_store::events::Selector::Item(item),
+            Query::BySha(sha) => rk_store::events::Selector::Sha(sha),
+            Query::ByRun(_) => rk_store::events::Selector::All,
+        };
+        rk_store::events::select(reader.conn(), selector).map_err(|e| io(e.to_string()))
     }
 
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P7; ADR-0181 decision 11, proposed.)* Every
+    /// row in append order, each with its anchor, its boundary tree and its opening run, answered
+    /// through the registry row (`registry::answer`).
     fn snapshot(&self) -> Result<Snapshot, StepError> {
-        Err(registry::refusal(
-            &self.registry,
-            registry::Capability::Snapshot,
+        registry::answer(&self.registry, registry::Capability::Snapshot)?;
+        let reader = Reader::open(&self.common_dir).map_err(|e| io(e.to_string()))?;
+        let rows = rk_store::tier_one::stored_rows(reader.conn()).map_err(|e| io(e.to_string()))?;
+        Ok(Snapshot::new(
+            rows.into_iter()
+                .map(|r| SnapshotRow {
+                    event: r.event,
+                    anchor_sha: r.anchor_sha,
+                    tree: r.tree,
+                    opening_run: r.opening_run,
+                })
+                .collect(),
         ))
     }
 
-    fn rebuild(&mut self, _snapshot: &Snapshot) -> Result<(), StepError> {
-        Err(registry::refusal(
-            &self.registry,
-            registry::Capability::Rebuild,
-        ))
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P7; ADR-0181 decision 11, proposed.)* The
+    /// snapshot's rows, append-only and in ONE transaction, through `rk_store::tier_one::rebuild`:
+    /// this store's rows must be a prefix of the snapshot's, and the `t1_*` rows are written by the
+    /// same closed mapping `append_tier1` uses. It never calls `append_tier1` (ADR-0181 decision
+    /// 10's exemption, in terms: the commits already exist).
+    fn rebuild(&mut self, snapshot: &Snapshot) -> Result<(), StepError> {
+        registry::answer(&self.registry, registry::Capability::Rebuild)?;
+        let rows: Vec<rk_store::tier_one::StoredRow> = snapshot
+            .rows()
+            .iter()
+            .map(|r| rk_store::tier_one::StoredRow {
+                event: r.event.clone(),
+                anchor_sha: r.anchor_sha.clone(),
+                tree: r.tree.clone(),
+                opening_run: r.opening_run.clone(),
+            })
+            .collect();
+        self.writer
+            .transaction(|tx| rk_store::tier_one::rebuild(tx, &rows))
+            .map(drop)
+            .map_err(|e| io(e.to_string()))
     }
 }

@@ -1,0 +1,16 @@
+# The `approved` seal's corpus (`s8e` §8e.8; the slice record, proposed). *(Added 2026-09-28, `s8e`
+# build, package S8E-P7.)*
+#
+# `exit/findings-block/`'s twin with the one datum changed that decides the review's outcome: the
+# transcript's `structured_output` is an EMPTY `Findings` set, so the review dispatch commits a
+# finding set, `review_pass` runs, nothing blocks, and the review stage's exit outcome is
+# `approved`. The item is `review-1` at `stage = "review"` in `pack.review.toml`, whose one stage is
+# `review`, so the lane then ends and mints its `closed` mark. Exit `0`.
+#
+# `slice_verdict::approved_is_sealed_on_the_advance_path` reads `Slice-Verdict:` off
+# `rk-run/review-1` with git's own parser; the two refusal tests run the same corpus with the item
+# record's `slice` removed, or set to the item id, and read exit `3` and the refusal's name.
+args = ["run", "review-1"]
+pack = "review"
+mode = "exit:0"
+transcript = "frames.jsonl"

@@ -570,6 +570,137 @@ fn adr0118_poisoned_store_lock_halts_run_exit_70() {
     );
 }
 
+/// The text of the one `LOCK_HALTS` string, as the one-copy scan below searches for it.
+const LOCK_HALTS_TEXT: &str = "a poisoned store lock halts the run; it is never recovered";
+
+/// **ADR-0118 clauses 1, 3, 4 and 6 — a poisoned `rk-store` WRITER mutex halts at exit `70`**
+/// (`s8e` §8e.1, D21-42 24b).
+///
+/// Clause 4 scopes the halt to both store locks: the port handle's, which
+/// `adr0118_poisoned_store_lock_halts_run_exit_70` covers, and `rk-store`'s writer
+/// `Mutex<Connection>`, which this covers. The tier-1 writer (§8e.2) runs through that mutex.
+///
+/// The payload is taken from a REAL `rk_store::conn::Writer` poisoned the way clause 1 means it (a
+/// transaction closure panicking while the writer holds the lock), never built around the constant
+/// (§7d.10's vacuous form). The hook's decision is `is_lock_halt(payload)`, and its code is
+/// `code_for(&Err(Halt::PoisonedLock{..}))`; the process-level `70` itself is not observable
+/// in-process (this module's header).
+///
+/// **One string** (§8e.1): the constant moved down to `rk-types` and `rk_kernel::runtime::LOCK_HALTS`
+/// re-exports it. The text appears on exactly one CODE line under every `crates/*/src/`, in
+/// `rk-types`, self-controlled against a synthetic pair.
+///
+/// Red while the writer reads `.unwrap_or_else(std::sync::PoisonError::into_inner)`: the writer
+/// recovers, the second call returns, and there is no payload for the hook to see.
+#[test]
+fn adr0118_a_poisoned_writer_mutex_halts_exit_70() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let w = rk_store::conn::Writer::open(dir.path()).expect("the writer opens");
+    w.transaction(|tx| {
+        tx.execute_batch("CREATE TABLE t (x INTEGER);")?;
+        Ok(())
+    })
+    .expect("a sound writer commits");
+
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let first = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        w.transaction(|_tx| -> Result<(), rk_store::conn::StoreError> {
+            panic!("a writer panics mid-transaction (the poisoning panic)")
+        })
+    }));
+    let second = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        w.transaction(|tx| {
+            tx.execute("INSERT INTO t (x) VALUES (1)", [])?;
+            Ok(())
+        })
+    }));
+    std::panic::set_hook(previous);
+
+    assert!(first.is_err(), "the poisoning closure did not panic");
+    let payload = match second {
+        Ok(result) => panic!(
+            "the rk-store writer RECOVERED a poisoned mutex: the second transaction call returned \
+             ({:?}) instead of halting, so rk-cli's hook never sees a payload and the run goes on \
+             over state no one re-established (ADR-0118 clause 3)",
+            result.map(|()| "Ok")
+        ),
+        Err(payload) => payload,
+    };
+    assert!(
+        rk_cli::is_lock_halt(payload.as_ref()),
+        "`is_lock_halt` is FALSE on the payload a real poisoned rk-store writer produces, so the \
+         hook would leave the process at 101"
+    );
+    assert_eq!(
+        rk_cli::code_for(&Err(Halt::PoisonedLock {
+            lock: "store",
+            verb: "the run",
+        })),
+        70,
+        "the hook's code for a poisoned-lock halt is not 70 (ADR-0118 clause 6; §7d.4's table)"
+    );
+    assert_eq!(
+        rk_kernel::runtime::LOCK_HALTS,
+        rk_types::LOCK_HALTS,
+        "the kernel's LOCK_HALTS is not the rk-types string it re-exports"
+    );
+
+    // ---- One string: the text on exactly one code line under crates/*/src, and it is rk-types'. --
+    let control = "    // \"a poisoned store lock halts the run; it is never recovered\" in prose\n    \
+                   const X: &str = \"a poisoned store lock halts the run; it is never recovered\";\n";
+    let control_hits = crate::code_lines(control)
+        .into_iter()
+        .filter(|(_, l)| l.contains(LOCK_HALTS_TEXT))
+        .count();
+    assert_eq!(
+        control_hits, 1,
+        "the synthetic control (one code line, one prose line) did not read exactly one — the scan \
+         is vacuous or reads prose"
+    );
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("crates/")
+        .to_path_buf();
+    let mut hits = Vec::new();
+    let mut members: Vec<_> = std::fs::read_dir(&crates)
+        .expect("read crates/")
+        .filter_map(Result::ok)
+        .map(|e| e.path().join("src"))
+        .filter(|p| p.is_dir())
+        .collect();
+    members.sort();
+    assert!(
+        members.len() >= 10,
+        "only {} crate src dirs found under {} — the scan surface is not the workspace",
+        members.len(),
+        crates.display()
+    );
+    for src in &members {
+        for file in crate::rs_files(src) {
+            let text = std::fs::read_to_string(&file).expect("a source file");
+            for (n, l) in code_lines(&text) {
+                if l.contains(LOCK_HALTS_TEXT) {
+                    hits.push(format!("{}:{n}", file.display()));
+                }
+            }
+        }
+    }
+    assert_eq!(
+        hits.len(),
+        1,
+        "the LOCK_HALTS text is on {} code line(s) under crates/*/src, expected exactly one \
+         (rk-types'): two copies can drift, and the drift would be invisible:\n{}",
+        hits.len(),
+        hits.join("\n")
+    );
+    assert!(
+        hits[0].replace('\\', "/").contains("rk-types/src/"),
+        "the one LOCK_HALTS string is not in rk-types: {}",
+        hits[0]
+    );
+}
+
 /// The environment-read spellings the ADR-0083 ban covers — Checkpoint 7d's own pattern.
 const ENV_SPELLINGS: [&str; 4] = ["std::env::var", "env::var(", "env::vars(", "env::var_os("];
 
@@ -1091,6 +1222,8 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
         reconciler: &reconciler,
         config: &reader,
         adapters: &resolver,
+        // `s8e` §8e.11's fourth seam; this case dispatches nothing.
+        harness: &rk_cli::verbs::ClaudeHarnessFactory,
     };
     let resolved = rk_cli::verbs::run::through_step_seven(
         &cli,

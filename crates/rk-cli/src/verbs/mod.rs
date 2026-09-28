@@ -155,8 +155,53 @@ impl AdapterResolver for RealAdapterResolver {
     }
 }
 
-/// The three seams a verb's outer `run` takes, as one value — so a fourth seam is one field rather
-/// than a fourth parameter on six functions.
+/// **The harness seam** (`s8e` §8e.11; D21-42 24c; D21-40 decision 2). *(Added 2026-09-28, `s8e`
+/// build, package S8E-P2.)*
+///
+/// `run`'s lane loop builds one harness per stage, over the configuration that stage's bindings
+/// filled, and until this seam it always built `rk_adapter_claude::ClaudeHarness` there — so no test
+/// could hand the lane a `FakeHarness`, and `grep -rn "verbs::run::run(" crates/*/tests` returned
+/// nothing (ADR-0161's *"Describing the lane loop as covered by tests"*). The product path builds
+/// exactly what it built before ([`ClaudeHarnessFactory`]); a test hands a factory over
+/// `rk_ports::fakes::FakeHarness::scripted(..)`.
+pub trait HarnessFactory {
+    /// Build the harness one stage of the lane dispatches through.
+    ///
+    /// `config` is the harness configuration the stage's binding pass filled (`Binder::into_config`),
+    /// and `token` is the run's cancel token, which a real adapter receives at construction.
+    ///
+    /// # Errors
+    /// A sentence naming why the harness could not be built; `run` prints it and exits `3`.
+    fn build(
+        &self,
+        config: rk_adapter_claude::config::Config,
+        token: rk_ports::cancel::CancelToken,
+    ) -> Result<std::sync::Arc<dyn rk_ports::harness::Harness>, String>;
+}
+
+/// The one implementor on the product path: `ClaudeHarness::new(config, token)`, exactly as `run`
+/// built it before the seam existed.
+#[derive(Debug, Clone, Copy)]
+pub struct ClaudeHarnessFactory;
+
+impl HarnessFactory for ClaudeHarnessFactory {
+    fn build(
+        &self,
+        config: rk_adapter_claude::config::Config,
+        token: rk_ports::cancel::CancelToken,
+    ) -> Result<std::sync::Arc<dyn rk_ports::harness::Harness>, String> {
+        rk_adapter_claude::ClaudeHarness::new(config, token)
+            .map(|harness| {
+                std::sync::Arc::new(harness) as std::sync::Arc<dyn rk_ports::harness::Harness>
+            })
+            .map_err(|e| e.to_string())
+    }
+}
+
+/// The ~~three~~ four seams a verb's outer `run` takes, as one value.
+///
+/// So a fourth seam is one field rather than a fourth parameter on six functions. *(dated
+/// 2026-09-28, `s8e` build, package S8E-P2: the fourth is [`Self::harness`], `s8e` §8e.11.)*
 #[derive(Clone, Copy)]
 pub struct Startup<'a> {
     /// AC-402's observable.
@@ -165,16 +210,20 @@ pub struct Startup<'a> {
     pub config: &'a dyn ConfigReader,
     /// AC-485's second counter.
     pub adapters: &'a dyn AdapterResolver,
+    /// The harness each stage of `run`'s lane dispatches through (`s8e` §8e.11). Only `run` reads
+    /// it; every other verb dispatches nothing.
+    pub harness: &'a dyn HarnessFactory,
 }
 
 impl Startup<'static> {
-    /// The product trio. `main.rs` and every verb's outer `run` use this one.
+    /// The product ~~trio~~ set. `main.rs` and every verb's outer `run` use this one.
     #[must_use]
     pub const fn real() -> Self {
         Self {
             reconciler: &RealReconciler,
             config: &FileConfigReader,
             adapters: &RealAdapterResolver,
+            harness: &ClaudeHarnessFactory,
         }
     }
 }

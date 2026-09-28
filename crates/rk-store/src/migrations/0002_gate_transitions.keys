@@ -1,0 +1,7 @@
+# 0002_gate_transitions -- declared key domains (AC-166).
+#
+# One line per repo-referencing column the .sql marks `-- repo-key`: <table>.<column> = sha | tree.
+# `t2_event.item` is an item id, not a repository reference, and carries no marker.
+
+t1_gate_transition.tree_hash  = tree
+t1_gate_transition.anchor_sha = sha

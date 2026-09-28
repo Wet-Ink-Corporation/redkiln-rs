@@ -41,3 +41,21 @@ pub mod usage;
 pub mod verb_output;
 /// The verify gate's record type (Step 7b-ii): the adapter's report with its closed basis and reason.
 pub mod verify;
+
+/// What a poisoned store lock means — **the one copy of the string** (ADR-0118 clauses 1, 3, 4).
+///
+/// Clause 1: *"the run stops at the poisoned acquisition. No `StepError` is constructed, nothing
+/// crosses a port boundary, no retry"*. The halt is an `.expect(LOCK_HALTS)` panic at the acquisition,
+/// and `rk-cli`'s panic hook turns a payload carrying this text into exit `70` (`is_lock_halt`).
+///
+/// **Why it lives HERE** (`s8e` §8e.1, D21-42 24b). Clause 4 scopes the rule to **both** store locks:
+/// the port handle's `Arc<Mutex<dyn EventStore>>`, acquired in `rk-kernel`, and `rk-store`'s writer
+/// `Mutex<Connection>`. `rk-store` depends on `rk-types` alone and cannot name `rk-kernel`, while
+/// `is_lock_halt` forbids a second copy of the string (*"two copies can drift, and the drift would be
+/// invisible"*). So the constant moved **down** from `rk_kernel::runtime`, which re-exports it:
+/// still one string. It is not a `StepError` and does not touch `error.rs` (clause 2).
+///
+/// **The text is UNCHANGED** from the kernel's constant. Moving a byte of it would break the match it
+/// exists for.
+pub const LOCK_HALTS: &str =
+    "a poisoned store lock halts the run; it is never recovered (ADR-0118)";

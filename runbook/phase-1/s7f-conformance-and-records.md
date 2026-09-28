@@ -182,6 +182,11 @@ The following remain true, and the four assertions of §7f.1 are run rather than
   `s7h` did not discharge it (ADR-0160). The old text asserted `0 passed; 0 failed; 3 ignored`, stays
   non-re-runnable as ADR-0134 decision clause 5 says, and is not reversed here: D21-43 N27, *"Re-scoping 7f is
   execution, not supersession."* `s8e`'s Slice-Verdict commit moves this literal again.)*
+  *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.13: moved. The trailer lint is discharged — both review
+  outcomes are sealed and its `#[ignore]` is deleted in that commit — so the block asserts all three lints `... ok`,
+  `test result: ok. 3 passed; 0 failed; 0 ignored`, no conformance lint ignored, and the ARMED string absent from
+  `conformance.rs`; the reason regex for the armed lint goes with it. Checkpoint 8e (10d) re-runs 7f whole, in its
+  clone.)*
 - **`shipped_pack_loads` is GREEN** — the product's own `.redkiln/` passes every load-time lint, not merely parses.
 - **`redkiln run` no longer refuses at catalog load**, which is this step's whole externally visible effect.
 - **`artifacts.toml` carries six toolchain-keyed kinds** and `spikes/p9/artifacts.toml` is unchanged.
@@ -231,13 +236,19 @@ n=$(printf '%s\n' "$out" | grep -cE '^test [A-Za-z0-9_:]*conformance_'); [ "$n" 
 # lint is still ARMED on Slice-Verdict; its reason now names s8e (D21-41 (e)), because s7h did not discharge it
 # (ADR-0160). The old text stays non-re-runnable (ADR-0134 decision clause 5; D21-43 N27). s8e's Slice-Verdict commit
 # moves this literal again, by dated line, when it un-ignores the lint.
-for t in conformance::conformance_every_step_kind_has_an_executor conformance::conformance_every_port_has_a_call_site; do
+# [amended 2026-09-28, s8e build, package S8E-P7; s8e section 8e.13] s8e's Slice-Verdict commit DISCHARGED the trailer lint
+# (the review pass seals both outcomes; the #[ignore] is deleted in that commit), so the literal moves once more: all THREE
+# conformance lints report ... ok, the selection is exactly 3 passed, 0 failed, 0 ignored, and no conformance lint is
+# ignored at all. The lines that expected the trailer lint ignored and ARMED with its reason naming s8e, the 2-passed and
+# 1-ignored literal, and the one-armed count are REPLACED rather than struck, because a struck line in this bash block
+# would still carry the ARMED string Checkpoint 8e re-runs past (its guard (10d)). The reason regex s7f carried for the
+# armed lint follows: with none armed, the guard is that the ARMED string is absent from conformance.rs.
+for t in conformance::conformance_every_step_kind_has_an_executor conformance::conformance_every_port_has_a_call_site conformance::conformance_every_trailer_key_has_a_producer; do
   printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: the discharged lint $t did not report '... ok' — it went red, was renamed, or was re-ignored"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
 done
-printf '%s\n' "$out" | grep -qF 'test conformance::conformance_every_trailer_key_has_a_producer ... ignored, ARMED: Slice-Verdict has 0 producers' || { echo "FAIL: the trailer lint is not ARMED naming Slice-Verdict — it was discharged, renamed or deleted, and s8e owns that move"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 2 passed; 0 failed; 1 ignored' || { echo "FAIL: the conformance selection is not exactly 2 passed, 0 failed, 1 ignored — the discharged state moved"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
-armed=$(printf '%s\n' "$out" | grep -E '^test [A-Za-z0-9_:]*conformance_.*\.\.\. ignored,'); a=$(printf '%s\n' "$armed" | grep -c .); [ "$a" -eq 1 ] || { echo "FAIL: $a conformance lints are ARMED, expected exactly 1 (the trailer lint, s8e's)"; exit 1; }
-printf '%s\n' "$armed" | grep -vE 'discharged by s8e'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: the armed lint's #[ignore] reason does not name s8e, the stage that discharges it (rc=$rc) — the reason IS the debt record"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 3 passed; 0 failed; 0 ignored' || { echo "FAIL: the conformance selection is not exactly 3 passed, 0 failed, 0 ignored — the discharged state moved"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
+armed=$(printf '%s\n' "$out" | grep -E '^test [A-Za-z0-9_:]*conformance_.*\.\.\. ignored'); a=$(printf '%s\n' "$armed" | grep -c .); [ "$a" -eq 0 ] || { echo "FAIL: $a conformance lints are ignored, expected none (s8e discharged the last)"; exit 1; }
+hits=$(grep -nF 'ARMED: Slice-Verdict has 0 producers' crates/rk-kernel/tests/it/conformance.rs); rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: the ARMED reason is still present in conformance.rs, or unreadable (grep rc=$rc)"; printf '%s\n' "$hits"; exit 1; }
 # THE BINARY MUST EXIST AND EXECUTE BEFORE ANY ASSERTION ABOUT WHAT IT PRINTS.
 # CORRECTED 2026-09-21 at this stage's execution, and the hole was BLOCKING: `target/` is
 # gitignored, 0 tracked files live under it, and this block builds nothing — so with the binary

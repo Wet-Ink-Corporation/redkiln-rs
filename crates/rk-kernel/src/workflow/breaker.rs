@@ -635,7 +635,10 @@ impl BreakerState {
                 | EventKind::ArtifactWrite
                 | EventKind::AdvisoryCreated
                 | EventKind::AdvisoryRetired
-                | EventKind::AdvisoryDismissed => {}
+                | EventKind::AdvisoryDismissed
+                | EventKind::WorktreeAssigned
+                | EventKind::StageEmpty
+                | EventKind::GitOp => {}
             }
         }
         Ok(state)

@@ -221,6 +221,74 @@ fn adr0153_the_two_policy_keys_may_not_disagree() {
     assert_eq!(ok.successor("triage"), Some("review"));
 }
 
+/// **`closed` is reserved for the lane's end, so a pack that declares a stage of that name is
+/// refused at load** (`s8e` §8e.5; D21-43 N9; ADR-0183, proposed). *(Added 2026-09-28, `s8e`
+/// build, package S8E-P4.)*
+///
+/// Red at entry because `closed` was an ordinary name: a pack could declare it, and the lane's
+/// terminal `Story: <project>/<item> closed` mark would then be indistinguishable from entering
+/// that stage. Every place a stage is declared is tried — `policy.stages`, `policy.stage_order`
+/// and a `[stage.closed]` table — and a control shows the same body with another name loads.
+#[test]
+fn a_pack_stage_named_closed_is_refused_at_load() {
+    let reserved = rk_git::trailer::grammar::CLOSED_STAGE_TOKEN;
+    assert_eq!(reserved, "closed");
+    for (site, src) in [
+        (
+            "policy.stages and policy.stage_order",
+            pack_src(
+                "stages = { triage = \"mandatory\", closed = \"mandatory\" }\n\
+                 stage_order = [\"triage\", \"closed\"]",
+            ),
+        ),
+        (
+            "policy.stages alone (no order)",
+            pack_src("stages = { triage = \"mandatory\", closed = \"optional\" }"),
+        ),
+        (
+            "a [stage.closed] table",
+            format!(
+                "{}\n[stage.closed]\nbaseline = []\n",
+                pack_src(
+                    "stages = { triage = \"mandatory\" }\n\
+                     stage_order = [\"triage\"]"
+                )
+            ),
+        ),
+    ] {
+        let refused = Pack::from_toml("closed.toml", &src);
+        let Err(err) = refused else {
+            panic!("`closed` is an ordinary name: a pack declaring it in {site} loaded");
+        };
+        let text = err.to_string();
+        assert!(
+            text.contains("closed") && text.contains("reserved"),
+            "the refusal must name the reserved stage `closed` ({site}): {text}"
+        );
+    }
+
+    // CONTROL: the same bodies with another name load, so the refusals are about the name.
+    for src in [
+        pack_src(
+            "stages = { triage = \"mandatory\", closeout = \"mandatory\" }\n\
+             stage_order = [\"triage\", \"closeout\"]",
+        ),
+        format!(
+            "{}\n[stage.closeout]\nbaseline = []\n",
+            pack_src(
+                "stages = { triage = \"mandatory\", closeout = \"mandatory\" }\n\
+                 stage_order = [\"triage\", \"closeout\"]"
+            )
+        ),
+    ] {
+        Pack::from_toml("ok.toml", &src).expect("`closeout` is an ordinary stage name and loads");
+    }
+    // And the shipped packs, whose last stage is `closeout`, still load.
+    for name in ["bug-standard.toml", "story.toml"] {
+        let _ = shipped(name);
+    }
+}
+
 #[test]
 fn adr0153_a_pack_declaring_no_lane_order_cannot_advance() {
     // An absence is not an identity map and not an alphabetical fallback: it is a refusal to

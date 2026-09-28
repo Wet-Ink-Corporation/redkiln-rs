@@ -123,7 +123,12 @@ pub fn run_with(
     let guard = store::acquire(store, "status")?;
     // ONE query. Per the header the selector is inert, so this is the whole journal and calling it
     // once per item would read the same rows N times.
-    let events = match guard.query(rk_kernel::runtime::journal_query("")) {
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; ADR-0182 decision 4's owed whole-store
+    // selector.)* ~~`journal_query("")`~~: `ByItem("")` returns only the UNKEYED rows once the
+    // tier-1 boundary keys every row of its acts (`s8e` §8e.3), which would drop every stage and gate
+    // transition from the roll-up. `ByRun` is inert and returns every row, so it is the whole-store
+    // read until a selector that says so exists.
+    let events = match guard.query(rk_ports::event_store::Query::ByRun(String::new())) {
         Ok(events) => events,
         Err(e) => {
             // `StepError` has no `Display` — it is a closed enum its own crate matches

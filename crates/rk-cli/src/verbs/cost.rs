@@ -164,7 +164,11 @@ pub fn run_with(
     // is passed empty rather than as the item on purpose: a future store that honoured `ByItem`
     // must not make foreign traffic vanish from the span, which is exactly what `not attributable`
     // is computed from (ADR-0163 decision 4).
-    let read = guard.query(rk_kernel::runtime::journal_query(""));
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; ADR-0182 decision 4's owed whole-store
+    // selector.)* ~~`journal_query("")`~~: `query` honours `ByItem` now, and `ByItem("")` returns only
+    // the unkeyed rows once producers key theirs (`s8e` §8e.3). `ByRun` is inert and returns every
+    // row, which is the whole journal this read needs.
+    let read = guard.query(rk_ports::event_store::Query::ByRun(String::new()));
     drop(guard);
     let rows = match read {
         Ok(rows) => rows,

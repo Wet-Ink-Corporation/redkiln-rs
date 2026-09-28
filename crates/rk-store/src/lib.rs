@@ -24,9 +24,16 @@
 pub mod artifacts;
 pub mod canon;
 pub mod conn;
+/// `t2_event`'s insert and its selector's `SELECT` — ADR-0181 decision 4, ADR-0182 decision 4.
+pub mod events;
 pub mod identity;
 pub mod locator;
 pub mod memo;
+/// The migration runner and the one opening transaction — ADR-0181 decision 6.
+pub mod migrate;
 pub mod retention;
 pub mod schema_lint;
 pub mod tier;
+/// The tier-1 statement functions — ADR-0181 decisions 3 and 4. Called only by the SQLite
+/// adapter's `append_tier1` and `rebuild`.
+pub mod tier_one;

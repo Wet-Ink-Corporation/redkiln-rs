@@ -1,7 +1,9 @@
 //! Design §5.4's trailer grammar, row by row (ADR-0105 clause 3; ADR-0109 decision 3; AC-165).
 
 use rk_git::reconcile::{CommitTrailers, reconcile};
-use rk_git::trailer::grammar::{MalformedReason, ParsedTrailer, TrailerKey, Verdict, parse_body};
+use rk_git::trailer::grammar::{
+    GateState, MalformedReason, ParsedTrailer, TrailerKey, Verdict, parse_body,
+};
 use rk_types::drift::Drift;
 
 fn commit(sha: &str, body: &str) -> CommitTrailers {
@@ -37,7 +39,8 @@ fn only_column_zero_and_exact_case_registers_as_a_trailer() {
             },
             ParsedTrailer::Story {
                 project: "demo".into(),
-                slug: "s-4".into()
+                slug: "s-4".into(),
+                stage: None,
             }
         ],
         "indented mentions must not register at all, and a lower-cased key must not register as \
@@ -148,22 +151,37 @@ fn the_verdict_vocabulary_is_closed_and_case_insensitive() {
     ));
 }
 
-/// Row 3: the third axis. A well-formed `Gate:` is the `(token, tree_hash, deadline)` triple.
+/// Row 3: the third axis. ~~A well-formed `Gate:` is the `(token, tree_hash, deadline)` triple.~~
+///
+/// *(Re-pointed 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.7; ADR-0184, proposed.)* A
+/// well-formed `Gate:` is the widened value `<token> <tree_hash> <deadline> <kind> <reach>
+/// <state>`, and its deadline is integer unix seconds (D21-43 N8). This test fed
+/// ~~`Gate: tok-1 {sha} 2026-09-13T00:00:00Z`~~, the triple with an RFC 3339 deadline, which is
+/// now legacy drift twice over; `trailers::an_rfc3339_gate_deadline_is_malformed_drift` holds that
+/// case. The name is kept so the re-point is visible, not a deletion.
 #[test]
 fn a_gate_trailer_carries_the_triple() {
     let sha = "0123456789abcdef0123456789abcdef01234567";
-    let t = parse_body(&format!("Gate: tok-1 {sha} 2026-09-13T00:00:00Z\n"));
+    let t = parse_body(&format!(
+        "Gate: tok-1 {sha} 1789257600 human:review 1 opened\n"
+    ));
     match &t[0] {
         ParsedTrailer::Gate {
             token,
             tree_hash,
             deadline,
+            kind,
+            reach,
+            state,
         } => {
             assert_eq!(token, "tok-1");
             assert_eq!(tree_hash, sha);
-            assert_eq!(deadline, "2026-09-13T00:00:00Z");
+            assert_eq!(*deadline, 1_789_257_600);
+            assert_eq!(kind, "human:review");
+            assert_eq!(*reach, 1);
+            assert_eq!(*state, GateState::Opened);
         }
-        other => panic!("not parsed as a Gate triple: {other:?}"),
+        other => panic!("not parsed as a widened Gate value: {other:?}"),
     }
 }
 

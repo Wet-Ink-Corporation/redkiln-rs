@@ -21,7 +21,11 @@ use rusqlite::Connection;
 use crate::conn::StoreError;
 
 /// The schema version this binary writes and understands.
-pub const SCHEMA_VERSION: u32 = 1;
+///
+/// *(dated 2026-09-28, s8e build; ADR-0181 decision 5, proposed.)* **2**, from `1`: D21-46 R2's
+/// `0002_gate_transitions`. A version-1 store is refused by [`check`] and rebuilt from git by
+/// `doctor --rebuild`, never migrated in place (AC-180).
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// What a store says it is.
 #[derive(Debug, Clone, PartialEq, Eq)]

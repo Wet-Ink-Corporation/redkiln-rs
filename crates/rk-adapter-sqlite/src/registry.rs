@@ -24,6 +24,14 @@
 //! (`ac492_…` reads this file for one), so no code path maps an unknown token to a default, an
 //! empty set or a no-op.
 //!
+//! *(dated 2026-09-28, `s8e` build, package S8E-P7; ADR-0181 decision 11, proposed; `s8e` §8e.9:
+//! **both rows flip together**, each to `Probe::Recorded { source }` naming the test that exercises
+//! it, `verified_on: "2026-09-28"`. `SqliteStore::snapshot` and `rebuild` are implemented, and
+//! they still answer THROUGH their rows ([`answer`]): a probe-less row refuses `Unsupported`, and a
+//! registry carrying no row is a decode failure. [`unsupported_tokens`] now returns nothing, so the
+//! real conformance row's capability arm is empty and the body's round trip runs over the real
+//! store. The paragraph below is left as written at `s7c`.)*
+//!
 //! **The SQLite entries, named**: `snapshot` and `rebuild`, each `verified_on: "2026-09-18"`
 //! and each `Probe::None { reason }` — exactly the rows D17-9 says answer `Unsupported`.
 //! `rk_ports::Snapshot` is an opaque newtype whose contents no record has decided, so no `Ok`
@@ -41,7 +49,10 @@
 //!
 //! **Wire form.** The registry is JSON (the crate carries `serde_json` for `t2_event.payload`
 //! already; a TOML reader would be a dependency for one file): a list of rows, `probe`
-//! externally tagged — `{"none": {"reason": …}}` / `{"recorded": {"source": …}}`.
+//! externally tagged — `{"none":{"reason": …}}` / `{"recorded":{"source": …}}`. *(dated
+//! 2026-09-28, `s8e` build, package S8E-P7: spelled without the space after the tag's colon, so
+//! Checkpoint 8e (5)'s count of probe-less rows — `grep -cF` on the tag, colon, space, brace — reads
+//! rows and not this sentence.)*
 
 use serde::Deserialize;
 
@@ -115,18 +126,19 @@ impl Row {
     }
 }
 
-/// The SQLite registry: the two rows D17-9 names, dated the day this crate landed, each
-/// explicitly probe-less.
+/// The SQLite registry: the two rows D17-9 names. ~~dated the day this crate landed, each
+/// explicitly probe-less.~~ *(dated 2026-09-28, `s8e` build, package S8E-P7: re-dated the day
+/// `s8e` §8e.9 implemented both, each with the recorded probe that exercises it.)*
 const REGISTRY: &str = r#"[
   {
     "capability": "snapshot",
-    "verified_on": "2026-09-18",
-    "probe": { "none": { "reason": "rk_ports::Snapshot is an opaque newtype whose contents no record has decided (D17-9); no Ok is constructible and no probe exists" } }
+    "verified_on": "2026-09-28",
+    "probe": { "recorded": { "source": "crates/rk-adapter-sqlite/tests/it/store.rs store::open_at_targets_a_staging_file_and_rebuild_writes_anchored_tier_one_rows; crates/rk-adapter-sqlite/tests/it/conformance.rs conformance::port_conformance_real_row_sqlite" } }
   },
   {
     "capability": "rebuild",
-    "verified_on": "2026-09-18",
-    "probe": { "none": { "reason": "rebuild takes the same undecided Snapshot (D17-9); its consumer is doctor --rebuild at 7d" } }
+    "verified_on": "2026-09-28",
+    "probe": { "recorded": { "source": "crates/rk-adapter-sqlite/tests/it/store.rs store::open_at_targets_a_staging_file_and_rebuild_writes_anchored_tier_one_rows; crates/rk-cli/tests/it/doctor.rs doctor::ac184_rebuild_differential_over_anchored_tier_one_rows" } }
   }
 ]"#;
 
@@ -159,7 +171,34 @@ pub fn unsupported_tokens() -> Result<Vec<String>, serde_json::Error> {
         .collect())
 }
 
+/// **Whether a port method may answer, derived from its row in `rows`.**
+///
+/// `Ok(())` for a row
+/// carrying a recorded probe (the method runs), `Err` as [`refusal`] otherwise. *(dated
+/// 2026-09-28, `s8e` build, package S8E-P7; ADR-0181 decision 11: `snapshot` and `rebuild` are
+/// implemented, so a recorded row is no longer "the row is wrong".)*
+///
+/// # Errors
+/// `Unsupported { capability }` for a probe-less row; a typed decode failure for no row.
+pub fn answer(rows: &[Row], capability: Capability) -> Result<(), StepError> {
+    match rows.iter().find(|r| r.capability == capability) {
+        Some(Row {
+            probe: Probe::Recorded { .. },
+            ..
+        }) => Ok(()),
+        Some(Row {
+            probe: Probe::None { .. },
+            ..
+        })
+        | None => Err(refusal(rows, capability)),
+    }
+}
+
 /// The error a port method answers for `capability`, **derived from its row in `rows`**.
+///
+/// *(dated 2026-09-28, `s8e` build, package S8E-P7.)* Reached through [`answer`] for a probe-less
+/// row or a missing one. Its recorded-probe arm below is kept for a direct caller and is now only a
+/// statement about such a caller: this crate implements both methods.
 ///
 /// AC-238; D17-9: `Unsupported { capability }` naming the row's token when the row is
 /// probe-less; a typed decode failure when `rows` carries no such row, or carries a row claiming

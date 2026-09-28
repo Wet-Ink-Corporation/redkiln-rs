@@ -72,11 +72,18 @@ fn ac364_event_store_port_has_no_update_or_delete() {
              below would be vacuous over a parse that reads the wrong block: {methods:?}"
         );
     }
+    // *(dated 2026-09-28, s8e build, §8e.2)* FIVE, not four: ADR-0181 (proposed) is the record
+    // that admits the fifth — the tier-1 writer, `append_tier1`, which D21-41 e names. It carries
+    // none of the verbs below, and the store stays append-only.
     assert_eq!(
         methods.len(),
-        4,
-        "`EventStore` declares exactly design:265's four methods, and a fifth is a write path a \
-         record has to admit: {methods:?}"
+        5,
+        "`EventStore` declares exactly design:265's four methods plus ADR-0181's tier-1 writer, and \
+         a sixth is a write path a record has to admit: {methods:?}"
+    );
+    assert!(
+        methods.contains("append_tier1"),
+        "the fifth method is ADR-0181's `append_tier1` and no other: {methods:?}"
     );
 
     // THE ABSENCES: no method whose name carries a mutating verb, whole or as a part

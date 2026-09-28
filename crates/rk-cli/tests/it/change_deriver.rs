@@ -72,10 +72,17 @@ fn change_repo() -> tempfile::TempDir {
 
     // The lane advances out of `triage` once the gate is answered, and an advance writes a
     // `Story:` trailer, whose value needs `[project] name` (ADR-0159).
+    // *(dated 2026-09-28, `s8e` build, package S8E-P2.)* ~~This fixture appended its own
+    // `[project] name = "chg-fixture"`.~~ `pack-min/config.toml` now declares `[project] name` for
+    // every fixture repository a lane runs in (`s8e` §8e.11), so a second `[project]` table would be
+    // a duplicate key; the shared one is asserted instead.
     let config = rk.join("config.toml");
-    let mut cfg = std::fs::read_to_string(&config).expect("config.toml reads");
-    cfg.push_str("\n[project]\nname = \"chg-fixture\"\n");
-    std::fs::write(&config, cfg).expect("config.toml writes");
+    let cfg = std::fs::read_to_string(&config).expect("config.toml reads");
+    assert_eq!(
+        cfg.lines().filter(|l| l.trim() == "[project]").count(),
+        1,
+        "PREMISE: the fixture configuration declares exactly one `[project]` table"
+    );
 
     let processes = rk_cli::processes::processes_dir(root);
     std::fs::create_dir_all(&processes).expect("the processes directory is created");

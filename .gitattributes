@@ -108,3 +108,15 @@ crates/rk-kernel/tests/fixtures/packs/incident-deviation.toml -text
 # bytes at P9_PIN, and the parity tests compare the Rust port's report to them byte for byte. Checkpoint 8b reads
 # them raw with `od -c`, because Git Bash cannot see a CR inside `$(...)`.
 crates/rk-kernel/tests/fixtures/lattice/** -text
+#
+# ADDED 2026-09-28 at s8e (section 8e.2; AC-180): the checked-in version-1 fixture store, minted on the entry
+# tree (766854c) before migration 0002 exists. store::a_checked_in_version_one_store_is_refused_and_its_bytes_are_unchanged
+# compares a refused open's copy with this blob by sha256, so no filter, diff or eol rule may touch it. `binary` is
+# -text -diff -merge; `text=auto` above would likely detect it as binary already, and this row says so rather than
+# relying on detection. Same header rule: the row lands with the file whose bytes a test pins.
+crates/rk-store/tests/fixtures/*.sqlite3 binary
+#
+# ADDED 2026-09-28 at s8e (section 8e.8, package S8E-P7): the `approved` seal's corpus. Its `frames.jsonl` is replayed
+# VERBATIM to the fixture child's stdout by the same driver as `exit/`, so it takes `exit/`'s rule; the row lands
+# with the files.
+crates/rk-cli/tests/fixtures/slice/** -text

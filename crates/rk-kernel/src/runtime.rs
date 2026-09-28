@@ -180,6 +180,7 @@ pub mod ledger;
 pub mod marks;
 pub mod reference;
 pub mod step;
+pub mod tier_one;
 
 /// What a poisoned store lock means. **ADR-0118 clause 1**: *"the run stops at the poisoned
 /// acquisition. No `StepError` is constructed, nothing crosses a port boundary, no retry, no next
@@ -193,8 +194,12 @@ pub mod step;
 /// (every test green, the hook silently at 101).
 ///
 /// **The text is UNCHANGED.** Moving a byte of it would break the match it exists for.
-pub const LOCK_HALTS: &str =
-    "a poisoned store lock halts the run; it is never recovered (ADR-0118)";
+///
+/// *(dated 2026-09-28, s8e build, §8e.1:)* **A re-export, not a second copy.** The constant moved
+/// down to `rk_types::LOCK_HALTS`, because ADR-0118 clause 4 scopes the halt to `rk-store`'s writer
+/// mutex too and `rk-store` cannot name this crate. `rk_kernel::runtime::LOCK_HALTS` stays the path
+/// `rk-cli` matches, and it is the same `&str`.
+pub use rk_types::LOCK_HALTS;
 
 /// Why the runtime boundary refused.
 ///
@@ -219,6 +224,9 @@ pub enum RuntimeError {
     SpecNotSupplied { step_id: String },
     /// The FSM refused to fold the journal this boundary read back.
     Fsm(FsmError),
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* The tier-1 boundary
+    /// refused an act: nothing was written when the refusal is a git one (AC-162).
+    TierOne(tier_one::TierOneError),
 }
 
 impl RuntimeError {
@@ -230,6 +238,7 @@ impl RuntimeError {
             Self::Store { .. } => "store",
             Self::SpecNotSupplied { .. } => "spec_not_supplied",
             Self::Fsm(_) => "fsm",
+            Self::TierOne(_) => "tier_one",
         }
     }
 }
@@ -245,6 +254,7 @@ impl core::fmt::Display for RuntimeError {
                  refuses rather than dispatching an empty one"
             ),
             Self::Fsm(e) => write!(f, "the recorded journal did not fold: {e}"),
+            Self::TierOne(e) => write!(f, "the tier-1 act was refused: {e}"),
         }
     }
 }
@@ -260,6 +270,12 @@ impl From<KeyError> for RuntimeError {
 impl From<FsmError> for RuntimeError {
     fn from(e: FsmError) -> Self {
         Self::Fsm(e)
+    }
+}
+
+impl From<tier_one::TierOneError> for RuntimeError {
+    fn from(e: tier_one::TierOneError) -> Self {
+        Self::TierOne(e)
     }
 }
 
@@ -339,6 +355,21 @@ pub struct Runtime {
     /// none — the kernel's machinery suites, which have no pack behind them — and the production
     /// path binds the selected pack in `replay::resume_routed` with [`Self::with_breaker`].
     breaker: Option<BreakerBinding>,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3; D21-42 8a.)* The tier-1
+    /// boundary every tier-1 act of this runtime goes through: the stage entry, the advance, a
+    /// gate's opening. [`Self::new`] binds none, and an UNBOUND runtime keeps the store-only arms
+    /// for the machinery suites and the golden-log recorder (`replay::record`), which have no
+    /// repository behind them; the production path, `replay::resume_routed` under `rk-cli`'s
+    /// `run`, binds one with [`Self::with_boundary`] (the three-kinds record states the residual).
+    boundary: Option<std::sync::Mutex<tier_one::Boundary>>,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.10's kernel half, for
+    /// `lane_e2e::two_items_in_one_store_do_not_fold_together`; ADR-0182, proposed.)* The item every
+    /// row [`Self::append`] writes is keyed to, when the row's kind carries the interim key and the
+    /// row has none yet. [`Self::new`] binds none (the machinery suites and the golden-log recorder
+    /// write item-less rows, as before); `replay::resume_routed` binds the run's item with
+    /// [`Self::with_item`]. Rows the executor appends through its own guard, and rows a harness
+    /// appends, are not keyed here: a stated residual of the interim key.
+    item: Option<String>,
 }
 
 /// **R4 (ADR-0176, proposed): the breaker's binding** — the selected pack.
@@ -383,6 +414,55 @@ impl Runtime {
             tool_routing: step::ToolRouting::default(),
             read_seam: std::sync::Arc::new(reference::UnwiredReadSeam),
             breaker: None,
+            boundary: None,
+            item: None,
+        }
+    }
+
+    /// Key every row [`Self::append`] writes to `item` (ADR-0182's interim key), when its kind
+    /// carries the key. *(dated 2026-09-28, `s8e` build, package S8E-P6.)*
+    #[must_use]
+    pub fn with_item(mut self, item: &str) -> Self {
+        self.item = Some(item.to_owned());
+        self
+    }
+
+    /// Bind the tier-1 boundary (`s8e` §8e.3). Every tier-1 act this runtime takes then commits
+    /// first and anchors its rows to the commit, through `tier_one::commit_act`.
+    #[must_use]
+    pub fn with_boundary(mut self, boundary: tier_one::Boundary) -> Self {
+        self.boundary = Some(std::sync::Mutex::new(boundary));
+        self
+    }
+
+    /// Is a tier-1 boundary bound?
+    #[must_use]
+    pub const fn is_bound(&self) -> bool {
+        self.boundary.is_some()
+    }
+
+    /// **Take one tier-1 act.** Bound: through the boundary, git first. Unbound (the machinery
+    /// suites and the golden-log recorder only): the rows are appended as they were before `s8e`,
+    /// with no commit.
+    ///
+    /// # Errors
+    ///
+    /// [`RuntimeError::TierOne`] from the boundary, or [`RuntimeError::Store`] unbound.
+    pub fn tier_one_act(&self, act: tier_one::Act) -> Result<(), RuntimeError> {
+        match &self.boundary {
+            Some(boundary) => {
+                boundary
+                    .lock()
+                    .expect(LOCK_HALTS)
+                    .act(&self.ports.store, act)?;
+                Ok(())
+            }
+            None => {
+                for row in act.rows {
+                    self.append(row)?;
+                }
+                Ok(())
+            }
         }
     }
 
@@ -478,6 +558,15 @@ impl Runtime {
     ///
     /// [`RuntimeError::Store`] when the port refuses.
     pub fn append(&self, event: Event) -> Result<(), RuntimeError> {
+        let event = match &self.item {
+            Some(item)
+                if event.item().is_none()
+                    && event.kind.item_key() == rk_types::event_kind::ItemKey::Carried =>
+            {
+                event.with_item(item)
+            }
+            _ => event,
+        };
         self.store_guard()
             .append(event)
             .map_err(|e| RuntimeError::Store {
@@ -519,7 +608,13 @@ impl Runtime {
     ) -> Result<StepOutcome, RuntimeError> {
         match action {
             NextAction::OpenGate(record) => {
-                self.append(gate_opened_event(record))?;
+                // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6.)* ~~`self.append(
+                // gate_opened_event(record))?;`~~ — the opening is a tier-1 act: its `Gate: … opened`
+                // mark first, then the row anchored to it, carrying the opening stage run.
+                self.tier_one_act(
+                    tier_one::Act::gate(gate_opened_event(record), record)?
+                        .opened_by(&self.stage, &self.run_id),
+                )?;
                 Ok(StepOutcome::GateOpened {
                     token: record.token().clone(),
                 })
@@ -547,7 +642,13 @@ impl Runtime {
                 Ok(StepOutcome::Activity(Box::new(report)))
             }
             NextAction::AdvanceStage { from, to } => {
-                self.append(stage_transition_event(from, to))?;
+                // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3 and §8e.5.)*
+                // ~~`self.append(stage_transition_event(from, to))?;`~~ — the advance is a tier-1
+                // act: the stage-bearing `Story:` mark for `to` first (ADR-0183), then the row.
+                self.tier_one_act(tier_one::Act::marked(
+                    tier_one::Mark::Stage(to.clone()),
+                    vec![stage_transition_event(from, to)],
+                ))?;
                 Ok(StepOutcome::StageAdvanced {
                     from: from.clone(),
                     to: to.clone(),

@@ -2058,6 +2058,8 @@ fn ac402_reconcile_called_on_run_answer_doctor() {
         reconciler: &reconciler,
         config: &rk_cli::verbs::FileConfigReader,
         adapters: &rk_cli::verbs::RealAdapterResolver,
+        // `s8e` §8e.11's fourth seam; this case dispatches nothing.
+        harness: &rk_cli::verbs::ClaudeHarnessFactory,
     };
     let cli = rk_cli::cli::Cli {
         cwd: Some(dir.path().to_path_buf()),
@@ -2166,6 +2168,8 @@ const SYNTHETIC_ITEMS: [(&str, &str); 3] = [
 /// which §7d.8 requires in terms: the wrapper is what pins `trailer.ifexists=add` and an empty
 /// hooks path, without which git silently does not append a repeated trailer (design §5.4).
 fn synthetic_trailer_repo() -> tempfile::TempDir {
+    use rk_git::trailer::grammar::{ParsedTrailer, StoryStage, Verdict};
+
     let dir = crate::temp_repo();
     let rk = dir.path().join(".redkiln");
     std::fs::create_dir_all(rk.join("items")).expect("the items directory is created");
@@ -2189,27 +2193,36 @@ fn synthetic_trailer_repo() -> tempfile::TempDir {
         &["commit", "--quiet", "-m", "the .redkiln scaffold"],
     );
 
-    let repo = rk_cli::repo::discover(Some(dir.path())).expect("the synthetic repository resolves");
-    for (key, value) in [
-        (rk_git::trailer::grammar::TrailerKey::Story, "demo/s-1"),
-        (rk_git::trailer::grammar::TrailerKey::Story, "demo/s-2"),
-        (
-            rk_git::trailer::grammar::TrailerKey::SliceVerdict,
-            "demo/sl-1 approved",
-        ),
-    ] {
-        rk_git::trailer::write::commit_with_trailers(
-            &repo.exec,
-            &repo.worktree,
-            "a trailer commit",
-            &[rk_git::trailer::grammar::Trailer {
-                key,
-                value: value.to_owned(),
-            }],
-            true,
-        )
-        .expect("the trailer commit is made through the wrapper");
-    }
+    // *(Re-pointed 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.5 and §8e.12; ADR-0183,
+    // proposed.)* The two marks are STAGE-BEARING (~~`"demo/s-1"`, `"demo/s-2"`~~, the stage-less
+    // form, is now the legacy mark the producer never writes), each naming the stage its item
+    // record names, so a rebuild that reads `to` from the mark and one that reads it from the
+    // record agree here; `s-3` stays unmarked, the discriminator. The legacy stage-less rule has
+    // its own pin, `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record` (`s8e`
+    // §8e.12).
+    //
+    // *(Re-pointed again 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.9; ADR-0181 decision
+    // 11, proposed.)* Each item's marks sit on ITS run ref, `rk-run/<slug>` (~~one commit chain on
+    // the default branch~~): the rebuild now walks each item's run ref, as the product mints every
+    // mark there, and the seal rides `rk-run/s-1`.
+    let story = |slug: &str, stage: &str| ParsedTrailer::Story {
+        project: "demo".to_owned(),
+        slug: slug.to_owned(),
+        stage: Some(StoryStage::Stage(stage.to_owned())),
+    };
+    marks_on_run_ref(
+        dir.path(),
+        "s-1",
+        &[
+            story("s-1", "review"),
+            ParsedTrailer::SliceVerdict {
+                project: "demo".to_owned(),
+                slice: "sl-1".to_owned(),
+                verdict: Verdict::Approved,
+            },
+        ],
+    );
+    marks_on_run_ref(dir.path(), "s-2", &[story("s-2", "implement")]);
     dir
 }
 
@@ -2277,9 +2290,12 @@ fn stage_actions(repo: &std::path::Path) -> BTreeMap<String, Option<(String, Str
     let discovered = rk_cli::repo::discover(Some(repo)).expect("the repository resolves");
     let store = rk_cli::adapters::open_store(&discovered.exec, &discovered.worktree)
         .expect("the store opens");
+    // *(Re-pointed 2026-09-28, `s8e` build, package S8E-P7: the whole store through `ByRun`, and each
+    // item's rows by their interim key — ~~`ByItem("")` and the payload's `item`~~, which a keyed
+    // row does not carry; `support::store_rows` took the same route at S8E-P5.)*
     let all = rk_ports::event_store::EventStore::query(
         &store,
-        rk_ports::event_store::Query::ByItem(String::new()),
+        rk_ports::event_store::Query::ByRun(String::new()),
     )
     .expect("the journal reads");
     // Dropped before the caller touches the file: `Writer` holds the connection in WAL mode and on
@@ -2288,15 +2304,10 @@ fn stage_actions(repo: &std::path::Path) -> BTreeMap<String, Option<(String, Str
 
     let mut out = BTreeMap::new();
     for (slug, stage) in SYNTHETIC_ITEMS {
-        let item = format!("demo/{slug}");
+        let item = slug.to_owned();
         let mine: Vec<rk_types::event::Event> = all
             .iter()
-            .filter(|e| {
-                e.payload
-                    .get("item")
-                    .and_then(serde_json::Value::as_str)
-                    .is_none_or(|i| i == item)
-            })
+            .filter(|e| e.item().is_none_or(|i| i == item))
             .cloned()
             .collect();
         let action = rk_kernel::workflow::fsm::stage_action(&item, stage, &mine)
@@ -2445,13 +2456,16 @@ fn ac427_rebuild_from_git_alone_matches_recorded_next_action() {
     {
         let mut store =
             rk_cli::adapters::open_store(&repo.exec, &repo.worktree).expect("the store opens");
+        // *(Re-pointed 2026-09-28, `s8e` build, package S8E-P7: each row carries the interim `item`
+        // key the kernel's reads select by (ADR-0182), ~~a payload `item` of `demo/<slug>`~~.)*
         for (slug, stage) in [SYNTHETIC_ITEMS[0], SYNTHETIC_ITEMS[1]] {
             rk_ports::event_store::EventStore::append(
                 &mut store,
                 rk_types::event::Event::new(
                     rk_types::event_kind::EventKind::StageTransition,
-                    serde_json::json!({ "item": format!("demo/{slug}"), "to": stage }),
-                ),
+                    serde_json::json!({ "to": stage }),
+                )
+                .with_item(slug),
             )
             .expect("the stage transition appends");
         }
@@ -2459,8 +2473,9 @@ fn ac427_rebuild_from_git_alone_matches_recorded_next_action() {
             &mut store,
             rk_types::event::Event::new(
                 rk_types::event_kind::EventKind::SliceSealed,
-                serde_json::json!({ "slice": "demo/sl-1", "verdict": "approved" }),
-            ),
+                serde_json::json!({ "project": "demo", "slice": "sl-1", "verdict": "approved" }),
+            )
+            .with_item("s-1"),
         )
         .expect("the slice seal appends");
         drop(store);
@@ -2475,9 +2490,9 @@ fn ac427_rebuild_from_git_alone_matches_recorded_next_action() {
          empty journals — §7d.14's own second red. Read: {before:?}"
     );
     assert_eq!(
-        before.get("demo/s-3").cloned().flatten(),
+        before.get("s-3").cloned().flatten(),
         None,
-        "`demo/s-3` carries no trailer and no store row, so it must read initial on both sides — \
+        "`s-3` carries no trailer and no store row, so it must read initial on both sides — \
          it is the arm a rebuild that emits a row per item record fails: {before:?}"
     );
 
@@ -2595,9 +2610,12 @@ fn ac429_rebuild_writes_no_object_ref_or_file() {
         let discovered = rk_cli::repo::discover(Some(dir.path())).expect("the repository resolves");
         let store = rk_cli::adapters::open_store(&discovered.exec, &discovered.worktree)
             .expect("the rebuilt store opens");
+        // *(Re-pointed 2026-09-28, `s8e` build, package S8E-P7: the whole store through `ByRun` —
+        // ~~`ByItem(String::new())`~~ reads only unkeyed rows, and every rebuilt row now carries its
+        // interim `item` key, ADR-0182.)*
         let rows = rk_ports::event_store::EventStore::query(
             &store,
-            rk_ports::event_store::Query::ByItem(String::new()),
+            rk_ports::event_store::Query::ByRun(String::new()),
         )
         .expect("the rebuilt journal reads");
         drop(store);
@@ -2716,5 +2734,591 @@ fn ac532_executed_ledger_reports_never_executed_activities() {
         "the finding names no activity. ADR-0114 decision 2 asks for the never-executed *list*, \
          not only the count, and the fixture's one activity has no `activity_committed` row. \
          Detail was:\n{detail}"
+    );
+}
+
+// ----------------------------------------------------- `s8e` §8e.9: the rebuild in the adapter
+//
+// *(Added 2026-09-28, `s8e` build, package S8E-P7; D21-42 8c; ADR-0181 decision 11, proposed.)*
+// `doctor --rebuild` builds a `Snapshot` from git — every mark reachable from each item's
+// `rk-run/<item>` ref, through the kernel's own mark-to-row derivation (the heal's) — and writes
+// it through the port into a store opened with `SqliteStore::open_at` on the staging file.
+
+/// A synthetic repository: the minimal `.redkiln/` scaffold and one item record per `(slug,
+/// stage)`, committed on the default branch.
+fn scaffold_repo(items: &[(&str, &str)]) -> tempfile::TempDir {
+    let dir = crate::temp_repo();
+    let rk = dir.path().join(".redkiln");
+    std::fs::create_dir_all(rk.join("items")).expect("the items directory is created");
+    std::fs::write(
+        rk.join("config.toml"),
+        b"[adapters]\nharness = \"rk-adapter-claude\"\nstore = \"rk-adapter-sqlite\"\n\
+          toolchains = [\"rk-adapter-toolchain-node\", \"rk-adapter-toolchain-rust\"]\n\n\
+          [packs]\nenabled = []\n\n[project]\nname = \"demo\"\n\n[doctor]\nunread_window_runs = 50\n",
+    )
+    .expect("the config writes");
+    for (slug, stage) in items {
+        std::fs::write(
+            rk.join("items").join(format!("{slug}.toml")),
+            format!("id    = \"{slug}\"\nkind  = \"story\"\nstage = \"{stage}\"\n").as_bytes(),
+        )
+        .expect("an item record writes");
+    }
+    crate::git(dir.path(), &["add", "."]);
+    crate::git(
+        dir.path(),
+        &["commit", "--quiet", "-m", "the .redkiln scaffold"],
+    );
+    dir
+}
+
+/// Commit `marks`, one trailer commit each and in order, on a new `rk-run/<item>` branch through
+/// the wrapper (`trailer.ifexists=add`, an empty hooks path), then return to the default branch.
+/// Returns each mark's commit sha.
+fn marks_on_run_ref(
+    root: &std::path::Path,
+    item: &str,
+    marks: &[rk_git::trailer::grammar::ParsedTrailer],
+) -> Vec<String> {
+    crate::git(
+        root,
+        &["checkout", "--quiet", "-b", &format!("rk-run/{item}")],
+    );
+    let repo = rk_cli::repo::discover(Some(root)).expect("the repository resolves");
+    let mut shas = Vec::new();
+    for mark in marks {
+        let trailer = mark
+            .to_trailer()
+            .unwrap_or_else(|| panic!("PREMISE: {mark:?} renders through rk-git's renderer"));
+        shas.push(
+            rk_git::trailer::write::commit_with_trailers(
+                &repo.exec,
+                &repo.worktree,
+                "a trailer commit",
+                &[trailer],
+                true,
+            )
+            .expect("the trailer commit is made through the wrapper"),
+        );
+    }
+    crate::git(root, &["checkout", "--quiet", "-"]);
+    shas
+}
+
+/// Delete the repository's store and its sidecars, and prove it is gone.
+fn delete_store(root: &std::path::Path) {
+    let store = crate::common_dir(root)
+        .join("redkiln")
+        .join("store.sqlite3");
+    for suffix in ["", "-wal", "-shm"] {
+        let p = store.with_file_name(format!("store.sqlite3{suffix}"));
+        if p.exists() {
+            std::fs::remove_file(&p).expect("the store file is deleted");
+        }
+    }
+    assert!(!store.exists(), "the store was not deleted");
+}
+
+/// Every row `sql` selects, each column as text (`NULL` for a null).
+fn sql_text_rows(root: &std::path::Path, sql: &str) -> Vec<Vec<String>> {
+    let reader =
+        rk_store::conn::Reader::open(&crate::common_dir(root)).expect("the store opens to read");
+    let mut stmt = reader.conn().prepare(sql).expect("the probe prepares");
+    let width = stmt.column_count();
+    stmt.query_map([], |r| {
+        (0..width)
+            .map(|i| {
+                r.get::<_, Option<String>>(i)
+                    .map(|v| v.unwrap_or_else(|| "NULL".to_owned()))
+            })
+            .collect::<Result<Vec<String>, _>>()
+    })
+    .expect("the probe runs")
+    .map(|row| row.expect("a row reads"))
+    .collect()
+}
+
+/// `redkiln doctor --rebuild` over `root`, asserted exit 0.
+fn rebuild_ok(root: &std::path::Path) {
+    let out = spawn_doctor_rebuild(root);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "`doctor --rebuild` exited {:?}.\nstdout:\n{}\nstderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+/// Whether `sha` is reachable from any ref of the repository at `root`
+/// (`git merge-base --is-ancestor <sha> <ref>`, ADR-0105 clause 9's *"reachable from the clone's
+/// refs"*).
+fn reachable(root: &std::path::Path, refs: &[String], sha: &str) -> bool {
+    refs.iter().any(|r| {
+        rk_git::git_exec::run(root, ["merge-base", "--is-ancestor", sha, r.as_str()]).is_ok()
+    })
+}
+
+/// **The tier-1 projection** (ADR-0105 clause 9: *"the tier-1 rows whose anchor is reachable from
+/// the clone's refs"*), in one canonical form per row: the table, then every column but `id`, in
+/// declaration order, `NULL` spelled out. The opening run of an `opened` row (`stage`, `run_id`) is
+/// masked as `~`: a rebuilt opening carries null there (D21-48 X11, a stated residual), and
+/// `rebuild_recovers_every_gate_state_from_the_widened_gate_value` pins the null itself.
+fn tier_one_projection(root: &std::path::Path) -> BTreeSet<String> {
+    let refs: Vec<String> = git_read(root, &["for-each-ref", "--format=%(refname)"])
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    let mut out = BTreeSet::new();
+    for (table, sql, anchor_col) in [
+        (
+            "t1_stage_transition",
+            "SELECT item, from_stage, to_stage, anchor_sha, tree_hash FROM t1_stage_transition",
+            3,
+        ),
+        (
+            "t1_gate_transition",
+            "SELECT token, state, tree_hash, deadline, kind, reach, option_id, stage, run_id, \
+             anchor_sha FROM t1_gate_transition",
+            9,
+        ),
+        (
+            "t1_slice_seal",
+            "SELECT project, slice, verdict, anchor_sha FROM t1_slice_seal",
+            3,
+        ),
+    ] {
+        for mut row in sql_text_rows(root, sql) {
+            if !reachable(root, &refs, &row[anchor_col]) {
+                continue;
+            }
+            if table == "t1_gate_transition" && row[1] == "opened" {
+                row[7] = "~".to_owned();
+                row[8] = "~".to_owned();
+            }
+            out.insert(format!("{table}|{}", row.join("|")));
+        }
+    }
+    out
+}
+
+/// **Criterion (2), re-measured against the real projection** (`s8e` §8e.9; ADR-0105 clause 9;
+/// D21-42 8c). AC-184's tier-1 projection is *"the tier-1 rows whose anchor is reachable from the
+/// clone's refs"*; `projection::rebuild_differential` in `rk-kernel` measures the equality and not
+/// the route (its own header). This is the route, over a real lane:
+///
+/// 1. the fixture lane (`pack-min`'s `Lane` variant, item `lane-1`) runs through `run()`'s seam:
+///    its lane entry and boundaries (`triage -> implement -> review -> closed`), a gate `opened` and
+///    `answered`, and the review's `approved` seal;
+/// 2. the `t1_*` rows whose anchors `git merge-base --is-ancestor` finds reachable are taken, in
+///    canonical form ([`tier_one_projection`]);
+/// 3. the store is deleted and `redkiln doctor --rebuild` runs;
+/// 4. the two projections are compared;
+/// 5. an ADVERSARIAL row whose anchor is unreachable is planted before step 2, and it must fall
+///    outside the projection (present in the table, absent from the set).
+///
+/// **What is not in this lane, and where it is:** `expired` needs a gate whose deadline passes
+/// inside the lane, which the `Lane` variant's pack does not carry; `voided` needs a void answer,
+/// and after one the fixture lane cannot be driven to its end deterministically — MEASURED at the
+/// build and reported as two findings, not repaired here: `answer` presents
+/// `open_gates().filter(..).last()`, the LAST token in token order, so after a void and a fresh
+/// gate it presents the spent token about half the time (*"has already been answered"*), and
+/// `run`'s gate binds the user checkout's tree (`prepare_inputs` hashes `resolved.worktree`) while
+/// `answer` hashes the run-owned tree, so a moved run tree voids every later answer too.
+/// `rebuild_recovers_every_gate_state_from_the_widened_gate_value` rebuilds every state, `expired`
+/// and `voided` included, from the widened value. RED at entry: the rebuild wrote `t2_event` rows only, so the
+/// rebuilt projection was empty. Red under S8E-M4 (doctor half: `append_tier1`'s and the rebuild's
+/// `t1_*` insert dropped) and S8E-M15 (the rebuild writes `t2_event` only).
+#[test]
+fn ac184_rebuild_differential_over_anchored_tier_one_rows() {
+    use crate::lane_e2e::{
+        GATE_ITEM, ScriptedFactory, answer_item, args, cli, lane_repo, ran, seam, through,
+    };
+    let repo = lane_repo();
+    let root = repo.path();
+    let run = |script| {
+        ran(
+            rk_cli::verbs::run::run(
+                &cli(root, GATE_ITEM),
+                &args(GATE_ITEM),
+                &crate::support::clean_env(),
+                seam(&ScriptedFactory::new(script)),
+            ),
+            GATE_ITEM,
+        )
+    };
+
+    // ---- (1) the lane.
+    assert_eq!(
+        run(Vec::new()),
+        rk_cli::exit::Exit::Success,
+        "PREMISE: the gate opens"
+    );
+    assert_eq!(
+        answer_item(root, GATE_ITEM, "approve"),
+        rk_cli::exit::Exit::Success,
+        "PREMISE: the gate is answered"
+    );
+    assert_eq!(
+        run(through()),
+        rk_cli::exit::Exit::Success,
+        "PREMISE: the lane walks to its end"
+    );
+
+    let count = |sql: &str| {
+        sql_text_rows(root, sql)[0][0]
+            .parse::<usize>()
+            .expect("a count")
+    };
+    assert!(
+        count("SELECT CAST(count(*) AS TEXT) FROM t1_stage_transition") >= 3
+            && count(
+                "SELECT CAST(count(*) AS TEXT) FROM t1_gate_transition WHERE state = 'opened'"
+            ) == 1
+            && count(
+                "SELECT CAST(count(*) AS TEXT) FROM t1_gate_transition WHERE state = 'answered'"
+            ) == 1
+            && count("SELECT CAST(count(*) AS TEXT) FROM t1_slice_seal") == 1,
+        "PREMISE: the lane wrote boundaries, an opening, an answer and a seal: {:?}",
+        sql_text_rows(
+            root,
+            "SELECT state, token FROM t1_gate_transition ORDER BY id"
+        )
+    );
+
+    // ---- (5) the adversarial row, planted BEFORE the projection is taken.
+    let ghost = "0".repeat(40);
+    {
+        let reader =
+            rk_store::conn::Reader::open(&crate::common_dir(root)).expect("the store opens");
+        reader
+            .conn()
+            .execute(
+                "INSERT INTO t1_stage_transition (item, from_stage, to_stage, anchor_sha, \
+                 tree_hash) VALUES (?1, 'implement', 'review', ?2, ?2)",
+                (GATE_ITEM, &ghost),
+            )
+            .expect("the adversarial row is planted");
+    }
+    assert_eq!(
+        count(&format!(
+            "SELECT CAST(count(*) AS TEXT) FROM t1_stage_transition WHERE anchor_sha = '{ghost}'"
+        )),
+        1,
+        "PREMISE: the adversarial row is in the table"
+    );
+
+    // ---- (2) the projection before.
+    let before = tier_one_projection(root);
+    assert!(
+        before.iter().all(|r| !r.contains(&ghost)),
+        "ADVERSARIAL: a row whose anchor is unreachable must fall outside the projection"
+    );
+    assert!(
+        before.len() >= 6,
+        "PREMISE: the projection holds the lane's rows: {before:#?}"
+    );
+
+    // ---- (3) delete, rebuild.
+    delete_store(root);
+    rebuild_ok(root);
+
+    // ---- (4) compare.
+    let after = tier_one_projection(root);
+    assert_eq!(
+        after,
+        before,
+        "the rebuilt tier-1 projection differs from the recorded one (AC-184; ADR-0105 clause 9).\n  \
+         only recorded: {:#?}\n  only rebuilt: {:#?}",
+        before.difference(&after).collect::<Vec<_>>(),
+        after.difference(&before).collect::<Vec<_>>()
+    );
+}
+
+/// **Every gate state rebuilds from the widened `Gate:` value** (`s8e` §8e.7, §8e.9; ADR-0184,
+/// proposed; D21-48 X11). *(Added 2026-09-28, `s8e` build, package S8E-P7.)*
+///
+/// A synthetic `rk-run/g-1` carries the item's entry mark and four gates, each token the one the
+/// fold derives from `(kind, tree_hash, deadline, reach)`: `opened` then `answered approve`;
+/// `opened` then `expired fail`; `opened` then `expired auto-decide approve`; `opened`, `answered
+/// approve`, then `voided`. The store is absent; `doctor --rebuild` must write one
+/// `t1_gate_transition` row per mark, anchored to it, with the columns the value carries — and
+/// **every rebuilt `opened` row's `run_id` (and `stage`) is null**: the value carries no run, and
+/// the rebuild invents none (X11; red under S8E-M48). RED at entry: gates were listed unresolvable
+/// and no row was written. Red under S8E-M13 (the value drops kind and reach, so it parses as
+/// drift and no gate is rebuilt).
+#[test]
+fn rebuild_recovers_every_gate_state_from_the_widened_gate_value() {
+    use rk_git::trailer::grammar::{GateExpiry, GateState, ParsedTrailer, StoryStage};
+
+    let repo = scaffold_repo(&[("g-1", "implement")]);
+    let root = repo.path();
+    let tree = "a".repeat(40);
+    let deadline: i64 = 1_900_000_000;
+    let token = |kind: &str, reach: u32| {
+        rk_kernel::workflow::fsm::GateRecord::derive_reach(
+            kind,
+            &tree,
+            rk_types::time::Timestamp::from_unix_seconds(deadline),
+            reach,
+        )
+        .expect("the token derives")
+        .token()
+        .as_str()
+        .to_owned()
+    };
+    let gate = |kind: &str, state: GateState| ParsedTrailer::Gate {
+        token: token(kind, 1),
+        tree_hash: tree.clone(),
+        deadline,
+        kind: kind.to_owned(),
+        reach: 1,
+        state,
+    };
+    let approve = || GateState::Answered {
+        option: "approve".to_owned(),
+    };
+    let marks = vec![
+        ParsedTrailer::Story {
+            project: "demo".to_owned(),
+            slug: "g-1".to_owned(),
+            stage: Some(StoryStage::Stage("implement".to_owned())),
+        },
+        gate("human-a", GateState::Opened),
+        gate("human-a", approve()),
+        gate("human-b", GateState::Opened),
+        gate(
+            "human-b",
+            GateState::Expired {
+                action: GateExpiry::Fail,
+            },
+        ),
+        gate("human-c", GateState::Opened),
+        gate(
+            "human-c",
+            GateState::Expired {
+                action: GateExpiry::AutoDecide {
+                    verdict: "approve".to_owned(),
+                },
+            },
+        ),
+        gate("human-d", GateState::Opened),
+        gate("human-d", approve()),
+        gate("human-d", GateState::Voided),
+    ];
+    let shas = marks_on_run_ref(root, "g-1", &marks);
+    rebuild_ok(root);
+
+    let got = sql_text_rows(
+        root,
+        "SELECT token, state, tree_hash, deadline, kind, reach, option_id, stage, run_id, \
+         anchor_sha FROM t1_gate_transition ORDER BY id",
+    );
+    let row = |kind: &str,
+               state: &str,
+               with_value: bool,
+               option: Option<&str>,
+               sha: &str|
+     -> Vec<String> {
+        let null = || "NULL".to_owned();
+        vec![
+            token(kind, 1),
+            state.to_owned(),
+            tree.clone(),
+            if with_value {
+                deadline.to_string()
+            } else {
+                null()
+            },
+            if with_value { kind.to_owned() } else { null() },
+            if with_value { "1".to_owned() } else { null() },
+            option.map_or_else(null, ToOwned::to_owned),
+            null(),
+            null(),
+            sha.to_owned(),
+        ]
+    };
+    let want = vec![
+        row("human-a", "opened", true, None, &shas[1]),
+        row("human-a", "answered", false, Some("approve"), &shas[2]),
+        row("human-b", "opened", true, None, &shas[3]),
+        vec![
+            token("human-b", 1),
+            "expired".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            shas[4].clone(),
+        ],
+        row("human-c", "opened", true, None, &shas[5]),
+        vec![
+            token("human-c", 1),
+            "expired".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            "approve".to_owned(),
+            "NULL".to_owned(),
+            "NULL".to_owned(),
+            shas[6].clone(),
+        ],
+        row("human-d", "opened", true, None, &shas[7]),
+        row("human-d", "answered", false, Some("approve"), &shas[8]),
+        row("human-d", "voided", false, None, &shas[9]),
+    ];
+    assert_eq!(
+        got, want,
+        "every gate state rebuilds from its widened value, one row per mark, anchored to it"
+    );
+    for opened in got.iter().filter(|r| r[1] == "opened") {
+        assert_eq!(
+            (opened[7].as_str(), opened[8].as_str()),
+            ("NULL", "NULL"),
+            "D21-48 X11: a rebuilt `opened` row's stage and run_id are null — the value carries no \
+             run, and the rebuild invents none: {opened:?}"
+        );
+    }
+}
+
+/// **The legacy stage-less mark rebuilds from the item record** — the pin (`s8e` §8e.12; §7d.8's
+/// rule as amended 2026-09-21; ADR-0183 keeps it for a legacy mark). *(Added 2026-09-28, `s8e`
+/// build, package S8E-P7.)*
+///
+/// `rk-run/leg` carries one `Story: demo/leg` — the stage-less form the product no longer writes,
+/// as `rk-run/rk-fix-doctor-test-count` at `73c087a` carries. The rebuild writes one
+/// `stage_transition` row anchored to that mark, its `to` read from `.redkiln/items/leg.toml`'s
+/// `stage`. GREEN at entry by design: it pins a rule the move into the adapter must keep. Red under
+/// S8E-M18 (the item-record fallback dropped).
+#[test]
+fn the_legacy_stage_less_mark_rebuilds_from_the_item_record() {
+    use rk_git::trailer::grammar::ParsedTrailer;
+
+    let repo = scaffold_repo(&[("leg", "review")]);
+    let root = repo.path();
+    let shas = marks_on_run_ref(
+        root,
+        "leg",
+        &[ParsedTrailer::Story {
+            project: "demo".to_owned(),
+            slug: "leg".to_owned(),
+            stage: None,
+        }],
+    );
+    rebuild_ok(root);
+
+    let rows = sql_text_rows(
+        root,
+        &format!(
+            "SELECT payload FROM t2_event WHERE kind = 'stage_transition' AND anchor_sha = '{}'",
+            shas[0]
+        ),
+    );
+    assert_eq!(
+        rows.len(),
+        1,
+        "one `stage_transition` row is anchored to the legacy mark: {rows:?}"
+    );
+    let payload: serde_json::Value =
+        serde_json::from_str(&rows[0][0]).expect("the payload is JSON");
+    assert_eq!(
+        payload.get("to").and_then(serde_json::Value::as_str),
+        Some("review"),
+        "its `to` is the item record's `stage`: {payload}"
+    );
+}
+
+/// **A version-1 store is refused by name, and `doctor --rebuild` re-derives it at version 2**
+/// (AC-180; D21-46 R2; ADR-0181 decision 6, proposed; `s8e` §8e.2, §8e.9). *(Added 2026-09-28,
+/// `s8e` build, package S8E-P7.)*
+///
+/// The checked-in version-1 fixture (`crates/rk-store/tests/fixtures/store-v1.sqlite3`, minted on
+/// the entry tree) is copied into a repository with a stage mark on `rk-run/v-1`, and its identity
+/// row is re-stamped to THIS repository at schema version 1 — so the only refusal left is the
+/// version. The ordinary open refuses it by name (*"A migration from 1 to 2 is required"*); the
+/// rebuild — which derives its identity from git and opens only the staging file — succeeds, and
+/// the store it leaves stamps version 2, opens, and holds the mark's anchored row. RED at entry
+/// under S8E-M36: a rebuild that opened the old store through the identity check first refused and
+/// exited 3.
+#[test]
+fn a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two() {
+    use rk_git::trailer::grammar::{ParsedTrailer, StoryStage};
+
+    let repo = scaffold_repo(&[("v-1", "implement")]);
+    let root = repo.path();
+    let shas = marks_on_run_ref(
+        root,
+        "v-1",
+        &[ParsedTrailer::Story {
+            project: "demo".to_owned(),
+            slug: "v-1".to_owned(),
+            stage: Some(StoryStage::Stage("implement".to_owned())),
+        }],
+    );
+
+    // ---- the version-1 store, re-stamped to this repository.
+    let discovered = rk_cli::repo::discover(Some(root)).expect("the repository resolves");
+    let common = crate::common_dir(root);
+    let opening =
+        rk_adapter_sqlite::identity::opening(&discovered.exec, &discovered.worktree, &common)
+            .expect("the identity derives from git");
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("rk-store")
+        .join("tests")
+        .join("fixtures")
+        .join("store-v1.sqlite3");
+    std::fs::create_dir_all(common.join("redkiln")).expect("the store directory");
+    let store = common.join("redkiln").join("store.sqlite3");
+    std::fs::copy(&fixture, &store).expect("the version-1 fixture copies");
+    {
+        let reader = rk_store::conn::Reader::open(&common).expect("the copy opens");
+        let n = reader
+            .conn()
+            .execute(
+                "UPDATE rk_identity SET root_commit = ?1, common_dir = ?2 WHERE id = 1",
+                (&opening.root_commit, &opening.common_dir),
+            )
+            .expect("the identity re-stamps");
+        assert_eq!(n, 1, "PREMISE: one identity row");
+    }
+    assert_eq!(
+        sql_text_rows(root, "SELECT CAST(schema_version AS TEXT) FROM rk_identity"),
+        vec![vec!["1".to_owned()]],
+        "PREMISE: the store stamps version 1"
+    );
+
+    // ---- refused by name.
+    match rk_adapter_sqlite::SqliteStore::open(&discovered.exec, &discovered.worktree) {
+        Err(rk_adapter_sqlite::StoreOpenError::Refused(text)) => assert!(
+            text.contains("A migration from 1 to 2 is required"),
+            "the refusal names the migration: {text}"
+        ),
+        Err(other) => panic!("a version-1 store is refused by name, not {other}"),
+        Ok(_) => panic!("a version-1 store opened, which AC-180 forbids"),
+    }
+
+    // ---- re-derived at version 2.
+    rebuild_ok(root);
+    assert_eq!(
+        sql_text_rows(root, "SELECT CAST(schema_version AS TEXT) FROM rk_identity"),
+        vec![vec!["2".to_owned()]],
+        "the rebuilt store stamps version 2"
+    );
+    let store = rk_adapter_sqlite::SqliteStore::open(&discovered.exec, &discovered.worktree)
+        .unwrap_or_else(|e| panic!("the rebuilt store opens: {e}"));
+    drop(store);
+    assert_eq!(
+        sql_text_rows(
+            root,
+            &format!("SELECT kind FROM t2_event WHERE anchor_sha = '{}'", shas[0])
+        ),
+        vec![vec!["stage_transition".to_owned()]],
+        "the rebuilt store holds the mark's anchored row"
     );
 }

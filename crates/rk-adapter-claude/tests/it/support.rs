@@ -457,6 +457,17 @@ impl EventStore for FailingStore {
             detail: "disk full (injected)".to_owned(),
         })
     }
+    /// *(dated 2026-09-28, s8e build; ADR-0181, proposed.)* The port's fifth method on this test
+    /// double. The anchor is not modelled here, so the row is appended exactly as `append`
+    /// appends it; the anchored behaviour is `VecStore`'s and `SqliteStore`'s, under test there.
+    fn append_tier1(
+        &mut self,
+        event: Event,
+        _anchor: &rk_ports::event_store::TierOneAnchor,
+    ) -> Result<(), StepError> {
+        self.append(event)
+    }
+
     fn query(&self, _by: Query) -> Result<Vec<Event>, StepError> {
         Ok(Vec::new())
     }

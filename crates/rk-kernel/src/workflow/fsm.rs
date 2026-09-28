@@ -209,7 +209,7 @@
 //! | `slice_sealed` | 1 | `verdict` | the run is sealed |
 //! | `activity_committed` | 2 | `item`, `activity_id_at_version`, `attempt`; *(2026-09-27, `s8d` build, R2FIX-8d; R1 = ADR-0174 decision 6, proposed)* and, when present, `step_id` with `iteration_path` (a row carrying `step_id` without a readable `iteration_path` is malformed) and `completion`; *(dated 2026-09-27, `s8d` build, D2177-8d; D21-76, ADR-0174 decision 7)* and `decision`, whose presence alone is read | ~~the activation is committed~~ a row with `step_id` commits that step activation (`is_step_committed`); the activation is COMPLETE on a completion row or a pre-R1 row (`is_committed`); a row carrying `decision` folds its attempt only — not a commit and not a completion |
 //! | `dispatch` | 2 | the same three | the activation was dispatched; the attempt high-water mark moves |
-//! | `gate_answer_void` | 2 | `token` | the mirror of the void decision, for a run whose voiding was already recorded |
+//! | `gate_answer_void` | ~~2~~ 1 *(2026-09-28, `s8e` build, S8E-P4; ADR-0184, proposed: a git-first `Gate: … voided` mark, D21-43 N6)* | `token` | the mirror of the void decision, for a run whose voiding was already recorded |
 //! | `step_refused` | 2 | `class` | a recorded halt (ADR-0095 decision 2's refusal arm) |
 //! | `memo_hit`, `dag_amended` | 2 | none | counted only (AC-019's identity, ADR-0120's delta) |
 //! | every other kind | — | none | **no state change**, one grouped arm |
@@ -975,6 +975,12 @@ pub struct RunState {
     amendments: usize,
     halt: Option<HaltReason>,
     sealed: Option<String>,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P7; D21-93; the slice record, proposed.)* The
+    /// stage the latest seal was made in: the row's `stage` member, or — for a stage-less row, which
+    /// a rebuilt or healed `Slice-Verdict:` mark is — the fold's stage when the row folds.
+    /// [`Self::terminal`] reads `Sealed` only while the fold is still in it. Not serialised: it
+    /// moves no canonical byte (no committed golden log carries `slice_sealed`, S8E-P0).
+    sealed_stage: Option<String>,
     survey: FoldSurvey,
 }
 
@@ -1002,6 +1008,7 @@ impl RunState {
             amendments: 0,
             halt: None,
             sealed: None,
+            sealed_stage: None,
             survey: FoldSurvey::default(),
         }
     }
@@ -1207,7 +1214,10 @@ impl RunState {
     ///
     /// The order below is the definition and is written out because it is the answer:
     ///
-    /// 1. a `slice_sealed` → [`TerminalState::Sealed`];
+    /// 1. a `slice_sealed` → [`TerminalState::Sealed`] — *(dated 2026-09-28, `s8e` build, package
+    ///    S8E-P7; D21-93)* **only while the fold is in the stage the seal was made in**: a later
+    ///    `stage_transition` ends the seal's scope, and the order falls through to 2–5. The verdict
+    ///    stays readable as history through [`Self::sealed`] (ADR-0109 decision 3);
     /// 2. an open, unanswered, un-void gate → [`TerminalState::AwaitingGate`] (ADR-0022);
     /// 3. nothing moved the state at all → [`TerminalState::NotStarted`] — **the value a kernel
     ///    that does nothing at all returns**;
@@ -1215,7 +1225,9 @@ impl RunState {
     /// 5. otherwise [`TerminalState::AwaitingDispatch`].
     #[must_use]
     pub fn terminal(&self) -> TerminalState {
-        if let Some(verdict) = &self.sealed {
+        if let Some(verdict) = &self.sealed
+            && self.sealed_stage.as_deref() == Some(self.stage.as_str())
+        {
             return TerminalState::Sealed {
                 verdict: verdict.clone(),
             };
@@ -1350,7 +1362,9 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
     if event.kind.tier() == Tier::One {
         state.survey.tier_one += 1;
     }
-    // TOTAL OVER THE CLOSED 29, WITH NO CATCH-ALL ARM. Grouped or-patterns, because
+    // TOTAL OVER THE CLOSED SET (`EventKind::ALL`), WITH NO CATCH-ALL ARM. *(Corrected 2026-09-28,
+    // `s8e` build, package S8E-P5, `s8e` §8e.13 finding 9: this comment used to state the enum's
+    // size, which went stale at every mint, so it names no count.)* Grouped or-patterns, because
     // `clippy::match_same_arms` is denied workspace-wide and grouping is what the lint asks for.
     match event.kind {
         EventKind::StageTransition => {
@@ -1546,6 +1560,9 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
         EventKind::SliceSealed => {
             state.survey.state_moving += 1;
             state.sealed = Some(required_str(event, "slice_sealed", "verdict")?);
+            // D21-93: the seal is scoped to the stage it was made in (dated 2026-09-28, S8E-P7).
+            state.sealed_stage =
+                Some(optional_str(event, "stage").unwrap_or_else(|| state.stage.clone()));
         }
         EventKind::GateAnswerVoid => {
             state.survey.state_moving += 1;
@@ -1680,7 +1697,10 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
         | EventKind::ArtifactWrite
         | EventKind::AdvisoryCreated
         | EventKind::AdvisoryRetired
-        | EventKind::AdvisoryDismissed => {}
+        | EventKind::AdvisoryDismissed
+        | EventKind::WorktreeAssigned
+        | EventKind::StageEmpty
+        | EventKind::GitOp => {}
     }
     Ok(())
 }

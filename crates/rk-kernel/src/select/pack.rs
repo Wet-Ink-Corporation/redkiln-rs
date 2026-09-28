@@ -275,6 +275,21 @@ impl Pack {
             }
         }
 
+        // **`closed` IS RESERVED** *(2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.5; D21-43
+        // N9; ADR-0183, proposed)*. The lane's end is the mark `Story: <project>/<item> closed`, so
+        // a stage of that name would be indistinguishable from it in git. Refused wherever a stage
+        // is declared: here, in the order below, and as a `[stage.*]` table.
+        let reserved = |site: &str| {
+            shape(format!(
+                "{name}: {site} declares a stage named {:?}, which is reserved for the lane's end \
+                 (the terminal `Story: <project>/<item> closed` mark, ADR-0183)",
+                rk_git::trailer::grammar::CLOSED_STAGE_TOKEN
+            ))
+        };
+        if stage_rigor.contains_key(rk_git::trailer::grammar::CLOSED_STAGE_TOKEN) {
+            return Err(reserved("policy.stages"));
+        }
+
         // **ADR-0153.** `[policy] stage_order` is an ARRAY, because the lane order has to survive
         // loading and nothing else here does: `policy.stages` above is an inline table read into a
         // `BTreeMap`, so its declaration order is gone by this line.
@@ -293,6 +308,9 @@ impl Pack {
                 let stage = item
                     .as_str()
                     .ok_or_else(|| shape("policy.stage_order carries a non-string".to_owned()))?;
+                if stage == rk_git::trailer::grammar::CLOSED_STAGE_TOKEN {
+                    return Err(reserved("policy.stage_order"));
+                }
                 if stage_order.iter().any(|s| s == stage) {
                     return Err(shape(format!(
                         "{name}: policy.stage_order names {stage:?} twice; a lane visits a stage \
@@ -317,6 +335,9 @@ impl Pack {
         let mut stages: BTreeMap<String, StageSpec> = BTreeMap::new();
         if let Some(table) = doc.get("stage").and_then(Value::as_table) {
             for (stage, body) in table {
+                if stage == rk_git::trailer::grammar::CLOSED_STAGE_TOKEN {
+                    return Err(reserved("a [stage.*] table"));
+                }
                 let body = body
                     .as_table()
                     .ok_or_else(|| shape(format!("[stage.{stage}] is not a table")))?;

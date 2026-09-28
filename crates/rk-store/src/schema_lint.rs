@@ -156,12 +156,22 @@ pub fn lint(sql: &str, keys: &str) -> Result<(), Vec<LintError>> {
     }
 }
 
-/// The migrations shipped with this binary, as `(name, sql, keys)`.
+/// The migrations shipped with this binary, as `(name, sql, keys)`, in the order they apply.
+///
+/// *(dated 2026-09-28, s8e build; ADR-0181 decision 5, proposed.)* `0002_gate_transitions` is
+/// D21-46 R2's forward migration. `rk_store::migrate::apply` runs each once per store.
 #[must_use]
 pub fn all() -> Vec<(&'static str, &'static str, &'static str)> {
-    vec![(
-        "0001_initial",
-        include_str!("migrations/0001_initial.sql"),
-        include_str!("migrations/0001_initial.keys"),
-    )]
+    vec![
+        (
+            "0001_initial",
+            include_str!("migrations/0001_initial.sql"),
+            include_str!("migrations/0001_initial.keys"),
+        ),
+        (
+            "0002_gate_transitions",
+            include_str!("migrations/0002_gate_transitions.sql"),
+            include_str!("migrations/0002_gate_transitions.keys"),
+        ),
+    ]
 }

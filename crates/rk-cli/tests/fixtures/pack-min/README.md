@@ -60,3 +60,11 @@ and a node with two agent steps of different roles and output kinds. Its two act
 `step-grain/` (`catalog/two-agents.toml`, `catalog/no-agent-steps.toml`, `cards/reviewer.json`) and are installed only by
 `support::PackVariant::StepGrain`, so no other variant sees them. (`pack.review.toml` and `pack.dispatch-1s.toml` were
 already a fourth and fifth before it; "there is no fourth" above is history.)
+
+*(dated 2026-09-28, `s8e` build, package S8E-P2.)* `pack.lane.toml` is regenerated from `pack.review.toml` with one delta:
+`[policy]` declares a `stage_order` (`triage` empty, `discovery` forbidden, `implement` with the abstention gate, `review`
+over `review-min`), so `verbs::run::run`'s lane loop crosses boundaries (`s8e` §8e.11). It is installed only by
+`support::PackVariant::Lane`, with `review-min.toml` and `lane/items/`'s three items (`lane-1` omits `has_repro`; `lane-2`
+and `lane-3` declare it; each declares a `slice`). `lane/implement-frames.jsonl` is the transcript the fixture child replays
+for the lane's `implement` dispatch in the binary arm. `config.toml` now declares `[project] name = "rk-fixture"`
+(ADR-0159), and `items/review-item.toml` a `slice`.

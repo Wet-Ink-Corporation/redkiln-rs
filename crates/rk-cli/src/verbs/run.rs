@@ -151,6 +151,14 @@ pub struct ItemRecord {
     /// a `require` row abstains and a gate opens.
     #[serde(default)]
     pub facets: BTreeMap<String, toml::Value>,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8; D21-41 e; the slice record,
+    /// proposed.)* **The slice this item's review outcome is sealed under** — the `<slice>` of
+    /// `Slice-Verdict: <project>/<slice> <verdict>`. Declared, never derived (ADR-0159's pattern;
+    /// ADR-0160's route), and **optional here** so the refusal names the item, as `stage` is: an
+    /// absent slice refuses the seal at the mint (`tier_one::seal_act`), not at startup. A fix-lane
+    /// item declares exactly one (D21-41 e: *"one per fix-lane item"*).
+    #[serde(default)]
+    pub slice: Option<String>,
 }
 
 /// Everything steps (1)–(7) resolve, handed to step (8).
@@ -173,13 +181,25 @@ pub struct Resolved {
     pub item: Item,
     /// The stage the item record carries (RT-50) — or, for the second stage of a lane onward, the
     /// stage the lane loop advanced INTO (ADR-0152).
+    ///
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.5; ADR-0183 decision 5,
+    /// proposed.)* **Seeded from git first**: the item's latest stage-bearing `Story:` mark as
+    /// `reconcile` folds it ([`seeded_stage`]), and the record's `stage` only when git carries no
+    /// stage-bearing mark for the item (the legacy stage-less mark included).
     pub stage: String,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6; D21-43 N9.)* **The item's
+    /// latest mark is `Story: <project>/<item> closed`**: the lane ended, read from git. `run`
+    /// reports it closed, exits 0 and mints nothing.
+    pub lane_closed: bool,
     /// **`[project] name` — the `<project>` component of every trailer value (ADR-0159).**
     ///
     /// `None` when the key is absent, empty or whitespace-only — all three are the same absence,
     /// because `split_qualified` cannot tell `Story: /slug` from a missing project. A run that mints
     /// no trailer is unaffected; a run that would mint one refuses by name.
     pub project: Option<String>,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8.)* The item record's declared
+    /// `slice`, read verbatim; `tier_one::seal_act` refuses it by name at the review pass's seal.
+    pub slice: Option<String>,
     /// **The stage this one was entered FROM, for `RuntimeContext::entered_from` (ADR-0152).**
     ///
     /// `None` for a lane's first stage, which has no predecessor — the one case `stage_entry` says
@@ -259,6 +279,27 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         Err(exit) => return Ok(exit),
     };
 
+    // ---- A CLOSED ITEM IS DONE, READ FROM GIT (`s8e` §8e.6; D21-43 N9; ADR-0183 decision 2,
+    // proposed). *(dated 2026-09-28, `s8e` build, package S8E-P6.)* Its latest mark is
+    // `Story: <project>/<item> closed`: `run` reports that, exits 0 and mints nothing — no worktree
+    // entered (a removed tree is not re-created), no commit, no dispatch, no tier-1 row. That exit 0
+    // is Done, not ADR-0157's stall. The invocation reconciled, so it still owes AC-172's single
+    // `reconcile_started` row, written the way every other post-reconcile exit writes it.
+    if resolved.lane_closed {
+        println!(
+            "{} is closed: its lane ended at `Story: {}/{} closed`; nothing to run",
+            resolved.item.id(),
+            resolved.project.as_deref().unwrap_or_default(),
+            resolved.item.id()
+        );
+        return Ok(refuse_after_reconcile(
+            &resolved.exec,
+            &resolved.worktree,
+            &resolved.config,
+            Exit::Success,
+        ));
+    }
+
     // ---- (5) the store. AC-413's identity check is inside `open`. ------------------------------
     let opened = match rk_adapter_sqlite::SqliteStore::open(&resolved.exec, &resolved.worktree) {
         Ok(store) => store,
@@ -298,9 +339,52 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         release_run_worktree(&release_exec, &release_start, &release_item, &owner);
         return Ok(exit);
     }
-    let lane = run_lane(resolved, env, &store, &token, &entered);
+    let mut closed = false;
+    let lane = run_lane(
+        resolved,
+        env,
+        &store,
+        &token,
+        &entered,
+        startup.harness,
+        &mut closed,
+    );
     release_run_worktree(&release_exec, &release_start, &release_item, &owner);
+    // ---- THE REMOVAL TRIGGER (`s8e` §8e.6; D21-43 N9; ADR-0180's rule, ADR-0183 decision 2, both
+    // proposed). *(dated 2026-09-28, `s8e` build, package S8E-P6.)* Keyed to the lane's `closed`
+    // mark, which this invocation minted, and run only AFTER the lock is released: `s8d-ii`'s rule
+    // removes a tree that is clean, landed, marked and UNLOCKED, never with `--force`, and keeps
+    // anything else with its named reason.
+    if closed {
+        remove_closed_tree(&release_exec, &release_start, &release_item);
+    }
     lane
+}
+
+/// **The removal trigger** (`s8e` §8e.6): `rk_git::worktree::remove_landed` over the item whose lane
+/// this invocation closed. A kept tree is reported with `s8d-ii`'s named reason. A refused removal
+/// (`GitError::WorktreeRemoveFailed`, Halt 6's typed error) is reported by name and not retried or
+/// forced; the lane's exit stands, because its `closed` mark is already git's truth and the tree is
+/// kept for the operator. *(dated 2026-09-28, `s8e` build, package S8E-P6.)*
+fn remove_closed_tree(exec: &GitExec, start: &Path, item: &str) {
+    match rk_git::worktree::remove_landed(exec, start, item) {
+        Ok(rk_git::worktree::Removal::Removed) => {
+            println!("{item}'s run tree was removed: clean, landed and marked closed");
+        }
+        Ok(rk_git::worktree::Removal::Kept { path, reason }) => {
+            eprintln!(
+                "redkiln: {item}'s lane is closed and its run tree {} is kept: {reason}",
+                path.display()
+            );
+        }
+        Err(e) => {
+            eprintln!(
+                "redkiln: {item}'s lane is closed and its run tree could not be removed; it is kept, \
+                 not retried and not forced: {}",
+                git_refusal_text(&e)
+            );
+        }
+    }
 }
 
 /// **The lane, over the entered run tree** — `run`'s body from step (6)'s row on, split out so the
@@ -321,6 +405,13 @@ fn run_lane(
     store: &Arc<Mutex<dyn EventStore>>,
     token: &CancelToken,
     entered: &rk_git::worktree::Entered,
+    // *(dated 2026-09-28, `s8e` build, package S8E-P2; `s8e` §8e.11.)* `Startup`'s harness seam:
+    // the product's `ClaudeHarnessFactory`, or a test's factory over a scripted `FakeHarness`.
+    harness_factory: &dyn crate::verbs::HarnessFactory,
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6.)* Set when this invocation
+    // minted the lane's terminal `closed` mark, so `run` fires the removal trigger once the lock
+    // is released.
+    closed: &mut bool,
 ) -> Result<Exit, Halt> {
     let owned = entered.tree.path.clone();
 
@@ -346,6 +437,49 @@ fn run_lane(
             }
         }
         Err(exit) => return Ok(exit),
+    }
+
+    // ---- THE `worktree_assigned` ROW, AT EVERY RUN START, AND OWNERSHIP READ BACK FROM IT.
+    //
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.4; D21-42 8d; the three-kinds
+    // record, proposed.)* Written on a created tree and on a reused one: `reused` says which, and
+    // `discarded` is every in-flight path the re-entry threw away (W2's "discarded explicitly and
+    // journalled"; the stderr lines `enter_run_worktree` prints stay as the operator's echo). Every
+    // tier-1 act of this invocation then resolves its `RunOwnership` from THIS row, read back
+    // through the one resolver, and never from the convention above or from RT-47's pair on the
+    // `reconcile_started` row (kept as tier-2 context; no reader resolves ownership from it).
+    let item_id = resolved.item.id().to_owned();
+    let assigned = rk_kernel::runtime::tier_one::worktree_assigned_event(
+        &item_id,
+        &owned,
+        &entered.tree.branch,
+        entered.created == rk_git::worktree::Creation::Reused,
+        &entered.discarded,
+    );
+    {
+        let mut guard = crate::store::acquire(store, "the run")?;
+        let appended = guard.append(assigned);
+        drop(guard);
+        if let Err(e) = appended {
+            eprintln!("redkiln: the `worktree_assigned` row could not be written: {e:?}");
+            return Ok(Exit::ConfigError);
+        }
+    }
+    let Some(ownership) = assigned_ownership(store, &item_id)? else {
+        eprintln!(
+            "redkiln: no `worktree_assigned` row reads back for `{item_id}`, so no tier-1 write \
+             can resolve its run-owned worktree (ADR-0105 clause 8); refusing, fail-closed"
+        );
+        return Ok(Exit::ConfigError);
+    };
+
+    // ---- THE HEAL (`s8e` §8e.3): a trailer commit on `rk-run/<item>` whose sha anchors no row —
+    // a crash between the boundary's commit and its rows — gets its rows now. Git → store only.
+    if let Err(e) =
+        rk_kernel::runtime::tier_one::heal(&resolved.exec, &resolved.worktree, store, &item_id)
+    {
+        eprintln!("redkiln: the tier-1 heal of `{item_id}` failed: {e}");
+        return Ok(Exit::ConfigError);
     }
 
     // THE ONE WALL-CLOCK READ. Both derived values come off it — see `base_inputs`.
@@ -405,7 +539,17 @@ fn run_lane(
         };
         // ---- R6 decision 4: still `null` at the lane's first stage, the gate opens (once), and
         // the FSM's first rule then awaits it (ADR-0022) before any selection reads the facet.
-        if let Err(exit) = open_derived_facet_gates(&resolved, store, &tree_hash, now)? {
+        // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* Each opening is a tier-1
+        // act, through the boundary.
+        let mut facet_boundary = tier_one_boundary(&resolved, &owned, &ownership);
+        if let Err(exit) = open_derived_facet_gates(
+            &resolved,
+            store,
+            &tree_hash,
+            now,
+            &mut facet_boundary,
+            inputs.run_id().ok().as_deref(),
+        )? {
             return Ok(exit);
         }
 
@@ -484,20 +628,22 @@ fn run_lane(
         // **ONLY THEN** the harness, over the config the bindings filled (§7d.5's own order):
         // `ClaudeHarness::dispatch` refuses a `card_digest` its validated store does not hold, and
         // `Binder::new(config).bind(..)` then `into_config()` is the one way that store is filled.
-        let harness =
-            match rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone()) {
-                Ok(harness) => harness,
-                Err(e) => {
-                    eprintln!("redkiln: the harness could not be built: {e}");
-                    return Ok(Exit::ConfigError);
-                }
-            };
+        // *(dated 2026-09-28, `s8e` build, package S8E-P2; `s8e` §8e.11.)* Built through
+        // `Startup`'s harness seam: `Startup::real()`'s factory builds `ClaudeHarness` exactly as
+        // this line did before.
+        let harness = match harness_factory.build(binder.into_config(), token.clone()) {
+            Ok(harness) => harness,
+            Err(e) => {
+                eprintln!("redkiln: the harness could not be built: {e}");
+                return Ok(Exit::ConfigError);
+            }
+        };
 
         let ports = rk_ports::root::Ports {
             // Cloned per iteration: the STORE outlives a stage (one journal per item, across the whole
             // lane), while every other port here is rebuilt for the stage's own bindings (ADR-0152).
             store: Arc::clone(store),
-            harness: Arc::new(harness),
+            harness,
             // The two with no Phase-1 real (ADR-0094 decision 2; design:265-266 — GitHub and mdBook
             // are Phase 3, which is ADR-0134's warrant for the port lint's expected-uncalled set).
             tracker: Arc::new(rk_ports::fakes::BoardTracker::default()),
@@ -520,6 +666,7 @@ fn run_lane(
         };
 
         let mut advanced: Option<String> = None;
+        let mut lane_end = false;
         last_exit = run_with_advance(
             &resolved,
             &inputs,
@@ -531,6 +678,10 @@ fn run_lane(
             &mut supply_spec,
             token,
             &mut advanced,
+            &mut lane_end,
+            // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* The stage's tier-1
+            // boundary: the lane entry, the advance and every gate transition commit through it.
+            Some(tier_one_boundary(&resolved, &owned, &ownership)),
         )?;
 
         // 🛑 **A NON-ZERO EXIT ENDS THE LANE, EVEN WHEN THE STAGE ADVANCED.** Found by this stage's
@@ -551,6 +702,15 @@ fn run_lane(
         // A stage that took no boundary ends the lane: a gate (exit 0, golden constraint 2), a
         // halt, a refusal, or `Done` at the end of the order.
         let Some(next) = advanced else {
+            // ---- THE LANE'S END (`s8e` §8e.6; D21-43 N9; ADR-0183 decision 2, proposed). *(dated
+            // 2026-09-28, `s8e` build, package S8E-P6.)* The stage reached `Done` with no
+            // successor, and its review pass (if any) did not block: the kernel's `close_act`
+            // mints `Story: <project>/<item> closed` through the tier-1 boundary, git first, with
+            // the empty content arm at Checkpoint 8e (`s8f`'s landed arm makes it carry closeout's
+            // content checkpoint).
+            if lane_end {
+                return close_lane(&resolved, store, &owned, &ownership, closed);
+            }
             return Ok(last_exit);
         };
 
@@ -581,6 +741,45 @@ fn run_lane(
             stage: next,
             ..resolved
         };
+    }
+}
+
+/// **Mint the lane's terminal `closed` mark** (`s8e` §8e.6): the kernel's
+/// `tier_one::close_act` for the stage the lane ended in, through this stage's tier-1 boundary.
+/// `closed` is set only when the mark is on the run ref (made now, or already there).
+/// *(dated 2026-09-28, `s8e` build, package S8E-P6.)*
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] never arises here (the boundary locks the store itself, and a poisoned
+/// lock halts inside it); a refusal is exit `3`, named.
+fn close_lane(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    owned: &Path,
+    ownership: &rk_git::worktree::RunOwnership,
+    closed: &mut bool,
+) -> Result<Exit, Halt> {
+    let mut boundary = tier_one_boundary(resolved, owned, ownership);
+    match boundary.act(
+        store,
+        rk_kernel::runtime::tier_one::close_act(&resolved.stage),
+    ) {
+        Ok(_) => {
+            *closed = true;
+            println!(
+                "{} closed: its lane ended after `{}`",
+                resolved.item.id(),
+                resolved.stage
+            );
+            Ok(Exit::Success)
+        }
+        Err(e) => {
+            eprintln!(
+                "redkiln: the lane of `{}` ended and its `closed` mark was refused: {e}",
+                resolved.item.id()
+            );
+            Ok(Exit::ConfigError)
+        }
     }
 }
 
@@ -639,6 +838,13 @@ pub fn run_with(
         supply_spec,
         token,
         &mut None,
+        // *(dated 2026-09-28, `s8e` build, package S8E-P6.)* The lane's end is reported and
+        // dropped: the in-process seam mints no `closed` mark (it is unbound).
+        &mut false,
+        // *(dated 2026-09-28, `s8e` build, package S8E-P5.)* The in-process seam is UNBOUND: its
+        // callers are the machinery suites over a counting store, with no `worktree_assigned` row
+        // and no run tree. The verb `run` always binds one (`run_lane`).
+        None,
     )
 }
 
@@ -677,6 +883,10 @@ pub fn run_with_advance(
     >,
     token: &CancelToken,
     advanced: &mut Option<String>,
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6.)* Set when the stage reached
+    // the lane's end (`RecordedRun::lane_ended`) and its review pass did not block.
+    lane_end: &mut bool,
+    boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
 ) -> Result<Exit, Halt> {
     let store = Arc::clone(&ports.store);
     let store = &store;
@@ -716,6 +926,8 @@ pub fn run_with_advance(
         supply_spec,
         token,
         advanced,
+        lane_end,
+        boundary,
     )
 }
 
@@ -788,7 +1000,12 @@ pub fn through_step_seven(
     // The ENTRY is a parameter because `answer` performs steps (1)-(6) as `run`'s with
     // `Entry::Answer` (§7d.6), and `rk_git::reconciled::Entry` has no `Status` variant — the type
     // is what forbids `status` and `explain` from reaching here at all (AC-402's negative).
-    let _ = startup
+    //
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.5; D21-43 N7; ADR-0183 decision 5,
+    // proposed.)* ~~`let _ = startup`~~ — the `Outcome` is KEPT: the item's stage is seeded from its
+    // fold below, which is the first time ADR-0109 decision 1's `Reconciled<State>` reaches the
+    // planner rather than being discarded.
+    let reconciled = startup
         .reconciler
         .reconcile(&repo.exec, &repo.worktree, entry)
         .map_err(|e| {
@@ -846,8 +1063,32 @@ pub fn through_step_seven(
         )
     })?;
 
-    // RT-50. Refused rather than defaulted, and the refusal NAMES THE ITEM.
-    let Some(stage) = record.stage.clone() else {
+    // ADR-0159: an empty or whitespace-only name is the ABSENT case, not a value.
+    let project = config
+        .project
+        .as_ref()
+        .map(|p| p.name.trim().to_owned())
+        .filter(|n| !n.is_empty());
+
+    // ---- THE SEED (`s8e` §8e.5; D21-41 a; D21-43 N7; ADR-0183 decision 5, proposed). *(dated
+    // 2026-09-28, `s8e` build, package S8E-P6.)* The item's reconciled latest stage-bearing mark is
+    // the stage; the record's is the fallback, taken only when git carries no stage-bearing mark
+    // for the item — which is today's behaviour exactly for the one legacy stage-less mark on the
+    // tree (`rk-run/rk-fix-doctor-test-count`, D21-42 8d's default). A `closed` mark is the lane's
+    // end, read from git (N9).
+    let git_stage = seeded_stage(&reconciled.state, project.as_deref(), &args.item);
+    let lane_closed = matches!(
+        git_stage,
+        Some(rk_git::trailer::grammar::StoryStage::Closed)
+    );
+    let seeded = match git_stage {
+        Some(rk_git::trailer::grammar::StoryStage::Stage(stage)) => Some(stage),
+        Some(rk_git::trailer::grammar::StoryStage::Closed) | None => None,
+    };
+
+    // RT-50. Refused rather than defaulted, and the refusal NAMES THE ITEM. *(dated 2026-09-28,
+    // `s8e` build, package S8E-P6.)* Only when git seeds no stage either.
+    let Some(stage) = seeded.or_else(|| record.stage.clone()) else {
         eprintln!(
             "redkiln: no stage on the item record for `{}` — the stage is read once, from the \
              record, and is not defaulted.",
@@ -979,12 +1220,9 @@ pub fn through_step_seven(
         extras,
         item,
         stage,
-        // ADR-0159: an empty or whitespace-only name is the ABSENT case, not a value.
-        project: config
-            .project
-            .as_ref()
-            .map(|p| p.name.trim().to_owned())
-            .filter(|n| !n.is_empty()),
+        lane_closed,
+        project,
+        slice: record.slice,
         // A lane's FIRST stage has no predecessor; the loop sets this for every stage after it.
         entered_from: None,
         config: kernel_config,
@@ -1004,6 +1242,28 @@ pub fn through_step_seven(
             .map(|f| f.name.clone())
             .collect(),
     })
+}
+
+/// **The seed**: the item's latest stage-bearing mark, as `reconcile` folded it.
+///
+/// (`s8e` §8e.5; D21-41 a; D21-43 N7; ADR-0183 decision 5, proposed.) The item's latest stage-bearing (or `closed`) `Story:` mark, as `reconcile` folded it for `project`.
+/// `None` when there is no project to look it up under, or git carries no stage-bearing mark for
+/// the item — a legacy stage-less mark included, which never sets a stage (ADR-0183 decision 3).
+/// The caller then falls back to the item record. *(dated 2026-09-28, `s8e` build, package
+/// S8E-P6.)*
+#[must_use]
+pub fn seeded_stage(
+    state: &rk_git::reconciled::Reconciled<rk_git::reconcile::State>,
+    project: Option<&str>,
+    item: &str,
+) -> Option<rk_git::trailer::grammar::StoryStage> {
+    state
+        .get()
+        .projects
+        .get(project?)?
+        .stages
+        .get(item)
+        .map(|mark| mark.stage.clone())
 }
 
 /// **The invocation's one `reconcile_started` row** — §7d.5 step (6), RT-41 and RT-47.
@@ -1057,6 +1317,27 @@ pub fn reconcile_started_event(
         rk_types::event_kind::EventKind::ReconcileStarted,
         payload,
     ))
+}
+
+/// **The one resolver of run ownership** (`s8e` §8e.4; D21-42 8d; AC-529; the three-kinds record,
+/// proposed): the latest `worktree_assigned` row the store holds FOR `item`, read through
+/// `ByItem`. `Ok(None)` when there is none, and every caller then refuses, fail-closed. Nothing is
+/// resolved from `cwd`, from the `.redkiln/worktrees/<item>` convention, or from RT-47's pair on
+/// `reconcile_started`, which stays tier-2 context that no reader resolves ownership from.
+/// *(dated 2026-09-28, `s8e` build, package S8E-P5.)*
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the store acquisition.
+pub fn assigned_ownership(
+    store: &Arc<Mutex<dyn EventStore>>,
+    item: &str,
+) -> Result<Option<rk_git::worktree::RunOwnership>, Halt> {
+    let guard = crate::store::acquire(store, "the ownership read")?;
+    let rows = guard.query(rk_kernel::runtime::journal_query(item));
+    drop(guard);
+    Ok(rows
+        .ok()
+        .and_then(|rows| rk_kernel::runtime::tier_one::assigned_ownership(&rows, item)))
 }
 
 /// **Step (9)'s EXPIRY PASS** — every open gate of the item whose recorded deadline is past is
@@ -1330,6 +1611,10 @@ fn open_derived_facet_gates(
     store: &Arc<Mutex<dyn EventStore>>,
     tree_hash: &str,
     now: i64,
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6.)* Each opening is a tier-1
+    // act through this boundary, carrying the opening stage run.
+    boundary: &mut rk_kernel::runtime::tier_one::Boundary,
+    run_id: Option<&str>,
 ) -> Result<Result<(), Exit>, Halt> {
     let abstaining: Vec<&String> = resolved
         .derived_facets
@@ -1375,16 +1660,13 @@ fn open_derived_facet_gates(
     if rows.is_empty() {
         return Ok(Ok(()));
     }
-    let mut guard = crate::store::acquire(store, "the run")?;
-    for row in rows {
-        if let Err(e) = guard.append(row) {
-            drop(guard);
-            eprintln!("redkiln: the `unknown_facet` gate row could not be written: {e:?}");
-            return Ok(Err(Exit::ConfigError));
-        }
-    }
-    drop(guard);
-    Ok(Ok(()))
+    gate_rows_through(
+        store,
+        Some(boundary),
+        &state,
+        rows,
+        run_id.map(|run| (resolved.stage.as_str(), run)),
+    )
 }
 
 /// Rebuild the kernel's `Item` from the record.
@@ -1658,6 +1940,8 @@ fn resume_and_read(
     >,
     token: &CancelToken,
     advanced: &mut Option<String>,
+    lane_end: &mut bool,
+    mut boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
 ) -> Result<Exit, Halt> {
     let item_id = resolved.item.id().to_owned();
     let store = Arc::clone(&ports.store);
@@ -1713,17 +1997,27 @@ fn resume_and_read(
     // The rows are appended and the journal is RE-READ rather than extended locally: `resume` folds
     // what the STORE holds, so a pass that wrote nowhere would be invisible to it, and reading it
     // back is what makes the append observable rather than assumed.
+    //
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6.)* ~~store-only~~: bound,
+    // each expiry row is a tier-1 act — its `Gate: … expired <action>` mark first, the row anchored
+    // to it — and an escalation's `gate_opened` is its own act. Unbound (`run_with`'s machinery
+    // seam), the rows are appended as before.
     let prior = if expiry_events.is_empty() {
         prior
     } else {
-        let mut guard = crate::store::acquire(&store, "the run")?;
-        for event in expiry_events {
-            if let Err(e) = guard.append(event) {
-                drop(guard);
-                eprintln!("redkiln: an expiry row could not be written: {e:?}");
-                return Ok(Exit::ConfigError);
-            }
+        if let Err(exit) = gate_rows_through(
+            &store,
+            boundary.as_mut(),
+            &state,
+            expiry_events,
+            Some((
+                &resolved.stage,
+                inputs.run_id().ok().as_deref().unwrap_or_default(),
+            )),
+        )? {
+            return Ok(exit);
         }
+        let guard = crate::store::acquire(&store, "the run")?;
         let re_read = guard.query(rk_kernel::runtime::journal_query(&item_id));
         drop(guard);
         match re_read {
@@ -1735,12 +2029,20 @@ fn resume_and_read(
         }
     };
 
+    // *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8.)* The review pass's seal is an
+    // act made AFTER `resume` has taken this stage's boundary, so it gets a sibling over the same
+    // wrapper and target. Unbound (`run_with`'s machinery seam), there is no seal, as there is no
+    // `closed` mark.
+    let seal_boundary = boundary
+        .as_ref()
+        .map(rk_kernel::runtime::tier_one::Boundary::sibling);
     let recorded = match rk_kernel::replay::resume_routed(
         inputs,
         ports,
         routing,
         &prior,
         supply_spec,
+        boundary,
     ) {
         Ok(run) => run,
         // 🛑 A FAILED DISPATCH IS NOT A CONFIGURATION ERROR, AND THE CLASS NOW ARRIVES ON THIS VALUE.
@@ -1816,13 +2118,12 @@ fn resume_and_read(
     // ADR-0152: the boundary the kernel took, reported to the lane loop before the terminal read.
     *advanced = recorded.advanced_to().map(ToOwned::to_owned);
 
-    // §7h.2: the `Story:` axis. As close to the boundary as the seams allow, and BEFORE the
-    // terminal read (ADR-0155 clause 4).
-    if advanced.is_some()
-        && let Err(exit) = story_trailer(resolved)
-    {
-        return Ok(exit);
-    }
+    // ~~§7h.2: the `Story:` axis. As close to the boundary as the seams allow, and BEFORE the
+    // terminal read (ADR-0155 clause 4).~~ *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e`
+    // §8e.3.)* `story_trailer` is DELETED, not re-ordered: the stage-bearing `Story:` mark is minted
+    // by the kernel's tier-1 boundary at the lane entry and at every advance, BEFORE its
+    // `stage_transition` row exists, so ADR-0155's bullet against writing it from anywhere after
+    // the store row is readable is true by construction.
 
     // **§7h.3's call site (ADR-0162).** After the boundary and the trailer, before the terminal
     // read: a blocking verdict is this run's last word, and it travels on the return channel.
@@ -1834,9 +2135,14 @@ fn resume_and_read(
         &candidate_toolchain,
         tree_hash,
         now,
+        seal_boundary,
     )? {
         return Ok(exit);
     }
+
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6.)* The lane's end, reported to
+    // the lane loop only once the review pass has not blocked: a blocking verdict is not an end.
+    *lane_end = recorded.lane_ended();
 
     Ok(terminal_read(resolved, &recorded))
 }
@@ -1847,194 +2153,128 @@ fn resume_and_read(
 /// actually emits. A test that re-spelled the format string would be asserting its own copy, and the
 /// failure this guards is precisely a value that LOOKS right and does not parse: `grep '^Story:'`
 /// passes on `Story: /item`, on `Story:item`, and on a project containing a space.
+///
+/// *(Widened 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.5; ADR-0183, proposed.)* The value
+/// is `<project> "/" <slug> SP <stage>`: ~~`format!("{project}/{item}")`~~, the stage-less form, is
+/// the legacy mark the producer never writes again. This stays a plain `format!` so the
+/// ADR-0159 test can show what an empty project renders; the producer does not write it directly,
+/// it writes `rk_git`'s round-trip-checked rendering (`ParsedTrailer::to_trailer`).
 #[must_use]
-pub fn story_value(project: &str, item: &str) -> String {
-    format!("{project}/{item}")
+pub fn story_value(project: &str, item: &str, stage: &str) -> String {
+    format!("{project}/{item} {stage}")
 }
 
-/// **§7h.2's first axis: mint `Story: <project>/<item>` — ONCE per item (ADR-0155).**
-///
-/// Called only when the run took a stage boundary. The value is `<project>/<item-id>` where the id is
-/// the `.redkiln/items/` file stem, because `doctor --rebuild` resolves `to` by looking that stem up
-/// and reports `unresolvable` for anything else.
-///
-/// 🛑 **IDEMPOTENT ACROSS RUNS, AND THAT IS NOT AN OPTIMISATION.** `reconcile` makes a second
-/// identical `Story:` value `Drift::DuplicateStoryTrailer` — *"counted, never a transition"* — so a
-/// producer that minted on every boundary would put the repository into drift by its second lane
-/// stage and make `doctor --rebuild` disagree with the store, which is what AC-427's differential
-/// exists to catch. `read_commits` reads every trailer-bearing commit reachable from ANY ref, so the
-/// check spans previous runs and previous lanes, not just this process.
-///
-/// 🛑 **A missing project REFUSES rather than emitting `Story: /<item>` (ADR-0159).** An empty
-/// project makes `split_qualified` return `None`, `classify` produce `BareStory`, and `reconcile`
-/// file it under `bare_story_ids` — a real commit that contributes to no state and still passes a
-/// `grep '^Story:'`.
-///
-/// Every write goes through `commit_with_trailers` on the run-owned worktree, past
-/// `authorise_tier1_write`. No new write path is introduced; the existing one gains a caller.
-fn story_trailer(resolved: &Resolved) -> Result<(), Exit> {
-    let item = resolved.item.id();
+// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* `story_trailer` — *"§7h.2's first
+// axis: mint `Story: <project>/<item>` — ONCE per item (ADR-0155)"* — is DELETED, with its comment
+// (§8e.13 finding 9). The stage-bearing mark is the kernel's tier-1 boundary's now, minted at the
+// lane entry and at every advance through `rk_kernel::runtime::tier_one::commit_act`, git first. Its
+// ADR-0159 refusals travel on `TierOneError::NoProject` / `ProjectHasSlash`, and a stage the
+// grammar cannot carry on `TierOneError::Unrenderable`.
 
-    // 🛑 **A PROJECT NAME CONTAINING `/` BREAKS THE AXIS SILENTLY, so it is refused.** Found by this
-    // stage's own adversarial pass. `split_qualified` splits the value on its **first** slash, so
-    // `[project] name = "acme/web"` emits `Story: acme/web/<item>` which parses as
-    // `project = "acme"`, `slug = "web/<item>"`. Two things then break at once: the idempotence read
-    // below looks up `state.projects.get("acme/web")` — a key `reconcile` can never produce — so the
-    // producer mints AGAIN on every boundary and every run, each one folding as
-    // `Drift::DuplicateStoryTrailer`, which is the exact state this function exists to prevent; and
-    // the slug `web/<item>` matches no `.redkiln/items/` stem, so `doctor --rebuild` reports it
-    // `unresolvable`. Both failures are invisible to a `grep '^Story:'`.
-    if let Some(p) = resolved.project.as_deref()
-        && p.contains('/')
-    {
-        eprintln!(
-            "redkiln: `.redkiln/config.toml`'s `[project] name` is {p:?}, which contains `/`. The \
-             trailer value is `<project>/<item>` and the reader splits on the FIRST slash, so this \
-             name would make every mark parse under a different project than it was written for, \
-             re-mint on every run, and fold as duplicate-story-trailer drift (ADR-0159)."
-        );
-        return Err(Exit::ConfigError);
-    }
-
-    let Some(project) = resolved.project.as_deref() else {
-        eprintln!(
-            "redkiln: the lane advanced and no `Story:` trailer can be written for `{item}`:              `.redkiln/config.toml` declares no `[project] name`. The trailer value is              `<project>/<item>` (design §5.4) and an empty project degrades the trailer to a bare              story id that records no transition, so it is refused rather than written (ADR-0159)."
-        );
-        return Err(Exit::ConfigError);
-    };
-
-    // ---- ONCE PER ITEM. Read what git already carries before writing anything.
-    let commits =
-        rk_git::reconcile::read_commits(&resolved.exec, &resolved.worktree).map_err(|e| {
-            eprintln!("redkiln: the trailer history could not be read: {e:?}");
-            Exit::ConfigError
-        })?;
-    let (state, _drift) = rk_git::reconcile::reconcile(&commits);
-    if state
-        .projects
-        .get(project)
-        .is_some_and(|p| p.stories_committed.contains(item))
-    {
-        // Already minted, by this lane or an earlier one. Writing again is drift, not a record.
-        return Ok(());
-    }
-
-    // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* Through the one
-    // derivation, never a joined literal.
-    let tree = run_tree_of(resolved)?;
-    let ownership = rk_git::worktree::RunOwnership {
-        worktree: tree.path,
-        branch: tree.branch,
-    };
-    let owned =
-        rk_git::worktree::authorise_tier1_write(&resolved.exec, &ownership.worktree, &ownership)
-            .map_err(|e| {
-                eprintln!("redkiln: the `Story:` trailer write was refused: {e:?}");
-                Exit::ConfigError
-            })?;
-
-    let trailer = rk_git::trailer::grammar::Trailer {
-        key: rk_git::trailer::grammar::TrailerKey::Story,
-        value: story_value(project, item),
-    };
-    rk_git::trailer::write::commit_with_trailers(
-        &resolved.exec,
-        owned.path(),
-        // 🛑 **THE SUBJECT MAY NOT CONTAIN `": "`, AND THIS IS NOT STYLE.** `parse_body` splits
-        // every line at column 0 on `": "` and treats a whitespace-free left side as a trailer key,
-        // so a subject like `story(<item>): entered the lane` parses as
-        // `UnknownKey { key: "story(<item>)" }` and is COUNTED into `unknown_keys` — design §5.4's
-        // *"Unknown keys are ignored and counted"* — on every commit this producer writes. Found by
-        // the round-trip test, not by reading. `terminal_read`'s `Gate opened for <item>` is safe
-        // for the same reason: no colon.
-        &format!("story {item} entered the lane"),
-        std::slice::from_ref(&trailer),
-        true,
+/// **The tier-1 boundary for one stage of this run** (`s8e` §8e.3): the tree the run entered as the
+/// target, the ownership the STORE records (`assigned_ownership`), and the two values a `Story:`
+/// value names. *(dated 2026-09-28, `s8e` build, package S8E-P5.)*
+fn tier_one_boundary(
+    resolved: &Resolved,
+    target: &Path,
+    ownership: &rk_git::worktree::RunOwnership,
+) -> rk_kernel::runtime::tier_one::Boundary {
+    rk_kernel::runtime::tier_one::Boundary::live(
+        resolved.exec.clone(),
+        rk_kernel::runtime::tier_one::Target {
+            worktree: target.to_path_buf(),
+            ownership: ownership.clone(),
+            project: resolved.project.clone(),
+            item: resolved.item.id().to_owned(),
+        },
     )
-    .map_err(|e| {
-        eprintln!("redkiln: the `Story:` trailer commit failed: {e:?}");
-        Exit::ConfigError
-    })?;
+}
 
-    println!("story {project}/{item} recorded on rk-run/{item}");
-    Ok(())
+/// **Gate transition rows, each as its own tier-1 act** (`s8e` §8e.3, N6): an expiry, an answer, a
+/// void or an opening — its `Gate:` mark first, the row anchored to it. An `opened` row carries the
+/// opening stage run when `opening` names one. Unbound (`run_with`'s machinery seam), the rows are
+/// appended as they were before `s8e`. *(dated 2026-09-28, `s8e` build, package S8E-P5.)*
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from a store acquisition; a refusal is the inner `Exit` (`3`), named.
+pub fn gate_rows_through(
+    store: &Arc<Mutex<dyn EventStore>>,
+    boundary: Option<&mut rk_kernel::runtime::tier_one::Boundary>,
+    state: &rk_kernel::workflow::fsm::RunState,
+    rows: Vec<rk_types::event::Event>,
+    opening: Option<(&str, &str)>,
+) -> Result<Result<(), Exit>, Halt> {
+    let Some(boundary) = boundary else {
+        let mut guard = crate::store::acquire(store, "the gate rows")?;
+        for row in rows {
+            if let Err(e) = guard.append(row) {
+                drop(guard);
+                eprintln!("redkiln: a gate row could not be written: {e:?}");
+                return Ok(Err(Exit::ConfigError));
+            }
+        }
+        drop(guard);
+        return Ok(Ok(()));
+    };
+    for row in rows {
+        let act = if row.kind == rk_types::event_kind::EventKind::GateOpened {
+            rk_kernel::runtime::tier_one::Act::gate_opened(row).map(|act| match opening {
+                Some((stage, run_id)) if !run_id.is_empty() => act.opened_by(stage, run_id),
+                _ => act,
+            })
+        } else {
+            let token = row
+                .payload
+                .get("token")
+                .and_then(serde_json::Value::as_str)
+                .and_then(|t| rk_types::digest::Digest::from_hex(t).ok());
+            let Some(record) = token.as_ref().and_then(|t| state.gate_record(t)) else {
+                eprintln!(
+                    "redkiln: a `{}` row names no gate this journal opened, so its `Gate:` mark \
+                     cannot be written: {}",
+                    row.kind.wire_name(),
+                    row.payload
+                );
+                return Ok(Err(Exit::ConfigError));
+            };
+            rk_kernel::runtime::tier_one::Act::gate(row, record)
+        };
+        let committed = act.and_then(|act| boundary.act(store, act));
+        if let Err(e) = committed {
+            eprintln!("redkiln: a gate transition was refused: {e}");
+            return Ok(Err(Exit::ConfigError));
+        }
+    }
+    Ok(Ok(()))
 }
 
 /// Step (10): the terminal read.
 ///
 /// **`run` NEVER WAITS** — no channel, prompt, socket or sleep is entered on any arm (golden
 /// constraint 2). A gate among the resumed run's new events is an EXIT, not a wait.
+///
+/// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* **Its commit is DELETED**, not
+/// re-ordered: the `Gate: … opened` mark is the kernel's tier-1 boundary's, made when the gate
+/// opened and BEFORE its row. What is left here is the report. Which gate it reports — the fold's
+/// awaited one rather than the latest tokened `gate_opened` — is `s8e` §8e.7's change.
 fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun) -> Exit {
     let item_id = resolved.item.id();
 
-    // 🛑 THE GATE ROW THIS READS IS THE RUNTIME'S, AND IT IS THE ONE CARRYING A TOKEN.
+    // ~~🛑 THE GATE ROW THIS READS IS THE RUNTIME'S, AND IT IS THE ONE CARRYING A TOKEN.~~ (the
+    // latest tokened `gate_opened` row, with no answered/void/expired filter — ADR-0161's recorded
+    // fourth finding.)
     //
-    // `select()` announces its abstention gates into `Selection::journal()` and those rows carry
-    // no token — §7d.5: the fold *"counts [them] as `gates_announced` and moves no state on"*.
-    // `resume` then steps `NextAction::OpenGate(record)` through `Runtime::step`, which appends
-    // `runtime::gate_opened_event(record)` — *"the `(kind, token, tree_hash, deadline)` row"*. A
-    // read that took the last `gate_opened` of either shape would sometimes trailer an
-    // announcement, whose token does not exist.
-    let gate = recorded.events.iter().rev().find(|e| {
-        e.kind == rk_types::event_kind::EventKind::GateOpened
-            && e.payload.get("token").is_some_and(|t| !t.is_null())
-    });
-    let Some(row) = gate else {
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.7; D21-42 24c.)* **It reports the
+    // gate the fold AWAITS**, and only that: `fsm::awaiting_gate()` over the recorded journal, which
+    // excludes an answered, a void and an expired token. So a re-run after an answer prints no open
+    // gate, and a dead token is never reported (the commit went with §8e.3; this only reports). A
+    // journal that will not fold reports nothing rather than guessing.
+    let awaited = rk_kernel::workflow::fsm::fold(item_id, &resolved.stage, &recorded.events)
+        .ok()
+        .and_then(|state| state.awaiting_gate().map(|t| t.as_str().to_owned()));
+    let Some(token_hex) = awaited else {
         return Exit::Success;
     };
-    let field = |name: &str| {
-        row.payload
-            .get(name)
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default()
-            .to_owned()
-    };
-    let token_hex = field("token");
-    let tree_hash = field("tree_hash");
-    let deadline = row
-        .payload
-        .get("deadline")
-        .and_then(serde_json::Value::as_i64)
-        .unwrap_or_default();
-
-    // ---- THE `Gate:` TRAILER COMMIT IS A TIER-1 WRITE (H-5). ------------------------------------
-    //
-    // ADR-0105 clause 8 / AC-529 / AC-518: it goes through `authorise_tier1_write`, against the
-    // RUN-OWNED worktree and its branch, and **never** against `cwd`. `OwnedWorktree`'s path is a
-    // private field with only an accessor — the type IS the mechanism: *was this write checked?*
-    // is answered by which function produced the value the commit is given.
-    // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* Through the one
-    // derivation, never a joined literal.
-    let tree = match run_tree_of(resolved) {
-        Ok(tree) => tree,
-        Err(exit) => return exit,
-    };
-    let owned_path = tree.path.clone();
-    let ownership = rk_git::worktree::RunOwnership {
-        worktree: tree.path,
-        branch: tree.branch,
-    };
-    let owned =
-        match rk_git::worktree::authorise_tier1_write(&resolved.exec, &owned_path, &ownership) {
-            Ok(owned) => owned,
-            Err(e) => {
-                eprintln!("redkiln: the gate trailer's write was not authorised: {e:?}");
-                return Exit::ConfigError;
-            }
-        };
-    if let Err(e) = rk_git::trailer::write::commit_with_trailers(
-        &resolved.exec,
-        owned.path(),
-        &format!("Gate opened for {item_id}"),
-        &[rk_git::trailer::grammar::Trailer {
-            key: rk_git::trailer::grammar::TrailerKey::Gate,
-            value: format!("{token_hex} {tree_hash} {deadline}"),
-        }],
-        true,
-    ) {
-        eprintln!("redkiln: the gate trailer could not be committed: {e:?}");
-        return Exit::ConfigError;
-    }
 
     // **`run` NEVER WAITS** (golden constraint 2). The gate is an EXIT, and exit 0 at that
     // (D-01; AC-240; AC-024): a run that opened a gate did everything it was asked to do.
@@ -2229,6 +2469,11 @@ fn remove_reference_worktree(exec: &GitExec, repo: &WorktreePath, path: &Path) {
 /// 🛑 **No verdict is constructed here.** `policy::Block`'s members are private and it has no
 /// public constructor (AC-294), so the only route to a block is to read one back out of a
 /// `Confirmed` the kernel produced. This function assembles inputs and reads an answer.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the seal's boundary joins the pass's six inputs (s8e section 8e.8); each is one \
+              value step (9) already holds, and bundling them would be a struct for one caller"
+)]
 fn review_pass(
     resolved: &Resolved,
     env: &Env,
@@ -2237,6 +2482,9 @@ fn review_pass(
     candidate: &Arc<dyn rk_ports::toolchain::Toolchain>,
     tree_hash: &str,
     now: i64,
+    // *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8.)* The seal's tier-1 boundary;
+    // `None` on the unbound machinery seam, which seals nothing.
+    mut seal_boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
 ) -> Result<Option<Exit>, Halt> {
     let findings = match crate::review_pass::findings_in(&recorded.events) {
         Ok(findings) => findings,
@@ -2331,6 +2579,40 @@ fn review_pass(
                      back out of the journal — the verdict would be reported on an append nothing \
                      can observe",
                     blocked.len()
+                );
+                return Ok(Some(Exit::ConfigError));
+            }
+        }
+
+        // ---- THE SEAL, ON BOTH OUTCOMES (`s8e` §8e.8; D21-41 e; the slice record, proposed). *(dated
+        // 2026-09-28, `s8e` build, package S8E-P7.)* The rejecting verdict crosses no boundary
+        // (ADR-0161 decision 2: the lane loop returns before reading `advanced`), so the seal sits on
+        // the review stage's EXIT OUTCOME, the value ADR-0162 wired without a stage literal:
+        // `blocked.is_empty()` seals `approved`, and `Exit::FindingsBlock` seals `changes-requested`
+        // BEFORE it returns. Both go through the kernel's tier-1 boundary (`tier_one::seal_act`, then
+        // `Boundary::act`): the `Slice-Verdict:` commit first, then `t1_slice_seal` and the anchored
+        // `slice_sealed` row. A refused seal — the slice undeclared, the item id, the project, a stage,
+        // whitespace — is exit 3, named, and nothing is committed.
+        let verdict = if blocked.is_empty() {
+            rk_git::trailer::grammar::Verdict::Approved
+        } else {
+            rk_git::trailer::grammar::Verdict::ChangesRequested
+        };
+        if let Some(boundary) = seal_boundary.as_mut() {
+            let sealed = rk_kernel::runtime::tier_one::seal_act(
+                resolved.slice.as_deref(),
+                resolved.item.id(),
+                resolved.project.as_deref(),
+                pack.stage_order(),
+                &resolved.stage,
+                verdict,
+            )
+            .and_then(|act| boundary.act(&**store, act));
+            if let Err(e) = sealed {
+                eprintln!(
+                    "redkiln: the review outcome of `{}` ({}) could not be sealed: {e}",
+                    resolved.item.id(),
+                    verdict.as_str()
                 );
                 return Ok(Some(Exit::ConfigError));
             }

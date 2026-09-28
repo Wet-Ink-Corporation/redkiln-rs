@@ -635,3 +635,97 @@ fn step_bound_zero_is_refused() {
     assert_eq!(five.as_secs(), Some(5));
     assert_eq!(StepBound::Undeclared.as_secs(), None);
 }
+
+// ---------------------------------------------------------------- ADR-0181 / ADR-0182 (s8e §8e.2, §8e.10)
+
+/// **The fake's tier-1 writer** (ADR-0181 decision 1; `s8e` §8e.2): `VecStore::append_tier1` keeps
+/// the anchored row beside its event, so the event is queryable by its item, the row reports its
+/// anchor through the port (`BySha`, decision 12), and a sha that anchors nothing selects nothing.
+///
+/// RED at entry: no `append_tier1` on the port (compile error E0599).
+#[test]
+fn vec_store_append_tier1_is_queryable_with_its_anchor() {
+    use rk_ports::event_store::TierOneAnchor;
+    use rk_types::event::Event;
+
+    let sha = "1".repeat(40);
+    let tree = "2".repeat(40);
+    let mut store = VecStore::default();
+    let boundary = Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({ "from": "triage", "to": "implement" }),
+    )
+    .with_item("item-a");
+    store
+        .append_tier1(boundary.clone(), &TierOneAnchor::new(&sha, &tree))
+        .expect("the fake's tier-1 append");
+    // A tier-2 row appended the ordinary way carries no anchor.
+    let plain =
+        Event::new(EventKind::ReconcileStarted, serde_json::json!({ "n": 1 })).with_item("item-a");
+    store.append(plain.clone()).expect("append");
+
+    assert_eq!(
+        store
+            .query(Query::ByItem("item-a".to_owned()))
+            .expect("by item"),
+        vec![boundary.clone(), plain],
+        "the anchored event is queryable as the event, in append order"
+    );
+    assert_eq!(
+        store.query(Query::BySha(sha.clone())).expect("by sha"),
+        vec![boundary],
+        "the anchored row reports its anchor: BySha selects it and only it (ADR-0181 decision 12)"
+    );
+    assert_eq!(
+        store
+            .query(Query::BySha("3".repeat(40)))
+            .expect("by another sha"),
+        Vec::<Event>::new(),
+        "a sha that anchors nothing selects nothing"
+    );
+    assert_eq!(store.anchor_of(0), Some(sha.as_str()));
+    assert_eq!(store.anchor_of(1), None, "an ordinary append has no anchor");
+}
+
+/// **`ByItem` is honoured by the fake** (ADR-0182 decision 4; `s8e` §8e.10): a row keyed to
+/// another item is never returned; an unkeyed row is returned to every item in the interim;
+/// `ByRun` stays inert (decision 5).
+///
+/// RED at entry: no `Event::with_item` (compile error E0599); against a fake whose `query` ignores
+/// the selector, `ByItem("item-a")` returns item-b's row.
+#[test]
+fn vec_store_query_by_item_returns_only_that_items_rows() {
+    use rk_types::event::Event;
+
+    let a = Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({ "to": "triage" }),
+    )
+    .with_item("item-a");
+    let b = Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({ "to": "triage" }),
+    )
+    .with_item("item-b");
+    let unkeyed = Event::new(EventKind::MemoMiss, serde_json::json!({ "key": "k" }));
+    let mut store = VecStore::default();
+    for e in [&a, &b, &unkeyed] {
+        store.append(e.clone()).expect("append");
+    }
+
+    assert_eq!(
+        store.query(Query::ByItem("item-a".to_owned())).expect("a"),
+        vec![a.clone(), unkeyed.clone()],
+        "ByItem(item-a) returns item-a's row and the unkeyed row, never item-b's"
+    );
+    assert_eq!(
+        store.query(Query::ByItem("item-b".to_owned())).expect("b"),
+        vec![b.clone(), unkeyed.clone()],
+        "ByItem(item-b) returns item-b's row and the unkeyed row, never item-a's"
+    );
+    assert_eq!(
+        store.query(Query::ByRun("r".to_owned())).expect("run"),
+        vec![a, b, unkeyed],
+        "ByRun stays inert: every row (ADR-0182 decision 5)"
+    );
+}

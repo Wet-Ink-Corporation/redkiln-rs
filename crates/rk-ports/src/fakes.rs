@@ -49,7 +49,7 @@ use rk_types::usage::{CliVersion, Timings};
 
 use crate::cancel::CancelToken;
 use crate::docs_site::DocsSite;
-use crate::event_store::{EventStore, Query, Snapshot};
+use crate::event_store::{EventStore, Query, Snapshot, SnapshotRow, TierOneAnchor};
 use crate::harness::{DispatchOutcome, Harness};
 use crate::toolchain::{
     ChangeKind, ChangeSummary, Classification, ManifestEntry, Selection, StepBound, TestOutcome,
@@ -83,9 +83,18 @@ const LOCK: &str = "a poisoned lock halts the run; it is never recovered (ADR-01
 /// the conformance suite can assert at 7a is that rebuilding from a snapshot of the *current*
 /// state leaves the store unchanged; a round-trip through a **stale** snapshot is not assertable
 /// until `Snapshot`'s contents are decided, and it is not claimed.
+///
+/// *(dated 2026-09-28, s8e build; ADR-0181 decisions 1 and 12 and ADR-0182 decisions 4 and 5,
+/// proposed.)* ~~`query` returns every appended event whatever the selector~~: the event now
+/// carries its interim `item` key and an anchored row its anchor, so the fake filters as the real
+/// store's SQL does — `ByItem(x)` the rows keyed `x` plus, in the interim, the unkeyed rows;
+/// `BySha(s)` the rows `append_tier1` anchored to `s`; `ByRun` every row. **`append_tier1` keeps the
+/// anchor beside the event** and models no `t1_*` table: the tier-1 row is the SQLite row's, and
+/// `rk-adapter-sqlite`'s `store::append_tier1_…` asserts it there.
 #[derive(Debug, Default)]
 pub struct VecStore {
     events: Vec<Event>,
+    anchors: Vec<Option<String>>,
 }
 
 impl VecStore {
@@ -94,23 +103,78 @@ impl VecStore {
     pub fn events(&self) -> &[Event] {
         &self.events
     }
+
+    /// The anchor the `index`-th appended event was written against, if it came through
+    /// `append_tier1`. The fake's own window, not part of the port.
+    #[must_use]
+    pub fn anchor_of(&self, index: usize) -> Option<&str> {
+        self.anchors.get(index).and_then(Option::as_deref)
+    }
 }
 
 impl EventStore for VecStore {
     fn append(&mut self, event: Event) -> Result<(), StepError> {
         self.events.push(event);
+        self.anchors.push(None);
         Ok(())
     }
 
-    fn query(&self, _by: Query) -> Result<Vec<Event>, StepError> {
-        Ok(self.events.clone())
+    fn append_tier1(&mut self, event: Event, anchor: &TierOneAnchor) -> Result<(), StepError> {
+        self.events.push(event);
+        self.anchors.push(Some(anchor.sha().to_owned()));
+        Ok(())
     }
 
+    fn query(&self, by: Query) -> Result<Vec<Event>, StepError> {
+        let keep = |(event, anchor): &(&Event, &Option<String>)| match &by {
+            Query::ByItem(item) => event.item().is_none_or(|i| i == item),
+            Query::BySha(sha) => anchor.as_deref() == Some(sha.as_str()),
+            Query::ByRun(_) => true,
+        };
+        Ok(self
+            .events
+            .iter()
+            .zip(self.anchors.iter())
+            .filter(keep)
+            .map(|(event, _)| event.clone())
+            .collect())
+    }
+
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P7; ADR-0181 decision 11, proposed.)* Every
+    /// row in order, each with the anchor the fake kept. The fake keeps the anchor's sha only, so its
+    /// rows carry no tree and no opening run.
     fn snapshot(&self) -> Result<Snapshot, StepError> {
-        Ok(Snapshot(()))
+        Ok(Snapshot::new(
+            self.events
+                .iter()
+                .zip(self.anchors.iter())
+                .map(|(event, anchor)| SnapshotRow {
+                    event: event.clone(),
+                    anchor_sha: anchor.clone(),
+                    tree: None,
+                    opening_run: None,
+                })
+                .collect(),
+        ))
     }
 
-    fn rebuild(&mut self, _snapshot: &Snapshot) -> Result<(), StepError> {
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P7.)* Append-only, as the port states: the
+    /// fake's rows must be a prefix of the snapshot's, and it gains the rest.
+    fn rebuild(&mut self, snapshot: &Snapshot) -> Result<(), StepError> {
+        let current = self.snapshot()?;
+        let held = current.rows();
+        if held.len() > snapshot.rows().len() || snapshot.rows()[..held.len()] != *held {
+            return Err(StepError::Transport {
+                kind: TransportKind::Io,
+                detail: "rebuild: the store's rows are not a prefix of the snapshot's, and a \
+                         rebuild neither updates nor deletes (AC-364)"
+                    .to_owned(),
+            });
+        }
+        for row in &snapshot.rows()[held.len()..] {
+            self.events.push(row.event.clone());
+            self.anchors.push(row.anchor_sha.clone());
+        }
         Ok(())
     }
 }

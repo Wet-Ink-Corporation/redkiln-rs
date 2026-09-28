@@ -342,6 +342,7 @@ mod step_error_row;
 mod step_grain;
 mod support;
 mod test_selection;
+mod tier_one;
 mod tool_verb_routing;
 mod ui;
 mod verb_registry;

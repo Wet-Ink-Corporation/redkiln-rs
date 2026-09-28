@@ -1256,6 +1256,12 @@ pub struct RecordedRun {
     /// second stage onward. The lane loop must not have to guess whether the boundary it asked for
     /// was taken.
     advanced: Option<String>,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6; D21-43 N9.)* **The lane
+    /// ended here**: [`resume`]'s loop stopped on [`NextAction::Done`] with NO successor supplied
+    /// (`Pack::successor` ended the order). Only then may the composition root mint the terminal
+    /// `closed` mark (`tier_one::close_act`). `false` for every other terminal, `record` and
+    /// `read_run` included — the same explicit-carrier rule as [`Self::advanced_to`].
+    lane_end: bool,
 }
 
 impl RecordedRun {
@@ -1288,6 +1294,12 @@ impl RecordedRun {
     #[must_use]
     pub fn advanced_to(&self) -> Option<&str> {
         self.advanced.as_deref()
+    }
+
+    /// Did this call reach the lane's end — `Done` with no successor (`s8e` §8e.6)?
+    #[must_use]
+    pub const fn lane_ended(&self) -> bool {
+        self.lane_end
     }
 
     /// The four-digest tuple AC-041 names, as the selection derived it.
@@ -1782,6 +1794,7 @@ pub fn record(inputs: &RunInputs, ports: Ports) -> Result<RecordedRun, ReplayErr
         // `record`'s loop breaks on any non-`Dispatch` action and takes no stage boundary, so it
         // never advances (ADR-0152).
         advanced: None,
+        lane_end: false,
     })
 }
 
@@ -1844,6 +1857,7 @@ pub fn resume(
         crate::runtime::step::ToolRouting::default(),
         prior,
         supply_spec,
+        None,
     )
 }
 
@@ -1853,6 +1867,13 @@ pub fn resume(
 /// the chosen adapter's value table, and hands both here as one value. [`resume`] binds none, so
 /// its `tool` steps refuse by bare verb name.
 ///
+/// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* **`boundary` is the tier-1
+/// boundary**, the journalled `GitOps` seam that travels beside `Ports` (git is not a port,
+/// ADR-0003), bound on the live path by `rk-cli`'s `run`. Bound, the stage entry, the advance and
+/// every gate opening commit first and anchor their rows to the commit. `None` is the unbound
+/// machinery seam [`resume`] passes: its callers are the in-process suites, with no repository
+/// behind them, and the three-kinds record names that residual.
+///
 /// # Errors
 /// As [`resume`].
 pub fn resume_routed(
@@ -1861,6 +1882,7 @@ pub fn resume_routed(
     routing: crate::runtime::step::ToolRouting,
     prior: &[Event],
     supply_spec: &mut dyn FnMut(&str) -> Result<RecordedSpec, ReplayError>,
+    boundary: Option<crate::runtime::tier_one::Boundary>,
 ) -> Result<RecordedRun, ReplayError> {
     let run_id = inputs.run_id()?;
     let runtime = inputs.runtime()?;
@@ -1872,18 +1894,62 @@ pub fn resume_routed(
     // there by name when the pack declares none.
     let rt = Runtime::new(ports, &run_id, &inputs.stage)
         .with_tool_routing(routing)
-        .with_breaker(crate::runtime::BreakerBinding::of(&pack));
+        .with_breaker(crate::runtime::BreakerBinding::of(&pack))
+        // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.10.)* Every row this call
+        // appends is keyed to the run's item, so a second item's `ByItem` read excludes it.
+        .with_item(item.id());
+    let rt = match boundary {
+        Some(boundary) => rt.with_boundary(boundary),
+        None => rt,
+    };
     let mut selection: Selection =
         select(&pack, &catalog, &artifacts, &facets, &inputs.stage, &item)?;
 
     // See the header: the plan's own row, not the journal's length.
     let plan_assembled = prior.iter().any(|e| e.kind == EventKind::DagAssembled);
 
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.5; ADR-0183 decision 6,
+    // proposed.)* **The entry is minted once per `(item, stage)`, never once per plan.** A stage
+    // the journal has already ENTERED (a `stage_transition` into it — after `s8e` §8e.3's heal, the
+    // store's copy of every stage-bearing mark git carries) takes no second entry, even when its
+    // plan's rows are absent (a deleted store rebuilt by the heal). The boundary's own read of git
+    // (`tier_one::stage_already_marked`) is the idempotence read for the MARK; this one keeps the
+    // local journal from folding a second, trailer-less entry row.
+    let entered = prior.iter().any(|e| {
+        e.kind == EventKind::StageTransition
+            && e.payload.get("to").and_then(serde_json::Value::as_str)
+                == Some(inputs.stage.as_str())
+    });
+    let entry_due = !plan_assembled && !entered;
+
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6; D21-43 N9; the three-kinds
+    // record decision 3, proposed.)* **An empty stage is entered, trailered and passed, and says
+    // so**: a plan with no node records `stage_empty { stage, reason }`, once per `(item, stage)`,
+    // as a row of the entry act when this call makes the entry, and appended beside it otherwise.
+    let empty_due = selection.dag().nodes().is_empty()
+        && !prior.iter().any(|e| {
+            e.kind == EventKind::StageEmpty
+                && e.payload.get("stage").and_then(serde_json::Value::as_str)
+                    == Some(inputs.stage.as_str())
+        });
+    let empty_row = empty_due.then(|| {
+        crate::runtime::tier_one::stage_empty_event(
+            &inputs.stage,
+            rk_types::event_kind::STAGE_EMPTY_REASONS[0],
+        )
+    });
+
     let mut journal: Vec<Event> = prior.to_vec();
     let prior_len = journal.len();
-    if !plan_assembled {
+    if entry_due {
         journal.push(stage_entry(&inputs.stage, runtime));
+        journal.extend(empty_row.clone());
+    }
+    if !plan_assembled {
         journal.extend(selection.journal());
+    }
+    if !entry_due {
+        journal.extend(empty_row.clone());
     }
 
     if let Some((request, requested_by)) = &inputs.deviation {
@@ -1919,7 +1985,27 @@ pub fn resume_routed(
 
     // Only the rows this run minted go through the port — `prior` is already in the store, and
     // appending it back would record every earlier row a second time.
-    for event in journal.iter().skip(prior_len) {
+    //
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3 and §8e.5.)* The lane ENTRY is a
+    // tier-1 act: the stage-bearing `Story:` mark first, then the `stage_transition` row anchored to
+    // it (ADR-0183). The selection's own rows that follow it are tier-2 or announcements and are
+    // appended as before.
+    //
+    // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6.)* An empty stage's
+    // `stage_empty` row is a second row of the SAME act, anchored to the entry's commit (§8e.3's
+    // "an act may carry several rows").
+    let entry_rows = if entry_due {
+        1 + usize::from(empty_row.is_some())
+    } else {
+        0
+    };
+    if entry_rows > 0 {
+        rt.tier_one_act(crate::runtime::tier_one::Act::marked(
+            crate::runtime::tier_one::Mark::Stage(inputs.stage.clone()),
+            journal[prior_len..prior_len + entry_rows].to_vec(),
+        ))?;
+    }
+    for event in journal.iter().skip(prior_len + entry_rows) {
         rt.append(event.clone())?;
     }
 
@@ -1943,6 +2029,7 @@ pub fn resume_routed(
     let activations = inputs.activations();
     // ADR-0152: set by the `AdvanceStage` arm alone, and reported out as `advanced_to()`.
     let mut advanced: Option<String> = None;
+    let mut lane_end = false;
     loop {
         let state = fsm::fold(item.id(), &inputs.stage, &journal)?;
         let ctx = fsm_context(runtime, &item, &activations);
@@ -2013,6 +2100,14 @@ pub fn resume_routed(
                 journal.extend(rt.journal(item.id())?.into_iter().skip(before));
                 break;
             }
+            // *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.6.)* `Done` with no
+            // successor supplied is the lane's END: `Pack::successor` ended the order. Reported, not
+            // acted on here: the terminal `closed` mark follows the review pass the composition root
+            // runs after this call (a blocking verdict is not an end).
+            NextAction::Done => {
+                lane_end = runtime.successor.is_none();
+                break;
+            }
             _ => break,
         }
     }
@@ -2026,6 +2121,7 @@ pub fn resume_routed(
         terminal_state,
         next_action,
         advanced,
+        lane_end,
     })
 }
 
@@ -2492,8 +2588,9 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         // `advanced` is NOT persisted to `run.json` and is not reconstructed here: it is the live
         // lane loop's signal, and a replay compares `terminal_state` and `next_action` (AC-006,
         // AC-008). Adding it to the record would change the run-record layout and move the digest
-        // accepted ADR-0151 pins, for a value no replay reads.
+        // accepted ADR-0151 pins, for a value no replay reads. `lane_end` likewise (s8e S8E-P6).
         advanced: None,
+        lane_end: false,
     })
 }
 

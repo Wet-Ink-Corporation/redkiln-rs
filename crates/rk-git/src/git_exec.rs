@@ -93,6 +93,42 @@ pub enum GitOp {
 }
 
 impl GitOp {
+    /// Every operation, for reading a journalled `op` name back (*dated 2026-09-28, `s8e` build,
+    /// package S8E-P5; `s8e` §8e.3, D21-43 N7*): replay serves the kernel boundary's git writes from
+    /// its `git_op` rows, and a row carries the name [`Self::as_str`] wrote. Adding a variant here
+    /// adds nothing to the write set; the set is the enum.
+    pub const ALL: [Self; 23] = [
+        Self::WorktreeAdd,
+        Self::WorktreeRemove,
+        Self::Add,
+        Self::Commit,
+        Self::InterpretTrailers,
+        Self::WriteTree,
+        Self::PatchId,
+        Self::Integrate,
+        Self::CloneRemove,
+        Self::WorktreeLock,
+        Self::WorktreeUnlock,
+        Self::ResetHard,
+        Self::Clean,
+        Self::RevParse,
+        Self::Status,
+        Self::Log,
+        Self::LsFiles,
+        Self::CheckIgnore,
+        Self::WorktreeList,
+        Self::LsTree,
+        Self::Config,
+        Self::CheckAttr,
+        Self::MergeBase,
+    ];
+
+    /// The operation a journalled name names, or `None` for a name no variant writes.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|op| op.as_str() == name)
+    }
+
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {

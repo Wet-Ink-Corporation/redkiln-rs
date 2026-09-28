@@ -13,7 +13,9 @@
 //!
 //! **What the SQLite entries are**: exactly the `snapshot` and `rebuild` rows D17-9 names, each
 //! dated and each **explicitly probe-less** (`Probe::None { reason }`) — a row is present, dated
-//! and says why it has no probe, never absent-member (§7c.7). A `test -f registry.rs` plus a
+//! and says why it has no probe, never absent-member (§7c.7). *(dated 2026-09-28, `s8e` build, package S8E-P7:
+//! both rows now carry a recorded probe — `s8e` §8e.9 implemented snapshot and rebuild —
+//! `ac489_…` is re-pointed and `snapshot_and_rebuild_rows_carry_a_recorded_probe` is new.)* A `test -f registry.rs` plus a
 //! `verified_on` grep is the block's floor, never the whole assertion; this is the rest.
 
 use std::path::Path;
@@ -112,7 +114,10 @@ fn ac489_capability_registry_dated() {
         "the refusal names the unknown probe member: {err}"
     );
 
-    // ---- the shipped registry: exactly the two rows D17-9 names, dated, explicitly probe-less.
+    // ---- the shipped registry: exactly the two rows D17-9 names, dated. *(Re-pointed 2026-09-28,
+    // `s8e` build, package S8E-P7; `s8e` §8e.9; ADR-0181 decision 11, proposed: ~~explicitly
+    // probe-less~~ — both rows flipped together to a recorded probe naming the test that exercises
+    // the method, and the store now answers both.)*
     let rows = registry::rows().expect("the shipped registry loads");
     let tokens: Vec<&str> = rows.iter().map(registry::Row::token).collect();
     assert_eq!(
@@ -128,20 +133,21 @@ fn ac489_capability_registry_dated() {
             row.verified_on
         );
         match &row.probe {
-            Probe::None { reason } => assert!(
-                !reason.trim().is_empty(),
-                "row {} says Probe::None with no reason",
+            Probe::Recorded { source } => assert!(
+                !source.trim().is_empty(),
+                "row {} claims a recorded probe with no source",
                 row.token()
             ),
-            Probe::Recorded { source } => panic!(
-                "row {} claims a recorded probe ({source:?}) — no snapshot/rebuild probe exists at 7c",
+            Probe::None { reason } => panic!(
+                "row {} is probe-less ({reason:?}) — `s8e` §8e.9 implemented snapshot and rebuild, \
+                 and the two rows flip together",
                 row.token()
             ),
         }
     }
-    assert_eq!(
-        registry::unsupported_tokens().expect("loads"),
-        vec!["snapshot".to_owned(), "rebuild".to_owned()]
+    assert!(
+        registry::unsupported_tokens().expect("loads").is_empty(),
+        "no shipped row is probe-less, so the real conformance row's capability arm is empty"
     );
 
     // ---- the derivation, as a pure function over rows (D17-9: "from a dated registry entry").
@@ -151,69 +157,76 @@ fn ac489_capability_registry_dated() {
         "snapshot",
         "no row for snapshot",
     );
-    // A row claiming a recorded probe for a method this crate has no implementation of: the row
-    // is wrong, and that is a decode failure too.
+    decode_naming(
+        &registry::answer(&[], Capability::Snapshot).expect_err("no row answers nothing"),
+        "snapshot",
+        "answer with no row for snapshot",
+    );
+    // A recorded row: the method answers.
     let recorded = Row {
         capability: Capability::Snapshot,
-        verified_on: "2026-09-18".to_owned(),
+        verified_on: "2026-09-28".to_owned(),
         probe: Probe::Recorded {
-            source: "a probe nobody ran".to_owned(),
+            source: "a recorded probe".to_owned(),
         },
     };
-    decode_naming(
-        &registry::refusal(std::slice::from_ref(&recorded), Capability::Snapshot),
-        "snapshot",
-        "a recorded-probe row for snapshot",
+    assert_eq!(
+        registry::answer(std::slice::from_ref(&recorded), Capability::Snapshot),
+        Ok(()),
+        "a row carrying a recorded probe lets the method answer"
     );
-    // The shipped rows: Unsupported, the token the row's.
-    match registry::refusal(&rows, Capability::Snapshot) {
-        StepError::Unsupported { capability } => assert_eq!(capability, "snapshot"),
-        other => panic!("the shipped snapshot row answers Unsupported; got {other:?}"),
+    // A probe-less row: Unsupported, the token the row's.
+    let probeless = |capability: Capability| Row {
+        capability,
+        verified_on: "2026-09-18".to_owned(),
+        probe: Probe::None {
+            reason: "a controlled probe-less row".to_owned(),
+        },
+    };
+    match registry::answer(&[probeless(Capability::Snapshot)], Capability::Snapshot) {
+        Err(StepError::Unsupported { capability }) => assert_eq!(capability, "snapshot"),
+        other => panic!("a probe-less snapshot row answers Unsupported; got {other:?}"),
     }
-    // Only `rebuild` present: rebuild is Unsupported and snapshot is the missing-row failure —
-    // one row does not answer for another.
-    let rebuild_only: Vec<Row> = rows
-        .iter()
-        .filter(|r| r.capability == Capability::Rebuild)
-        .cloned()
-        .collect();
-    assert_eq!(rebuild_only.len(), 1, "PREMISE: one rebuild row");
-    match registry::refusal(&rebuild_only, Capability::Rebuild) {
-        StepError::Unsupported { capability } => assert_eq!(capability, "rebuild"),
-        other => panic!("rebuild over its own row is Unsupported; got {other:?}"),
+    // Only a probe-less `rebuild` present: rebuild is Unsupported and snapshot is the missing-row
+    // failure — one row does not answer for another.
+    let rebuild_only = vec![probeless(Capability::Rebuild)];
+    match registry::answer(&rebuild_only, Capability::Rebuild) {
+        Err(StepError::Unsupported { capability }) => assert_eq!(capability, "rebuild"),
+        other => panic!("rebuild over its own probe-less row is Unsupported; got {other:?}"),
     }
     decode_naming(
-        &registry::refusal(&rebuild_only, Capability::Snapshot),
+        &registry::answer(&rebuild_only, Capability::Snapshot).expect_err("no snapshot row"),
         "snapshot",
         "snapshot with only a rebuild row",
     );
 
-    // ---- the adapter answers FROM the rows it holds: the token in the error is the row's, and a
+    // ---- the adapter answers FROM the rows it holds: the shipped rows let both methods run, and a
     // store opened over a registry with no row answers the decode failure, not Unsupported.
     let fx = Fixture::new();
     let exec = fx.exec();
     let repo = fx.repo_with_one_commit("repo");
     {
         let mut store = open(&exec, &repo);
-        match store.snapshot() {
-            Err(StepError::Unsupported { capability }) => assert_eq!(capability, rows[0].token()),
-            other => panic!("snapshot answers Unsupported from its registry row; got {other:?}"),
-        }
-        match store.rebuild(&a_snapshot()) {
-            Err(StepError::Unsupported { capability }) => assert_eq!(capability, rows[1].token()),
-            other => panic!("rebuild answers Unsupported from its registry row; got {other:?}"),
-        }
+        let snapshot = store
+            .snapshot()
+            .expect("the shipped snapshot row lets the method answer");
+        store
+            .rebuild(&snapshot)
+            .expect("the shipped rebuild row lets the method answer; a snapshot of the current state rebuilds as identity");
+        store
+            .rebuild(&a_snapshot())
+            .expect("an empty snapshot is a prefix-compatible rebuild over an empty store");
     }
     {
         let mut store = SqliteStore::open_over_registry(&exec, &wt(&repo), Vec::new())
             .expect("the store opens; the registry is consulted by the port methods, not by open");
         decode_naming(
-            &store.snapshot().expect_err("no Ok is constructible"),
+            &store.snapshot().expect_err("no row, no answer"),
             "snapshot",
             "snapshot over an EMPTY registry",
         );
         decode_naming(
-            &store.rebuild(&a_snapshot()).expect_err("no Ok path"),
+            &store.rebuild(&a_snapshot()).expect_err("no row, no answer"),
             "rebuild",
             "rebuild over an EMPTY registry",
         );
@@ -222,19 +235,71 @@ fn ac489_capability_registry_dated() {
         let mut store =
             SqliteStore::open_over_registry(&exec, &wt(&repo), rebuild_only).expect("opens");
         decode_naming(
-            &store.snapshot().expect_err("no Ok is constructible"),
+            &store.snapshot().expect_err("no snapshot row"),
             "snapshot",
             "snapshot over a registry carrying only rebuild",
         );
         match store.rebuild(&a_snapshot()) {
             Err(StepError::Unsupported { capability }) => assert_eq!(capability, "rebuild"),
-            other => panic!("rebuild over its own row is Unsupported; got {other:?}"),
+            other => panic!("rebuild over its own probe-less row is Unsupported; got {other:?}"),
         }
     }
 }
 
-/// RED (observed 2026-09-18) against the skeleton whose `capability` was an open `String`:
-/// `reads_minds` loaded as a row.
+/// **`s8e` §8e.9 — both SQLite rows carry a recorded probe, and the probe names a real test**
+/// (D21-42 8c: *"`open_at` / `Capability::Rebuild`"*; ADR-0181 decision 11, proposed). *(Added
+/// 2026-09-28, `s8e` build, package S8E-P7.)*
+///
+/// `conform_event_store` treats a registry that declares one of snapshot/rebuild unsupported and
+/// not the other as a defect, so the rows flip together. Each row's `source` is a `;`-separated
+/// list of `<path> <module>::<test>`; every path must exist and define that test, so a row cannot
+/// cite a probe nobody wrote. RED at entry: both rows were `Probe::None`. Red under S8E-M39 (the
+/// `rebuild` row alone restored to `Probe::None`).
+#[test]
+fn snapshot_and_rebuild_rows_carry_a_recorded_probe() {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..");
+    let rows = registry::rows().expect("the shipped registry loads");
+    for capability in [Capability::Snapshot, Capability::Rebuild] {
+        let row = rows
+            .iter()
+            .find(|r| r.capability == capability)
+            .unwrap_or_else(|| panic!("no `{}` row", capability.as_str()));
+        let Probe::Recorded { source } = &row.probe else {
+            panic!(
+                "the `{}` row is {:?}, not a recorded probe — `s8e` §8e.9 implements it",
+                capability.as_str(),
+                row.probe
+            );
+        };
+        let mut cited = 0_usize;
+        for entry in source.split(';').map(str::trim).filter(|e| !e.is_empty()) {
+            let (path, test) = entry
+                .split_once(' ')
+                .unwrap_or_else(|| panic!("`{entry}` is not `<path> <module>::<test>`"));
+            let name = test.rsplit("::").next().expect("a test name");
+            let text = std::fs::read_to_string(workspace.join(path))
+                .unwrap_or_else(|e| panic!("the probe source {path} is unreadable: {e}"));
+            assert!(
+                text.contains(&format!("fn {name}(")),
+                "the `{}` row cites {test} in {path}, which defines no such test",
+                capability.as_str()
+            );
+            cited += 1;
+        }
+        assert!(
+            cited >= 1,
+            "the `{}` row cites no probe",
+            capability.as_str()
+        );
+        assert_eq!(
+            registry::answer(&rows, capability),
+            Ok(()),
+            "the shipped `{}` row lets the method answer",
+            capability.as_str()
+        );
+    }
+}
+
 #[test]
 fn ac492_unknown_capability_token_fails() {
     let err = registry::load(READS_MINDS).expect_err("`reads_minds` is not a capability");

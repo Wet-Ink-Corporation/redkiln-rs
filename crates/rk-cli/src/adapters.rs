@@ -255,3 +255,26 @@ pub fn rebuilt_store_identity(
         }
     }
 }
+
+/// **Open the rebuild's STAGING store.**
+///
+/// `SqliteStore::open_at` over `staging`, under the
+/// identity `doctor --rebuild` derived from git (`s8e` §8e.9; D21-42 8c; ADR-0181 decision 11,
+/// proposed). *(dated 2026-09-28, `s8e` build, package S8E-P7.)*
+///
+/// Here and not in `doctor/rebuild.rs` for the reason `open_store` is: Checkpoint 7d's D-10 ban
+/// forbids `SqliteStore::open` — a prefix of `SqliteStore::open_at` — on any code line under a
+/// `doctor` module path, and the root's adapter module is where a store handle is opened. It opens
+/// ONLY the staging file (`<staging>/redkiln/store.sqlite3`): the repository's store is never
+/// opened on the way to rebuilding it, so a version-1 store is rebuilt rather than refused
+/// (S8E-M36). The rows are written by the adapter's `EventStore::rebuild`, which owns the SQL
+/// (D21-48 X10).
+///
+/// # Errors
+/// [`rk_adapter_sqlite::StoreOpenError`] when the staging file refuses.
+pub fn open_rebuild_target(
+    staging: &std::path::Path,
+    identity: &rk_store::identity::Identity,
+) -> Result<rk_adapter_sqlite::SqliteStore, rk_adapter_sqlite::StoreOpenError> {
+    rk_adapter_sqlite::SqliteStore::open_at(staging, identity)
+}

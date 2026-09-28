@@ -73,3 +73,56 @@ fn wal_and_busy_timeout_are_enforced() {
         "rk-store's constant is clause 7's value"
     );
 }
+
+/// **AC-499 (SQLite row), with the tier-1 arm** (ADR-0181 decision 1; `s8e` §8e.2): the shared
+/// body now runs an anchored append through `append_tier1` and asserts, through the port, that
+/// the event is queryable and that the row reports its anchor (`BySha`). Over the real store the
+/// arm must also have written the `t1_stage_transition` row beside the anchored `t2_event` row,
+/// which is what this row adds: the body cannot see a table, and a real row that answered the
+/// port's queries without writing tier 1 would pass the body alone.
+///
+/// RED at entry: no tier-1 arm in the body and no `TIER_ONE_*` constants (E0425).
+#[test]
+fn sqlite_store_conforms_including_the_tier_one_arm() {
+    use rk_ports::conformance::{TIER_ONE_ITEM, TIER_ONE_SHA, TIER_ONE_TREE};
+
+    let fx = Fixture::new();
+    let exec = fx.exec();
+    let repo = fx.repo_with_one_commit("repo");
+    let mut store = open(&exec, &repo);
+    let unsupported = registry::unsupported_tokens().expect("the shipped registry loads");
+    let arm: Vec<&str> = unsupported.iter().map(String::as_str).collect();
+
+    conform_event_store(&mut store, &arm);
+
+    let reader = rk_store::conn::Reader::open(store.common_dir()).expect("a reader opens");
+    let t1: (String, String, String) = reader
+        .conn()
+        .query_row(
+            "SELECT item, anchor_sha, tree_hash FROM t1_stage_transition",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .expect("the arm's boundary wrote exactly one t1_stage_transition row");
+    assert_eq!(
+        t1,
+        (
+            TIER_ONE_ITEM.to_owned(),
+            TIER_ONE_SHA.to_owned(),
+            TIER_ONE_TREE.to_owned()
+        ),
+        "the tier-1 arm's row carries its item, its anchor and the anchor's tree"
+    );
+    let anchored: i64 = reader
+        .conn()
+        .query_row(
+            "SELECT count(*) FROM t2_event WHERE anchor_sha = ?1",
+            [TIER_ONE_SHA],
+            |r| r.get(0),
+        )
+        .expect("count");
+    assert_eq!(
+        anchored, 1,
+        "exactly one t2_event row carries the arm's anchor"
+    );
+}

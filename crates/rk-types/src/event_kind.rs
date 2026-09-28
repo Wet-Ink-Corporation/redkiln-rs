@@ -51,6 +51,17 @@ pub enum Tier {
     Two,
 }
 
+/// Where a kind's owning item is recorded — ADR-0182 decision 3 (`s8e` §8e.10; D21-43 N5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ItemKey {
+    /// Item-scoped: the producer sets the interim key beside the event (`Event::with_item`).
+    Carried,
+    /// Item-scoped, keyed in the payload by an earlier record (ADR-0163's `rate_limit_reading.item`).
+    InPayload,
+    /// Not item-scoped; ADR-0182 gives the reason per kind.
+    NotItemScoped,
+}
+
 /// Every event kind the system may record. Closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum EventKind {
@@ -137,12 +148,37 @@ pub enum EventKind {
     AdvisoryRetired,
     /// Name owed to design §5.
     AdvisoryDismissed,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.4; D21-42 8d; the three-kinds
+    /// record, proposed.)* The run-owned worktree a `run` entered: `{ item, worktree, branch,
+    /// reused, discarded }`, written at **every** run start, on a created tree and on a reused one.
+    /// Every tier-1 write resolves its `RunOwnership` from the latest one for its item, and from
+    /// nothing else. Tier 2 by the deleted-database test: `run` re-enters the registered tree and
+    /// writes it again without re-creating anything, and `answer` refuses fail-closed until it
+    /// does, so losing it changes no next action of `run`.
+    WorktreeAssigned,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.6; D21-42 7; the three-kinds
+    /// record, proposed.)* A stage the lane entered and passed with an empty plan: `{ stage,
+    /// reason }`, the reason one of [`STAGE_EMPTY_REASONS`]. Tier 2: the `Story:` mark carries the
+    /// entry either way, and the row is anchored to that mark's commit as a row of the same act.
+    StageEmpty,
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3; D21-43 N7; the three-kinds
+    /// record, proposed.)* One journalled git invocation of the kernel's tier-1 boundary —
+    /// `GitInvocation`'s own members `{ op, cwd, argv_digest, status, stdout, stderr_digest }` —
+    /// anchored to the act's commit, so replay serves the boundary's git writes from the journal.
+    /// Tier 2: the commit it describes is the durable fact.
+    GitOp,
 }
+
+/// *(dated 2026-09-28, `s8e` build, package S8E-P5; the three-kinds record decision 3, proposed.)*
+/// The closed reason set a `stage_empty` row carries. One member at Checkpoint 8e:
+/// `no_applicable_activity` — the stage's assembled plan holds zero nodes, so nothing is
+/// dispatchable there at the effective rigor. A new reason is a record, never a producer's choice.
+pub const STAGE_EMPTY_REASONS: [&str; 1] = ["no_applicable_activity"];
 
 impl EventKind {
     /// Every kind, for the completeness test. Built from an exhaustive match so a new variant
     /// cannot be added without appearing here.
-    pub const ALL: [Self; 38] = [
+    pub const ALL: [Self; 41] = [
         Self::StageTransition,
         Self::GateOpened,
         Self::GateAnswered,
@@ -181,6 +217,9 @@ impl EventKind {
         Self::AdvisoryCreated,
         Self::AdvisoryRetired,
         Self::AdvisoryDismissed,
+        Self::WorktreeAssigned,
+        Self::StageEmpty,
+        Self::GitOp,
     ];
 
     /// The wire name, exactly as design §5's table spells it — including the two **dotted** names,
@@ -226,6 +265,9 @@ impl EventKind {
             Self::AdvisoryCreated => "advisory_created",
             Self::AdvisoryRetired => "advisory_retired",
             Self::AdvisoryDismissed => "advisory_dismissed",
+            Self::WorktreeAssigned => "worktree_assigned",
+            Self::StageEmpty => "stage_empty",
+            Self::GitOp => "git_op",
         }
     }
 
@@ -236,16 +278,20 @@ impl EventKind {
     /// new variant an `E0004` here, which is the property that matters — a kind cannot enter the
     /// system without someone deciding whether losing it would change the next action.
     #[must_use]
+    ///
+    /// *(Dated 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.7; D21-43 N6; ADR-0184,
+    /// proposed.)* `gate_answer_void` moves from tier 2 to tier 1 with design §5's row: N6 makes
+    /// every gate transition, the void included, a git-first tier-1 event.
     pub const fn tier(self) -> Tier {
         match self {
             Self::StageTransition
             | Self::GateOpened
             | Self::GateAnswered
             | Self::GateExpired
+            | Self::GateAnswerVoid
             | Self::SliceSealed => Tier::One,
 
             Self::ReconcileStarted
-            | Self::GateAnswerVoid
             | Self::GateAnswerSpent
             | Self::GateResumed
             | Self::ReviewBlock
@@ -276,17 +322,83 @@ impl EventKind {
             | Self::ArtifactWrite
             | Self::AdvisoryCreated
             | Self::AdvisoryRetired
-            | Self::AdvisoryDismissed => Tier::Two,
+            | Self::AdvisoryDismissed
+            | Self::WorktreeAssigned
+            | Self::StageEmpty
+            | Self::GitOp => Tier::Two,
+        }
+    }
+
+    /// Where this kind's item lives — ADR-0182 decision 3's list (`s8e` §8e.10; D21-43 N5).
+    ///
+    /// Total with no catch-all, so a kind cannot be added without deciding it, and
+    /// `fsm::every_item_scoped_kind_carries_the_interim_item_key` pins the list. Grouped into
+    /// three or-pattern arms for `clippy::match_same_arms`, as [`Self::tier`] is.
+    #[must_use]
+    pub const fn item_key(self) -> ItemKey {
+        match self {
+            Self::StageTransition
+            | Self::GateOpened
+            | Self::GateAnswered
+            | Self::GateExpired
+            | Self::SliceSealed
+            | Self::ReconcileStarted
+            | Self::GateAnswerVoid
+            | Self::GateAnswerSpent
+            | Self::GateResumed
+            | Self::ReviewBlock
+            | Self::QuarantineGranted
+            | Self::QuarantineRemoved
+            | Self::QuarantineExpired
+            | Self::SelectionIneffective
+            | Self::StageExitRefused
+            | Self::DagAssembled
+            | Self::DagAmended
+            | Self::ActivityCommitted
+            | Self::Dispatch
+            | Self::DispatchCompleted
+            | Self::StepFailed
+            | Self::StepCancelled
+            | Self::StepRefused
+            | Self::RateLimited
+            | Self::Degraded
+            | Self::StructuredDrift
+            | Self::DriftAdvisory
+            | Self::ReviewClassDrift
+            | Self::ArtifactRead
+            | Self::ArtifactWrite
+            | Self::WorktreeAssigned
+            | Self::StageEmpty
+            | Self::GitOp => ItemKey::Carried,
+
+            // ADR-0163 keys it in its payload; a second source beside it could disagree.
+            Self::RateLimitReading => ItemKey::InPayload,
+
+            // The memo is content-keyed and shared across items (ADR-0097 d1); a rewrite is a fact
+            // about the repository; the advisory sink is store-wide (AC-310's invariant).
+            Self::MemoHit
+            | Self::MemoMiss
+            | Self::MemoEvicted
+            | Self::Rewrite
+            | Self::AdvisoryCreated
+            | Self::AdvisoryRetired
+            | Self::AdvisoryDismissed => ItemKey::NotItemScoped,
         }
     }
 
     /// Is this kind carried on a git trailer? The tier-1 kinds are, and design §5 names which
     /// trailer axis each uses.
+    ///
+    /// *(Dated 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.7; ADR-0184, proposed.)*
+    /// `gate_expired` ~~maps to `None`~~ is a `Gate: … expired` mark, and `gate_answer_void` a
+    /// `Gate: … voided` mark (D21-43 N6), so both ride the `Gate` axis.
     #[must_use]
     pub const fn trailer_axis(self) -> Option<&'static str> {
         match self {
             Self::StageTransition => Some("Story"),
-            Self::GateOpened | Self::GateAnswered => Some("Gate"),
+            Self::GateOpened | Self::GateAnswered | Self::GateExpired | Self::GateAnswerVoid => {
+                Some("Gate")
+            }
             Self::SliceSealed => Some("Slice-Verdict"),
             _ => None,
         }

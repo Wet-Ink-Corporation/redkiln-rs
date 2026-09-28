@@ -19,3 +19,11 @@ enabled = ["bug-standard", "story"]
 
 [doctor]
 unread_window_runs = 50
+
+# *(dated 2026-09-28, `s8e` build, package S8E-P2; `s8e` §8e.11.)* ADR-0159: the `<project>`
+# component of every trailer value. Entry mints a `Story:` mark once `s8e` §8e.6 lands, and
+# ADR-0159 decision 2 refuses that mint by name without this key, so every binary fixture that
+# runs a stage (AC-438's table, `cost`'s run, `exit/findings-block/`) would move its exit to `3`.
+# It contains no `/` and equals no item id, slice or stage in this corpus.
+[project]
+name = "rk-fixture"

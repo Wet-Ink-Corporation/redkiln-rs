@@ -1,0 +1,12 @@
+# The lane fixture's DIRTY item (`s8e` §8e.6, §8e.11). *(Added 2026-09-28, `s8e` build, package S8E-P2.)*
+#
+# `lane-through.toml`'s twin: a second item that walks the whole lane, so
+# `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one` can close one clean
+# tree and one tree its scripted step left dirty, in one repository.
+id    = "lane-3"
+kind  = "bug"
+stage = "triage"
+slice = "lane-3-fix"
+
+[facets]
+has_repro = true

@@ -3128,6 +3128,15 @@ and AC-164 to the stage-level next action and scopes AC-187 to a run whose Event
 *Inherited limit:* F19's 174/174 is losslessness of **suspension**, not of database deletion, and F19 explicitly never
 replayed the FSM — so the evidence does not yet license "same next action". AC-188 is the criterion that would
 establish it, and this one is only as strong as that.
+*(Re-point note, dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.14; ADR-0181 and ADR-0183, both proposed.)*
+**The route half moves crate and repository.** The kernel half is `rk-kernel`'s `projection::stage_level_next_action`,
+the equality over tier-1 rows, re-run at `s8e`. The ROUTE — a deleted store file and a real `run` seeding from git —
+cannot live in `rk-kernel`, which may not depend on an adapter (AC-484), so it is `rk-cli`'s
+`lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted` and `lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered`,
+over the fixture repositories `pack-min`'s `Lane` variant builds, not over the pinned corpus repo. Since D21-43 N6 the
+gate half covers answered, expired and voided gates as well as open ones. **The pinned-corpus arm is owed and not
+built**: F12's corpus carries no stage-bearing `Story:` mark, so it has nothing to seed from. Nothing here states the
+criterion met; that waits on the operator's ledger line (`s8e` §8e.14).
 
 **AC-162** — `rk-git` · evidence: §4.5 rule 4 (single write path) [documented]; F12 (360 trailer commits, 74 slices —
 the corpus this is exercised against) [measured] · decisions: **ADR-0109**, ADR-0105, ADR-0003 (ADR-0018 related)
@@ -3150,6 +3159,16 @@ wrapper, with `-c trailer.ifexists=add` so a repeated identical trailer is appen
 AND the transition is never recorded in the store alone.
 *Verified by:* unit test asserting `HEAD` advanced and the trailer parses; a corpus replay asserting one commit per
 tier-1 transition, which fails on a store row with no matching commit.
+*(Re-point note, dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.14; ADR-0181, proposed.)* **The replay's
+corpus is the fixture lane.** The unit test is `rk-kernel`'s `tier_one::a_boundary_anchors_every_row_of_the_act_to_its_commit`.
+The replay is `rk-cli`'s `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit`, over `pack-min`'s `Lane`
+variant (the lane's entry and boundaries, a gate opened and answered, the review's seal, the `closed` mark) and, in a
+second arm, `pack.gate-1s.toml`'s gate EXPIRY (its `gate_expired` row anchored to its `Gate: … expired` commit): each
+`t1_*` row's anchor names a commit on `rk-run/<item>` whose trailer matches the row, no two rows of distinct transitions
+share a commit, and every tier-1 trailer commit on the ref anchors a row. An adversarial arm plants a
+`t1_stage_transition` row whose anchor names no commit, and the instrument fails on it — the clause above. F12's corpus
+is a git bundle with no store to compare against, so it is not the replay's corpus. Nothing here states the criterion
+met; that waits on the operator's ledger line (`s8e` §8e.14).
 
 **AC-164** — `rk-store` · evidence: §4.5 tier-2 list [documented]; F6 (`utilization` quantised to 0.01, so per-run cost
 is not measurable) [measured — motivating: it is why cost belongs in tier 2] · decisions: **ADR-0109**, ADR-0097,
@@ -3324,6 +3343,15 @@ THEN the open is refused and names the migration required
 AND no implicit in-place migration occurs.
 *Verified by:* a checked-in fixture store at version N-1; an assertion that the file's bytes are unchanged after the
 refused open.
+*(dated 2026-09-28, `s8e` build, §8e.2; ADR-0181, proposed.)* **N−1 is now version 1, and the fixture is checked
+in.** D21-46 R2's `0002_gate_transitions` moves `SCHEMA_VERSION` to 2. The fixture is
+`crates/rk-store/tests/fixtures/store-v1.sqlite3` (minted on the entry tree at `766854c` before `0002` existed; sha256
+`603d60041fc41e0788deb8cc80957c330dd3d8101b2cdadb887fbfd42f055dd3`; pinned `binary` in `.gitattributes`), and the
+instrument is `rk-store`'s `store::a_checked_in_version_one_store_is_refused_and_its_bytes_are_unchanged`: a copy is
+opened through `rk_store::migrate::open`, refused naming *"A migration from 1 to 2 is required"*, and its sha256
+still equals the blob's. Until this note every test store was created at open. **The explicit migration is the
+rebuild**: `doctor --rebuild` re-derives a version-2 store from git into a staging file without first opening the old
+one through the identity check (`s8e` §8e.9); what it drops is tier 2 by definition, and ADR-0181 lists it.
 
 **AC-181** — `rk-store` · evidence: §4.7 (parallel across antichains, one worktree each) [documented] · decisions:
 ADR-0018, ADR-0003
@@ -7152,6 +7180,7 @@ AND a divergence on any slice fails the test.
 local-only until Step 2 lands the artefact. **Limit:** F12's registered primary was uncomputable (1 of 101 runs recorded
 the field), so this replays the re-scoped measure, not the original one; F12's "at the pinned SHA" reads "across all
 refs of the frozen clone".
+*(dated 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.7 and the records table's attendant edits; ADR-0183 and ADR-0184, proposed.)* **The grammar table this criterion's drift counts are pinned to has widened**: `Story:` is `<project>/<slug> [<stage>]` (three or more tokens are drift) and `Gate:` is `<token> <tree_hash> <deadline> <kind> <reach> <state> [<outcome>…]` with an integer deadline (the old triple is legacy drift). The criterion is corpus-bound and Phase 2, so this note **re-pins nothing Phase 1 asserts**: `rk-git`'s `corpus_f12` replay asserts 74 slices, 15 ever rejected, at least one legacy `Gate:` drift and no coerced gate, and all four hold under the widened grammar. Measured 2026-09-28 at `d80609b` by that test's own printout, `cargo test -p rk-git --features corpus` over `CORPUS_PIN` `61f590e5`, entry grammar (a detached worktree at `d80609b`) → widened grammar: trailer-bearing commits 1686 → 1686, slices 74 → 74, ever rejected 15 → 15, sealed more than once 16 → 16, unknown keys 2456 → 2456, bare story ids **31 → 22**, legacy `Gate:` drift **15 → 14**, total drift **45 → 54**. The nine bare ids that moved were multi-token `Story:` values the old parser kept as bare ids and the widened one reports as drift; the one legacy `Gate:` value that moved has the widened token count and is now `unparsable-trailer` drift. Whoever pins this criterion's drift counts pins them against the widened table.
 
 **AC-445** — test provenance · evidence: proposal §5 (row 3: 101 CLI-behaviour test files cross "as black-box
 specifications … not ported tests") · decisions: ADR-0002
@@ -8120,6 +8149,17 @@ resolver. Note: the earlier draft's "index mtime unchanged" is struck as an unso
 ordinary read operations, so the mtime moves without any orchestrator write and the assertion would be flaky in the false-positive direction.
 Note on evidence: F19's 7% is `[measured]`; the inference that a low drift rate makes an unexpected working-tree write *expensive to detect*
 is `[inferred]`, and the earlier draft tagged it `[measured]`.
+*(Re-point note, dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.14; ADR-0181 and ADR-0185, both proposed.)* **The write-path
+lint's scope at `s8e` is the commit write.** It is `rk-kernel`'s `tier_one::every_run_commit_resolves_through_the_worktree_resolver`: every
+code-line call of `commit_with_trailers` under `crates/rk-cli/src/` and `crates/rk-kernel/src/` is in `crates/rk-kernel/src/runtime/tier_one.rs`,
+where `authorise_tier1_write` precedes it (the tier-1 boundary, which resolves its `RunOwnership` from the store's `worktree_assigned` row);
+workspace-wide the only other caller is `redkiln-migrate`'s one, named with its reason (it commits a migration branch, not a run). The
+file-write and index-change halves are the landing's, and `s8f` claims them and brings its own writes under this lint in the commit that
+adds them (`s8f` §8f.11). The integration half is `rk-cli`'s `lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it`.
+Nothing here states the criterion met: that waits on the operator's ledger line (`s8e` §8e.14).
+*(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8.)* The seal's `Slice-Verdict:` commit rides the same
+boundary (`tier_one::seal_act`, then the boundary's `commit_act`), so the lint's scope above covers it unchanged; the
+rebuild writes nothing to git.
 *(Reading note, dated 2026-09-27 at `s8d-ii`'s build (package P6), under ADR-0180, written `proposed`; D21-44:
 *"Run-owned worktrees move to **`.redkiln/worktrees/<item>`**, git-ignored."*)* **The run-owned worktree now sits
 inside the checkout's own directory, and it is a separate checkout.** Its path is `.redkiln/worktrees/<item>` under the

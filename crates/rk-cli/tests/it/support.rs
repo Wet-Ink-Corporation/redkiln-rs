@@ -362,6 +362,22 @@ impl EventStore for CountingStore {
         Ok(())
     }
 
+    /// *(dated 2026-09-28, s8e build; ADR-0181, proposed.)* The port's fifth method on this test
+    /// double. The anchor is not modelled here, so the row is appended exactly as `append`
+    /// appends it; the anchored behaviour is `VecStore`'s and `SqliteStore`'s, under test there.
+    fn append_tier1(
+        &mut self,
+        event: Event,
+        _anchor: &rk_ports::event_store::TierOneAnchor,
+    ) -> Result<(), StepError> {
+        self.append(event)
+    }
+
+    /// *(dated 2026-09-28, s8e build; ADR-0182, proposed: the real `SqliteStore::query` now honours
+    /// `ByItem` — the item's rows plus, in the interim, the unkeyed rows. This double still returns
+    /// every row, which equals the real answer while no producer keys its rows, and is broader
+    /// afterwards: re-point it when the producers key.)*
+    ///
     /// **The selector is ignored, deliberately.** §7d.6 records that the REAL `SqliteStore::query`
     /// also ignores its selector and returns every event, so a fake that filtered would be sharper
     /// than the product and would hide a verb that queried for the wrong thing.
@@ -536,6 +552,12 @@ pub enum PackVariant {
     /// two roles, two output kinds, one literal bound above its budget) and `no-agent-steps` (no
     /// agent step at all), plus `step-grain/cards/reviewer.json`. *(Added 2026-09-26, `s8d` P3.)*
     StepGrain,
+    /// `pack.lane.toml` — `s8e` §8e.11's fixture LANE: a declared `stage_order` over an empty stage
+    /// (`triage`), a `forbidden` one (`discovery`), the abstention gate's stage (`implement`) and a
+    /// review stage over `review-min`. Installs `review-min.toml` beside `emit-report`, and
+    /// `lane/items/`'s three items (each with a `slice`) beside the shared ones. *(Added 2026-09-28,
+    /// `s8e` build, package S8E-P2.)*
+    Lane,
 }
 
 impl PackVariant {
@@ -547,6 +569,7 @@ impl PackVariant {
             Self::DispatchOneSecond => "pack.dispatch-1s.toml",
             Self::Review => "pack.review.toml",
             Self::StepGrain => "pack.step-grain.toml",
+            Self::Lane => "pack.lane.toml",
         }
     }
 }
@@ -678,7 +701,7 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
     if variant == PackVariant::TwoActivities {
         catalog.push("second-activity.toml");
     }
-    if variant == PackVariant::Review {
+    if variant == PackVariant::Review || variant == PackVariant::Lane {
         catalog.push("review-min.toml");
     }
     for name in catalog {
@@ -732,6 +755,31 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
         std::fs::write(rk.join("items").join(format!("{id}.toml")), &src_text)
             .expect("the item record installs");
         installed += 1;
+    }
+    // `s8e` §8e.11: the lane variant's own items, from their own subdirectory so no other variant
+    // sees them. Each record's install name is its `id`, by the rule above.
+    if variant == PackVariant::Lane {
+        let from = src.join("lane").join("items");
+        let mut n = 0_usize;
+        for entry in std::fs::read_dir(&from).expect("the lane items directory reads") {
+            let path = entry.expect("an entry").path();
+            let src_text =
+                std::fs::read_to_string(&path).expect("the lane item record is readable");
+            let id = src_text
+                .lines()
+                .find_map(|l| l.strip_prefix("id"))
+                .and_then(|rest| rest.split('=').nth(1))
+                .map(|v| v.trim().trim_matches('"').to_owned())
+                .unwrap_or_else(|| panic!("{} declares no top-level id", path.display()));
+            std::fs::write(rk.join("items").join(format!("{id}.toml")), &src_text)
+                .expect("the lane item record installs");
+            n += 1;
+        }
+        assert!(
+            n >= 3,
+            "only {n} lane item records installed from {}",
+            from.display()
+        );
     }
     assert!(
         installed >= 5,
@@ -1401,6 +1449,11 @@ pub fn impl_report() -> Typed {
 /// at this pin], so `journal_query` here would be decoration; the whole-journal read is what the
 /// row-COUNT assertions of AC-172 actually need.
 ///
+/// *(dated 2026-09-28, `s8e` build, package S8E-P5; ADR-0182 decisions 4 and 5, proposed.)*
+/// ~~`journal_query("*")`~~: `query` now honours `ByItem`, and a `ByItem("*")` read returns only the
+/// unkeyed rows once the tier-1 boundary keys every row of its acts (§8e.3). The whole-store read is
+/// `ByRun`, which stays inert and returns every row, so the counts here stay whole-journal counts.
+///
 /// # Panics
 /// If the repository will not discover, or the store will not open — either means the run under
 /// test never reached step (5), which is a different failure and is reported as itself.
@@ -1411,7 +1464,7 @@ pub fn store_rows(root: &Path) -> Vec<Event> {
     let store = rk_adapter_sqlite::SqliteStore::open(&repo.exec, &repo.worktree)
         .unwrap_or_else(|e| panic!("the store the run wrote opens: {e}"));
     store
-        .query(rk_kernel::runtime::journal_query("*"))
+        .query(rk_ports::event_store::Query::ByRun(String::new()))
         .unwrap_or_else(|e| panic!("the store reads: {e:?}"))
 }
 

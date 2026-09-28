@@ -36,7 +36,8 @@ use crate::error::GitError;
 use crate::git_exec::{GitExec, GitOp};
 use crate::path::WorktreePath;
 use crate::trailer::grammar::{
-    MalformedReason, ParsedTrailer, TrailerKey, UnknownKeyCounts, Verdict, parse_body,
+    GateState, MalformedReason, ParsedTrailer, StoryStage, TrailerKey, UnknownKeyCounts, Verdict,
+    parse_body,
 };
 
 /// One commit's resume-relevant trailers.
@@ -81,16 +82,40 @@ pub struct ProjectState {
     pub project: String,
     /// Union of every `Story:` trailer seen. Membership, not completion.
     pub stories_committed: BTreeSet<String>,
+    /// Every distinct `(slug, stage)` mark seen, the legacy stage-less one as `None`. A repeat of
+    /// one of these is `DuplicateStoryTrailer` drift. *(Added 2026-09-28, `s8e` build, package
+    /// S8E-P4; ADR-0183, proposed.)*
+    pub story_marks: BTreeSet<(String, Option<StoryStage>)>,
+    /// The latest stage-bearing (or `closed`) mark per slug, folded oldest-first. A legacy
+    /// stage-less mark never sets or resets it. *(Added 2026-09-28, `s8e` build, package S8E-P4;
+    /// ADR-0183, proposed.)*
+    pub stages: BTreeMap<String, StageMark>,
     pub slices: BTreeMap<String, SliceState>,
 }
 
-/// A gate mark as the trailers carry it.
+/// An item's latest stage as git carries it, and the commit that carries it.
+/// *(Added 2026-09-28, `s8e` build, package S8E-P4; ADR-0183, proposed.)*
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StageMark {
+    pub stage: StoryStage,
+    pub commit: String,
+}
+
+/// A gate as the trailers carry it: its identity, its latest state, and every transition.
+///
+/// *(Widened 2026-09-28, `s8e` build, package S8E-P4; ADR-0184, proposed.)* `state` and `commit`
+/// are the latest mark's, folded oldest-first; `history` is every mark for the token, in fold
+/// order, so a rebuild can emit every transition and not just the last.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GateRecord {
     pub token: String,
     pub tree_hash: String,
-    pub deadline: String,
+    pub deadline: i64,
+    pub kind: String,
+    pub reach: u32,
+    pub state: GateState,
     pub commit: String,
+    pub history: Vec<(String, GateState)>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -99,7 +124,8 @@ pub struct State {
     /// Bare-ID `Story:` trailers (`RK-S0272`), used by the fix lane rather than the `project/slug`
     /// form. Kept separate: they carry no project, so folding them into one would invent it.
     pub bare_story_ids: BTreeSet<String>,
-    /// The third axis. Latest mark per token.
+    /// The third axis. ~~Latest mark per token.~~ *(2026-09-28, `s8e` build, package S8E-P4;
+    /// ADR-0184, proposed.)* The latest STATE per token, with every transition in its history.
     pub gates: BTreeMap<String, GateRecord>,
     /// Unknown trailer keys: **counted, not drift** (design §5.4's last row).
     pub unknown_keys: UnknownKeyCounts,
@@ -114,14 +140,35 @@ pub fn reconcile(commits: &[CommitTrailers]) -> (State, Vec<Drift>) {
     for c in commits {
         for t in &c.trailers {
             match t {
-                ParsedTrailer::Story { project, slug } => {
+                ParsedTrailer::Story {
+                    project,
+                    slug,
+                    stage,
+                } => {
+                    // *(Widened 2026-09-28, `s8e` build, package S8E-P4; ADR-0183, proposed.)*
+                    // Membership is kept; a repeat of an IDENTICAL `(project, slug, stage)` is the
+                    // drift it always was, counted and not a transition; and the latest
+                    // stage-bearing mark wins, oldest-first, as `Slice-Verdict:` already does. A
+                    // stage-less mark never sets or resets the stage.
                     let p = project_entry(&mut state, project);
-                    if !p.stories_committed.insert(slug.clone()) {
+                    p.stories_committed.insert(slug.clone());
+                    if !p.story_marks.insert((slug.clone(), stage.clone())) {
                         drift.push(Drift::DuplicateStoryTrailer {
                             project: project.clone(),
                             slug: slug.clone(),
                             commit: c.sha.clone(),
                         });
+                        continue;
+                    }
+                    if let Some(stage) = stage {
+                        // Latest wins: commits are folded oldest-first.
+                        p.stages.insert(
+                            slug.clone(),
+                            StageMark {
+                                stage: stage.clone(),
+                                commit: c.sha.clone(),
+                            },
+                        );
                     }
                 }
                 ParsedTrailer::BareStory { id } => {
@@ -148,16 +195,29 @@ pub fn reconcile(commits: &[CommitTrailers]) -> (State, Vec<Drift>) {
                     token,
                     tree_hash,
                     deadline,
+                    kind,
+                    reach,
+                    state: gate_state,
                 } => {
-                    state.gates.insert(
-                        token.clone(),
-                        GateRecord {
+                    // *(Widened 2026-09-28, `s8e` build, package S8E-P4; ADR-0184, proposed.)*
+                    // The latest state per token, oldest-first, with every transition kept.
+                    let record = state
+                        .gates
+                        .entry(token.clone())
+                        .or_insert_with(|| GateRecord {
                             token: token.clone(),
                             tree_hash: tree_hash.clone(),
-                            deadline: deadline.clone(),
+                            deadline: *deadline,
+                            kind: kind.clone(),
+                            reach: *reach,
+                            state: gate_state.clone(),
                             commit: c.sha.clone(),
-                        },
-                    );
+                            history: Vec::new(),
+                        });
+                    record.history.push((c.sha.clone(), gate_state.clone()));
+                    // Latest wins: commits are folded oldest-first.
+                    record.state = gate_state.clone();
+                    record.commit = c.sha.clone();
                 }
                 ParsedTrailer::UnknownKey { key } => state.unknown_keys.record(key),
                 ParsedTrailer::Malformed {
@@ -205,7 +265,9 @@ fn malformed_to_drift(sha: &str, key: &TrailerKey, offending: &str, why: Malform
             commit: sha.to_string(),
             offending: Text::new(offending),
         },
-        MalformedReason::UnknownVerdict => Drift::UnparsableTrailer {
+        MalformedReason::UnknownVerdict
+        | MalformedReason::MalformedStoryValue
+        | MalformedReason::MalformedGateValue => Drift::UnparsableTrailer {
             commit: sha.to_string(),
             key: key.as_str().to_string(),
             offending: Text::new(offending),
@@ -214,6 +276,16 @@ fn malformed_to_drift(sha: &str, key: &TrailerKey, offending: &str, why: Malform
 }
 
 /// Read every trailer-bearing commit reachable from any ref, oldest first.
+///
+/// 🛑 **THE ORDER ASSUMPTION, STATED** *(2026-09-28, `s8e` build, package S8E-P4; ADR-0183,
+/// proposed)*. The per-item stage fold and the per-token gate fold are both *latest wins*, so they
+/// rest on this read's order. It is `log --all --reverse` **without `--topo-order`**. Git's default
+/// walk emits a commit only after every child that reached it, so over ONE linear run ref a child
+/// always precedes its parent, whatever the commit dates, and `--reverse` puts the parent first.
+/// That is the case the lane writes: every `Story:` and `Gate:` mark for an item is a commit on
+/// `rk-run/<item>` alone. Across refs the default walk interleaves by commit date, so two refs'
+/// marks for ONE item would be ordered by clock; nothing writes that shape, and the record names it
+/// rather than paying `--topo-order`'s change to the F12 corpus read.
 ///
 /// Unit separators keep parsing off the shell and out of regex escaping, matching what
 /// `verify.ts::trailerCommits` does. **This is edit 2**: the corpus version spawned

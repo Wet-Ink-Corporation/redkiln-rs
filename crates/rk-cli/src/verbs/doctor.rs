@@ -158,8 +158,11 @@ pub fn run_to(
 /// # 🛑 `unresolvable` IS PRINTED, NOT SWALLOWED
 ///
 /// AC-165: a mark that does not become a transition is *"surfaced with the offending text, never
-/// skipped and never coerced"*. Every `Gate:` mark is one of these by construction (§7d.8), and so
-/// is any `Story:` mark whose item record carries no stage. A rebuild that printed only its
+/// skipped and never coerced"*. ~~Every `Gate:` mark is one of these by construction (§7d.8), and so
+/// is any `Story:` mark whose item record carries no stage.~~ *(dated 2026-09-28, `s8e` build,
+/// package S8E-P7; `s8e` §8e.9: every `Gate:` mark on an item's run ref is now rebuilt; the list
+/// holds a legacy mark whose item record has no stage, a mark no `rk-run/<item>` ref reaches, and a
+/// bare-id `Story:`.)* A rebuild that printed only its
 /// successes would report a store reconstructed from *some* of git as though it were all of it.
 ///
 /// The exit is `Success` — an incomplete rebuild is a reported fact about the repository, not a

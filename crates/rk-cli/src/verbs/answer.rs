@@ -254,20 +254,38 @@ pub fn run_with(
         }
     }
 
-    // ---- The recorded journal, and the run-owned worktree RECORDED IN IT (ADR-0105 clause 8).
+    // ---- The run-owned worktree the STORE records (ADR-0105 clause 8), read FIRST.
+    //
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.4; D21-42 8d; the three-kinds
+    // record, proposed.)* ~~`recorded_ownership` read the pair off the last `reconcile_started` row
+    // (RT-47)~~ — ownership is the latest `worktree_assigned` row for THIS item, through the one
+    // resolver. **No row, no answer: fail-closed**, by name, before the heal and before any read of
+    // the gate, and nothing is resolved from the `.redkiln/worktrees/<item>` convention. The
+    // deleted-database reading: a `run` re-enters the registered tree and writes the row again.
+    let Some(ownership) = run::assigned_ownership(store, &args.item)? else {
+        eprintln!(
+            "redkiln: the store holds no `worktree_assigned` row for `{}`, so no run-owned \
+             worktree is recorded and nothing is answered (fail-closed; ADR-0105 clause 8 \
+             resolves a tier-1 write's target from the store, never from the working directory \
+             or a path convention). A `redkiln run {}` re-enters its tree and records it.",
+            args.item, args.item
+        );
+        return Ok(Exit::ConfigError);
+    };
+
+    // ---- THE HEAL (`s8e` §8e.3), after ownership: a trailer commit on `rk-run/<item>` whose sha
+    // anchors no row gets its rows. Git -> store only; it writes nothing to git.
+    if let Err(e) =
+        rk_kernel::runtime::tier_one::heal(&resolved.exec, &resolved.worktree, store, &args.item)
+    {
+        eprintln!("redkiln: the tier-1 heal of `{}` failed: {e}", args.item);
+        return Ok(Exit::ConfigError);
+    }
+
+    // ---- The recorded journal.
     let events = match read_journal(store, &args.item)? {
         Ok(events) => events,
         Err(exit) => return Ok(exit),
-    };
-
-    let Some(ownership) = recorded_ownership(&events) else {
-        eprintln!(
-            "redkiln: no run has recorded a run-owned worktree for `{}`, so there is no tree to \
-             hash and nothing to answer. ADR-0105 clause 8 resolves a tier-1 write's target from \
-             the store, never from the working directory.",
-            args.item
-        );
-        return Ok(Exit::ConfigError);
     };
 
     // §7d.6: *"a recorded worktree that no longer exists is exit 3 naming its path, a refusal of
@@ -322,16 +340,14 @@ pub fn run_with(
         Ok(events) => events,
         Err(exit) => return Ok(exit),
     };
-    if !expiry_events.is_empty() {
-        let mut guard = crate::store::acquire(store, "the answer")?;
-        for event in expiry_events {
-            if let Err(e) = guard.append(event) {
-                drop(guard);
-                eprintln!("redkiln: an expiry row could not be written: {e:?}");
-                return Ok(Exit::ConfigError);
-            }
-        }
-        drop(guard);
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6.)* ~~store-only~~: each
+    // expiry row is a tier-1 act through the boundary, its `Gate: … expired` mark first.
+    let mut boundary = boundary_of(resolved, &ownership, &args.item);
+    if !expiry_events.is_empty()
+        && let Err(exit) =
+            run::gate_rows_through(store, Some(&mut boundary), &state, expiry_events, None)?
+    {
+        return Ok(exit);
     }
 
     // ---- THE GATE READ, over the journal AS THE EXPIRY PASS LEFT IT.
@@ -419,7 +435,34 @@ pub fn run_with(
     let token = record.token().clone();
 
     answer_the_gate(
-        registry, resolved, args, store, &owned, &token, &tree_hash, &state,
+        registry,
+        resolved,
+        args,
+        store,
+        &owned,
+        &token,
+        &tree_hash,
+        &state,
+        &mut boundary,
+    )
+}
+
+/// The tier-1 boundary an answer commits through: the run-owned worktree the store records, as
+/// both the target and the ownership (`answer` enters no tree of its own). *(dated 2026-09-28,
+/// `s8e` build, package S8E-P5; `s8e` §8e.3.)*
+fn boundary_of(
+    resolved: &run::Resolved,
+    ownership: &rk_git::worktree::RunOwnership,
+    item: &str,
+) -> rk_kernel::runtime::tier_one::Boundary {
+    rk_kernel::runtime::tier_one::Boundary::live(
+        resolved.exec.clone(),
+        rk_kernel::runtime::tier_one::Target {
+            worktree: ownership.worktree.clone(),
+            ownership: ownership.clone(),
+            project: resolved.project.clone(),
+            item: item.to_owned(),
+        },
     )
 }
 
@@ -444,6 +487,7 @@ fn answer_the_gate(
     token: &rk_types::digest::Digest,
     tree_hash: &str,
     state: &rk_kernel::workflow::fsm::RunState,
+    boundary: &mut rk_kernel::runtime::tier_one::Boundary,
 ) -> Result<Exit, Halt> {
     // The KERNEL's attachment type, not the CLI's: `rk-kernel` opens no files, so it carries the
     // kind and the path as a string and any digest is computed on this side.
@@ -502,41 +546,32 @@ fn answer_the_gate(
         }
     };
 
-    {
-        let mut guard = crate::store::acquire(store, "the answer")?;
-        for event in outcome.events {
-            if let Err(e) = guard.append(event) {
-                drop(guard);
-                eprintln!("redkiln: an answer row could not be written: {e:?}");
-                return Ok(Exit::ConfigError);
-            }
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6: "the answer (`answer.rs`,
+    // today append-then-commit — **the order N6 fixes**)".)* ~~Every outcome row appended, then the
+    // `Gate:` commit~~: an APPLIED answer's `gate_answered` row and a VOID answer's two rows are
+    // tier-1 acts through the kernel's boundary — the `Gate: … answered <option>` mark (and, for a
+    // void, the `Gate: … voided` mark after it) committed FIRST, each row anchored to its commit —
+    // so a commit git refuses leaves no row. A SPENT token's `gate_answer_spent` row is tier 2 and
+    // records a refusal, not a transition, so it is appended as before.
+    let rows_written = match outcome.disposition {
+        gate::Disposition::Applied | gate::Disposition::Void => {
+            run::gate_rows_through(store, Some(boundary), state, outcome.events, None)?
         }
-        drop(guard);
+        gate::Disposition::RefusedSpent => {
+            run::gate_rows_through(store, None, state, outcome.events, None)?
+        }
+    };
+    if let Err(exit) = rows_written {
+        return Ok(exit);
     }
 
     match outcome.disposition {
         gate::Disposition::Applied => {
-            // The `Gate:` trailer commit, a TIER-1 WRITE, at the OwnedWorktree and never `cwd`
-            // (H-5; ADR-0105 clause 8; AC-518). The value is THE SAME TRIPLE `run` writes -- the
-            // one value `rk-git`'s grammar parses. An answer-specific value is a design §5.4 row
-            // and is RAISED (§7d.18), not invented here.
-            let deadline = state
-                .gate_record(token)
-                .map_or(0, |record| record.deadline().unix_seconds());
-            let trailer = rk_git::trailer::grammar::Trailer {
-                key: rk_git::trailer::grammar::TrailerKey::Gate,
-                value: format!("{} {tree_hash} {deadline}", token.as_str()),
-            };
-            if let Err(e) = rk_git::trailer::write::commit_with_trailers(
-                &resolved.exec,
-                owned.path(),
-                &format!("answer({}): {}", args.item, args.option),
-                &[trailer],
-                true,
-            ) {
-                eprintln!("redkiln: the answer's trailer commit failed: {e:?}");
-                return Ok(Exit::ConfigError);
-            }
+            // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* The `Gate: …
+            // answered <option>` mark (ADR-0184's widened value, the gate record's own token, tree
+            // hash, deadline, kind and reach, carrying the chosen option) was committed ABOVE,
+            // through the kernel's tier-1 boundary and before its row — the direct
+            // call that stood here, after the row, is deleted.
             // ---- AC-410's POSITIVE CONTROL: every admitted attachment is stored as a
             // human-supplied root, one `artifact.write` row each, in ADR-0116 decision 1's shape.
             //
@@ -548,8 +583,11 @@ fn answer_the_gate(
             }
             Ok(Exit::Success)
         }
-        // AC-406: the gate STAYS OPEN and NO trailer commit is made. The answer was recorded, as
-        // void -- an outcome, not a failure, so exit 0 (H-1). `ac406_...` is its test.
+        // AC-406: the gate STAYS OPEN. The answer was recorded, as void -- an outcome, not a
+        // failure, so exit 0 (H-1). `ac406_...` is its test. *(dated 2026-09-28, `s8e` build,
+        // package S8E-P5; `s8e` §8e.3, N6.)* ~~and NO trailer commit is made~~: every gate
+        // transition is git-first, so the void's two rows each rode their own act above — the
+        // `Gate: … answered <option>` mark, then the `Gate: … voided` mark.
         gate::Disposition::Void => Ok(Exit::Success),
         // AC-407 / ADR-0123. The kernel's one `gate_answer_spent` row is already appended above.
         gate::Disposition::RefusedSpent => {
@@ -590,25 +628,10 @@ fn fold(
     })
 }
 
-/// The run-owned pair a previous `run` recorded -- RT-47, read back off the journal.
-///
-/// The LAST `reconcile_started` row carrying the pair wins: a re-run re-creates the worktree and
-/// records it again, and the current tree is the one the human reviewed (ADR-0017). `answer`'s own
-/// row carries no pair, so it can never shadow the run's.
-fn recorded_ownership(events: &[rk_types::event::Event]) -> Option<rk_git::worktree::RunOwnership> {
-    events
-        .iter()
-        .rev()
-        .filter(|e| e.kind == rk_types::event_kind::EventKind::ReconcileStarted)
-        .find_map(|e| {
-            let worktree = e.payload.get("worktree")?.as_str()?;
-            let branch = e.payload.get("branch")?.as_str()?;
-            Some(rk_git::worktree::RunOwnership {
-                worktree: std::path::PathBuf::from(worktree),
-                branch: branch.to_owned(),
-            })
-        })
-}
+// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.4.)* `recorded_ownership` — *"The
+// run-owned pair a previous `run` recorded -- RT-47, read back off the journal"* — is deleted: it
+// filtered by kind alone, so with two items in one store it took the last pair of EITHER item
+// (R-63). Ownership is `run::assigned_ownership`'s, over `worktree_assigned` through `ByItem`.
 
 /// Store every attachment as a human-supplied root -- one `artifact.write` row each.
 ///

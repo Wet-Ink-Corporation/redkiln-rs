@@ -754,7 +754,10 @@ pub fn tally_activations(events: &[Event]) -> Result<ActivationTally, MemoError>
             | EventKind::ArtifactWrite
             | EventKind::AdvisoryCreated
             | EventKind::AdvisoryRetired
-            | EventKind::AdvisoryDismissed => {}
+            | EventKind::AdvisoryDismissed
+            | EventKind::WorktreeAssigned
+            | EventKind::StageEmpty
+            | EventKind::GitOp => {}
         }
     }
     Ok(t)

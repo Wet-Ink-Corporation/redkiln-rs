@@ -1,0 +1,12 @@
+# The lane fixture's GATE item (`s8e` §8e.11). *(Added 2026-09-28, `s8e` build, package S8E-P2.)*
+#
+# It enters the lane at its first stage, `triage`, and `has_repro` is OMITTED, so the lane's
+# `implement` stage opens the abstention gate (`unknown_facet:has_repro`) and the run exits 0 there.
+# `slice` is the declared slice identity `s8e` §8e.8 seals at the review stage's exit outcome; it
+# differs from the item id, the project name and every stage the order names.
+id    = "lane-1"
+kind  = "bug"
+stage = "triage"
+slice = "lane-1-fix"
+
+[facets]

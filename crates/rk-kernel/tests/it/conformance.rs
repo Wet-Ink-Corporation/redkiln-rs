@@ -12,7 +12,7 @@
 //! | --- | --- | --- | --- |
 //! | [`conformance_every_step_kind_has_an_executor`] | design §4.5's five step kinds | **0** `StepKind` references in `runtime/` | **DISCHARGED by `s7g`** — `runtime/step.rs` routes all five |
 //! | [`conformance_every_port_has_a_call_site`] | ADR-0003's port table | harness 1, store 1, **toolchain 0, tracker 0, docs 0** | **DISCHARGED by `s7g`**, narrowed by **ADR-0134** — see below |
-//! | [`conformance_every_trailer_key_has_a_producer`] | design §5.4's trailer grammar | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | **HALF discharged at `s7h.2`** — `Story` 1, `Slice-Verdict` still **0**; ARMED |
+//! | [`conformance_every_trailer_key_has_a_producer`] | design §5.4's trailer grammar | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | **HALF discharged at `s7h.2`** — `Story` 1, `Slice-Verdict` still **0**; ARMED. *(dated 2026-09-28, `s8e` build, package S8E-P7: **DISCHARGED by `s8e`** — the review pass seals both outcomes through the boundary's `seal_act`; the `#[ignore]` is deleted and the lint counts act-constructor call sites, `doctor/` excluded)* |
 //! | [`shipped_pack_loads`] | the product's own `.redkiln/` | GREEN from `s7f` §7f.2 | GREEN, 102 pinned |
 //!
 //! 🛑 **The `#[ignore]` reason spelling is load-bearing.** Checkpoint 7f greps each armed lint's
@@ -699,8 +699,42 @@ fn conformance_every_port_has_a_call_site() {
 /// `runtime.rs` appends the `stage_transition` event to the **store** and no `Story:` trailer
 /// commit accompanies it, while design §5.4's tier-1 rule is *"git first"* and AC-162 requires the
 /// trailer commit to exist before any store row for that transition is readable.
+///
+/// # *(dated 2026-09-28, `s8e` build, package S8E-P7)* DISCHARGED, and re-pointed to the boundary
+///
+/// **The `#[ignore]` line is deleted in the commit whose real fixture run reaches the seal**
+/// (`s8e` §8e.8; ADR-0160's route; ADR-0162's precedent that a real `redkiln run` over a fixture
+/// corpus reaches a producer): `slice_verdict::approved_is_sealed_on_the_advance_path` and
+/// `slice_verdict::changes_requested_is_sealed_on_the_findings_block_path` read the mark off
+/// `rk-run/<item>` with git's own parser. No erratum is owed: the line is source, not a record.
+///
+/// **The producer spelling moved, and the lint moves with it.** Until `s8e` every producer named
+/// `TrailerKey::<Key>` on a code line of `rk-cli/src/` or `rk-kernel/src/` and handed a `Trailer`
+/// to `commit_with_trailers`. `s8e` §8e.3 (package S8E-P5) routed every tier-1 act through ONE
+/// boundary function, `rk-kernel/src/runtime/tier_one.rs`'s `commit_act`, whose renderer is
+/// `rk-git`'s round-trip-checked `ParsedTrailer::to_trailer` — so measured 2026-09-28 at `d80609b`,
+/// `TrailerKey::` appears on **no** code line of either producer directory, and the old pattern
+/// would fail at its own anchor with every axis produced. A producer is now a call site of the
+/// boundary's act constructor for the axis, named OUTSIDE the boundary module:
+///
+/// | axis | the act constructor a producer names |
+/// | --- | --- |
+/// | `Story` | `Mark::Stage(` (the lane entry and every advance), `close_act(` (the lane's end) |
+/// | `Gate` | `Act::gate(`, `Act::gate_opened(` |
+/// | `Slice-Verdict` | `seal_act(` (the review pass's two outcomes, `s8e` §8e.8) |
+///
+/// `runtime/tier_one.rs` is excluded because it DEFINES the constructors and renders and matches
+/// every mark (its `render`, `subject` and heal arms name each variant): counting it would report
+/// every axis as produced by the boundary itself, which is the reader-direction trap below one
+/// level down. Its definitions are the anchor instead, so a rename fails loudly here.
+///
+/// **The producer scope drops `crates/rk-cli/src/doctor/`** (`s8e` §8e.8, MINOR 9). `doctor/
+/// rebuild.rs` is the READER direction — it re-derives rows from trailers — so a construction
+/// there could satisfy the lint with no producer anywhere; that is the same reason
+/// `rk-git/src/trailer/` was never in scope. Mutant S8E-M45 deletes the review pass's seal while
+/// `doctor/rebuild.rs` names `TrailerKey::SliceVerdict` (and, a second variant, `seal_act(`), and
+/// this lint must stay red on both.
 #[test]
-#[ignore = "ARMED: Slice-Verdict has 0 producers; Gate and Story are both minted as of s7h.2; discharged by s8e"]
 fn conformance_every_trailer_key_has_a_producer() {
     let root = workspace_root();
 
@@ -716,7 +750,29 @@ fn conformance_every_trailer_key_has_a_producer() {
         "design §5.4's trailer grammar and `EventKind::trailer_axis()` name different key sets"
     );
 
-    // ANCHORS FIRST.
+    // ANCHORS FIRST: the boundary defines every constructor this lint counts.
+    let boundary = root.join("crates/rk-kernel/src/runtime/tier_one.rs");
+    let boundary_code = code_lines(
+        &std::fs::read_to_string(&boundary)
+            .unwrap_or_else(|e| panic!("{} is readable: {e}", boundary.display())),
+    );
+    for definition in [
+        "Stage(String)",
+        "pub fn close_act(",
+        "pub fn gate(",
+        "pub fn gate_opened(",
+        "pub fn seal_act(",
+    ] {
+        assert!(
+            boundary_code.iter().any(|l| l.contains(definition)),
+            "the tier-1 boundary defines no `{definition}` — the act constructors were renamed and \
+             this lint is now counting nothing"
+        );
+    }
+
+    // THE PRODUCER SCOPE: `rk-cli/src/` less `doctor/` (the reader direction), and `rk-kernel/src/`
+    // less the boundary module that defines the constructors.
+    let doctor = root.join("crates/rk-cli/src/doctor");
     let producer_dirs = [
         root.join("crates/rk-cli/src"),
         root.join("crates/rk-kernel/src"),
@@ -724,39 +780,44 @@ fn conformance_every_trailer_key_has_a_producer() {
     let mut lines: Vec<(PathBuf, String)> = Vec::new();
     for d in &producer_dirs {
         assert!(d.is_dir(), "{} is missing", d.display());
-        lines.extend(code_lines_under(d));
+        lines.extend(
+            code_lines_under(d)
+                .into_iter()
+                .filter(|(p, _)| !p.starts_with(&doctor) && *p != boundary),
+        );
     }
     assert!(
-        lines.iter().any(|(_, l)| l.contains("TrailerKey::")),
-        "no `TrailerKey::` construction anywhere in the producer scope — the scope is wrong, or \
-         the trailer API was renamed and this lint is now asserting nothing"
+        doctor.is_dir(),
+        "PREMISE: `rk-cli/src/doctor/` exists, so excluding it excludes something"
     );
 
-    // `Story` / `Slice-Verdict` are the design's spellings; the variants are `Story` /
-    // `SliceVerdict`. The map is written out so a rename of either side fails loudly here.
-    let variant_of = |axis: &str| match axis {
-        "Story" => "Story",
-        "Slice-Verdict" => "SliceVerdict",
-        "Gate" => "Gate",
-        other => panic!("no `TrailerKey` variant is mapped for the {other:?} axis"),
+    let producers_of = |axis: &str| -> &'static [&'static str] {
+        match axis {
+            "Story" => &["Mark::Stage(", "close_act("],
+            "Gate" => &["Act::gate(", "Act::gate_opened("],
+            "Slice-Verdict" => &["seal_act("],
+            other => panic!("no act constructor is mapped for the {other:?} axis"),
+        }
     };
 
     let unproduced: Vec<&str> = declared
         .iter()
         .copied()
         .filter(|axis| {
-            let pat = format!("TrailerKey::{}", variant_of(axis));
-            !lines.iter().any(|(_, l)| l.contains(&pat))
+            !producers_of(axis)
+                .iter()
+                .any(|pat| lines.iter().any(|(_, l)| l.contains(pat)))
         })
         .collect();
 
     assert!(
         unproduced.is_empty(),
-        "design §5.4 closes the trailer grammar at three keys and {} of them are minted — no \
-         producer for: {unproduced:?}. `Gate:` is written by run.rs and answer.rs, and `Story:` by \
-         run.rs's `story_trailer` as of s7h.2 (ADR-0155). `Slice-Verdict:` needs a `slice_sealed` \
-         producer — the only construction of that kind today is doctor/rebuild.rs, the REBUILD \
-         path — and a declared `<slice>` component; see ADR-0160.",
+        "design §5.4 closes the trailer grammar at three keys and {} of them have a producer — no \
+         call of the boundary's act constructor for: {unproduced:?}. `Story:` is minted by the \
+         runtime's entry and advance (`Mark::Stage`) and `run`'s lane end (`close_act`), `Gate:` by \
+         every gate transition (`Act::gate`, `Act::gate_opened`), and `Slice-Verdict:` by the review \
+         pass's two outcomes (`seal_act`, `s8e` §8e.8; ADR-0160). A construction under \
+         `rk-cli/src/doctor/` or inside the boundary module does not count.",
         3 - unproduced.len()
     );
 }

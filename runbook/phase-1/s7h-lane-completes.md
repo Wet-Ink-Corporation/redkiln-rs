@@ -75,6 +75,7 @@ the value has no stage slot, `reconcile` makes a repeat `duplicate-story-trailer
 `doctor --rebuild` already writes ONE `stage_transition` per item **and its own comment says why**. The
 two axes have different cardinalities on purpose — `Slice-Verdict:` is many-per-slice (F12's rejection
 history) — and this sentence flattened them.
+*(Re-amended 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.5 and its records table; **ADR-0183**, proposed; D21-41 a.)* ~~**ONE PER ITEM PER LANE, AT THE *FIRST* BOUNDARY — ADR-0155.**~~ The ADR-0155 decision-6 erratum this paragraph carries — *"the first stage boundary"* — is overtaken: the `Story:` value widens to `<project>/<slug> <stage>`, so a boundary no longer repeats a value, and **a stage-bearing `Story:` mark is minted at every boundary** (and a terminal `<project>/<item> closed` mark at the lane's end), each through the kernel's boundary function (`s8e` §8e.3). ADR-0183 supersedes ADR-0155 decisions 1, 2 and 5(a) in part; until the operator's dated ledger line flips it, ADR-0155 remains the accepted record and this re-amendment states the route `s8e` builds. The one legacy stage-less mark on the tree (`rk-run/rk-fix-doctor-test-count` at `73c087a`) is admitted read-only, so Checkpoint 7h's (2) and (3) keep reading what they read. The two axes still differ in cardinality on purpose: `Story:` is one per `(item, stage)`, `Slice-Verdict:` many per slice.
 **`Slice-Verdict:` from the lane's review stage** — `<project> "/" <slice> SP <verdict>`, exactly two
 whitespace-separated tokens, verdict in `approved | changes-requested` compared case-insensitively and stored
 lower-case, latest wins with commits folded oldest-first.
@@ -104,7 +105,11 @@ and ADR-0160 clause 5 says in terms that *"a review call site could exist withou
 slice"*). The **`Slice-Verdict:` axis is NOT delivered**, and Checkpoint 7h guards (6) and (7)
 REQUIRE it to stay that way: they assert the ARMED lint still names `Slice-Verdict` as the sole
 missing producer, so sealing a slice here would turn two green guards red. The rest of this
-section stands as written. ***Previously: NOT DELIVERED AT THIS STAGE. ADR-0156 and ADR-0160
+section stands as written. *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8 and §8e.13: `s8e`
+sealed the slice — `ItemRecord.slice` declared, both review outcomes sealed through the kernel's tier-1
+boundary — and in that commit guards (6) and (7) are amended to the discharged state, the Slice-Verdict
+bullet below is dated ✅, and guard (10a)'s FAIL message loses its two executing backticks. Checkpoint 7h is
+`passed 490c755, re-run pending` until Checkpoint 8e (10c) re-runs it whole.)* ***Previously: NOT DELIVERED AT THIS STAGE. ADR-0156 and ADR-0160
 carry the reasons, and they are different reasons.*** The call site is blocked by ADR-0156's **six** measured absences — blocker (0), found by
 running the binary, is that **8 of 8** shipped cards carry no `permission_mode` (AC-214), which is the
 exit 3 a real run now stops at one stage after the boundary it takes. The `Slice-Verdict:` axis is blocked
@@ -156,9 +161,14 @@ passes on `Story: /item`, which `split_qualified` resolves to a `BareStory` that
   trailer (ADR-0157). ✅
 - **The user's checkout is unchanged across the run** — AC-518, asserted by `git status --porcelain`
   empty. ✅
-- **`Slice-Verdict:` has a producer.** ❌ **ADR-0160**: `slice_sealed` has no run-path producer (its
+- **`Slice-Verdict:` has a producer.** ~~❌~~ **ADR-0160**: `slice_sealed` has no run-path producer (its
   one construction is `doctor/rebuild.rs`, the rebuild path), `review::confirm` produces no seal, and
-  `<slice>` is declared nowhere.
+  `<slice>` is declared nowhere. *(dated 2026-09-28, `s8e` build, package S8E-P7; `s8e` §8e.8 and §8e.13:
+  ✅ — the item record declares `slice`, and the review pass seals both outcomes through the kernel's tier-1
+  boundary, `approved` on `blocked.is_empty()` and `changes-requested` before `Exit::FindingsBlock` returns;
+  `slice_verdict::approved_is_sealed_on_the_advance_path` and
+  `slice_verdict::changes_requested_is_sealed_on_the_findings_block_path` read the mark off `rk-run/<item>`
+  with git's own parser. The ❌ above is history. Guards (6) and (7) are amended in the same commit.)*
 - **`Exit::FindingsBlock` has a producer.** ✅ **ADR-0162**, over the **fixture corpus**: a real
   `redkiln run review-1` exits `4`, driven by `exit/findings-block/` as AC-438's tenth row. The
   producer is `review_pass`, wired into `resume_and_read` on the return channel; the finding set is
@@ -212,19 +222,22 @@ runs=$(ls -d .git/redkiln/runs/* 2>/dev/null | grep -c .)
 porcelain=$(git status --porcelain | grep -v 'runbook/PROGRESS.md')
 test -z "$porcelain" || { echo "FAIL: the lane wrote to the user's checkout (AC-518):"; printf '%s\n' "$porcelain"; exit 1; }
 
-# ---- (6) THE ARMED LINT'S POSITION IS MEASURED. It is NOT green: `Slice-Verdict:` has no producer
-# ---- (ADR-0160). This guard asserts the lint is still ARMED **and** that its reason names the one
-# ---- key that is missing — so a lint discharged by an invented slice identity fails here.
-out=$(cargo test -p rk-kernel --test it -- conformance_every_trailer_key_has_a_producer 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the conformance selection did not run cleanly (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qF 'ignored, ARMED: Slice-Verdict has 0 producers' || { echo "FAIL: the trailer lint's ARMED reason does not name Slice-Verdict as the one missing producer — it was discharged, renamed, or deleted rather than measured"; printf '%s\n' "$out" | grep -E 'ignored|test result:'; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. [0-9]+ passed; 0 failed; 1 ignored' || { echo "FAIL: the conformance module did not report exactly one ignored lint"; exit 1; }
+# ---- (6) [amended 2026-09-28, s8e build, package S8E-P7; s8e section 8e.13; D21-47's time-bound rule] THE TRAILER LINT IS
+# ---- DISCHARGED. s8e's Slice-Verdict commit seals both review outcomes through the kernel's boundary (seal_act) and deletes
+# ---- the lint's #[ignore] in that commit. This guard asserted the lint ignored and ARMED with Slice-Verdict as its one
+# ---- missing key, and one ignored; both went red by design there. The lines are REPLACED, not struck: a struck line in
+# ---- this bash block would still carry the ARMED string, and Checkpoint 8e re-runs this block whole (its guard (10c)).
+# ---- Now: the lint by its module-qualified name, its ok line, and exactly one passed with none ignored.
+out=$(cargo test -p rk-kernel --test it -- conformance::conformance_every_trailer_key_has_a_producer --exact 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the discharged trailer lint did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qxF 'test conformance::conformance_every_trailer_key_has_a_producer ... ok' || { echo "FAIL: the trailer lint did not report its ok line — it went red, was renamed, or was re-ignored"; printf '%s\n' "$out" | grep -E '^test |test result:'; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed; 0 ignored' || { echo "FAIL: the trailer lint's selection is not exactly 1 passed, 0 failed, 0 ignored"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
 
-# ---- (7) HALF THE LINT IS DISCHARGED, AND THAT IS ASSERTED RATHER THAN CLAIMED: run it un-ignored
-# ---- and require its failure to name Slice-Verdict ALONE. Before s7h it named Story too.
-out=$(cargo test -p rk-kernel --test it -- conformance_every_trailer_key_has_a_producer --ignored 2>&1); rc=$?
-[ "$rc" -ne 0 ] || { echo "FAIL: the armed lint PASSES — it should be discharged and its #[ignore] removed in that same commit (s7f's convention)"; exit 1; }
-printf '%s\n' "$out" | grep -qF 'no producer for: ["Slice-Verdict"]' || { echo "FAIL: the lint's failure does not name Slice-Verdict as the sole missing producer"; printf '%s\n' "$out" | grep -E 'no producer|panicked'; exit 1; }
+# ---- (7) [amended 2026-09-28, s8e build, package S8E-P7; s8e section 8e.13] THE ARMED REASON IS GONE, NOT REWORDED. This
+# ---- guard ran the lint with --ignored and required its failure to name Slice-Verdict alone; after the discharge the lint
+# ---- passes, so it asserts instead that the ARMED string is absent from conformance.rs, with grep's rc exactly 1.
+hits=$(grep -nF 'ARMED: Slice-Verdict has 0 producers' crates/rk-kernel/tests/it/conformance.rs); rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: the ARMED reason is still present in conformance.rs, or the file is unreadable (grep rc=$rc)"; printf '%s\n' "$hits"; exit 1; }
 
 # ---- (8) ADR-0101 CLAUSE 5. S-SUBTLE-CB is UNRUN and nothing may claim the gate is guarded.
 #
@@ -280,7 +293,10 @@ test -d crates/rk-cli/tests/fixtures/exit/findings-block || { echo "FAIL: the fi
 exp=$(tr -d '[:space:]' < crates/rk-cli/tests/fixtures/exit/findings-block/expected)
 [ "$exp" = "4" ] || { echo "FAIL: findings-block/expected reads '$exp', not 4"; exit 1; }
 out=$(cargo test -p rk-cli --test it -- run::ac438_table_driven_exit_codes_over_fixtures_binary_arm --exact 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: AC-438's binary arm did not pass (rc=$rc) — a real `redkiln run` over the review fixture did not exit 4"; printf '%s\n' "$out" | tail -25; exit 1; }
+# [amended 2026-09-28, s8e build, package S8E-P7; s8e section 8e.13] the FAIL message below carried two backticks inside
+# double quotes, which is command substitution: its FAIL path ran redkiln run before it echoed. The two backticks are
+# removed and no other byte of the line changes.
+[ "$rc" -eq 0 ] || { echo "FAIL: AC-438's binary arm did not pass (rc=$rc) — a real redkiln run over the review fixture did not exit 4"; printf '%s\n' "$out" | tail -25; exit 1; }
 # 🛑 THE NAME IS MODULE-QUALIFIED, AND THAT IS NOT STYLE. `--exact` on the BARE function name runs
 # ZERO tests and exits 0 — measured on this very line on 2026-09-23, which is trap (4) live.
 printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed' || { echo "FAIL: the exit-table selection did not run exactly one test — a filter that matches nothing is a green"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }

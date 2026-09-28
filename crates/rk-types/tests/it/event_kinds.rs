@@ -10,8 +10,9 @@ fn all_lists_every_variant_exactly_once() {
     // 29 until ADR-0123 (2026-09-17) minted `gate_answer_spent` and `gate_resumed`; 31 until
     // ADR-0124 (the same day) minted the review and verify gates' five; 36 until ADR-0125 (the same
     // day again) minted `stage_exit_refused`; 37 until ADR-0126 (the same day, Step 7c Slice 1)
-    // minted `dispatch_completed`.
-    assert_eq!(EventKind::ALL.len(), 38);
+    // minted `dispatch_completed`; 38 until `s8e`'s three-kinds record (2026-09-28, package S8E-P5,
+    // proposed) minted `worktree_assigned`, `stage_empty` and `git_op`.
+    assert_eq!(EventKind::ALL.len(), 41);
     let mut names: Vec<&str> = EventKind::ALL.iter().map(|k| k.wire_name()).collect();
     let before = names.len();
     names.sort_unstable();
@@ -135,10 +136,12 @@ fn stage_exit_refused_exists_and_is_tier_two() {
 fn adr0126_dispatch_completed_is_tier_two() {
     // Written first against the wire name and the count, so the red is the ABSENT kind
     // (`from_wire` answering `None`, `ALL` at 37) and not a compile error naming a variant.
+    // *(dated 2026-09-28, `s8e` build, package S8E-P5.)* 38 -> 41: `s8e`'s three-kinds record
+    // (proposed) adds three tier-2 kinds after ADR-0126's one.
     assert_eq!(
         EventKind::ALL.len(),
-        38,
-        "ADR-0126 adds exactly one kind to 7b-ii's 37"
+        41,
+        "ADR-0126 adds exactly one kind to 7b-ii's 37, and s8e's three-kinds record three more"
     );
     let kind = EventKind::from_wire("dispatch_completed")
         .expect("`dispatch_completed` is in the closed table (ADR-0126 decision 1)");
@@ -169,8 +172,13 @@ fn the_dotted_names_are_not_normalised_to_snake_case() {
     assert_eq!(EventKind::ArtifactWrite.wire_name(), "artifact.write");
 }
 
-/// Exactly five kinds are tier 1, and they are the five design §5's table marks as git-first:
-/// stage transitions, gate opened/answered/expired, and slice seals.
+/// Exactly ~~five~~ six kinds are tier 1, and they are the ~~five~~ six design §5's table marks as
+/// git-first: stage transitions, gate opened/answered/expired/voided, and slice seals.
+///
+/// *(Re-pointed 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.7; D21-43 N6; ADR-0184,
+/// proposed.)* `gate_answer_void` moves to tier 1 with design §5's row: N6 makes the voiding a
+/// git-first transition (*"Every gate transition (opened, answered, expired, voided) is a git-first
+/// tier-1 event"*). The name is kept so the re-point is visible.
 #[test]
 fn exactly_five_kinds_are_tier_one() {
     let t1: Vec<&str> = EventKind::ALL
@@ -185,7 +193,8 @@ fn exactly_five_kinds_are_tier_one() {
             "gate_opened",
             "gate_answered",
             "gate_expired",
-            "slice_sealed"
+            "slice_sealed",
+            "gate_answer_void"
         ],
         "the tier-1 set is not the one the deleted-database test selects"
     );
@@ -227,12 +236,18 @@ fn slice_sealed_is_a_single_kind() {
 
 /// Every tier-1 kind names the trailer axis it rides on, and no tier-2 kind does — tier 1 is
 /// exactly the set that is written to git first.
+///
+/// *(Re-pointed 2026-09-28, `s8e` build, package S8E-P4; `s8e` §8e.7; ADR-0184, proposed.)* The
+/// exception ~~`|| k == EventKind::GateExpired`~~ is gone: `gate_expired` is a `Gate: … expired`
+/// mark (N6), so it names its axis like every other tier-1 kind, and so does `gate_answer_void`.
 #[test]
 fn the_trailer_axes_belong_to_the_tier_one_kinds() {
+    assert_eq!(EventKind::GateExpired.trailer_axis(), Some("Gate"));
+    assert_eq!(EventKind::GateAnswerVoid.trailer_axis(), Some("Gate"));
     for k in EventKind::ALL {
         match k.tier() {
             Tier::One => assert!(
-                k.trailer_axis().is_some() || k == EventKind::GateExpired,
+                k.trailer_axis().is_some(),
                 "{} is tier 1 but names no trailer axis",
                 k.wire_name()
             ),

@@ -77,3 +77,39 @@ pub fn commit_with_trailers(
     let head = exec.run(GitOp::RevParse, cwd, ["rev-parse", "HEAD"])?;
     Ok(head.stdout_trimmed())
 }
+
+impl crate::gitops::GitOps<'_> {
+    /// [`commit_with_trailers`], **through the journalled seam** (ADR-0105 clause 1).
+    ///
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3; D21-42 8a; D21-43 N7.)* The
+    /// kernel's tier-1 boundary commits here, so each of the two invocations — the commit and the
+    /// `HEAD` re-read — is recorded by the seam's journal, and on replay both are served back from it
+    /// and neither reaches git. The argument list is [`commit_with_trailers`]'s, byte for byte, and
+    /// the wrapper supplies the same `-c core.hooksPath=<empty>` and `-c trailer.ifexists=add`
+    /// prelude (clauses 2 and 3).
+    ///
+    /// # Errors
+    /// Propagates [`GitError`] from the seam: the wrapper's when live, the journal's when replaying.
+    pub fn commit_with_trailers(
+        &mut self,
+        cwd: &WorktreePath,
+        message: &str,
+        trailers: &[Trailer],
+        allow_empty: bool,
+    ) -> Result<String, GitError> {
+        let mut args: Vec<String> = vec!["commit".into(), "--quiet".into()];
+        if allow_empty {
+            args.push("--allow-empty".into());
+        }
+        args.push("-m".into());
+        args.push(message.to_string());
+        for t in trailers {
+            args.push("--trailer".into());
+            args.push(t.to_line());
+        }
+        let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+        self.run(GitOp::Commit, cwd, &refs)?;
+        let head = self.run(GitOp::RevParse, cwd, &["rev-parse", "HEAD"])?;
+        Ok(head.stdout_trimmed())
+    }
+}

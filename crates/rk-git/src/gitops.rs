@@ -111,6 +111,18 @@ impl<'j> GitOps<'j> {
         self.mode
     }
 
+    /// The wrapper this seam runs over, for the READS a caller takes beside a journalled write.
+    ///
+    /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* The kernel's tier-1 boundary
+    /// authorises its target through `crate::worktree::authorise_tier1_write`, which takes a
+    /// [`GitExec`] and reads `HEAD`'s branch; the commit it then makes goes through
+    /// [`Self::commit_with_trailers`] and is journalled. On replay the boundary takes no
+    /// authorisation read at all, so nothing reaches the wrapper there.
+    #[must_use]
+    pub const fn exec(&self) -> &GitExec {
+        &self.exec
+    }
+
     /// Run `op`, journalling it — or, on replay, serving it back from the journal.
     ///
     /// # Errors

@@ -42,6 +42,10 @@ pub enum StoreError {
         path: PathBuf,
     },
     Identity(String),
+    /// A tier-1 row its event cannot fill: a `NOT NULL` member the event does not carry (ADR-0181
+    /// decision 3: *"A tier-1 row never invents a member"*). The write refuses and its transaction
+    /// rolls back to zero rows. *(dated 2026-09-28, s8e build.)*
+    TierOne(String),
 }
 
 impl std::fmt::Display for StoreError {
@@ -59,6 +63,7 @@ impl std::fmt::Display for StoreError {
                 path.display()
             ),
             Self::Identity(e) => write!(f, "store identity: {e}"),
+            Self::TierOne(e) => write!(f, "tier-1 row: {e}"),
         }
     }
 }
@@ -126,6 +131,14 @@ impl Writer {
     /// # Errors
     /// [`StoreError::TransactionExceededBusyTimeout`] if the transaction outran the timeout;
     /// otherwise whatever `f` returns.
+    ///
+    /// # Panics
+    /// With [`rk_types::LOCK_HALTS`] when the writer mutex is poisoned — a panic unwound while the one
+    /// writer held it. **ADR-0118 clauses 1, 3 and 4**: the run halts at the poisoned acquisition; no
+    /// `StoreError` is returned (the adapter would carry it across the port as a `StepError`, which
+    /// clause 1 forbids), and the guard is never recovered. `rk-cli`'s panic hook maps the payload to
+    /// exit `70`. *(dated 2026-09-28, s8e build, §8e.1: the `PoisonError` recovery this line carried
+    /// since Step 6.3 — the violation clause 4 names and whose repair it owed — is removed.)*
     #[expect(
         clippy::disallowed_methods,
         reason = "AC-001 bans the clock on the WORKFLOW side, where a time read makes a decision                   non-deterministic. clippy.toml has no path scoping, so the exemption is stated                   here, at the narrowest item. This reading feeds no decision and is never                   journalled: it is the store's own durability guard for ADR-0105 clause 7's                   `every write transaction shorter than busy_timeout`, and the alternative to                   measuring is not checking."
@@ -134,10 +147,7 @@ impl Writer {
     where
         F: FnOnce(&rusqlite::Transaction<'_>) -> Result<T, StoreError>,
     {
-        let mut guard = self
-            .conn
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut guard = self.conn.lock().expect(rk_types::LOCK_HALTS);
         let started = std::time::Instant::now();
         let tx = guard.transaction()?;
         let out = f(&tx)?;
