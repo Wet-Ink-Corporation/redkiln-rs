@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-93), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-94), and what they license
 
 *(Title moved 2026-09-28 at `s8d-ii`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-89)"**, true when package R2FIX-8dii corrected it; `D21-90` and `D21-91` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 91, the last `D21-91`.)*
 
@@ -3877,3 +3877,28 @@ working one. The shipped packs `bug-standard` and `story` both run release, oper
 verdict as history, so resume still reads all three axes (ADR-0109 decision 3). Stated in `s8e`'s slice record
 (`proposed`), built red-first with a mutant (the scope dropped) in §8e.8's package; no committed golden log moves (none
 contains `slice_sealed`, S8E-P0).
+
+---
+
+## D21-94 · An undeclared slice on a fix lane is refused at entry, before any dispatch; three other `s8e` record choices confirmed
+
+**Taken 2026-09-28 by the operator, in the session executing `s8e`, reviewing records ADR-0181 … ADR-0186 (all
+`proposed`) during the build, on four questions with grounded options and a recommendation each.**
+
+**Ruled — one change.** ADR-0186 decision 2 sited the refusal of an absent, empty or otherwise undeclarable `slice` at
+the seal's mint, so a fix lane with no slice walks to its review stage, dispatches its review, and only then refuses
+(*"The cost of the mint siting, stated"*). **The refusal moves to the lane's entry, before any dispatch**, for a lane
+that will reach a review stage (the fix lane always does): an undeclared slice there is a certain failure, and it must
+not be paid for. The mint keeps its refusal as the backstop. Built red-first with a mutant (the entry check dropped) in
+`s8e`; ADR-0186 (`proposed`) is amended by dated text, and its *"refuse an undeclared slice at entry"* option becomes
+the one taken, stated as a divergence from ADR-0159 decision 2's mint siting for this key only.
+
+**Confirmed — three record choices, as written:**
+1. ADR-0182 decision 4: under `ByItem(x)` a row that carries no key is returned, as the **interim** (the inclusive
+   reading), with exclusion plus a named `doctor` finding taken once every producer of a `Carried` kind keys its rows.
+   This departs from `s8e` §8e.10's recommendation, for the reason the record gives.
+2. ADR-0184 decisions 2 and 5: `expired` carries its action (`fail`, `escalate`, `auto-decide <verdict>`) by the same
+   deleted-database test as `answered`'s option, and ADR-0109 decision 2's parenthetical is read as illustrative (not
+   superseded).
+3. ADR-0185 decision 3: with the database deleted, `answer` refuses fail-closed until the next `run` writes
+   `worktree_assigned` again; ownership has one source.
