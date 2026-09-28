@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-27 (D21-1 … D21-86), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-89), and what they license
+
+*(Title corrected 2026-09-28 at `s8d-ii`'s build, package R2FIX-8dii (refuting round 2's minor): it read **"2026-09-21 … 2026-09-27 (D21-1 … D21-86)"** while the file carried **D21-89**, three entries and one date stale: `D21-87` … `D21-89` were appended during `s8d-ii` without moving it, and `D21-89` is dated 2026-09-28. No entry is added with this correction. Measured: `grep -c '^## D21-'` over this file → 89, the last `D21-89`.)*
 
 *(Title corrected 2026-09-27 at `s8d`'s close: it read **"2026-09-21 … 2026-09-26 (D21-1 … D21-71)"** while the file carried **D21-77**, six entries stale: `D21-72` … `D21-77` were appended during `s8d` without moving it. `D21-78` … `D21-86` are appended with this correction and move it. Measured: `grep -c '^## D21-'` over this file → 86, the last `D21-86`.)*
 

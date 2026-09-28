@@ -296,13 +296,16 @@ pub enum WorktreeRefusal {
     /// `git check-ignore`, run in the main worktree, does not report the run tree as ignored.
     RootNotIgnored { main: PathBuf, path: String },
     /// The worst-case path, computed on this item, passes the limit and `core.longpaths` is not
-    /// `true`.
+    /// `true`. `commit` is the commit that tracks `longest_path`, as the rule read it: the one the
+    /// run tree checks out, or on the existing-branch arm the merge-base the reference tree checks
+    /// out *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii; round-2 minor)*.
     PathPastLimit {
         item: String,
         bound: usize,
         limit: usize,
         longest: usize,
         longest_path: String,
+        commit: String,
     },
     /// `git worktree list --porcelain` printed nothing this module can read (no record, a
     /// non-UTF-8 or quoted path), so the main worktree cannot be named.
@@ -347,21 +350,26 @@ pub enum WorktreeRefusal {
         remaining: Vec<String>,
     },
     // ---- W4's refusals (s8d-ii §8d-ii.5; D21-47 V1; D21-48 X2). *(dated 2026-09-27, P4.)*
-    /// V1 (a): a path at the fork commit selects `driver`, and no `filter.<driver>.process` or
-    /// `.smudge` value resolves at any scope read (`scopes`), so git would check out the
-    /// committed content, which for LFS is the pointer.
+    /// V1 (a): a path at ~~the fork commit~~ `commit` selects `driver`, and no
+    /// `filter.<driver>.process` or `.smudge` value resolves at any scope read (`scopes`), so git
+    /// would check out the committed content, which for LFS is the pointer. `commit` is the
+    /// commit read: the one the run tree checks out, or on the existing-branch arm the merge-base
+    /// the reference tree checks out *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii)*.
     FilterDriverNotEffective {
         driver: String,
         path: String,
         scopes: String,
+        commit: String,
     },
     /// V1 (b): smudge is skipped for `driver`, by a resolved `smudge` value carrying `--skip`
     /// (its `scope` and `origin` file) or by `GIT_LFS_SKIP_SMUDGE` (scope `environment`).
+    /// `commit` as in [`WorktreeRefusal::FilterDriverNotEffective`].
     SmudgeSkipped {
         driver: String,
         path: String,
         scope: String,
         origin: String,
+        commit: String,
     },
     /// D21-48 X2: after checkout, paths a selected driver names hold a Git LFS pointer. Boxed,
     /// so `GitError` stays small.
@@ -471,11 +479,12 @@ impl std::fmt::Display for WorktreeRefusal {
                 limit,
                 longest,
                 longest_path,
+                commit,
             } => write!(
                 f,
                 "{}: the worst-case path for `{item}` is {bound} characters, past the {limit} \
                  limit, and core.longpaths is not true (longest tracked path {longest}: \
-                 `{longest_path}`)",
+                 `{longest_path}` at `{commit}`)",
                 self.name()
             ),
             Self::UnreadableWorktreeList { detail } => write!(
@@ -566,9 +575,10 @@ impl std::fmt::Display for WorktreeRefusal {
                 driver,
                 path,
                 scopes,
+                commit,
             } => write!(
                 f,
-                "{}: `{path}` selects the filter driver `{driver}` at the fork commit, and no \
+                "{}: `{path}` selects the filter driver `{driver}` at `{commit}`, and no \
                  filter.{driver}.process or filter.{driver}.smudge value is effective at any \
                  scope read ({scopes}); the checkout would keep the committed content, which for \
                  Git LFS is a pointer file",
@@ -579,10 +589,11 @@ impl std::fmt::Display for WorktreeRefusal {
                 path,
                 scope,
                 origin,
+                commit,
             } => write!(
                 f,
-                "{}: the smudge of the filter driver `{driver}`, which `{path}` selects at the \
-                 fork commit, is skipped at {scope} scope ({origin}); the checkout would yield \
+                "{}: the smudge of the filter driver `{driver}`, which `{path}` selects at \
+                 `{commit}`, is skipped at {scope} scope ({origin}); the checkout would yield \
                  pointer files",
                 self.name()
             ),
@@ -970,7 +981,11 @@ pub fn refuse_unignored_root(exec: &GitExec, main: &Path, item: &ItemId) -> Resu
 
 /// The worst-case path bound (§8d-ii.6): `len(root) + 20 + len(item) + 11 + 1 + longest`, where
 /// `root` is the main worktree's directory, 20 is `/.redkiln/worktrees/`, 11 is `.review-ref` (the
-/// longer of the two trees' names) and `longest` the longest path tracked at the fork commit.
+/// longer of the two trees' names) and `longest` the longest path tracked at ~~the fork commit~~
+/// the commit the tree checks out (start's `HEAD` on a first creation, the branch tip on an
+/// existing branch, D21-89 ruling 1) and, on the existing-branch arm, at the merge-base the review
+/// reference tree checks out, whichever is longer (§8d-ii.6; [`refuse_past_limit`]). *(dated
+/// 2026-09-28, s8d-ii build, package R2FIX-8dii; wording, and the second commit is new.)*
 /// **`item_len` is the actual item's**, never the 64-character maximum (D21-47).
 #[must_use]
 pub const fn path_bound(root_len: usize, item_len: usize, longest: usize) -> usize {
@@ -996,8 +1011,16 @@ fn longpaths_enabled(exec: &GitExec, at: &WorktreePath) -> Result<bool, GitError
 }
 
 /// §8d-ii.6: refuse by name when [`path_bound`], computed on **this** item and the longest path
-/// tracked at `fork`, exceeds [`PATH_LIMIT`] and `core.longpaths` is not `true`, rather than
-/// check out a partial tree.
+/// tracked at ~~`fork`~~ any of `commits`, exceeds [`PATH_LIMIT`] and `core.longpaths` is not
+/// `true`, rather than check out a partial tree.
+///
+/// *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii; s8d-ii refuting round 2.)* `commits` are
+/// the commits the two trees check out: the run tree's (start's `HEAD`, or the branch's tip on
+/// the existing-branch arm, D21-89 ruling 1) and, on that arm, the merge-base the review's
+/// reference tree checks out (`RK_BASE`'s fork, D21-89 ruling 2). The longest-path term is the
+/// longest over them all, so `max(longest at tip, longest at merge-base)`: conservative, since
+/// the run tree's own path is 11 shorter than the `.review-ref` term the bound adds. The refusal
+/// names the commit that tracks the longest path.
 ///
 /// # Errors
 /// [`WorktreeRefusal::PathPastLimit`]; wrapper errors.
@@ -1005,22 +1028,26 @@ pub fn refuse_past_limit(
     exec: &GitExec,
     main: &Path,
     item: &ItemId,
-    fork: &str,
+    commits: &[&str],
 ) -> Result<(), GitError> {
     let at = WorktreePath::new(main)?;
-    let out = exec.run(
-        GitOp::LsTree,
-        &at,
-        ["ls-tree", "-r", "-z", "--name-only", fork],
-    )?;
     let mut longest = 0usize;
     let mut longest_path = String::new();
-    for raw in out.stdout.split(|b| *b == 0).filter(|s| !s.is_empty()) {
-        let p = String::from_utf8_lossy(raw);
-        let n = utf16_len(&p);
-        if n > longest {
-            longest = n;
-            longest_path = p.into_owned();
+    let mut commit = commits.first().copied().unwrap_or_default().to_string();
+    for c in commits {
+        let out = exec.run(
+            GitOp::LsTree,
+            &at,
+            ["ls-tree", "-r", "-z", "--name-only", c],
+        )?;
+        for raw in out.stdout.split(|b| *b == 0).filter(|s| !s.is_empty()) {
+            let p = String::from_utf8_lossy(raw);
+            let n = utf16_len(&p);
+            if n > longest {
+                longest = n;
+                longest_path = p.into_owned();
+                commit = (*c).to_string();
+            }
         }
     }
     let bound = path_bound(
@@ -1037,6 +1064,7 @@ pub fn refuse_past_limit(
         limit: PATH_LIMIT,
         longest,
         longest_path,
+        commit,
     }))
 }
 
@@ -1088,12 +1116,24 @@ pub fn prepare_creation(
     item: &str,
     fork: &str,
 ) -> Result<RunTree, GitError> {
+    prepare_creation_over(exec, start, item, &[fork])
+}
+
+/// [`prepare_creation`] with the length rule read over every commit in `commits` (the commits
+/// the run tree and the review's reference tree check out; [`refuse_past_limit`]). *(dated
+/// 2026-09-28, s8d-ii build, package R2FIX-8dii.)*
+fn prepare_creation_over(
+    exec: &GitExec,
+    start: &Path,
+    item: &str,
+    commits: &[&str],
+) -> Result<RunTree, GitError> {
     let main = main_worktree(exec, start)?;
     let item = ItemId::parse(item)?;
     refuse_linked_segments(&main, &item)?;
     refuse_case_fold_collision(exec, &main, &item)?;
     refuse_unignored_root(exec, &main, &item)?;
-    refuse_past_limit(exec, &main, &item, fork)?;
+    refuse_past_limit(exec, &main, &item, commits)?;
     Ok(derive(&main, &item))
 }
 
@@ -1680,14 +1720,34 @@ fn create(
     // *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
     let tip = branch_tip(exec, main, &derive(Path::new(main.as_str()), id).branch)?;
     let checked = tip.as_deref().unwrap_or(head.as_str());
-    let tree = prepare_creation(exec, start, id.as_str(), checked)?;
-    let filters = check_filters(exec, Path::new(main.as_str()), id, checked, lfs_skip_smudge)?;
     // D21-89 ruling 2: RK_BASE records where the branch forked, `merge-base(start HEAD, tip)`; a
-    // first creation's fork is start's `HEAD`, unchanged.
+    // first creation's fork is start's `HEAD`, unchanged. *(dated 2026-09-28, s8d-ii build, package
+    // R2FIX-8dii: read BEFORE the guards, not after them, because the review's reference tree
+    // checks this commit out, so the length rule and the filter read cover it too; refuting round
+    // 2.)*
     let fork = match tip.as_deref() {
         Some(t) => merge_base(exec, main, &head, t)?,
         None => head.clone(),
     };
+    let reads: Vec<&str> = if fork == checked {
+        vec![checked]
+    } else {
+        vec![checked, fork.as_str()]
+    };
+    let tree = prepare_creation_over(exec, start, id.as_str(), &reads)?;
+    let mut filters = check_filters(exec, Path::new(main.as_str()), id, checked, lfs_skip_smudge)?;
+    // V1 over the reference tree's commit: a refusal names it. Its selection is not the scan's
+    // path set, which is the run tree's own (D21-48 X2); only its debug notes are kept.
+    if fork != checked {
+        let reference = check_filters(
+            exec,
+            Path::new(main.as_str()),
+            id,
+            fork.as_str(),
+            lfs_skip_smudge,
+        )?;
+        filters.notes.extend(reference.notes);
+    }
     let path = WorktreePath::new(&tree.path)?;
     let created = if tip.is_some() {
         // The branch exists and no tree is registered: check it out as it stands. Never `-B`.
@@ -2107,6 +2167,7 @@ pub fn check_filters(
                 driver: d.driver.clone(),
                 path: d.paths[0].clone(),
                 scopes: scopes_read(&notes),
+                commit: fork.to_string(),
             }));
         }
     }
@@ -2120,6 +2181,7 @@ pub fn check_filters(
             path: d.paths[0].clone(),
             scope: "environment".into(),
             origin: format!("GIT_LFS_SKIP_SMUDGE={v}"),
+            commit: fork.to_string(),
         }));
     }
     // ... or by a resolved `smudge` value carrying `--skip`.
@@ -2132,6 +2194,7 @@ pub fn check_filters(
                 path: d.paths[0].clone(),
                 scope: e.scope,
                 origin: e.origin,
+                commit: fork.to_string(),
             }));
         }
     }

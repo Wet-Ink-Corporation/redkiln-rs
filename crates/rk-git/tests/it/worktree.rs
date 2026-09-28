@@ -1990,11 +1990,13 @@ fn assert_smudge_skipped(
     );
     let text = refusal.to_string();
     match &refusal {
+        // `..`: the refusal now also names the commit read (R2FIX-8dii, dated 2026-09-28).
         WorktreeRefusal::SmudgeSkipped {
             driver,
             path,
             scope: s,
             origin,
+            ..
         } => {
             assert_eq!((driver.as_str(), path.as_str()), ("fx", "a.bin"), "{text}");
             assert_eq!(s, scope, "the refusal names the wrong scope: {text}");
@@ -2365,11 +2367,13 @@ fn a_committed_pointer_that_the_driver_smudges_creates_silently() {
 // basename collision). ADR-0180, proposed. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
 // ---------------------------------------------------------------------------------------------
 
-/// A repository whose `rk-run/<ITEM>` branch forks at `fork`, carries one commit (`tip`) that adds
-/// `attributes` and `files` (committed with no filter configured, so each blob holds the bytes
-/// given), and whose checkout then moves on to a third commit (`head`) that selects nothing. No
-/// tree is registered: the existing-branch arm (`Creation::OnExistingBranch`) is the one taken.
-/// Returns `(main, fork, tip, head)`.
+/// A repository whose `rk-run/<ITEM>` branch forks at `fork`, carries ~~one commit (`tip`)~~ two
+/// commits, the first adding `attributes` and `files` (committed with no filter configured, so
+/// each blob holds the bytes given) and the second (`tip`) a plain file, and whose checkout then
+/// moves on ~~to a third commit~~ by two commits (`head`) that select nothing. So the fork is
+/// neither `tip^` nor `head^` *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii; round-2
+/// minor)*. No tree is registered: the existing-branch arm (`Creation::OnExistingBranch`) is the
+/// one taken. Returns `(main, fork, tip, head)`.
 fn run_branch_ahead(
     fx: &crate::support::Fixture,
     name: &str,
@@ -2405,15 +2409,40 @@ fn run_branch_ahead(
             "run work on the branch",
         ],
     );
+    // A second commit on each side, so the fork is neither `tip^` nor `head^` (round-2 minor:
+    // with one commit a side, a fork read as either parent passed as the merge-base).
+    // *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii.)*
+    std::fs::write(main.join("run-2.txt"), b"more run work\n").expect("write");
+    fx.git(&main, &["add", "run-2.txt"]);
+    fx.git(
+        &main,
+        &["commit", "--quiet", "-m", "more run work on the branch"],
+    );
     let tip = sha(fx, &main, "HEAD");
     fx.git(&main, &["switch", "--quiet", "-"]);
-    std::fs::write(main.join("moved.txt"), b"HEAD moved on\n").expect("write");
-    fx.git(&main, &["add", "moved.txt"]);
-    fx.git(&main, &["commit", "--quiet", "-m", "the checkout moves on"]);
+    for (n, file) in ["moved.txt", "moved-2.txt"].iter().enumerate() {
+        std::fs::write(main.join(file), b"HEAD moved on\n").expect("write");
+        fx.git(&main, &["add", file]);
+        fx.git(
+            &main,
+            &[
+                "commit",
+                "--quiet",
+                "-m",
+                &format!("the checkout moves on ({})", n + 1),
+            ],
+        );
+    }
     let head = sha(fx, &main, "HEAD");
     assert!(
         fork != tip && tip != head && fork != head,
         "PREMISE: fork, tip and HEAD are three commits"
+    );
+    let tip_parent = sha(fx, &main, &format!("{tip}^"));
+    let head_parent = sha(fx, &main, &format!("{head}^"));
+    assert!(
+        fork != tip_parent && fork != head_parent,
+        "PREMISE: the fork is `tip^` or `head^`, so a parent read passes as the merge-base"
     );
     (main, fork, tip, head)
 }
@@ -2596,6 +2625,20 @@ fn a_tree_created_on_an_existing_run_branch_records_the_merge_base_as_its_fork()
         base.fork
     );
     assert_eq!(e.fork, fork, "Entered::fork is not the merge-base");
+    // RK_BASE is `git merge-base` as the fixture reads it, and neither parent (round-2 minor).
+    // *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii.)*
+    let read = fx.git(&main, &["merge-base", &head, &tip]).stdout_trimmed();
+    assert_eq!(
+        base.fork, read,
+        "RK_BASE is not the fixture's own `git merge-base {head} {tip}`"
+    );
+    for parent in [format!("{tip}^"), format!("{head}^")] {
+        assert_ne!(
+            base.fork,
+            sha(&fx, &main, &parent),
+            "RK_BASE records `{parent}`, not the merge-base"
+        );
+    }
     assert_eq!(
         sha(&fx, &e.tree.path, "HEAD"),
         tip,
@@ -2609,6 +2652,173 @@ fn a_tree_created_on_an_existing_run_branch_records_the_merge_base_as_its_fork()
     assert_eq!(
         f.fork, first_head,
         "a first creation's fork is not start's HEAD"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// s8d-ii refuting round 2 (package R2FIX-8dii): on the existing-branch arm the run tree checks out
+// the tip, but the review's reference tree (`<item>.review-ref`, `rk-cli`'s `reference_worktree`)
+// checks out `RK_BASE`'s fork, the merge-base. The length rule's longest path is the longer of the
+// two commits', and V1's filter read runs over the merge-base too, a refusal naming that commit.
+// ADR-0180 decisions 9, 12 and 16, proposed. *(dated 2026-09-28, s8d-ii build.)*
+// ---------------------------------------------------------------------------------------------
+
+/// A repository state in which `main`'s commit `fork` tracks the paths `at_fork` commits, and
+/// both sides then drop them: start's checkout commits the removal (`head`), and `rk-run/<ITEM>`
+/// carries a separate removal commit (`tip`, built with `commit-tree`, so the working tree never
+/// checks the fork's paths out again). Returns `(fork, tip, head)`; `merge-base(head, tip)` is
+/// `fork`, asserted.
+fn merge_base_only(
+    fx: &crate::support::Fixture,
+    main: &std::path::Path,
+    at_fork: impl FnOnce() -> Vec<String>,
+) -> (String, String, String) {
+    let paths = at_fork();
+    let fork = sha(fx, main, "HEAD");
+    for p in &paths {
+        fx.git(main, &["rm", "--cached", "--quiet", "--", p]);
+        let _ = std::fs::remove_file(main.join(p));
+    }
+    fx.git(
+        main,
+        &[
+            "commit",
+            "--quiet",
+            "-m",
+            "the checkout drops the fork's paths",
+        ],
+    );
+    let head = sha(fx, main, "HEAD");
+    let tree = sha(fx, main, "HEAD:");
+    let tip = fx
+        .git(
+            main,
+            &[
+                "commit-tree",
+                &tree,
+                "-p",
+                &fork,
+                "-m",
+                "the run branch drops them too",
+            ],
+        )
+        .stdout_trimmed();
+    fx.git(
+        main,
+        &["update-ref", &format!("refs/heads/rk-run/{ITEM}"), &tip],
+    );
+    assert_eq!(
+        fx.git(main, &["merge-base", &head, &tip]).stdout_trimmed(),
+        fork,
+        "PREMISE: the merge-base of start's HEAD and the tip is not the fork"
+    );
+    assert!(tip != head && tip != fork, "PREMISE: three commits");
+    (fork, tip, head)
+}
+
+/// Round-2 minor, the length rule: the MERGE-BASE (the reference tree's commit) tracks a path that
+/// makes the worst case exactly 260 (sized from the formula's literal terms); the tip and start's
+/// `HEAD` track nothing long. Creation on the existing branch refuses by name before the add,
+/// naming the merge-base.
+///
+/// Red while the rule reads the tip only: admitted, and the reference tree at the merge-base would
+/// pass the limit.
+#[test]
+fn an_existing_run_branch_whose_merge_base_is_past_the_path_limit_refuses() {
+    let fx = crate::support::Fixture::new();
+    let exec = exec_for(&fx);
+    let main = lifecycle_repo(&fx, "mblong", &[]);
+    let root = worktree::main_worktree(&exec, &main).expect("main worktree");
+    let mut long = String::new();
+    let (fork, tip, head) = merge_base_only(&fx, &main, || {
+        long = commit_path_of_len(&fx, &main, 260 - fixed_terms(&root, ITEM.len()));
+        vec![long.clone()]
+    });
+    for at in [&tip, &head] {
+        assert!(
+            fx.git(&main, &["ls-tree", "-r", "--name-only", at])
+                .stdout_trimmed()
+                .lines()
+                .all(|p| p.len() < 20),
+            "PREMISE: {at} tracks a long path"
+        );
+    }
+    let r = refused(
+        "the merge-base's worst case is 260; the tip's and start's HEAD's are short",
+        worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None),
+    );
+    assert!(
+        matches!(&r, WorktreeRefusal::PathPastLimit { bound: 260, limit: 259, longest, longest_path, commit, .. }
+            if *longest == long.len() && *longest_path == long && *commit == fork),
+        "not the length refusal over the merge-base {fork}'s longest path: {r:?}"
+    );
+    assert!(
+        r.to_string().contains(&fork),
+        "the refusal does not name {fork}: {r}"
+    );
+    assert_not_created(&fx, &main, "after the refusal");
+    assert_eq!(
+        sha(&fx, &main, &format!("rk-run/{ITEM}")),
+        tip,
+        "the run branch moved"
+    );
+
+    // CONTROL: core.longpaths=true admits the same topology, and the fork is the merge-base.
+    fx.git(&main, &["config", "core.longpaths", "true"]);
+    let e = worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None)
+        .unwrap_or_else(|err| panic!("CONTROL: core.longpaths=true did not admit: {err:?}"));
+    assert_eq!(e.fork, fork, "CONTROL: the fork is not the merge-base");
+}
+
+/// Round-2 minor, V1 over the reference tree's commit: the MERGE-BASE selects a driver no scope
+/// declares; the tip and start's `HEAD` select nothing. Creation on the existing branch refuses
+/// before the add, naming the driver, the path and the merge-base.
+///
+/// Red while the read runs over the tip only: admitted, and the reference tree at the merge-base
+/// would hold the pointer.
+#[test]
+fn an_existing_run_branch_whose_merge_base_selects_an_ineffective_driver_refuses() {
+    let fx = crate::support::Fixture::new();
+    let exec = filter_exec(&fx, "mbnodrv", "", "");
+    let main = lifecycle_repo(&fx, "mbnodrv", &[]);
+    let (fork, tip, head) = merge_base_only(&fx, &main, || {
+        std::fs::write(main.join(".gitattributes"), b"*.bin filter=nodrv\n").expect("attributes");
+        std::fs::write(main.join("a.bin"), POINTER).expect("pointer");
+        fx.git(&main, &["add", ".gitattributes", "a.bin"]);
+        fx.git(
+            &main,
+            &["commit", "--quiet", "-m", "a filtered path at the fork"],
+        );
+        vec![".gitattributes".to_string(), "a.bin".to_string()]
+    });
+    let id = ItemId::parse(ITEM).expect("id");
+    for at in [&tip, &head] {
+        let c = worktree::check_filters(&exec, &main, &id, at, None)
+            .unwrap_or_else(|e| panic!("PREMISE: the read over {at} refused: {e:?}"));
+        assert!(
+            c.selected.is_empty(),
+            "PREMISE: {at} selects a driver: {c:?}"
+        );
+    }
+    let refusal = refused(
+        "the merge-base selects `nodrv`, declared at no scope; the tip selects nothing",
+        worktree::enter(&exec, &main, ITEM, &owner(1), &|_| None, None),
+    );
+    assert!(
+        matches!(&refusal, WorktreeRefusal::FilterDriverNotEffective { driver, path, commit, .. }
+            if driver == "nodrv" && path == "a.bin" && *commit == fork),
+        "not the no-effective-driver refusal naming `nodrv`, `a.bin` and the merge-base {fork}: \
+         {refusal:?}"
+    );
+    assert!(
+        refusal.to_string().contains(&fork),
+        "the refusal does not name {fork}: {refusal}"
+    );
+    assert_not_created(&fx, &main, "after the refusal");
+    assert_eq!(
+        sha(&fx, &main, &format!("rk-run/{ITEM}")),
+        tip,
+        "the run branch moved"
     );
 }
 

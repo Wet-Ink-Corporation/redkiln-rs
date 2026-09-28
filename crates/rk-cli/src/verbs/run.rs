@@ -2062,7 +2062,14 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
 ///
 /// *(Rewritten 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 10, proposed; ADR-0162 decision
 /// 10 cited, not superseded.)* 🛑 **THE MERGE BASE STILL NEEDS NO COMPUTATION, BUT IT IS NO LONGER
-/// `HEAD`.** `GitOp` still carries no `merge-base` (ADR-0105 clause 5's list; ADR-0180 adds none).
+/// `HEAD`.** ~~`GitOp` still carries no `merge-base` (ADR-0105 clause 5's list; ADR-0180 adds
+/// none).~~ *(dated 2026-09-28, `s8d-ii` build, package R2FIX-8dii; refuting round 2.)* `GitOp` now
+/// carries `MergeBase`, a read (D21-89 ruling 2; ADR-0180 decision 15, proposed), which `rk-git`'s
+/// worktree `create` runs only when a run tree is created on an existing `rk-run/<item>` branch,
+/// to record `merge-base(start HEAD, tip)` in `RK_BASE`. This function still computes nothing: it
+/// reads its base from `RK_BASE` and runs no `merge-base`. On that arm the base is not the tip the
+/// run tree checks out, so `rk-git` also runs the length rule and V1's filter read over it before
+/// the run tree is added (§8d-ii.5, §8d-ii.6).
 /// The argument above rested on `recreate_run_worktree` creating `rk-run/<item>` at `HEAD` on every
 /// run, and that function is retired: under reuse (D21-45 W2) the run branch forked at an earlier
 /// `HEAD`, and the operator's checkout may have moved since, so `HEAD` is not the base. The base is

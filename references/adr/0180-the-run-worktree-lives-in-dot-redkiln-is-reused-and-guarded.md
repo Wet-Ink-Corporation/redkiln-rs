@@ -1,6 +1,6 @@
 ---
 id: "0180"
-title: "**The run-owned worktree lives at `.redkiln/worktrees/<item>` under the main worktree, is reused on re-entry and never force-removed, and is guarded** (`s8d-ii`'s record; D21-44; D21-45 W1, W2, W4 and W3's carry; D21-46's two corrections and R8; D21-47 V1 and its clause-5 rule; D21-48 X1, X2 and X14): one derivation in `rk_git::worktree` from the main worktree and a validated item id; creation refuses by name when the root is not git-ignored, when a filter a path selects at the fork commit would leave pointer files, when a post-checkout scan finds one, and when the worst-case path computed on the actual item passes 259 characters without `core.longpaths`; an `RK_BASE` marker, a pid-and-start-time lock and a re-entry check; re-entry reuses the tree and discards in-flight changes explicitly; removal only when clean, landed, marked and unlocked, never forced; `init` writes a `# redkiln-runtime` block to `<commondir>/info/exclude`. Supersedes in part `0137` decision 3's path literal, `0105` clause 6 and its reused-worktree forbids member (for the run-owned worktree only), `0105` clause 5's closed write list (for the writes lock, unlock, the `RK_BASE` marker, `reset --hard` and `clean -fd`), and `0107` decision 2 (for the first `init` after this record on a repository initialised before it)"
+title: "**The run-owned worktree lives at `.redkiln/worktrees/<item>` under the main worktree, is reused on re-entry and never force-removed, and is guarded** (`s8d-ii`'s record; D21-44; D21-45 W1, W2, W4 and W3's carry; D21-46's two corrections and R8; D21-47 V1 and its clause-5 rule; D21-48 X1, X2 and X14; D21-88 rulings 1 and 2; D21-89): one derivation in `rk_git::worktree` from the main worktree and a validated item id; creation refuses by name when the root is not git-ignored, when a filter a path selects at the fork commit would leave pointer files, when a post-checkout scan finds one, and when the worst-case path computed on the actual item passes 259 characters without `core.longpaths`; an `RK_BASE` marker, a pid-and-start-time lock and a re-entry check; re-entry reuses the tree and discards in-flight changes explicitly; removal only when clean, landed, marked and unlocked, never forced, and a fresh tree whose carry or `setup` fails rolled back, unforced; a tree created on an existing run branch checked at its tip and at the merge-base the review's reference tree checks out, with `RK_BASE` that merge-base; `init` writes a `# redkiln-runtime` block to `<commondir>/info/exclude`. Supersedes in part `0137` decision 3's path literal, `0105` clause 6 and its reused-worktree forbids member (for the run-owned worktree only), `0105` clause 5's closed write list (for the writes lock, unlock, the `RK_BASE` marker, `reset --hard` and `clean -fd`), and `0107` decision 2 (for the first `init` after this record on a repository initialised before it)"
 status: proposed
 date: 2026-09-27
 legacy_id: none
@@ -275,8 +275,15 @@ checkout by existing fails AC-518's instrument on a correct run.
     carry did not complete is never re-entered as reused.
 
 12. **The filter check refuses only when pointer files would result** (D21-47 V1, refining D21-46 R8). Before `git
-    worktree add`, creation reads *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii, D21-89.)* (on the existing-branch arm, "the fork commit" in reads (1) and (2)
-    below is the commit the tree checks out, the run branch's tip; decision 9): (1) the paths that select a filter
+    worktree add`, creation reads *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii, D21-89.)* (on the existing-branch arm, "the fork commit" in ~~reads (1) and (2)~~
+    read (1) *(corrected 2026-09-28, s8d-ii build, package R2FIX-8dii: read (2) is a configuration read and names no
+    commit)*
+    below is the commit the tree checks out, the run branch's tip; decision 9) *(dated 2026-09-28, s8d-ii build,
+    package R2FIX-8dii; refuting round 2: on that arm read (1) also runs over the merge-base, the commit decision 10's
+    reference tree checks out, before the add, and a refusal (a) or (b) there names that commit; every such refusal
+    names the commit it read. Residuals, recorded: the drivers are resolved as the run tree resolves them, so an
+    `includeIf` matching only the reference tree's detached gitdir is not evaluated, and decision 13's scan covers the
+    run tree only)*: (1) the paths that select a filter
     **at the fork commit**, by `git check-attr
     --source=<fork> filter` over `git ls-tree -r --name-only <fork>`; (2) the drivers at every scope, by `git config
     --show-scope --show-origin --includes --get-regexp '^filter\.'`, with every `include` followed and every matching
@@ -347,7 +354,9 @@ checkout by existing fails AC-518's instrument on a correct run.
 
 16. **The worst-case path is bounded on the item being created.** The bound is `len(root) + 20 + len(item) + 11 + 1 +`
     the longest path tracked at the fork commit (*(dated 2026-09-28, s8d-ii build, package R1FIX-8dii, D21-89.)* on the existing-branch arm, at the tip the tree
-    checks out), where `root` is the main worktree's directory, 20 is
+    checks out; *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii; refuting round 2)* and, on that arm, the
+    longer of that and the longest path at the merge-base decision 10's reference tree checks out, the refusal naming
+    the commit that tracks it), where `root` is the main worktree's directory, 20 is
     `/.redkiln/worktrees/`, and 11 is `.review-ref`, the longer of the two trees' names. Creation refuses by name when
     the bound exceeds **259** (Windows' 260-character `MAX_PATH` leaves 259 usable) and `core.longpaths` is not `true`,
     rather than check out a partial tree. The bound is computed on the **actual** item, never on the 64-character
@@ -416,6 +425,9 @@ checkout by existing fails AC-518's instrument on a correct run.
 - Forbids judging a tree created on an existing `rk-run/<item>` (its filter read, its scan's path set and its length
   bound) against any commit but the tip it checks out, and forbids recording start's `HEAD` rather than
   `merge-base(start HEAD, tip)` as its fork *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii, D21-89)*.
+- Forbids admitting a tree created on an existing `rk-run/<item>` whose merge-base, the commit the review's reference
+  tree checks out, passes the length bound or selects a filter whose driver is effective at no scope or whose smudge
+  is skipped *(dated 2026-09-28, s8d-ii build, package R2FIX-8dii; refuting round 2)*.
 - Forbids leaving a fresh tree whose carry or `setup` failed registered for the next run to reuse, and forbids that
   rollback touching a reused tree, a tree this run does not hold the lock of, or anything by `--force`
   *(dated 2026-09-27, s8d-ii build, D21-88 ruling 2)*.
@@ -463,6 +475,13 @@ checkout by existing fails AC-518's instrument on a correct run.
   `worktree::a_tree_created_on_an_existing_run_branch_records_the_merge_base_as_its_fork`; the mutants reverting
   the checked commit to start's `HEAD` and the recorded fork to start's `HEAD` are killed. Round 1's probe had
   created a tree holding a pointer file on this arm with no refusal.
+- [built 2026-09-28, `s8d-ii` build, refuting round 2, package R2FIX-8dii] the merge-base the reference tree checks
+  out, red first (`s8d-ii` §8d-ii.8's R2FIX-8dii note):
+  `worktree::an_existing_run_branch_whose_merge_base_is_past_the_path_limit_refuses` and
+  `worktree::an_existing_run_branch_whose_merge_base_selects_an_ineffective_driver_refuses`, each read *"… ADMITTED"*
+  before the change; the mutants reading the tip only are killed. `run_branch_ahead` now puts two commits on each side
+  of the fork, and the merge-base test asserts `RK_BASE` equals the fixture's own `git merge-base`: mutants recording
+  `tip^` or `HEAD^` survived the one-commit fixture and are killed on the two-commit one.
 - [documented, `references/adr/0105`, `0107`, `0127`, `0137`, `0162`, `0018`] each sentence superseded or cited is quoted
   above from its own file, as read 2026-09-27.
 - [documented, `crates/rk-containment/src`] `is_alive`'s *"Test support"* status and its Windows arm's 259 note.
