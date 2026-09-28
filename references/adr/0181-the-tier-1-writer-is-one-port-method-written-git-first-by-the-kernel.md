@@ -4,7 +4,7 @@ title: "**The tier-1 writer is one method on `EventStore`, `append_tier1(event, 
 status: proposed
 date: 2026-09-28
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-41 (row e — *"The tier-1 writer is ADR-0158 decision 4's route: a tier-1 write method on `EventStore` with its fake and conformance row, called where the trailer commit is made and taking its `anchor_sha`. That is a port-surface change under ADR-0003."*), D21-42 (rows 8a, 8c and 24b–d), D21-43 (N6, N7 and N10), D21-46 (R2), D21-47 (the clause-5 rule) and D21-48 (X10); runbook/phase-1/s8e-tier-one-and-the-lane.md (the records table's second row, §8e.0's stage-open readings taken 2026-09-28 at `766854c`, §8e.2, §8e.3, §8e.9 and §8e.14); crates/rk-ports/src/event_store.rs, crates/rk-ports/src/fakes.rs, crates/rk-ports/src/conformance.rs, crates/rk-adapter-sqlite/src/lib.rs, crates/rk-store/src/migrations/0001_initial.sql, crates/rk-store/src/identity.rs and crates/rk-store/src/schema_lint.rs, as read 2026-09-28 at `766854c`; references/2026-09-08-acceptance-criteria.md AC-160 … AC-163, AC-166, AC-180 and AC-364
+source: spikes/DECISIONS-2026-09-21.md D21-41 (row e — *"The tier-1 writer is ADR-0158 decision 4's route: a tier-1 write method on `EventStore` with its fake and conformance row, called where the trailer commit is made and taking its `anchor_sha`. That is a port-surface change under ADR-0003."*), D21-42 (rows 8a, 8c and 24b–d), D21-43 (N6, N7 and N10), D21-46 (R2), D21-47 (the clause-5 rule) and D21-48 (X10); runbook/phase-1/s8e-tier-one-and-the-lane.md (the records table's second row, §8e.0's stage-open readings taken 2026-09-28 at `766854c`, §8e.2, §8e.3, §8e.9 and §8e.14); crates/rk-ports/src/event_store.rs, crates/rk-ports/src/fakes.rs, crates/rk-ports/src/conformance.rs, crates/rk-adapter-sqlite/src/lib.rs, crates/rk-store/src/migrations/0001_initial.sql, crates/rk-store/src/identity.rs and crates/rk-store/src/schema_lint.rs, as read 2026-09-28 at `766854c`; references/2026-09-08-acceptance-criteria.md AC-160 … AC-163, AC-166, AC-180 and AC-364; and D21-96 (the `answered` row's tree, dated amendment of 2026-09-28, package D2196-8e)
 supersedes: ["0155", "0158"]
 superseded_by: []
 related: ["0003", "0092", "0105", "0109", "0118", "0131", "0155", "0158", "0182"]
@@ -130,6 +130,22 @@ insert fails, neither row exists. The mapping is by kind and it is closed:
   a gate's `token`, a seal's `project`, `slice` or `verdict`) refuses the write as a transport fault naming the
   member, and the transaction rolls back to zero rows. A nullable member the payload does not carry (`t1_gate_transition`'s
   `tree_hash` on an expiry, `deadline`, `kind`, `reach`, `option_id`, `stage`, `run_id`) is written `NULL`.
+- *(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96.)* **An `answered` row's `tree_hash` is the gate's BOUND tree, read from its token's `opened` row.**
+  D21-96: *"The live `answered` row of `t1_gate_transition` carries the gate's **bound** tree, taken from the gate record, so the tier-1 row equals what its mark carries and a rebuild reproduces it byte for byte. The answer's observed tree is not lost: it stays in the anchored tier-2 `gate_answer_void` row."* The mapping above wrote the `gate_answered` payload's `tree_hash`, the answer's OBSERVED tree; over a
+  void that differs from the bound tree ADR-0184 decision 1 puts on every `Gate:` mark for the token (*"the gate's
+  bound tree (ADR-0105 clause 4), the same on every mark for the token"*), so the rebuilt row differed from the live one
+  and decision 11's claim failed (measured: *"only recorded: …answered|6aaf314e…"*, *"only rebuilt:
+  …answered|6ae68e31…"*). The writer — `rk_store::tier_one::append`, which the live act, the heal and the rebuild all
+  call — now takes an `answered` row's tree from the `opened` row of the same token in `t1_gate_transition`, the gate
+  record the store holds. The payload is unchanged, so no canonical event moves; the observed tree stays in the
+  anchored `t2_event` rows (the `gate_answered` payload's `tree_hash` and the `gate_answer_void` payload's
+  `observed_tree_hash`). **A reading this record states while `proposed`:** an `answered` row for a token the store
+  holds no `opened` row for is refused as `StoreError::TierOne` naming the rule, and the transaction leaves zero rows —
+  the store neither falls back to the payload's tree nor writes `NULL` (this decision's *"A tier-1 row never invents a
+  member"*). No live path reaches it: `Act::gate` needs the fold's gate record, an opening is git-first and its row
+  precedes the answer's, and the heal and the rebuild walk the marks in ref order. The other states are unchanged: an
+  `opened` row's tree is its payload's (the bound tree), a `voided` row's is the payload's `bound_tree_hash`, and an
+  `expired` row's is `NULL`.
 
 **4. The SQL lives in `rk-store`, and its entry points are named.** `rk-store` gains `tier_one`, statement functions
 over a `rusqlite` connection (`insert_stage_transition`, `insert_gate_transition`, `insert_slice_seal`, and `append`,
@@ -156,6 +172,8 @@ are written by the adapter's `rebuild`.
   the migration header carry the note;
 - adds the interim `item` column to `t2_event` (ADR-0182), with an index;
 - and `SCHEMA_VERSION` becomes **2**.
+
+*(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96.)* `t1_gate_transition.tree_hash` holds the gate's bound tree on every row that carries one — `opened`, `answered` (read from the `opened` row, decision 3's dated bullet) and `voided` — and `NULL` on `expired`. The `.keys` declaration `tree_hash = tree` is unchanged.
 
 The grammar that writes these rows, the `Gate:` value's six tokens and whether the answered form carries the option,
 is the `Gate:` record's (`s8e` records table, third row). This record lands the surface it writes through.
@@ -237,6 +255,14 @@ free, stated here while the record is `proposed`:**
   mark's transition carries — an `opened` row's tree, deadline, kind and reach; an answered row's option — and leaves
   null what the live row leaves null. A rebuilt `opened` row's `stage` and `run_id` are null (D21-48 X11).
 
+*(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96.)* **Over a void the claim above did not hold, and now does.** A rebuilt `answered` row carries its mark's tree, the
+gate's bound tree; the live row carried the answer's observed tree, so `doctor::ac184_…` failed once its lane walked
+through a void. Decision 3's dated bullet makes the live row carry the bound tree, through the one writer every path
+calls, so a rebuilt `answered` row is again *"the row the live act anchored to that commit"*, byte for byte. The
+ac184 lane now walks through a void (`lane_e2e::walk_the_lane_through_a_void`) and is green; a rebuilt store keeps no
+observed tree, because the `Gate:` value carries none — the observed tree is a fact of the live store's tier-2 rows,
+outside AC-184's `t1_*` projection.
+
 **12. `BySha` selects by anchor.** `Query::BySha(sha)` returns the rows whose `anchor_sha` is `sha`, in append order,
 in `rk-store`'s SQL and in `VecStore`. A row appended through `append` has no anchor and never matches. That is how
 a conformance row reports its anchor through the port. `ByItem` and `ByRun` are ADR-0182's.
@@ -274,6 +300,8 @@ a conformance row reports its anchor through the port. `ByItem` and `ByRun` are 
   every store this binary writes, and the identity check reads only the stamp.
 - `t1_gate_transition`'s descriptive columns are nullable, because the answered, expired and void payloads do not
   carry every member the `Gate:` value does. The rebuild fills them from the value; a writer row does not invent them.
+  *(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96.)* An `answered` row's tree is no longer the payload's: it is read from the gate's `opened` row, so a
+  store holding no `opened` row for the token refuses the answer's row (decision 3's dated bullet).
 
 **What this forbids**
 - A `t1_*` row written without its trailer commit, or before it.
@@ -301,4 +329,4 @@ operator's dated ledger line. *(dated 2026-09-28, `s8e` build, package S8E-P7: d
 `registry::snapshot_and_rebuild_rows_carry_a_recorded_probe`, `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows`,
 `doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value` and
 `doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two`, each red first or pinned by a
-mutant that kills it (S8E-M4, M13, M15, M36, M39, M48).)*
+mutant that kills it (S8E-M4, M13, M15, M36, M39, M48).)* *(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96.)* Decision 3's `answered`-tree bullet is measured: `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows`, its lane walked through a void (red at the package's entry for the reported reason), and `store::an_answered_row_carries_its_gates_bound_tree_and_is_refused_without_an_opening` (red against the pre-D21-96 writer); S8E-M58 (the observed tree restored) is killed by both, S8E-M59 (the payload's tree taken when no `opened` row exists) by the `rk-store` test.

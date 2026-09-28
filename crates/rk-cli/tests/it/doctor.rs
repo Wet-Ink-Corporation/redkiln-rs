@@ -2949,41 +2949,30 @@ fn tier_one_projection(root: &std::path::Path) -> BTreeSet<String> {
 /// carry it. RED at entry: the rebuild wrote `t2_event` rows only, so the
 /// rebuilt projection was empty. Red under S8E-M4 (doctor half: `append_tier1`'s and the rebuild's
 /// `t1_*` insert dropped) and S8E-M15 (the rebuild writes `t2_event` only).
+///
+/// *(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96.)* ~~This lane still carries no
+/// `voided`~~ — **the lane now walks THROUGH A VOID** ([`crate::lane_e2e::walk_the_lane_through_a_void`]):
+/// two openings, two answers (the void one and the applied one) and one `voided` row, each
+/// anchored to its own mark. D21-96 ruled defect (c): *"The live `answered` row of
+/// `t1_gate_transition` carries the gate's **bound** tree, taken from the gate record, so the
+/// tier-1 row equals what its mark carries and a rebuild reproduces it byte for byte. The
+/// answer's observed tree is not lost: it stays in the anchored tier-2 `gate_answer_void` row."*
+/// RED at this package's entry for exactly the reported reason (*"only recorded:
+/// …|answered|<observed tree>…"*, *"only rebuilt: …|answered|<bound tree>…"*); green once
+/// `rk_store::tier_one::append` reads an `answered` row's tree from its token's `opened` row. The
+/// second half of the ruling is pinned here too, on the LIVE store before it is deleted: the
+/// anchored `gate_answer_void` row carries `observed_tree_hash`, which differs from its
+/// `bound_tree_hash`. (A rebuilt void row carries the bound tree only — the `Gate:` value holds no
+/// observed tree — so the observed tree is a fact of the live store, never of the projection.)
+/// Red under S8E-M58 (the observed tree restored in the `answered` row).
 #[test]
 fn ac184_rebuild_differential_over_anchored_tier_one_rows() {
-    use crate::lane_e2e::{
-        GATE_ITEM, ScriptedFactory, answer_item, args, cli, lane_repo, ran, seam, through,
-    };
+    use crate::lane_e2e::{GATE_ITEM, lane_repo, walk_the_lane_through_a_void};
     let repo = lane_repo();
     let root = repo.path();
-    let run = |script| {
-        ran(
-            rk_cli::verbs::run::run(
-                &cli(root, GATE_ITEM),
-                &args(GATE_ITEM),
-                &crate::support::clean_env(),
-                seam(&ScriptedFactory::new(script)),
-            ),
-            GATE_ITEM,
-        )
-    };
 
-    // ---- (1) the lane.
-    assert_eq!(
-        run(Vec::new()),
-        rk_cli::exit::Exit::Success,
-        "PREMISE: the gate opens"
-    );
-    assert_eq!(
-        answer_item(root, GATE_ITEM, "approve"),
-        rk_cli::exit::Exit::Success,
-        "PREMISE: the gate is answered"
-    );
-    assert_eq!(
-        run(through()),
-        rk_cli::exit::Exit::Success,
-        "PREMISE: the lane walks to its end"
-    );
+    // ---- (1) the lane, through a void (D21-96).
+    walk_the_lane_through_a_void(root);
 
     let count = |sql: &str| {
         sql_text_rows(root, sql)[0][0]
@@ -2994,16 +2983,45 @@ fn ac184_rebuild_differential_over_anchored_tier_one_rows() {
         count("SELECT CAST(count(*) AS TEXT) FROM t1_stage_transition") >= 3
             && count(
                 "SELECT CAST(count(*) AS TEXT) FROM t1_gate_transition WHERE state = 'opened'"
-            ) == 1
+            ) == 2
             && count(
                 "SELECT CAST(count(*) AS TEXT) FROM t1_gate_transition WHERE state = 'answered'"
+            ) == 2
+            && count(
+                "SELECT CAST(count(*) AS TEXT) FROM t1_gate_transition WHERE state = 'voided'"
             ) == 1
             && count("SELECT CAST(count(*) AS TEXT) FROM t1_slice_seal") == 1,
-        "PREMISE: the lane wrote boundaries, an opening, an answer and a seal: {:?}",
+        "PREMISE: the lane wrote boundaries, two openings, two answers, a void and a seal: {:?}",
         sql_text_rows(
             root,
             "SELECT state, token FROM t1_gate_transition ORDER BY id"
         )
+    );
+
+    // ---- the observed tree stays in the anchored tier-2 void row (D21-96's second sentence).
+    let voids = sql_text_rows(
+        root,
+        "SELECT CAST(anchor_sha AS TEXT), json_extract(payload, '$.bound_tree_hash'), \
+         json_extract(payload, '$.observed_tree_hash') FROM t2_event \
+         WHERE kind = 'gate_answer_void' ORDER BY id",
+    );
+    assert_eq!(
+        voids.len(),
+        1,
+        "PREMISE: one `gate_answer_void` row: {voids:?}"
+    );
+    let (void_anchor, bound, observed) = (&voids[0][0], &voids[0][1], &voids[0][2]);
+    assert!(
+        !void_anchor.is_empty() && void_anchor != "NULL",
+        "the `gate_answer_void` row is anchored to its `Gate: … voided` commit: {voids:?}"
+    );
+    assert!(
+        !observed.is_empty()
+            && observed != "NULL"
+            && !bound.is_empty()
+            && bound != "NULL"
+            && observed != bound,
+        "the void row keeps the answer's OBSERVED tree beside the gate's bound one (D21-96): {voids:?}"
     );
 
     // ---- (5) the adversarial row, planted BEFORE the projection is taken.

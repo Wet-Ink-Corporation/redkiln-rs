@@ -661,6 +661,99 @@ fn t1_gate_transition_appends_one_row_per_transition_and_is_never_updated() {
     );
 }
 
+/// **An `answered` row carries its gate's BOUND tree, read from the `opened` row; with no
+/// `opened` row it is refused** (D21-96; ADR-0181 decision 3's dated note). *(Added 2026-09-28,
+/// `s8e` build, package D2196-8e.)*
+///
+/// Arm 1: an opening bound to tree `B`, then a `gate_answered` whose payload `tree_hash` is the
+/// answer's OBSERVED tree `O` (a void answer's shape) — the `answered` row's `tree_hash` is `B`, as
+/// its `Gate: … answered` mark's is (ADR-0184 decision 1), never `O`. Arm 2 (the refusal branch's
+/// fixture): a `gate_answered` for a token the store never opened is refused as
+/// [`StoreError::TierOne`] naming the rule, and the transaction leaves zero rows — the store does
+/// not fall back to the payload's tree. RED against the pre-D21-96 writer (the payload's tree
+/// taken): arm 1 reads `O`. Red under S8E-M58 (arm 1) and S8E-M59 (arm 2: the payload's tree taken
+/// when no `opened` row exists).
+#[test]
+fn an_answered_row_carries_its_gates_bound_tree_and_is_refused_without_an_opening() {
+    use rk_types::event::Event;
+    use rk_types::event_kind::EventKind;
+
+    let bound = "b".repeat(40);
+    let observed = "0".repeat(40);
+    let token = "c".repeat(64);
+    let anchor = |sha: &'static str| rk_store::tier_one::Anchor {
+        sha,
+        tree: sha,
+        opening_run: None,
+    };
+    let answered = |token: &str| {
+        Event::new(
+            EventKind::GateAnswered,
+            serde_json::json!({ "token": token, "tree_hash": observed, "verdict": "approve" }),
+        )
+    };
+
+    // ---- arm 1: the bound tree.
+    let dir = tmp();
+    let w = migrated(dir.path());
+    let opened = Event::new(
+        EventKind::GateOpened,
+        serde_json::json!({ "deadline": 1_760_000_000, "kind": "human", "reach": 1, "token": token, "tree_hash": bound }),
+    );
+    w.transaction(|tx| {
+        rk_store::tier_one::append(
+            tx,
+            &opened,
+            &anchor("1111111111111111111111111111111111111111"),
+        )
+    })
+    .expect("the opening appends");
+    w.transaction(|tx| {
+        rk_store::tier_one::append(
+            tx,
+            &answered(&token),
+            &anchor("2222222222222222222222222222222222222222"),
+        )
+    })
+    .expect("the answer appends");
+    drop(w);
+    let tree: String = one_row(
+        dir.path(),
+        "SELECT tree_hash FROM t1_gate_transition WHERE state = 'answered'",
+        |r| r.get(0),
+    );
+    assert_eq!(
+        tree, bound,
+        "the `answered` row carries the answer's OBSERVED tree, not the gate's bound tree its mark \
+         carries (D21-96)"
+    );
+
+    // ---- arm 2: no opening, refused, zero rows.
+    let dir = tmp();
+    let w = migrated(dir.path());
+    let refused = w.transaction(|tx| {
+        rk_store::tier_one::append(
+            tx,
+            &answered(&token),
+            &anchor("3333333333333333333333333333333333333333"),
+        )
+    });
+    drop(w);
+    assert!(
+        matches!(&refused, Err(StoreError::TierOne(m)) if m.contains("bound tree") && m.contains("D21-96")),
+        "an `answered` row with no `opened` row for its token was not refused by the bound-tree \
+         rule: {refused:?}"
+    );
+    assert_eq!(
+        (
+            count(dir.path(), "SELECT count(*) FROM t1_gate_transition"),
+            count(dir.path(), "SELECT count(*) FROM t2_event")
+        ),
+        (0, 0),
+        "the refused answer left rows"
+    );
+}
+
 /// **`0002_gate_transitions`** (D21-46 R2; ADR-0181 decisions 5 and 6): a pair the schema lint
 /// reads; a fresh store gains `t1_gate_transition` and `t2_event.item`, loses `t1_gate`, stamps
 /// schema version 2 and counts two applied migrations; and a second open of that store applies

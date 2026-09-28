@@ -219,10 +219,22 @@ pub fn append(conn: &Connection, event: &Event, anchor: &Anchor<'_>) -> Result<(
         (GateState::Opened, Some((stage, run))) => (Some(stage.to_owned()), Some(run.to_owned())),
         _ => (None, None),
     };
+    let token = required(event, "token")?;
+    // *(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96; ADR-0181 decision 3's dated
+    // note.)* An `answered` row carries the gate's BOUND tree, read from its token's `opened` row —
+    // the gate record the store holds — and never the `gate_answered` payload's `tree_hash`, which
+    // is the answer's OBSERVED tree. So the row equals its `Gate: … answered` mark (ADR-0184
+    // decision 1: *"the same on every mark for the token"*) and a rebuild reproduces it. Over a
+    // void the two trees differ; the observed one stays in the anchored `gate_answer_void` row's
+    // payload. No `opened` row for the token: refused, nothing is invented.
+    let tree_hash = match gate_state {
+        GateState::Answered => Some(bound_tree(conn, &token)?),
+        _ => text(event, "tree_hash").or_else(|| text(event, "bound_tree_hash")),
+    };
     let row = GateTransition {
-        token: required(event, "token")?,
+        token,
         state: gate_state,
-        tree_hash: text(event, "tree_hash").or_else(|| text(event, "bound_tree_hash")),
+        tree_hash,
         deadline: text(event, "deadline"),
         kind: text(event, "kind"),
         reach: text(event, "reach"),
@@ -231,6 +243,31 @@ pub fn append(conn: &Connection, event: &Event, anchor: &Anchor<'_>) -> Result<(
         run_id,
     };
     insert_gate_transition(conn, &row, anchor.sha)
+}
+
+/// The gate's bound tree: the `tree_hash` of `token`'s `opened` row (D21-96). *(dated 2026-09-28,
+/// `s8e` build, package D2196-8e.)*
+///
+/// # Errors
+/// [`StoreError::TierOne`] when the store holds no `opened` row for `token` (or one with no tree):
+/// an `answered` row's tree is the gate's, and the store does not invent it.
+fn bound_tree(conn: &Connection, token: &str) -> Result<String, StoreError> {
+    conn.query_row(
+        "SELECT tree_hash FROM t1_gate_transition WHERE token = ?1 AND state = 'opened' \
+         ORDER BY id LIMIT 1",
+        [token],
+        |r| r.get::<_, Option<String>>(0),
+    )
+    .map(Some)
+    .or_else(none_when_absent)?
+    .flatten()
+    .ok_or_else(|| {
+        StoreError::TierOne(format!(
+            "an `answered` row for gate {token} carries the gate's bound tree, read from its \
+             `opened` row, and the store holds none (D21-96; ADR-0181 decision 3): nothing is \
+             invented"
+        ))
+    })
 }
 
 /// One row a store holds, as `SqliteStore::snapshot` reads it and `SqliteStore::rebuild` writes it
