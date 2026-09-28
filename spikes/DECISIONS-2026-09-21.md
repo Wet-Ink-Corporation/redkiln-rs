@@ -3635,3 +3635,21 @@ carry and `setup`, so the run would proceed over half its dependencies.
    same pre-unlink path) before the run refuses by name, as D21-48 X2's pointer scan already does, so the next run
    creates it anew and re-carries. A reused tree is still not re-carried. Built red-first in `s8d-ii`, recorded in
    ADR-0180 (`proposed`).
+
+---
+
+## D21-89 · A run tree re-created on an existing run branch is checked, and based, at what it actually checks out: the filter read, the pointer scan and the length rule read the branch tip, and `RK_BASE` records the merge-base
+
+**Taken 2026-09-28 by the operator, in the session executing `s8d-ii`, on refuting round 1's findings (the base choice
+was the operator's; the check-the-checked-out-commit fix follows from D21-48 X2 and V1's intent).**
+
+**Why.** When the run branch exists and no tree is registered (routine after a D21-88 ruling-2 rollback), `create`
+reads `fork` from `start`'s HEAD and runs the V1 filter read, the X2 pointer scan's path set and the length rule over
+it, while the tree checks out the branch tip; a probe created a tree holding a pointer file with no refusal. `RK_BASE`
+also recorded that HEAD as the fork, so a review reference tree would diff against the wrong base (§8d-ii.8 had named
+the base choice for *"the reference-tree package"*).
+
+**Ruled.** On the existing-branch path: (1) the filter read, the pointer scan's path set and the length rule read the
+**commit being checked out** (the run branch's tip, read before the add); (2) `RK_BASE` records
+**`merge-base(start HEAD, run-branch tip)`** — the point the branch forked. First creation is unchanged (fork = start's
+HEAD). Built red-first in `s8d-ii`, stated in ADR-0180 (`proposed`).
