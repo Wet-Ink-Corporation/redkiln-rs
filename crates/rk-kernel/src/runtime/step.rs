@@ -731,7 +731,9 @@ fn report_digest<T: serde::Serialize>(report: &T) -> rk_types::digest::Digest {
 /// reference the evaluator cannot resolve. A step with no `when` always runs. *(dated 2026-09-27,
 /// `s8d` build, package D2177-8d; ADR-0174 decision 7.)* The value is the guard's truth value:
 /// `Tri::True` runs the step, and `Tri::False` and `Tri::Null` skip it. The walk tells the two
-/// apart because a `null` gate `when` is not a decision and is not journaled.
+/// apart because ~~a `null` gate `when` is not a decision and is not journaled~~ a gate's `when`
+/// is journaled with its three-valued outcome: *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* a `null` gate `when` skips the
+/// gate, which continues the walk, so it is journaled as `null` and replayed as `null`.
 ///
 /// # Errors
 ///
@@ -1284,8 +1286,11 @@ impl super::Runtime {
         // whose route CONTINUES the walk is journaled, so only such a decision is replayed: a
         // `true`, a loop-back, a `repeat` pass, an escalation, a `continue`, a gate walked past. A
         // `false` routed to a refusal (`"fail"`, no `on_false`, an exhausted loop-back, an `until`
-        // exhausted into a refusal) leaves no row, and the next run re-verifies it. A `null` is not
-        // a decision and leaves no row either.
+        // exhausted into a refusal) leaves no row, and the next run re-verifies it. ~~A `null` is not
+        // a decision and leaves no row either.~~ *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* A `null`
+        // `until` or gate `when` is journaled on the same rule: when its route continues the walk
+        // (another pass, a `continue` or escalation at `max`, a gate walked past), and not when it is
+        // routed to a refusal.
         let mut w = Walk {
             report: ActivityReport::walk(now),
             scope: super::reference::Scope::new(steps),
@@ -1426,15 +1431,17 @@ impl super::Runtime {
         // 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1.)* A journaled `false` is one
         // whose route continued the walk (a loop-back or `continue`), so its replay re-takes a
         // route that continues; a `false` routed to a refusal was never journaled.
-        if step.kind == StepKind::Check
-            && let Some(holds) =
-                super::activity::journaled_decision(&w.journal, &key, DecisionKind::Check)
-        {
-            if holds {
-                w.scope.mark_ran(&step.id);
-                return Ok(Flow::Next);
+        // A `check`'s `null` abstains and refuses by name, so no `check` row is ever `null`; one
+        // read as `null` is not replayed and the `check` decides fresh. *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)*
+        if step.kind == StepKind::Check {
+            match super::activity::journaled_decision(&w.journal, &key, DecisionKind::Check) {
+                Some(Tri::True) => {
+                    w.scope.mark_ran(&step.id);
+                    return Ok(Flow::Next);
+                }
+                Some(Tri::False) => return Ok(self.on_false(w, steps, index)),
+                Some(Tri::Null) | None => {}
             }
-            return Ok(self.on_false(w, steps, index));
         }
         // A `gate` step's `when` decides whether the walk asks the human — an escalate gate's
         // decides the escalation — so it is journaled and replayed as a `check` is. ~~17 shipped
@@ -1447,7 +1454,9 @@ impl super::Runtime {
         } else {
             None
         };
-        if replayed_when == Some(false) {
+        // A replayed `false` walks past the gate, and so does a replayed `null` (D21-92): each
+        // skips the gate, as the first walk did. *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)*
+        if matches!(replayed_when, Some(Tri::False | Tri::Null)) {
             return Ok(Flow::Next);
         }
         let run = {
@@ -1463,14 +1472,20 @@ impl super::Runtime {
         // D21-76: a decision taken FRESH is journaled under this step's commit key. *(dated
         // 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1.)* A `check`'s `false` is
         // journaled below, and only when its `on_false` route continues the walk. A `null` gate
-        // `when` is not a decision (ADR-0174 decision 7) and is not journaled.
+        // ~~`when` is not a decision (ADR-0174 decision 7) and is not journaled.~~ *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)*
+        // `when` skips the gate, which continues the walk, so it is journaled as `null`.
         let fresh = match (step.kind, &run.verdict) {
-            (StepKind::Check, StepVerdict::Continue) => Some((DecisionKind::Check, true)),
-            (StepKind::Gate, StepVerdict::Skipped) if gate_when && !run.guard_null => {
-                Some((DecisionKind::When, false))
+            (StepKind::Check, StepVerdict::Continue) => Some((DecisionKind::Check, Tri::True)),
+            (StepKind::Gate, StepVerdict::Skipped) if gate_when && replayed_when.is_none() => {
+                let holds = if run.guard_null {
+                    Tri::Null
+                } else {
+                    Tri::False
+                };
+                Some((DecisionKind::When, holds))
             }
             (StepKind::Gate, StepVerdict::Gate) if gate_when && replayed_when.is_none() => {
-                Some((DecisionKind::When, true))
+                Some((DecisionKind::When, Tri::True))
             }
             _ => None,
         };
@@ -1506,7 +1521,7 @@ impl super::Runtime {
                     at,
                     Decision {
                         kind: DecisionKind::Check,
-                        holds: false,
+                        holds: Tri::False,
                     },
                     e.now,
                 )?;
@@ -2042,11 +2057,13 @@ impl super::Runtime {
                     })
                 })
             },
-            |holds| Ok(if holds { Tri::True } else { Tri::False }),
+            Ok,
         );
         // *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 ruling 1; ADR-0174 decision 7.)*
-        // The `until` decided FRESH, journaled below only when it is not `null` and its route
-        // continues the walk.
+        // The `until` decided FRESH, journaled below only when ~~it is not `null` and~~ its route
+        // continues the walk. *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* A `null` is
+        // journaled on that rule too, as `null`, and a replayed `null` takes another pass (or at
+        // `max` its `on_exhausted`) exactly as the fresh `null` did.
         let fresh = if replayed.is_none() {
             holds.as_ref().ok().copied()
         } else {
@@ -2120,10 +2137,11 @@ impl super::Runtime {
         };
         // 🛑 **D21-77 ruling 1: only an `until` whose route CONTINUES the walk is journaled** — the
         // end of the repeat, another pass, or at `max` a `continue` or an escalation. An `until`
-        // exhausted into a refusal leaves no row, so the next run re-evaluates it; a `null` is not
-        // a decision (ADR-0174 decision 7) and is evaluated again on a later walk.
+        // exhausted into a refusal leaves no row, so the next run re-evaluates it; ~~a `null` is not
+        // a decision (ADR-0174 decision 7) and is evaluated again on a later walk.~~
+        // *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* A `null` whose route continues is
+        // journaled as `null`; a `null` exhausted into a refusal leaves no row, as a `false` does.
         if let Some(tri) = fresh
-            && tri != Tri::Null
             && route.is_ok()
         {
             self.commit_decision(
@@ -2132,7 +2150,7 @@ impl super::Runtime {
                 at,
                 Decision {
                     kind: DecisionKind::Until,
-                    holds: tri == Tri::True,
+                    holds: tri,
                 },
                 e.now,
             )?;
@@ -2395,10 +2413,9 @@ impl super::Runtime {
             // (1) THE GUARD, its `${…}` resolved through the scope (ADR-0136; R2).
             let mut resolve_ref =
                 |text: &str| super::reference::resolve_text(env, scope, &step.id, "when", text);
-            let held = site.guard.map_or_else(
-                || guard_holds(step, ctx, &mut resolve_ref),
-                |replayed| Ok(if replayed { Tri::True } else { Tri::False }),
-            );
+            let held = site
+                .guard
+                .map_or_else(|| guard_holds(step, ctx, &mut resolve_ref), Ok);
             match held {
                 Ok(tri @ (Tri::False | Tri::Null)) => {
                     return Ok(StepRun {
@@ -2510,8 +2527,10 @@ struct StepSite<'a> {
     verdict: bool,
     /// *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76.)* A guard verdict the walk
     /// REPLAYS from its journal (a `gate` step's `when`): `Some` stands for the guard and it is
-    /// not re-evaluated. `None` everywhere else: the guard is evaluated.
-    guard: Option<bool>,
+    /// not re-evaluated. `None` everywhere else: the guard is evaluated. *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)*
+    /// Three-valued: the walk passes only a replayed `true` here (a replayed `false` or `null`
+    /// walks past the gate before the step runs).
+    guard: Option<Tri>,
 }
 
 /// What one step's execution produced: its verdict, a tool step's typed output, and its resolved
@@ -2529,8 +2548,9 @@ struct StepRun {
     /// call (the registry lookup, the selection, an unresolved input, the route) made none.
     dispatched: bool,
     /// *(dated 2026-09-27, `s8d` build, package D2177-8d; ADR-0174 decision 7.)* The step was
-    /// skipped because its `when` evaluated `null`, which is not a decision: a gate's `null` `when`
-    /// is not journaled, and a later walk evaluates it again.
+    /// skipped because its `when` evaluated `null`. ~~which is not a decision: a gate's `null` `when`
+    /// is not journaled, and a later walk evaluates it again.~~ *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)*
+    /// A gate's `null` `when` continues the walk, so it is journaled as `null` and replayed.
     guard_null: bool,
 }
 

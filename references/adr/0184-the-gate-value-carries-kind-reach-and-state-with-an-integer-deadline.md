@@ -112,6 +112,9 @@ table says. `s8e` §8e.7 asked the record to decide this *"by that test, and say
 applied to the other states, gives `expired` its action and `auto-decide`'s verdict; this record takes that
 extension and names it for the adversarial pass, because §8e.7 did not raise it. The answered row of
 `t1_gate_transition` writes the option into its `option_id` column (ADR-0181 decision 5).
+*(dated 2026-09-28, `s8e` build, package S8E-RULINGS.)* **Confirmed as written by the operator**
+(`spikes/DECISIONS-2026-09-21.md` D21-94, confirmation 2: *"`expired` carries its action (`fail`, `escalate`,
+`auto-decide <verdict>`) by the same deleted-database test as `answered`'s option"*).
 
 **3. The fold.** `reconcile` folds a gate's **latest state per token**, commits oldest-first (the order
 ADR-0183 decision 4 states), and keeps **every transition** in the token's history, so a rebuild emits the
@@ -135,6 +138,9 @@ decision's operative sentence is the test, and the list names examples of what i
 therefore does **not** supersede decision 2. It names the reading for its adversarial pass: if the list is
 judged enumerative, this record supersedes that parenthetical in part — to add `gate_expired` and
 `gate_answer_void` — and nothing else of decision 2.
+*(dated 2026-09-28, `s8e` build, package S8E-RULINGS.)* **Confirmed as written by the operator**
+(`spikes/DECISIONS-2026-09-21.md` D21-94, confirmation 2: *"ADR-0109 decision 2's parenthetical is read as
+illustrative (not superseded)"*); the fallback supersession above is not taken.
 
 **6. The opening's run is a column, not a token (D21-48 X11).** The `opened` row of `t1_gate_transition`
 carries the opening stage run's `stage` and `run_id` from the kernel's `OpenGate` act (ADR-0181 decision

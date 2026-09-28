@@ -771,8 +771,10 @@ impl Runtime {
     /// so `(item, activity_id@version, attempt)` stays unique across the log (AC-011).
     ///
     /// *(dated 2026-09-27, `s8d` build, package D2177-8d; D21-77 rulings 1 and 2a.)* The walk calls
-    /// this only for a decision whose route continues the walk: a `false` routed to a refusal and a
-    /// `null` are not journaled. The attempt the row takes draws nothing from AC-029's retry cap:
+    /// this only for a decision whose route continues the walk: a `false` routed to a refusal ~~and a
+    /// `null` are~~ is not journaled. *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92;
+    /// ADR-0187, proposed.)* A `null` `until` or gate `when` follows the same rule: journaled (as
+    /// `"holds": null`) when its route continues the walk, and not when it is routed to a refusal. The attempt the row takes draws nothing from AC-029's retry cap:
     /// [`Self::run_activity_at`] checks the cap against the activation's `dispatch` rows only.
     ///
     /// # Errors
@@ -1277,19 +1279,36 @@ impl DecisionKind {
 }
 
 /// **D21-76: one control decision** — its kind and whether its predicate held.
+///
+/// *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* `holds` is
+/// the predicate's three-valued outcome, not a `bool`: a `null` `until` or gate `when` whose route
+/// continues the walk is journaled as `null` (the row's `"holds": null`), so its replay re-takes
+/// the route the `null` took and the journal never records a `false` the predicate did not
+/// answer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Decision {
     /// What decided.
     pub kind: DecisionKind,
-    /// Whether it held.
-    pub holds: bool,
+    /// Whether it held: `true`, `false`, or `null` (D21-92).
+    pub holds: crate::predicate::Tri,
+}
+
+/// The row's `holds` member for a decision's outcome: a JSON `true`, `false` or `null`.
+const fn holds_json(holds: crate::predicate::Tri) -> serde_json::Value {
+    match holds {
+        crate::predicate::Tri::True => serde_json::Value::Bool(true),
+        crate::predicate::Tri::False => serde_json::Value::Bool(false),
+        crate::predicate::Tri::Null => serde_json::Value::Null,
+    }
 }
 
 /// **D21-76: a control decision's row** — one more `activity_committed`.
 ///
 /// As R1's completion row is (ADR-0174 decision 5's precedent: no `EventKind` is minted), it is
 /// keyed by the commit key of the frame that took it (`step_id`, `iteration_path`) and carrying a `decision` member,
-/// `{"kind": "check" | "until" | "when", "holds": <bool>}`. It carries no `result`, no `schema` and
+/// `{"kind": "check" | "until" | "when", "holds": <bool>}` — *(dated 2026-09-28, `s8e` build,
+/// package S8E-RULINGS; D21-92)* or `"holds": null` for a `null` `until` or gate `when` whose
+/// route continued the walk. It carries no `result`, no `schema` and
 /// no `family`: it is not a step activation's commit, so [`commit_key_of`] answers `None` for it,
 /// the fold does not count it as a commit (`fsm::fold`), and the breaker never reads it.
 #[must_use]
@@ -1306,7 +1325,7 @@ pub fn decision_event(
             "activity_id_at_version": key.activity_id_at_version,
             "at": now.timestamp().unix_seconds(),
             "attempt": key.attempt,
-            "decision": { "kind": decision.kind.as_str(), "holds": decision.holds },
+            "decision": { "kind": decision.kind.as_str(), "holds": holds_json(decision.holds) },
             "item": key.item,
             "iteration_path": at.iteration_path.to_json(),
             "run_id": run_id,
@@ -1323,17 +1342,33 @@ pub fn is_decision_row(event: &Event) -> bool {
 
 /// **D21-76.** The journaled verdict of the `kind` decision taken under `key`, or `None` when the
 /// walk never journaled one there — which is where a re-entry stops replaying and decides fresh.
+///
+/// *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* The verdict
+/// is three-valued: a row whose `holds` is JSON `null` is a journaled `null` ([`Tri::Null`]), which
+/// is a decision the walk replays, never an absent one. A `holds` that is none of `true`, `false`
+/// and `null` (or is missing) is not read as a decision, so the walk decides fresh there.
+///
+/// [`Tri::Null`]: crate::predicate::Tri::Null
 #[must_use]
-pub fn journaled_decision(events: &[Event], key: &CommitKey, kind: DecisionKind) -> Option<bool> {
+pub fn journaled_decision(
+    events: &[Event],
+    key: &CommitKey,
+    kind: DecisionKind,
+) -> Option<crate::predicate::Tri> {
     events
         .iter()
         .filter(|e| is_decision_row(e))
         .filter(|e| row_key_of(e).as_ref() == Some(key))
         .find_map(|e| {
             let d = e.payload.get("decision")?;
-            (d.get("kind")?.as_str()? == kind.as_str())
-                .then(|| d.get("holds")?.as_bool())
-                .flatten()
+            if d.get("kind")?.as_str()? != kind.as_str() {
+                return None;
+            }
+            match d.get("holds")? {
+                serde_json::Value::Bool(b) => Some(crate::predicate::Tri::from_bool(*b)),
+                serde_json::Value::Null => Some(crate::predicate::Tri::Null),
+                _ => None,
+            }
         })
 }
 

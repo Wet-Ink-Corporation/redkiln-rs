@@ -124,6 +124,10 @@ the `WHERE` and to `VecStore`'s filter, taken once every producer keys and `cost
 a selector that says so. The `doctor` finding for an item-less row of a `Carried` kind is named and owed, not built.
 Rows written before this stage carry no key; the shipped store is rebuilt at schema version 2 (ADR-0181 decision 6),
 and the rebuild keys what it re-derives.
+*(dated 2026-09-28, `s8e` build, package S8E-RULINGS.)* **Confirmed as written by the operator**
+(`spikes/DECISIONS-2026-09-21.md` D21-94, confirmation 1: *"under `ByItem(x)` a row that carries no key is returned,
+as the **interim** (the inclusive reading), with exclusion plus a named `doctor` finding taken once every producer of
+a `Carried` kind keys its rows"*), departing from `s8e` §8e.10's recommendation for the reason given above.
 
 **5. `ByRun` stays inert, and `BySha` selects by anchor.** No run carrier exists on an event, so `ByRun(_)` returns
 every row, as it did, and the conformance bodies that query by run are unchanged. `BySha` is ADR-0181 decision 12's:

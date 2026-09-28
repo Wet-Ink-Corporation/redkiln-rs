@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-94), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-95), and what they license
 
 *(Title moved 2026-09-28 at `s8d-ii`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-89)"**, true when package R2FIX-8dii corrected it; `D21-90` and `D21-91` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 91, the last `D21-91`.)*
 
@@ -3902,3 +3902,29 @@ the one taken, stated as a divergence from ADR-0159 decision 2's mint siting for
    superseded).
 3. ADR-0185 decision 3: with the database deleted, `answer` refuses fail-closed until the next `run` writes
    `worktree_assigned` again; ownership has one source.
+
+---
+
+## D21-95 · "Will reach a review stage" is read from declared `provides`, never from a stage name; the shipped catalog's missing `Findings` producer is owed to `s8g`
+
+**Taken 2026-09-28 by the operator, in the session executing `s8e`, on package S8E-RULINGS's blocker (four grounded
+options and a recommendation), and on the gap that blocker measured.**
+
+**Why.** D21-94 refuses an undeclared slice at entry *"for a lane that will reach a review stage (the fix lane always
+does)"*. Accepted ADR-0162 forbids *"matching `resolved.stage` against a string literal to find the review stage"*;
+the review pass is selected by an activity's declared `provides`, and `review_pass` seals only when a committed
+activation's schema is `Findings`. Measured by a `tomllib` census over `.redkiln/catalog/*.toml`: **0** shipped
+activities declare `provides` first `Findings`; the shipped `code-review` provides `["ReviewVerdict"]`. So under
+ADR-0162's rule no shipped lane reaches the seal, and `Slice-Verdict:` is minted over fixtures only.
+
+**Ruled.**
+1. **The entry check decides from declared `provides` (option A).** At entry it walks the stage order from the current
+   stage through `Pack::successor`, skipping forbidden stages, and refuses by name, through the one validator
+   `seal_act` also calls, when any stage reached has a catalog activity for that stage whose `provides` first is
+   `Findings`. No stage-name literal; ADR-0162 stands whole. D21-94's parenthetical *"(the fix lane always does)"* is
+   read as the operator's expectation, not as the test. The check is inert on the shipped packs until item 2 lands;
+   the mint's refusal stays the backstop.
+2. **The shipped catalog's missing `Findings` producer is owed to `s8g`** by a dated receiver note in `s8g`'s file: the
+   shipped review activity and `review_pass`'s schema key must agree (either `code-review` provides `Findings`, or the
+   pass keys on what the shipped review provides), decided by a record there, so a shipped lane reaches the seal.
+   `s8e` closes on its fixtures and states the gap in ADR-0186.

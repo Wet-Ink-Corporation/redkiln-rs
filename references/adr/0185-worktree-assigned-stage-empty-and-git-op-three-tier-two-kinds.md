@@ -92,6 +92,9 @@ gate read; it writes no row but its invocation's `reconcile_started` (AC-172's b
 resolves nothing from the `.redkiln/worktrees/<item>` convention. The next `run` re-enters the registered, marked tree
 under W2 and writes the row again without re-creating anything, so `run`'s next action is the same with or without
 the row.
+*(dated 2026-09-28, `s8e` build, package S8E-RULINGS.)* **Confirmed as written by the operator**
+(`spikes/DECISIONS-2026-09-21.md` D21-94, confirmation 3: *"with the database deleted, `answer` refuses fail-closed
+until the next `run` writes `worktree_assigned` again; ownership has one source"*).
 
 **4. `stage_empty { stage, reason }`, tier 2, with a closed reason set.** The reason is one of
 `rk_types::event_kind::STAGE_EMPTY_REASONS`, which holds one member at this record: **`no_applicable_activity`** — the

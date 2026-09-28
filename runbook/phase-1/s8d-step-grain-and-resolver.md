@@ -2404,6 +2404,11 @@ D21-77 ruled on all three, and the round's four minors are fixed with them. All 
 - `a_null_until_or_gate_when_is_not_journaled` fixes the records minor by changing code, not the record. **RED** on the
   D21-76 build: *"left: [("g", "repeat:1", Object {"kind": String("until"), "holds": Bool(false)}), ("g", "repeat:2",
   …)] right: [("g", "repeat:2", …)]"*. Its gate arm was red under mutant N2, which is the pre-fix gate code.
+  *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* Replaced: D21-92 rules that a
+  `null` `until` or gate `when` is journaled when its route continues the walk, so this test pinned the rule the ruling
+  reverses. Its successors are `a_null_until_or_gate_when_whose_route_continues_is_journaled_and_replayed` and
+  `a_null_until_routed_to_a_refusal_is_not_journaled_so_a_fixed_re_run_completes` (`s8e` §8e.12), and Checkpoint 8d's
+  selection names them by dated edit.
 - `a_decision_is_journaled_at_most_once_per_commit_key_and_kind` (round 8's mutants B and D) and
   `a_replayed_true_check_is_marked_run_for_the_emit_evidence` (mutant C) close the tests-mutants minor.
 
@@ -2889,11 +2894,18 @@ run_lib_named rk-kernel "step5 in-crate" \
 # ---- round 8's minors: a refusal is not replayed, decisions draw nothing from the retry cap, a gate `when`'s false is
 # ---- replayed, a null is not journaled, at most once per key and kind, and a replayed true is marked run (section
 # ---- 8d.10's D2177-8d note). `want` moves from 22 to 28 with them.
+# ---- (dated 2026-09-28, s8e build, package S8E-RULINGS; D21-92) One name removed and two added by dated edit, the
+# ---- operator's ruling that a routing null is journaled when its route continues the walk (ADR-0187, proposed):
+# ---- ~~on_false_exec::a_null_until_or_gate_when_is_not_journaled~~ pinned the rule D21-92 reverses and is replaced by
+# ---- on_false_exec::a_null_until_or_gate_when_whose_route_continues_is_journaled_and_replayed and
+# ---- on_false_exec::a_null_until_routed_to_a_refusal_is_not_journaled_so_a_fixed_re_run_completes (s8e section 8e.12).
+# ---- `want` moves from 28 to 29 with them.
 run_named rk-kernel "on_false, telemetry, breaker" \
   on_false_exec::a_refused_decision_is_not_replayed_so_a_refused_then_fixed_re_run_completes \
   on_false_exec::journaled_decisions_draw_nothing_from_the_retry_cap \
   on_false_exec::a_gate_when_that_decides_false_is_journaled_and_replayed \
-  on_false_exec::a_null_until_or_gate_when_is_not_journaled \
+  on_false_exec::a_null_until_or_gate_when_whose_route_continues_is_journaled_and_replayed \
+  on_false_exec::a_null_until_routed_to_a_refusal_is_not_journaled_so_a_fixed_re_run_completes \
   on_false_exec::a_decision_is_journaled_at_most_once_per_commit_key_and_kind \
   on_false_exec::a_replayed_true_check_is_marked_run_for_the_emit_evidence \
   on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path \

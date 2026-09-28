@@ -1931,59 +1931,213 @@ fn a_gate_when_that_decides_false_is_journaled_and_replayed() {
     );
 }
 
-/// **A `null` `until` or gate `when` is not a decision: it is not journaled, and a later walk
-/// evaluates it again** (ADR-0174 decision 7: *"A `null` or an error is not a decision"*; refuting
-/// round 8's two records minors). (a) A `repeat`'s `until` over `${g.outputs.status}` reads `null` on
-/// pass 1 (the step answered `status: null`), so the walk takes pass 2, which holds. (b) A gate's
-/// `when` over the same `null` skips the gate. Each routes as the fresh path always did; only the
-/// journal differs.
+/// `(step, path, {"kind": kind, "holds": null})`: a `null` decision, as [`Rig::decisions`] renders
+/// one *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92)*.
+fn decided_null(step: &str, path: &str, kind: &str) -> (String, String, Json) {
+    (
+        step.to_owned(),
+        path.to_owned(),
+        serde_json::json!({"kind": kind, "holds": null}),
+    )
+}
+
+// ================================================================================================
+// D21-92: A ROUTING `null` IS JOURNALED WHEN ITS ROUTE CONTINUES THE WALK; ONE ROUTED TO A REFUSAL
+// IS NOT
+// ================================================================================================
+//
+// *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed, superseding
+// ADR-0174 decision 7 in part — its null sentence only.)* D21-92: *"A `null` `until` or gate `when`
+// is journaled on the same rule as a `true` or `false`: **when its route continues the walk**. A
+// `null` routed to a refusal leaves no row, so a refused-then-fixed re-run still completes
+// (D21-77)."* These two tests replace `a_null_until_or_gate_when_is_not_journaled`, which pinned the
+// rule the ruling reverses. Each `null` below is a Kleene disjunction over an agent step's `null`
+// member and a tool step's count: `null or false` is `null`, and `null or true` is `true`, so a
+// re-executed tool answer that changed between walks would decide the disjunction differently if it
+// were re-evaluated.
+
+/// **D21-92, the continuing arm: a `null` `until` or gate `when` whose route continues the walk is
+/// journaled, and a re-entry replays it over a changed tool answer.**
+///
+/// (a) `until`: `g` (agent, `repeat` max 2) → `rv` (`toolchain:test`), `until = "${g.outputs.status}
+/// == 'passing' or ${rv.outputs.failed} == 0"`, then an unguarded `approve` gate that cuts the walk.
+/// Pass 1 answers `status: null` over `(0, 1)`, so the `until` is `null` and takes pass 2, which
+/// holds. Between the walks the tree was fixed, so the re-entry's `rv` answers `(1, 0)`: re-evaluated,
+/// pass 1's `until` would now hold and end the repeat a pass early. Replayed, the walk takes pass 2
+/// again (served), replays its `true`, and completes past the answered gate.
+///
+/// (b) gate `when`: `a` → `t` (`toolchain:test`) → the gate `g`, `when = "${a.outputs.status} ==
+/// 'stuck' or ${t.outputs.failed} > 0"` → `approve` → `emit`. The first walk's `t` reports `(1, 0)`,
+/// so `g`'s `when` is `null` and `g` is walked past (a skipped gate always continues the walk).
+/// The re-entry's `t` reports `(0, 1)`: re-evaluated, `g` would open a gate the first walk never
+/// asked. Replayed, the walk passes `g` and completes.
 #[test]
-fn a_null_until_or_gate_when_is_not_journaled() {
+fn a_null_until_or_gate_when_whose_route_continues_is_journaled_and_replayed() {
+    // (a) the `until`.
     let steps = vec![
         repeating(
             agent("g", &[]),
-            "${g.outputs.status} == 'passing'",
+            "${g.outputs.status} == 'passing' or ${rv.outputs.failed} == 0",
             2,
             Some("fail"),
             None,
         ),
+        tool("rv", "test", &[("selection", "${g.outputs.tests}")]),
+        gate("approve", "a.approve", None),
         step("emit", StepKind::Emit),
     ];
     let rig = Rig::new(
         vec![
-            serde_json::json!({"status": null}),
-            serde_json::json!({"status": "passing"}),
+            serde_json::json!({"status": null, "tests": ["t1"]}),
+            serde_json::json!({"status": "passing", "tests": ["t1"]}),
         ],
-        Vec::new(),
+        vec![(0, 1), (0, 1), (1, 0), (1, 0)],
     );
-    let report = rig.walk(&steps);
+    let first = rig.walk(&steps);
     assert!(
-        report.completed() && report.step_error().is_none() && rig.harness.dispatches() == 2,
-        "PREMISE (until): a `null` `until` takes another pass, which holds: {}",
-        refusal(&report)
+        first.gate_opened().is_some() && first.step_error().is_none(),
+        "PREMISE (until): pass 1's `null` takes pass 2, which holds, and `approve` opens: {}",
+        refusal(&first)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.tests.selections().len()),
+        (2, 2),
+        "PREMISE (until): two passes, each dispatching `g` and running `rv` once"
     );
     assert_eq!(
         rig.decisions(),
-        vec![decided("g", "repeat:2", "until", true)],
-        "(until) the `null` of pass 1 is not journaled; the `true` of pass 2 is"
+        vec![
+            decided_null("g", "repeat:1", "until"),
+            decided("g", "repeat:2", "until", true),
+        ],
+        "(until) pass 1's `null` continued the walk (another pass), so it is journaled as `null` \
+         beside pass 2's `true` (D21-92)"
+    );
+    rig.answer(&first, "approve");
+    let second = rig.walk(&steps);
+    assert!(
+        second.completed() && second.step_error().is_none() && second.gate_opened().is_none(),
+        "(until) the re-entry replays pass 1's `null` and pass 2's `true` and completes: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        (
+            rig.harness.dispatches(),
+            rig.tests.selections().len(),
+            rig.paths("g")
+        ),
+        (2, 4, vec!["repeat:1".to_owned(), "repeat:2".to_owned()]),
+        "(until) both of `g`'s passes are served and `rv` re-executes in each: pass 1's `until` was \
+         NOT re-decided over the fixed `(1, 0)`, which would have ended the repeat at pass 1 and run \
+         `rv` once"
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![
+            decided_null("g", "repeat:1", "until"),
+            decided("g", "repeat:2", "until", true),
+        ],
+        "(until) the re-entry journals nothing new: both decisions were replayed"
     );
 
+    // (b) the gate `when`.
     let steps = vec![
         agent("a", &[]),
-        gate("g", "a.escalate", Some("${a.outputs.status} == 'stuck'")),
+        tool("t", "test", &[("selection", "${a.outputs.tests}")]),
+        gate(
+            "g",
+            "a.escalate",
+            Some("${a.outputs.status} == 'stuck' or ${t.outputs.failed} > 0"),
+        ),
+        gate("approve", "a.approve", None),
         step("emit", StepKind::Emit),
     ];
-    let rig = Rig::new(vec![serde_json::json!({"status": null})], Vec::new());
-    let report = rig.walk(&steps);
+    let rig = Rig::new(
+        vec![serde_json::json!({"status": null, "tests": ["t1"]})],
+        vec![(1, 0), (0, 1)],
+    );
+    let first = rig.walk(&steps);
     assert!(
-        report.completed() && report.gate_opened().is_none(),
-        "PREMISE (when): a `null` guard skips the gate: {}",
-        refusal(&report)
+        first.gate_opened().is_some() && first.step_error().is_none(),
+        "PREMISE (when): `g`'s `null` walks past it and `approve` opens: {}",
+        refusal(&first)
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![decided_null("g", "root", "when")],
+        "(when) `g`'s `null` continued the walk (the gate is walked past), so it is journaled as \
+         `null` (D21-92); `approve`, with no `when`, journals nothing"
+    );
+    rig.answer(&first, "approve");
+    let second = rig.walk(&steps);
+    assert!(
+        second.gate_opened().is_none() && second.completed() && second.step_error().is_none(),
+        "(when) the re-entry replays `g`'s journaled `null` over the changed `t` answer, opens no \
+         gate and completes: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        (rig.tests.selections().len(), rig.harness.dispatches()),
+        (2, 1),
+        "PREMISE (when): `t` re-executed on the re-entry (ADR-0174 decision 7); `a` was served"
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![decided_null("g", "root", "when")],
+        "(when) the re-entry journals nothing new"
+    );
+}
+
+/// **D21-92, the refusal arm: a `null` `until` routed to a refusal leaves no row, so a
+/// refused-then-fixed re-run completes** (D21-77's rule, kept for a `null`). `g` (agent, `repeat`
+/// max 1, `on_exhausted = "fail"`) → `rv` → `emit`, `until = "${g.outputs.status} == 'passing' or
+/// ${rv.outputs.failed} == 0"`. The first walk's pass answers `status: null` over `(0, 1)`: the
+/// `until` is `null` at `max`, and `"fail"` refuses. The tree is fixed before the re-run, whose `rv`
+/// answers `(1, 0)`: the `until` is decided fresh, holds, and the walk completes. A gate `when` has
+/// no refusal arm — a skipped gate always continues the walk — so this arm is the `until`'s alone.
+#[test]
+fn a_null_until_routed_to_a_refusal_is_not_journaled_so_a_fixed_re_run_completes() {
+    let steps = vec![
+        repeating(
+            agent("g", &[]),
+            "${g.outputs.status} == 'passing' or ${rv.outputs.failed} == 0",
+            1,
+            Some("fail"),
+            None,
+        ),
+        tool("rv", "test", &[("selection", "${g.outputs.tests}")]),
+        step("emit", StepKind::Emit),
+    ];
+    let rig = Rig::new(
+        vec![serde_json::json!({"status": null, "tests": ["t1"]})],
+        vec![(0, 1), (1, 0)],
+    );
+    let first = rig.walk(&steps);
+    assert!(
+        first.step_error().is_some() && !first.completed() && refusal(&first).contains("exhausted"),
+        "PREMISE: the one pass's `until` is `null` at `max`, and `on_exhausted = \"fail\"` refuses: \
+         {}",
+        refusal(&first)
     );
     assert_eq!(
         rig.decisions(),
         Vec::new(),
-        "(when) the `null` guard is not journaled"
+        "the `null` routed to a refusal leaves no row (D21-92; D21-77)"
+    );
+    let second = rig.walk(&steps);
+    assert!(
+        second.completed() && second.step_error().is_none(),
+        "the re-run re-evaluates the refused `until` over the fixed tree and completes: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        (
+            rig.harness.dispatches(),
+            rig.tests.selections().len(),
+            rig.decisions()
+        ),
+        (1, 2, vec![decided("g", "repeat:1", "until", true)]),
+        "`g` is served, `rv` re-executes once, and the re-run journals the `true` it decided"
     );
 }
 
@@ -2003,7 +2157,7 @@ fn a_decision_is_journaled_at_most_once_per_commit_key_and_kind() {
     };
     let check_true = Decision {
         kind: DecisionKind::Check,
-        holds: true,
+        holds: rk_kernel::predicate::Tri::True,
     };
     for _ in 0..2 {
         rig.rt
@@ -2022,7 +2176,7 @@ fn a_decision_is_journaled_at_most_once_per_commit_key_and_kind() {
             at_c,
             Decision {
                 kind: DecisionKind::When,
-                holds: false,
+                holds: rk_kernel::predicate::Tri::False,
             },
             at(100),
         )
