@@ -3612,3 +3612,26 @@ Checkpoint 8d-ii's `REC_WT` line reads `0180` by a dated edit in the same change
 round is dry, on its own dated ledger line; the flip commit writes the three back-links. Checkpoint 8d-ii (9) asserts
 whichever back-link state the record's status requires, so it passes over either state and needs no D21-49 flip-stop
 of its own. Until then the record binds nothing.
+
+---
+
+## D21-88 · `s8d-ii` findings 17 and 18: a run tree's untracked links are unlinked before its unforced removal, and a fresh tree whose carry or setup fails is rolled back
+
+**Taken 2026-09-27 by the operator, in the session executing `s8d-ii`, on a brief with measured options and a
+recommendation for each.**
+
+**Why.** (17) Measured on git 2.55.0.windows.3: after `setup` ran `pnpm install` in a run tree, git's unforced
+`git worktree remove` deregistered it but left 114 dangling junctions on disk; `rk_git::worktree::remove_landed`, which
+unlinks every UNTRACKED symlink or junction inside a clean, landed, marked, unlocked tree without following it and
+then runs the unforced removal, left nothing. (18) A fresh tree whose carry or `setup` failed stayed registered; the
+next run re-entered it as `Creation::Reused`, and §8d-ii.4's *"A reused tree is not re-carried"* skipped both the
+carry and `setup`, so the run would proceed over half its dependencies.
+
+**Ruled.**
+1. **(17) Keep the pre-unlink as built:** a link inside the tree is removed, never its target, then git's unforced
+   removal runs, and any residue refuses as `WorktreeRemoveFailed`. It executes ADR-0180 decision 9 as written; the
+   measurement is added to decision 9's evidence before the flip.
+2. **(18) Roll back on failure:** when a FRESH tree's carry or `setup` fails, the tree is removed (unforced, through the
+   same pre-unlink path) before the run refuses by name, as D21-48 X2's pointer scan already does, so the next run
+   creates it anew and re-carries. A reused tree is still not re-carried. Built red-first in `s8d-ii`, recorded in
+   ADR-0180 (`proposed`).
