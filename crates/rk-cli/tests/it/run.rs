@@ -1222,3 +1222,48 @@ fn ac257_expired_gate_resolved_by_fresh_process() {
         expired[0].payload
     );
 }
+
+/// **AC-126's surface half** (`s8f` §8f.5; *"absence of a skip flag asserted by a CLI surface
+/// test"*): `run` takes exactly its item and `--lane`, and no argument of `run` or of the root
+/// command names a way around the entry's reconcile — no `skip`, `no-reconcile`, `cache`, `fast`
+/// or `offline` spelling in any id, long flag or help line. *(Added 2026-09-28, s8f build, package
+/// S8F-P4-RENDER-WRITE-READ.)*
+#[test]
+fn no_cli_flag_skips_the_entry_reconcile() {
+    use clap::CommandFactory;
+    let root = rk_cli::cli::Cli::command();
+    let run = root
+        .get_subcommands()
+        .find(|c| c.get_name() == "run")
+        .expect("`run` is a subcommand");
+    let own: Vec<String> = run
+        .get_arguments()
+        .map(|a| a.get_id().as_str().to_owned())
+        .filter(|id| id != "help" && id != "version")
+        .collect();
+    assert_eq!(
+        own,
+        ["item", "lane"],
+        "`run` takes an argument beyond its item and `--lane`"
+    );
+    let banned = ["skip", "reconcile", "cache", "fast", "offline"];
+    let offending: Vec<String> = run
+        .get_arguments()
+        .chain(root.get_arguments())
+        .filter(|a| {
+            let spelled = format!(
+                "{} {} {}",
+                a.get_id().as_str(),
+                a.get_long().unwrap_or_default(),
+                a.get_help().map(ToString::to_string).unwrap_or_default()
+            )
+            .to_ascii_lowercase();
+            banned.iter().any(|b| spelled.contains(b))
+        })
+        .map(|a| a.get_id().as_str().to_owned())
+        .collect();
+    assert!(
+        offending.is_empty(),
+        "an argument names a way around the entry's reconcile (AC-126): {offending:?}"
+    );
+}

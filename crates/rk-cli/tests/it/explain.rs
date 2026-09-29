@@ -928,3 +928,113 @@ fn explain_prints_one_output_digest_per_committed_step_activation() {
         "explain at run time and over the replayed step-grain record differ"
     );
 }
+
+// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; `s8f` §8f.4's hand-off; the landing
+// record ADR-0188 decision 12, proposed.)* The landing block, over `landing`'s end-to-end lane.
+
+/// The rows the lane's end leaves, for `explain`.
+fn landing_explain_output(root: &std::path::Path, item: &str) -> (rk_cli::exit::Exit, String) {
+    let discovered = rk_cli::repo::discover(Some(root)).expect("the repository discovers");
+    let opened = rk_adapter_sqlite::SqliteStore::open(&discovered.exec, &discovered.worktree)
+        .expect("the store opens");
+    let store: std::sync::Arc<std::sync::Mutex<dyn rk_ports::event_store::EventStore>> =
+        std::sync::Arc::new(std::sync::Mutex::new(opened));
+    let mut out: Vec<u8> = Vec::new();
+    let exit = rk_cli::verbs::explain::run_with(
+        &rk_cli::verbs::RealReconciler,
+        &discovered.exec,
+        &discovered.worktree,
+        &discovered.common_dir,
+        &store,
+        item,
+        &mut out,
+    )
+    .expect("explain does not halt");
+    (exit, String::from_utf8(out).expect("utf-8"))
+}
+
+/// **`explain <item>` prints the landing block and the exact merge command** (ADR-0188 decision
+/// 12): `landing: rk-run/<item> at <tip>`, `landing: <n> commits ahead of <base>, <c> with
+/// content`, `landing: git merge --no-ff rk-run/<item>`, after the recorded resolution. Every
+/// expected value is computed here with git (the fork is the checkout's `HEAD` the tree forked
+/// from; `<c>` counts the commits whose tree is not their first parent's). Read mid-lane (the run
+/// tree exists) and at the lane's end (the tree is removed), the same base both times. No squash
+/// and no rebase appears. Red under M22 (`--squash`).
+#[test]
+fn explain_prints_the_landed_commit_and_the_merge_command() {
+    let repo = crate::lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = crate::lane_e2e::THROUGH_ITEM;
+    let tree = crate::run_tree(root, item).path;
+    let fork = crate::landing::rev(root, "HEAD").expect("the checkout's HEAD");
+    let first = crate::landing::writing(&tree, vec![crate::lane_e2e::implement()], |n, t| {
+        if n == 0 {
+            crate::landing::write(t, "landed.txt", crate::landing::LANDED);
+        }
+    });
+    let _ = crate::landing::run(root, item, &first);
+    assert!(tree.is_dir(), "PREMISE: mid-lane, the run tree exists");
+
+    let expect = |root: &std::path::Path| -> Vec<String> {
+        let tip = crate::lane_e2e::ref_sha(root, item).expect("the run ref");
+        let range = format!("{fork}..{tip}");
+        let commits: Vec<String> = crate::lane_e2e::git_read(root, &["rev-list", &range])
+            .unwrap_or_default()
+            .lines()
+            .map(str::to_owned)
+            .collect();
+        let content = commits
+            .iter()
+            .filter(|c| !crate::landing::is_empty_commit(root, c))
+            .count();
+        vec![
+            format!("landing: rk-run/{item} at {tip}"),
+            format!(
+                "landing: {} commits ahead of {fork}, {content} with content",
+                commits.len()
+            ),
+            format!("landing: git merge --no-ff rk-run/{item}"),
+        ]
+    };
+    let check = |when: &str| {
+        let (exit, out) = landing_explain_output(root, item);
+        assert_eq!(
+            exit,
+            rk_cli::exit::Exit::Success,
+            "{when}: explain refused:\n{out}"
+        );
+        let lines: Vec<&str> = out.lines().collect();
+        let landing: Vec<String> = lines
+            .iter()
+            .filter(|l| l.starts_with("landing:"))
+            .map(|l| (*l).to_owned())
+            .collect();
+        assert_eq!(
+            landing,
+            expect(root),
+            "{when}: the landing block is not exactly the three lines git gives:\n{out}"
+        );
+        let first_landing = lines.iter().position(|l| l.starts_with("landing:"));
+        let run_line = lines.iter().position(|l| l.starts_with("run: "));
+        assert!(
+            run_line.is_some() && first_landing > run_line,
+            "{when}: the landing block is not after the recorded resolution:\n{out}"
+        );
+        assert!(
+            !out.contains("--squash") && !out.contains("rebase"),
+            "{when}: explain names a squash or a rebase:\n{out}"
+        );
+    };
+    check("mid-lane");
+
+    let second = crate::lane_e2e::ScriptedFactory::new(vec![crate::lane_e2e::review()]);
+    assert_eq!(
+        crate::landing::run(root, item, &second),
+        rk_cli::exit::Exit::Success
+    );
+    assert!(
+        !tree.exists(),
+        "PREMISE: at the lane's end the clean tree is removed"
+    );
+    check("at the lane's end");
+}

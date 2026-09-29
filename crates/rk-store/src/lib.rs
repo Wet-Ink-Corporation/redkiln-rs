@@ -31,6 +31,9 @@ pub mod locator;
 pub mod memo;
 /// The migration runner and the one opening transaction — ADR-0181 decision 6.
 pub mod migrate;
+/// The render, write and read path -- the render record ADR-0189, proposed (`s8f` §8f.5, §8f.6).
+/// *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)*
+pub mod render;
 pub mod retention;
 pub mod schema_lint;
 pub mod tier;

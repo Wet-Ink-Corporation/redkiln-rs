@@ -57,6 +57,32 @@ impl std::fmt::Display for LocatorError {
     }
 }
 
+/// **The leading YAML frontmatter block's inner byte range** — from the line after the opening
+/// `---` to the start of the closing `---` line — or `None` when `doc` does not open with one.
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; the render record ADR-0189
+/// decision 2, proposed.)* The frontmatter's stamp is a YAML comment, `# rk-stamp …`, and `s8f`
+/// §8f.5 requires that no stamp be a line this module reads as a heading. So a leading frontmatter
+/// block is a decoy like a fence or an HTML comment: nothing inside it is an anchor ([`scan`]), and
+/// this function is how the rest of the store finds its bytes without looking at markdown itself.
+#[must_use]
+pub fn frontmatter(doc: &str) -> Option<Range<usize>> {
+    let mut lines = doc.split_inclusive('\n');
+    let first = lines.next()?;
+    if first.trim_end_matches(['\n', '\r']) != "---" {
+        return None;
+    }
+    let start = first.len();
+    let mut offset = start;
+    for raw in lines {
+        if raw.trim_end_matches(['\n', '\r']) == "---" {
+            return Some(start..offset);
+        }
+        offset += raw.len();
+    }
+    None
+}
+
 /// Resolve `anchor` in `doc`, returning the byte range of its section's content.
 ///
 /// # Errors
@@ -119,10 +145,21 @@ fn scan(doc: &str) -> Vec<Line> {
     let mut fence_marker = String::new();
     let mut in_html_comment = false;
     let mut offset = 0usize;
+    // *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* A leading frontmatter
+    // block is content: its `# rk-stamp` YAML comment is never a heading ([`frontmatter`]).
+    let frontmatter_end = frontmatter(doc).map_or(0, |r| r.end);
 
     for raw in doc.split_inclusive('\n') {
         let start = offset;
         offset += raw.len();
+        if start < frontmatter_end {
+            out.push(Line {
+                start,
+                end: offset,
+                heading: None,
+            });
+            continue;
+        }
         let line = raw.trim_end_matches(['\n', '\r']);
         let trimmed = line.trim_start();
         let indent = line.len() - trimmed.len();

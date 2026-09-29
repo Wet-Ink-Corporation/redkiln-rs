@@ -21,6 +21,7 @@
 //! the next arm. A run tree that will not delete is kept and named, and never handed to another
 //! item.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use crate::error::GitError;
@@ -1475,13 +1476,69 @@ fn in_flight(exec: &GitExec, at: &WorktreePath) -> Result<(usize, Vec<String>), 
 /// The discard (W2; N10's semantics): read every in-flight path, then `reset --hard HEAD` and
 /// `clean -fd` **without `-x`**, so ignored files survive; return the paths. The status must be
 /// empty afterwards, or the re-entry is refused by name.
-fn discard(exec: &GitExec, at: &WorktreePath, path: &Path) -> Result<Vec<String>, GitError> {
-    let (_, paths) = in_flight(exec, at)?;
-    if !paths.is_empty() {
-        exec.run(GitOp::ResetHard, at, ["reset", "--hard", "--quiet", "HEAD"])?;
-        exec.run(GitOp::Clean, at, ["clean", "-fd", "--quiet"])?;
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 13, proposed.)*
+/// **The discarded set is the staging set.** With a journalled `baseline`, an untracked path in it
+/// is NOT in flight — the run did not create it — so it is neither discarded nor named: tracked
+/// changes are reset, and exactly the other untracked paths are cleaned, by name
+/// (`clean -f -- <path>…`, literal pathspecs). Afterwards the status may list the baseline's
+/// paths and nothing else. With no baseline (`None`: none is journalled) the discard is the one
+/// `s8d-ii` built, `reset --hard` and `clean -fd`.
+fn discard(
+    exec: &GitExec,
+    at: &WorktreePath,
+    path: &Path,
+    baseline: Option<&BTreeSet<String>>,
+) -> Result<Vec<String>, GitError> {
+    let empty = BTreeSet::new();
+    let keep = baseline.unwrap_or(&empty);
+    let out = exec.run(
+        GitOp::Status,
+        at,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    )?;
+    let mut paths = Vec::new();
+    let mut tracked = false;
+    let mut created = Vec::new();
+    for entry in crate::landing::parse_status(&out.stdout) {
+        if entry.is_ignored() {
+            continue;
+        }
+        if entry.is_untracked() {
+            if keep.contains(&entry.path) {
+                continue;
+            }
+            created.push(entry.path.clone());
+        } else {
+            tracked = true;
+        }
+        paths.push(entry.path);
+        if let Some(orig) = entry.orig {
+            paths.push(orig);
+        }
     }
-    let (_, remaining) = in_flight(exec, at)?;
+    if tracked {
+        exec.run(GitOp::ResetHard, at, ["reset", "--hard", "--quiet", "HEAD"])?;
+    }
+    if !created.is_empty() {
+        if keep.is_empty() {
+            exec.run(GitOp::Clean, at, ["clean", "-fd", "--quiet"])?;
+        } else {
+            let mut args: Vec<&str> = vec!["clean", "-f", "--quiet", "--"];
+            args.extend(created.iter().map(String::as_str));
+            exec.run_env(
+                GitOp::Clean,
+                at,
+                args,
+                &[("GIT_LITERAL_PATHSPECS".into(), "1".into())],
+            )?;
+        }
+    }
+    let remaining: Vec<String> = in_flight(exec, at)?
+        .1
+        .into_iter()
+        .filter(|p| !keep.contains(p))
+        .collect();
     if !remaining.is_empty() {
         return Err(refuse(WorktreeRefusal::DiscardIncomplete {
             path: path.to_path_buf(),
@@ -1558,6 +1615,25 @@ pub fn enter(
     probe: &dyn ProcessProbe,
     lfs_skip_smudge: Option<&str>,
 ) -> Result<Entered, GitError> {
+    enter_with_baseline(exec, start, item, owner, probe, lfs_skip_smudge, None)
+}
+
+/// [`enter`], with the run's journalled **baseline** handed to a re-entry's discard (ADR-0188
+/// decision 13): an untracked path the tree held at creation is not in flight, so it is neither
+/// discarded nor named. `None` (no baseline is journalled) discards as [`enter`] does.
+/// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)*
+///
+/// # Errors
+/// As [`enter`].
+pub fn enter_with_baseline(
+    exec: &GitExec,
+    start: &Path,
+    item: &str,
+    owner: &LockOwner,
+    probe: &dyn ProcessProbe,
+    lfs_skip_smudge: Option<&str>,
+    baseline: Option<&BTreeSet<String>>,
+) -> Result<Entered, GitError> {
     let main = main_worktree(exec, start)?;
     let id = ItemId::parse(item)?;
     refuse_linked_segments(&main, &id)?;
@@ -1566,7 +1642,15 @@ pub fn enter(
     let records = worktree_records(exec, &main_at)?;
     if let Some(rec) = record_at(&records, &tree.path) {
         let current = rec.locked.clone();
-        return reenter(exec, &main_at, tree, current.as_deref(), owner, probe);
+        return reenter(
+            exec,
+            &main_at,
+            tree,
+            current.as_deref(),
+            owner,
+            probe,
+            baseline,
+        );
     }
     if std::fs::symlink_metadata(&tree.path).is_ok() {
         return Err(refuse(unregistered(exec, &main_at, &tree.path)?));
@@ -1605,6 +1689,7 @@ fn reenter(
     current_lock: Option<&str>,
     owner: &LockOwner,
     probe: &dyn ProcessProbe,
+    baseline: Option<&BTreeSet<String>>,
 ) -> Result<Entered, GitError> {
     let at = WorktreePath::new(&tree.path)?;
     let Some(base) = read_rk_base(exec, &tree.path)? else {
@@ -1674,7 +1759,7 @@ fn reenter(
     // A refused discard releases the lock this call just took, so no refusal leaves the run's own
     // lock behind (ADR-0180 decision 6, *"released at the run's end"*; round-1 minor). The tree
     // is kept. *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
-    let discarded = match discard(exec, &at, &tree.path) {
+    let discarded = match discard(exec, &at, &tree.path, baseline) {
         Ok(paths) => paths,
         Err(refused) => {
             exec.run(

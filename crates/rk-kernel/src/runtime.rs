@@ -350,6 +350,12 @@ pub struct Runtime {
     /// rk-store seam with [`Self::with_read_seam`], and that seam is the only emitter of
     /// `artifact.read` (D21-47).
     read_seam: std::sync::Arc<dyn reference::ArtifactReadSeam>,
+    /// *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; the render record ADR-0189,
+    /// proposed.)* The write seam the `emit` arm calls once per provided kind. [`Self::new`] binds
+    /// the NON-WRITING stub [`reference::UnwiredWriteSeam`] (the machinery suites and the golden-log
+    /// recorder hold no managed directory); the composition root binds `rk-store`'s writer with
+    /// [`Self::with_write_seam`], whose `artifact.write` is the output's (ADR-0116's forbids).
+    write_seam: std::sync::Arc<dyn reference::ArtifactWriteSeam>,
     /// *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176, proposed.)* The pack's breaker
     /// envelope and role → family table, read before an agent step dispatches. [`Self::new`] binds
     /// none — the kernel's machinery suites, which have no pack behind them — and the production
@@ -413,6 +419,7 @@ impl Runtime {
             stage: stage.to_owned(),
             tool_routing: step::ToolRouting::default(),
             read_seam: std::sync::Arc::new(reference::UnwiredReadSeam),
+            write_seam: std::sync::Arc::new(reference::UnwiredWriteSeam),
             breaker: None,
             boundary: None,
             item: None,
@@ -531,6 +538,23 @@ impl Runtime {
     pub fn with_read_seam(mut self, seam: std::sync::Arc<dyn reference::ArtifactReadSeam>) -> Self {
         self.read_seam = seam;
         self
+    }
+
+    /// Bind the write seam (the render record ADR-0189, proposed). *(dated 2026-09-28, s8f build,
+    /// package S8F-P4-RENDER-WRITE-READ.)*
+    #[must_use]
+    pub fn with_write_seam(
+        mut self,
+        seam: std::sync::Arc<dyn reference::ArtifactWriteSeam>,
+    ) -> Self {
+        self.write_seam = seam;
+        self
+    }
+
+    /// The write seam the `emit` arm calls.
+    #[must_use]
+    pub fn write_seam(&self) -> &dyn reference::ArtifactWriteSeam {
+        self.write_seam.as_ref()
     }
 
     /// The read seam the resolver's `artifact:` arm calls.

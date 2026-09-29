@@ -300,6 +300,7 @@ mod degradation;
 mod deviation;
 mod dispatch_completed;
 mod divergence;
+mod emit;
 mod emit_binding;
 mod envelope;
 mod evaluator;

@@ -360,7 +360,15 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         Ok(owner) => owner,
         Err(exit) => return Ok(exit),
     };
-    let entered = match enter_run_worktree(&resolved, env, &owner) {
+    // *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 13,
+    // proposed.)* The re-entry discard is the staging set: the run's journalled baseline (the
+    // untracked paths the tree held at creation) is read from the store first and handed in, so
+    // a baseline file is neither discarded nor named.
+    let baseline = match journalled_baseline(&store, resolved.item.id())? {
+        Ok(baseline) => baseline,
+        Err(exit) => return Ok(exit),
+    };
+    let entered = match enter_run_worktree(&resolved, env, &owner, baseline.as_ref()) {
         Ok(entered) => entered,
         Err(exit) => return Ok(exit),
     };
@@ -583,6 +591,30 @@ fn run_lane(
         return Ok(Exit::ConfigError);
     }
 
+    // ---- THE REFUSED LANDING'S ANSWERS (ADR-0188 decision 6, proposed). *(dated 2026-09-28,
+    // s8f build, package S8F-P3-LANDING-E2E.)* An applied `abort` stops the lane here, before
+    // any tree effect, commit or dispatch; an applied `exclude` binds its paths to every
+    // landing this invocation makes, each named on stderr.
+    let answers = match landing_answers(store, &resolved)? {
+        Ok(answers) => answers,
+        Err(exit) => return Ok(exit),
+    };
+    if let Some(token) = &answers.aborted {
+        println!(
+            "{item_id}'s lane was aborted at its `{}` gate {token}; nothing runs",
+            rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND
+        );
+        return Ok(Exit::Success);
+    }
+    for path in &answers.excluded {
+        eprintln!(
+            "redkiln: `{path}` is excluded by an answered `{}` gate: every landing of \
+             {item_id}'s lane leaves it unstaged",
+            rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND
+        );
+    }
+    let excluded = answers.excluded;
+
     // THE ONE WALL-CLOCK READ. Both derived values come off it — see `base_inputs`.
     let now = crate::clock::now().unix_seconds();
 
@@ -625,6 +657,11 @@ fn run_lane(
     let mut resolved = resolved;
     let mut visited: Vec<String> = Vec::new();
     let mut last_exit;
+    // *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; ADR-0189 decisions 4 and 9,
+    // proposed.)* The entry's reconcile of the item's managed artifacts, taken ONCE per invocation
+    // at the lane's first stage (`stage_seams`), before any reader exists; every stage's reader is
+    // bound to it (AC-126).
+    let mut reconciled: Option<rk_store::render::Reconciled> = None;
 
     loop {
         visited.push(resolved.stage.clone());
@@ -649,11 +686,26 @@ fn run_lane(
             Ok(pair) => pair,
             Err(exit) => return Ok(exit),
         };
+        // *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; `s8f` §8f.5, §8f.6;
+        // ADR-0189 decisions 7 to 9, proposed.)* `rk-store`'s writer and reader for THIS stage run
+        // (its stage, and its `run_id`), handed to the kernel through the routing below.
+        let run_id = match inputs.run_id() {
+            Ok(id) => id,
+            Err(e) => {
+                eprintln!("redkiln: the stage run's id could not be derived: {e}");
+                return Ok(Exit::ConfigError);
+            }
+        };
+        let (reader, writer) = match stage_seams(&resolved, store, &owned, &run_id, &mut reconciled)
+        {
+            Ok(seams) => seams,
+            Err(exit) => return Ok(exit),
+        };
         // ---- R6 decision 4: still `null` at the lane's first stage, the gate opens (once), and
         // the FSM's first rule then awaits it (ADR-0022) before any selection reads the facet.
         // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* Each opening is a tier-1
         // act, through the boundary.
-        let mut facet_boundary = tier_one_boundary(&resolved, &owned, &ownership);
+        let mut facet_boundary = tier_one_boundary(&resolved, &owned, &ownership, &excluded);
         if let Err(exit) = open_derived_facet_gates(
             &resolved,
             store,
@@ -724,6 +776,10 @@ fn run_lane(
             resolved.exec.clone(),
             resolved.worktree.clone(),
         )));
+        // *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* The read seam is
+        // re-pointed from `UnwiredReadSeam` to `rk-store`'s reader, and the `emit` arm's write seam
+        // is `rk-store`'s writer (§8f.2 item 10; ADR-0189 decision 9).
+        let routing = routing.with_artifact_seams(reader, writer);
 
         let inputs = match bind_nodes(
             &resolved,
@@ -793,7 +849,7 @@ fn run_lane(
             &mut lane_end,
             // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* The stage's tier-1
             // boundary: the lane entry, the advance and every gate transition commit through it.
-            Some(tier_one_boundary(&resolved, &owned, &ownership)),
+            Some(tier_one_boundary(&resolved, &owned, &ownership, &excluded)),
         )?;
 
         // 🛑 **A NON-ZERO EXIT ENDS THE LANE, EVEN WHEN THE STAGE ADVANCED.** Found by this stage's
@@ -821,7 +877,7 @@ fn run_lane(
             // the empty content arm at Checkpoint 8e (`s8f`'s landed arm makes it carry closeout's
             // content checkpoint).
             if lane_end {
-                return close_lane(&resolved, store, &owned, &ownership, closed);
+                return close_lane(&resolved, store, &owned, &ownership, &excluded, closed);
             }
             return Ok(last_exit);
         };
@@ -869,9 +925,10 @@ fn close_lane(
     store: &Arc<Mutex<dyn EventStore>>,
     owned: &Path,
     ownership: &rk_git::worktree::RunOwnership,
+    excluded: &std::collections::BTreeSet<String>,
     closed: &mut bool,
 ) -> Result<Exit, Halt> {
-    let mut boundary = tier_one_boundary(resolved, owned, ownership);
+    let mut boundary = tier_one_boundary(resolved, owned, ownership, excluded);
     match boundary.act(
         store,
         rk_kernel::runtime::tier_one::close_act(&resolved.stage),
@@ -2156,6 +2213,11 @@ fn resume_and_read(
     let seal_boundary = boundary
         .as_ref()
         .map(rk_kernel::runtime::tier_one::Boundary::sibling);
+    // *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 6.)* A
+    // refused landing's gate is an act made after `resume` refused, so it too gets a sibling.
+    let landing_boundary = boundary
+        .as_ref()
+        .map(rk_kernel::runtime::tier_one::Boundary::sibling);
     let recorded = match rk_kernel::replay::resume_routed(
         inputs,
         ports,
@@ -2211,6 +2273,27 @@ fn resume_and_read(
         // So there is no `None` branch to invent a row for, and `impl From<&StepError> for Exit`
         // — eleven arms, no wildcard — is the one mapping, unchanged. **No row of §7d.4's table is
         // added, moved or renumbered.**
+        // *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decisions 6-7,
+        // proposed.)* **A refused landing is a gate, not a refusal of the run.** The step's act
+        // landed nothing and its row was not appended (the kernel's `LandingRefused`), so no
+        // committed step is left with an unlanded effect; the `landing.refused-path` gate opens
+        // and `run` exits `0` (golden constraint 2). An explicit arm, not the catch-all below.
+        Err(rk_kernel::replay::ReplayError::Runtime(
+            rk_kernel::runtime::RuntimeError::TierOne(
+                rk_kernel::runtime::tier_one::TierOneError::LandingRefused { refusals, tree },
+            ),
+        )) => {
+            return Ok(open_refused_landing_gate(
+                resolved,
+                &store,
+                landing_boundary,
+                &state,
+                &refusals,
+                &tree,
+                now,
+                inputs.run_id().ok().as_deref().unwrap_or_default(),
+            ));
+        }
         Err(rk_kernel::replay::ReplayError::StepFailedAfterCommit {
             step_id,
             activity_id_at_version,
@@ -2294,10 +2377,14 @@ pub fn story_value(project: &str, item: &str, stage: &str) -> String {
 /// **The tier-1 boundary for one stage of this run** (`s8e` §8e.3): the tree the run entered as the
 /// target, the ownership the STORE records (`assigned_ownership`), and the two values a `Story:`
 /// value names. *(dated 2026-09-28, `s8e` build, package S8E-P5.)*
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 6.)* It leaves
+/// `excluded` — the paths the lane's applied `exclude` answers name — unstaged at every landing.
 fn tier_one_boundary(
     resolved: &Resolved,
     target: &Path,
     ownership: &rk_git::worktree::RunOwnership,
+    excluded: &std::collections::BTreeSet<String>,
 ) -> rk_kernel::runtime::tier_one::Boundary {
     rk_kernel::runtime::tier_one::Boundary::live(
         resolved.exec.clone(),
@@ -2308,6 +2395,302 @@ fn tier_one_boundary(
             item: resolved.item.id().to_owned(),
         },
     )
+    .with_excluded(excluded.clone())
+}
+
+/// **The run's journalled baseline** (ADR-0188 decisions 4 and 13): read from the item's
+/// journal through the kernel's one reader, for the re-entry discard. `None` when none is
+/// journalled. *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)*
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the acquisition; a store that will not read is exit `3`, named.
+fn journalled_baseline(
+    store: &Arc<Mutex<dyn EventStore>>,
+    item: &str,
+) -> Result<Result<Option<std::collections::BTreeSet<String>>, Exit>, Halt> {
+    let guard = crate::store::acquire(store, "the run")?;
+    let read = guard.query(rk_kernel::runtime::journal_query(item));
+    drop(guard);
+    Ok(match read {
+        Ok(events) => Ok(rk_kernel::runtime::tier_one::journalled_baseline(
+            &events, item,
+        )),
+        Err(e) => {
+            eprintln!("redkiln: the store could not be read: {e:?}");
+            Err(Exit::ConfigError)
+        }
+    })
+}
+
+/// **`rk-store`'s reader and writer for one stage run** (`s8f` §8f.5 and §8f.6; the render record
+/// ADR-0189 decisions 4, 7, 8 and 9, proposed). *(dated 2026-09-28, s8f build, package
+/// S8F-P4-RENDER-WRITE-READ.)*
+///
+/// The writer writes into the item's managed directory in the RUN-OWNED tree (decision 6) and the
+/// reader reads the run ref; both carry this stage and this stage run's `run_id` on every row.
+/// At the invocation's FIRST stage, before any seam is handed to the kernel, `rk-store`'s entry
+/// pass runs over the managed directory (C2's surface-and-restore half, decision 4): this is the
+/// entry's reconcile a read must follow (AC-126), and `reconciled` keeps it for every later stage
+/// of the lane. `rk-kernel` opens no files and spawns no `git`, so the git reads the store needs —
+/// the causing commit, the run ref's bytes and its tree — are this root's, through `rk-git`'s one
+/// wrapper.
+///
+/// # Errors
+/// An [`Exit`] for an unreadable artifact registry, or an entry pass that refuses (named).
+fn stage_seams(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    owned: &Path,
+    run_id: &str,
+    reconciled: &mut Option<rk_store::render::Reconciled>,
+) -> Result<
+    (
+        Arc<rk_store::render::ArtifactReader>,
+        Arc<rk_store::render::ArtifactWriter>,
+    ),
+    Exit,
+> {
+    let item = resolved.item.id().to_owned();
+    let at = rk_store::render::StageRun {
+        item: item.clone(),
+        stage: resolved.stage.clone(),
+        run: run_id.to_owned(),
+    };
+    let schemas = artifact_schemas(resolved)?;
+    let writer = rk_store::render::ArtifactWriter::new(
+        owned,
+        at.clone(),
+        schemas.clone(),
+        store_journal(store, &item),
+    );
+    if reconciled.is_none() {
+        let exec = resolved.exec.clone();
+        let repo = resolved.worktree.clone();
+        let run_ref = format!("refs/heads/rk-run/{item}");
+        let causing = move |path: &str| -> Result<Option<String>, String> {
+            let out = exec
+                .run(
+                    rk_git::git_exec::GitOp::Log,
+                    &repo,
+                    ["log", "-1", "--format=%H", run_ref.as_str(), "--", path],
+                )
+                .map_err(|e| git_refusal_text(&e))?;
+            let sha = out.stdout_trimmed();
+            Ok((!sha.is_empty()).then_some(sha))
+        };
+        match rk_store::render::reconcile_entry(&writer, &causing) {
+            Ok(done) => {
+                for d in done.drifts() {
+                    eprintln!(
+                        "redkiln: `{}` of `{item}` drifted at `{}` ({} -> {}); it is restored from \
+                         the type and recorded as `structured_drift` (AC-124, AC-411)",
+                        d.kind,
+                        d.anchor,
+                        d.old_digest.as_str(),
+                        d.new_digest.as_str()
+                    );
+                }
+                *reconciled = Some(done);
+            }
+            Err(e) => {
+                eprintln!(
+                    "redkiln: the entry's reconcile of `{item}`'s managed artifacts refused: {e}"
+                );
+                return Err(Exit::ConfigError);
+            }
+        }
+    }
+    let Some(entry) = reconciled.as_ref() else {
+        return Err(Exit::ConfigError);
+    };
+    let exec = resolved.exec.clone();
+    let repo = resolved.worktree.clone();
+    let run_ref = format!("refs/heads/rk-run/{item}");
+    let source = move |path: &str| -> Result<Option<rk_store::render::RunRefBlob>, String> {
+        let spec = format!("{run_ref}:{path}");
+        let Ok(oid) = exec.run(
+            rk_git::git_exec::GitOp::RevParse,
+            &repo,
+            ["rev-parse", "--verify", "--quiet", spec.as_str()],
+        ) else {
+            return Ok(None);
+        };
+        let oid = oid.stdout_trimmed();
+        let bytes = exec
+            .run(
+                rk_git::git_exec::GitOp::CatFile,
+                &repo,
+                ["cat-file", "blob", oid.as_str()],
+            )
+            .map_err(|e| git_refusal_text(&e))?
+            .stdout;
+        let tree = exec
+            .run(
+                rk_git::git_exec::GitOp::RevParse,
+                &repo,
+                ["rev-parse", &format!("{run_ref}^{{tree}}")],
+            )
+            .map_err(|e| git_refusal_text(&e))?
+            .stdout_trimmed();
+        Ok(Some(rk_store::render::RunRefBlob { bytes, tree }))
+    };
+    let reader = rk_store::render::ArtifactReader::new(
+        entry,
+        at,
+        schemas,
+        store_journal(store, &item),
+        source,
+    );
+    Ok((Arc::new(reader), Arc::new(writer)))
+}
+
+/// Each registered kind's `schema` string (`.redkiln/artifacts.toml`, read by the one registry
+/// reader), for the `schema_version` member (ADR-0189 decision 8). *(dated 2026-09-28, s8f build,
+/// package S8F-P4-RENDER-WRITE-READ.)*
+fn artifact_schemas(
+    resolved: &Resolved,
+) -> Result<std::collections::BTreeMap<String, String>, Exit> {
+    let path = Path::new(resolved.worktree.as_str())
+        .join(".redkiln")
+        .join("artifacts.toml");
+    let src = std::fs::read_to_string(&path).map_err(|e| {
+        eprintln!("redkiln: {}: {e}", path.display());
+        Exit::ConfigError
+    })?;
+    let registry =
+        rk_kernel::select::ArtifactRegistry::from_toml("artifacts.toml", &src).map_err(|e| {
+            eprintln!("redkiln: {}: {e:?}", path.display());
+            Exit::ConfigError
+        })?;
+    Ok(registry
+        .kinds()
+        .filter_map(|k| Some((k.name.clone(), k.schema.clone()?)))
+        .collect())
+}
+
+/// The store, as `rk-store` is handed it (`rk_store::render::Journal`): append one row, and read
+/// the item's rows through `ByItem`. *(dated 2026-09-28, s8f build, package
+/// S8F-P4-RENDER-WRITE-READ.)* A poisoned lock is a refusal here, carried by name into the
+/// writer's or reader's error, never recovered (ADR-0118).
+fn store_journal(store: &Arc<Mutex<dyn EventStore>>, item: &str) -> rk_store::render::Journal {
+    let (a, r) = (Arc::clone(store), Arc::clone(store));
+    let query = rk_kernel::runtime::journal_query(item);
+    rk_store::render::Journal::new(
+        move |event| {
+            a.lock()
+                .map_err(|_| rk_kernel::runtime::LOCK_HALTS.to_owned())?
+                .append(event)
+                .map_err(|e| format!("{e:?}"))
+        },
+        move || {
+            r.lock()
+                .map_err(|_| rk_kernel::runtime::LOCK_HALTS.to_owned())?
+                .query(query.clone())
+                .map_err(|e| format!("{e:?}"))
+        },
+    )
+}
+
+/// **The lane's refused-landing answers** (ADR-0188 decision 6), folded from the item's journal
+/// at the stage the lane resolved. *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)*
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the acquisition; a store that will not read, or a journal that
+/// does not fold, is exit `3`, named.
+fn landing_answers(
+    store: &Arc<Mutex<dyn EventStore>>,
+    resolved: &Resolved,
+) -> Result<Result<rk_kernel::runtime::tier_one::LandingAnswers, Exit>, Halt> {
+    let item = resolved.item.id();
+    let guard = crate::store::acquire(store, "the run")?;
+    let read = guard.query(rk_kernel::runtime::journal_query(item));
+    drop(guard);
+    let events = match read {
+        Ok(events) => events,
+        Err(e) => {
+            eprintln!("redkiln: the store could not be read: {e:?}");
+            return Ok(Err(Exit::ConfigError));
+        }
+    };
+    Ok(
+        match rk_kernel::workflow::fsm::fold(item, &resolved.stage, &events) {
+            Ok(state) => Ok(rk_kernel::runtime::tier_one::landing_answers(
+                &state, &events,
+            )),
+            Err(e) => {
+                eprintln!("redkiln: the recorded journal did not fold: {e}");
+                Err(Exit::ConfigError)
+            }
+        },
+    )
+}
+
+/// **The refused landing's gate** (ADR-0188 decisions 6-7): the step whose act refused did not
+/// commit and nothing landed; the gate opens git-first through a sibling of the stage's
+/// boundary, its `Gate: … opened` mark on an EMPTY commit, its tree the refusal's
+/// no-checkpoint-due derivation, its row naming every refused path with its rule. Every path is
+/// printed by name, with the answer command. `run` exits `0` at a gate (golden constraint 2).
+/// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)*
+#[expect(
+    clippy::too_many_arguments,
+    reason = "every value is one the stage already resolved: the gate's deadline is `now` plus \
+              the pack's `gate_deadline_secs`, its reach is the fold's, and its opening run is \
+              the stage's `(stage, run_id)`"
+)]
+fn open_refused_landing_gate(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
+    state: &rk_kernel::workflow::fsm::RunState,
+    refusals: &[rk_git::landing::Refusal],
+    tree: &str,
+    now: i64,
+    run_id: &str,
+) -> Exit {
+    use rk_kernel::runtime::tier_one::{
+        LANDING_REFUSED_KIND, landing_gate_record, refused_landing_act,
+    };
+    let item = resolved.item.id();
+    let Some(mut boundary) = boundary else {
+        eprintln!(
+            "redkiln: the landing of `{item}` refused {} path(s) and no tier-1 boundary is bound \
+             to open its gate",
+            refusals.len()
+        );
+        return Exit::ConfigError;
+    };
+    let deadline = rk_types::time::Timestamp::from_unix_seconds(
+        now.saturating_add(resolved.extras.gate_deadline_secs),
+    );
+    let reach = state.reaches(LANDING_REFUSED_KIND).saturating_add(1);
+    let act = landing_gate_record(tree, deadline, reach).map(|record| {
+        (
+            record.token().as_str().to_owned(),
+            refused_landing_act(&record, refusals).opened_by(&resolved.stage, run_id),
+        )
+    });
+    let (token, act) = match act {
+        Ok(pair) => pair,
+        Err(e) => {
+            eprintln!("redkiln: the refused landing's gate could not be opened: {e}");
+            return Exit::ConfigError;
+        }
+    };
+    if let Err(e) = boundary.act(store, act) {
+        eprintln!("redkiln: the refused landing's gate could not be opened: {e}");
+        return Exit::ConfigError;
+    }
+    for refusal in refusals {
+        eprintln!(
+            "redkiln: the landing of `{item}` refused `{}` ({}); nothing landed",
+            refusal.path, refusal.rule
+        );
+    }
+    println!(
+        "{item}: gate {token} is open ({LANDING_REFUSED_KIND}); answer with `redkiln answer {item} \
+         exclude` or `redkiln answer {item} abort`"
+    );
+    Exit::Success
 }
 
 /// **Gate transition rows, each as its own tier-1 act** (`s8e` §8e.3, N6): an expiry, an answer, a
@@ -2851,14 +3234,16 @@ fn enter_run_worktree(
     resolved: &Resolved,
     env: &Env,
     owner: &rk_git::worktree::LockOwner,
+    baseline: Option<&std::collections::BTreeSet<String>>,
 ) -> Result<rk_git::worktree::Entered, Exit> {
-    let entered = rk_git::worktree::enter(
+    let entered = rk_git::worktree::enter_with_baseline(
         &resolved.exec,
         Path::new(resolved.worktree.as_str()),
         resolved.item.id(),
         owner,
         &process_probe,
         env.lfs_skip_smudge(),
+        baseline,
     )
     .map_err(|e| {
         eprintln!(

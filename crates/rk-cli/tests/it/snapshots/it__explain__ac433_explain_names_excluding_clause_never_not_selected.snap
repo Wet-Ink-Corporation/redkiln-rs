@@ -45,3 +45,5 @@ excluded: excluded-predicate
 
 excluded: excluded-rigor
   clause: its `min_rigor` is `mandatory` and the recorded pack sets this stage to `recommended`
+
+landing: nothing landed (no rk-run/explain-2)

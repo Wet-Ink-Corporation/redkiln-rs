@@ -71,6 +71,7 @@ mod doctor;
 mod exit;
 mod explain;
 mod init;
+mod landing;
 mod lane_e2e;
 mod lint;
 mod processes;

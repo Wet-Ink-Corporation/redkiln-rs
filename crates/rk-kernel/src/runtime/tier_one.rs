@@ -433,6 +433,11 @@ pub enum TierOneError {
         refusals: Vec<Refusal>,
         tree: String,
     },
+    /// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 3.)* A step
+    /// checkpoint on the run ref whose row the store lacks, and whose body cannot be healed: the
+    /// body is absent, is not canonical JSON, or names a key that disagrees with the subject. The
+    /// commit is named; the step is never re-dispatched over its own landed edit.
+    StepCheckpointUnreadable { sha: String, detail: String },
 }
 
 /// **Why a seal's `<slice>` is refused.**
@@ -471,6 +476,7 @@ impl TierOneError {
             Self::Journal { .. } => "journal",
             Self::SliceRefused { .. } => "slice_refused",
             Self::LandingRefused { .. } => "landing_refused",
+            Self::StepCheckpointUnreadable { .. } => "step_checkpoint_unreadable",
         }
     }
 }
@@ -517,6 +523,12 @@ impl core::fmt::Display for TierOneError {
                     named.join(", ")
                 )
             }
+            Self::StepCheckpointUnreadable { sha, detail } => write!(
+                f,
+                "the step checkpoint {sha} on the run ref anchors no row, and its row cannot be \
+                 read back from it: {detail}. The step is not re-dispatched over its own landed \
+                 edit (ADR-0188 decision 3)"
+            ),
             Self::SliceRefused {
                 item,
                 slice,
@@ -819,6 +831,19 @@ fn baseline_of(events: &[Event], item: &str) -> BaselineRead {
     }
 }
 
+/// **The journalled baseline, for the re-entry discard** (ADR-0188 decisions 4 and 13): the set
+/// the item's journal records, or `None` when none is recorded (no creation row, a creation no act
+/// has read yet, or a deleted database). The discard keeps a recorded baseline's paths, since the
+/// run did not create them, and with `None` it discards as it did before `s8f`.
+/// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)*
+#[must_use]
+pub fn journalled_baseline(events: &[Event], item: &str) -> Option<BTreeSet<String>> {
+    match baseline_of(events, item) {
+        BaselineRead::Journalled(set) => Some(set),
+        BaselineRead::ThisAct | BaselineRead::Unknown => None,
+    }
+}
+
 /// **The act, over a store the caller holds** — the body of [`commit_act`].
 ///
 /// Live: authorise; the `Story:` idempotence read; the baseline; the landing's staging (a refusal
@@ -1100,6 +1125,124 @@ pub fn close_act(last_stage: &str) -> Act {
             rk_git::trailer::grammar::CLOSED_STAGE_TOKEN,
         )],
     )
+}
+
+// ------------------------------------------------------------ the refused landing's gate
+
+/// The gate class a refused landing opens (ADR-0188 decision 6). *(dated 2026-09-28, s8f build,
+/// package S8F-P3-LANDING-E2E.)*
+pub const LANDING_REFUSED_KIND: &str = "landing.refused-path";
+/// Its option that leaves exactly the refused paths unstaged at every later landing of the lane.
+pub const LANDING_EXCLUDE: &str = "exclude";
+/// Its option that stops the lane.
+pub const LANDING_ABORT: &str = "abort";
+
+/// **The refused landing's question** (ADR-0129 decisions 3-4; ADR-0188 decision 6): `exclude` or
+/// `abort`, neither attaching anything. The kernel owns it, as it owns the default question; the
+/// paths and rules it asks about are on the gate's `gate_opened` row (`refused`).
+#[must_use]
+pub fn landing_question() -> crate::workflow::question::Question {
+    crate::workflow::question::Question::new([LANDING_EXCLUDE, LANDING_ABORT]).with_text(
+        "The landing refused paths by name, and nothing landed. `exclude`: every later landing of \
+         this lane leaves exactly those paths unstaged, naming them each time. `abort`: the lane \
+         stops.",
+    )
+}
+
+/// **The refused landing's gate record** — class [`LANDING_REFUSED_KIND`], bound to `tree`, the
+/// refusal's no-checkpoint-due derivation over the run-owned tree (ADR-0188 decision 7), never
+/// the empty commit's tree.
+///
+/// # Errors
+/// [`TierOneError::NotAGateRow`] when the token cannot be minted.
+pub fn landing_gate_record(
+    tree: &str,
+    deadline: rk_types::time::Timestamp,
+    reach: u32,
+) -> Result<GateRecord, TierOneError> {
+    GateRecord::derive_reach(LANDING_REFUSED_KIND, tree, deadline, reach).map_err(|e| {
+        TierOneError::NotAGateRow {
+            detail: format!("the refused landing's gate token cannot be minted: {e:?}"),
+        }
+    })
+}
+
+/// **The refused landing's gate, as one act** (ADR-0188 decisions 6-7): its `Gate: … opened` mark
+/// rides an EMPTY commit (no checkpoint is due at a refused landing, so nothing is staged), and its
+/// `gate_opened` row names every refused path with its rule under `refused`, in the spellings the
+/// record fixes (`denylist:<glob>`, `size:<bytes>`, `path-length:<bound>`, `baseline-unknown`).
+#[must_use]
+pub fn refused_landing_act(record: &GateRecord, refusals: &[Refusal]) -> Act {
+    let mut row = super::gate_opened_event(record);
+    if let Some(map) = row.payload.as_object_mut() {
+        map.insert(
+            "refused".to_owned(),
+            serde_json::Value::Array(
+                refusals
+                    .iter()
+                    .map(|r| serde_json::json!({ "path": r.path, "rule": r.rule.to_string() }))
+                    .collect(),
+            ),
+        );
+    }
+    Act::marked_empty(
+        Mark::Gate {
+            token: record.token().as_str().to_owned(),
+            tree_hash: record.tree_hash().to_owned(),
+            deadline: record.deadline().unix_seconds(),
+            kind: record.kind().to_owned(),
+            reach: record.reach(),
+            state: GateState::Opened,
+        },
+        vec![row],
+    )
+}
+
+/// What the lane's answered refused-landing gates say (ADR-0188 decision 6).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LandingAnswers {
+    /// Every path an applied `exclude` answer leaves unstaged.
+    pub excluded: BTreeSet<String>,
+    /// The token of an applied `abort` answer, if one was given: the lane is stopped.
+    pub aborted: Option<String>,
+}
+
+/// **Read the lane's refused-landing answers** off the fold and the journal: an APPLIED answer
+/// (the fold's answered set, which excludes a void) to a gate of [`LANDING_REFUSED_KIND`]. An
+/// `exclude` contributes the paths its gate's `gate_opened` row names; an `abort` stops the lane.
+/// A gate healed from git carries no `refused` list, so its `exclude` excludes nothing and the
+/// next landing refuses again, by name (fail-closed).
+#[must_use]
+pub fn landing_answers(state: &crate::workflow::fsm::RunState, events: &[Event]) -> LandingAnswers {
+    let mut out = LandingAnswers::default();
+    for answer in state.answered_gates() {
+        let token = answer.token();
+        if state.gate_record(token).map(GateRecord::kind) != Some(LANDING_REFUSED_KIND) {
+            continue;
+        }
+        match answer.verdict() {
+            LANDING_EXCLUDE => {
+                for row in events.iter().filter(|e| {
+                    e.kind == EventKind::GateOpened
+                        && e.payload.get("token").and_then(serde_json::Value::as_str)
+                            == Some(token.as_str())
+                }) {
+                    out.excluded.extend(
+                        row.payload
+                            .get("refused")
+                            .and_then(serde_json::Value::as_array)
+                            .into_iter()
+                            .flatten()
+                            .filter_map(|r| r.get("path").and_then(serde_json::Value::as_str))
+                            .map(str::to_owned),
+                    );
+                }
+            }
+            LANDING_ABORT => out.aborted = Some(token.as_str().to_owned()),
+            _ => {}
+        }
+    }
+    out
 }
 
 /// **The one slice validator.**
@@ -1411,7 +1554,155 @@ pub fn heal(
         drop(guard);
         healed.push(commit.sha.clone());
     }
+    // *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 3; finding
+    // 11.)* The step-checkpoint arm: a commit whose subject begins `rk step ` and whose sha anchors
+    // no row gets the row its body carries, anchored to it. A crash between a step's landing and
+    // its row is D21-42 8a's window, and this is how it closes for a step: the step is served, not
+    // re-dispatched over its own landed edit.
+    for checkpoint in step_checkpoints(exec, repo, item)? {
+        let present = store
+            .lock()
+            .expect(LOCK_HALTS)
+            .query(Query::BySha(checkpoint.sha.clone()))
+            .map_err(|e| TierOneError::Store {
+                detail: format!("{e:?}"),
+            })?;
+        if !present.is_empty() {
+            continue;
+        }
+        let row = step_row_of(&checkpoint, item)?;
+        let tree = commit_tree(exec, repo, &checkpoint.sha)?;
+        store
+            .lock()
+            .expect(LOCK_HALTS)
+            .append_tier1(
+                keyed(row, item),
+                &TierOneAnchor::new(&checkpoint.sha, &tree),
+            )
+            .map_err(|e| TierOneError::Store {
+                detail: format!("{e:?}"),
+            })?;
+        healed.push(checkpoint.sha);
+    }
     Ok(healed)
+}
+
+/// One step checkpoint on the run ref: its sha, subject and body (ADR-0188 decision 3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct StepCommit {
+    sha: String,
+    subject: String,
+    body: String,
+}
+
+/// Every commit reachable from `rk-run/<item>` whose subject begins [`STEP_SUBJECT_PREFIX`] and
+/// names `item`, oldest first. A read.
+fn step_checkpoints(
+    exec: &GitExec,
+    repo: &WorktreePath,
+    item: &str,
+) -> Result<Vec<StepCommit>, TierOneError> {
+    let run_ref = format!("refs/heads/rk-run/{item}");
+    if exec
+        .run(
+            GitOp::RevParse,
+            repo,
+            ["rev-parse", "--verify", "--quiet", run_ref.as_str()],
+        )
+        .is_err()
+    {
+        return Ok(Vec::new());
+    }
+    let out = exec.run(
+        GitOp::Log,
+        repo,
+        [
+            "log",
+            "--reverse",
+            "--format=%H%x1f%s%x1f%b%x1e",
+            run_ref.as_str(),
+        ],
+    )?;
+    let text = String::from_utf8_lossy(&out.stdout).into_owned();
+    let prefix = format!("{STEP_SUBJECT_PREFIX}{item} ");
+    Ok(text
+        .split('\u{1e}')
+        .filter_map(|record| {
+            let mut fields = record.trim_start_matches('\n').splitn(3, '\u{1f}');
+            let sha = fields.next()?.trim().to_owned();
+            let subject = fields.next()?.to_owned();
+            let body = fields.next().unwrap_or_default().to_owned();
+            (!sha.is_empty() && subject.starts_with(&prefix)).then_some(StepCommit {
+                sha,
+                subject,
+                body,
+            })
+        })
+        .collect())
+}
+
+/// **The row a step checkpoint carries**, read from its body and checked against its subject: the
+/// key the subject names (`<item> <activity_id@version> <step_id> <iteration-path>`) must be the
+/// key inside the row. Anything else is refused by name, naming the commit.
+fn step_row_of(checkpoint: &StepCommit, item: &str) -> Result<Event, TierOneError> {
+    let refuse = |detail: String| TierOneError::StepCheckpointUnreadable {
+        sha: checkpoint.sha.clone(),
+        detail,
+    };
+    let key: Vec<&str> = checkpoint
+        .subject
+        .strip_prefix(STEP_SUBJECT_PREFIX)
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect();
+    let [subject_item, activity, step_id, path] = key.as_slice() else {
+        return Err(refuse(format!(
+            "its subject {:?} does not name `<item> <activity_id@version> <step_id> \
+             <iteration-path>`",
+            checkpoint.subject
+        )));
+    };
+    let line = checkpoint
+        .body
+        .lines()
+        .find_map(|l| l.strip_prefix(STEP_ROW_PREFIX))
+        .ok_or_else(|| refuse(format!("its body carries no `{STEP_ROW_PREFIX}` line")))?;
+    let value: serde_json::Value = serde_json::from_str(line)
+        .map_err(|e| refuse(format!("its `{STEP_ROW_PREFIX}` line is not JSON: {e}")))?;
+    let canonical = rk_store::canon::canonical(&value)
+        .map(|b| String::from_utf8_lossy(&b).into_owned())
+        .map_err(|e| refuse(format!("its row is not canonical JSON: {e:?}")))?;
+    if canonical != line {
+        return Err(refuse("its row is not in canonical form".to_owned()));
+    }
+    let kind = value
+        .get("kind")
+        .and_then(serde_json::Value::as_str)
+        .and_then(EventKind::from_wire)
+        .ok_or_else(|| refuse("its row names no event kind this binary knows".to_owned()))?;
+    let payload = value
+        .get("payload")
+        .cloned()
+        .ok_or_else(|| refuse("its row carries no payload".to_owned()))?;
+    let text = |m: &str| payload.get(m).and_then(serde_json::Value::as_str);
+    let row_path = payload
+        .get("iteration_path")
+        .map(rk_store::canon::canonical)
+        .transpose()
+        .map_err(|e| refuse(format!("its row's iteration path is not canonical: {e:?}")))?
+        .map(|b| String::from_utf8_lossy(&b).into_owned());
+    let agrees = *subject_item == item
+        && text("item").is_none_or(|i| i == item)
+        && text("activity_id_at_version") == Some(*activity)
+        && text("step_id") == Some(*step_id)
+        && row_path.as_deref() == Some(*path);
+    if !agrees {
+        return Err(refuse(format!(
+            "the key its subject names ({:?}) disagrees with the key inside its row",
+            checkpoint.subject
+        )));
+    }
+    Ok(Event::new(kind, payload))
 }
 
 /// One trailer commit reachable from `rk-run/<item>`, and the rows its marks carry for the item.

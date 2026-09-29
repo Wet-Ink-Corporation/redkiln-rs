@@ -193,7 +193,13 @@ pub fn run(cli: &Cli, args: &AnswerArgs, env: &Env, startup: Startup<'_>) -> Res
     // answerable only as `approve` / `changes-requested`. The registry is now the one `run` loads,
     // from the same worktree the catalog is read from; a file that does not load refuses the answer
     // by name, before any row is written.
-    let registry = match crate::processes::load(Path::new(resolved.worktree.as_str())) {
+    // *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 6, proposed.)*
+    // Over it, the kernel's own questions: a refused landing's gate is answered `exclude` or
+    // `abort`, and no pack file declares that question.
+    let root = Path::new(resolved.worktree.as_str());
+    let registry = match crate::processes::load(root)
+        .and_then(|loaded| crate::processes::with_kernel_questions(root, loaded))
+    {
         Ok(registry) => registry,
         Err(e) => {
             eprintln!("redkiln: the question registry was refused: {e}");

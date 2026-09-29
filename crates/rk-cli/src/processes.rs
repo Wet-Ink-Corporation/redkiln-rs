@@ -152,6 +152,35 @@ pub fn load(root: &Path) -> Result<QuestionRegistry, ProcessesError> {
     Ok(registry)
 }
 
+/// **The kernel's own questions, over a loaded registry** — the refused landing's
+/// (`landing.refused-path`: `exclude` | `abort`; ADR-0188 decision 6, proposed). The kernel opens
+/// that gate, as it opens the selection's `unknown_facet:*` gates, so no pack file declares its
+/// question; `answer` validates against the registry this returns. A pack file that declares or
+/// binds the kernel's kind is refused by name, never silently replaced. [`load`] itself is
+/// unchanged, so an absent directory still loads the default question alone.
+/// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)*
+///
+/// # Errors
+/// [`ProcessesError::Duplicate`] when a pack file already declares or binds the kind.
+pub fn with_kernel_questions(
+    root: &Path,
+    registry: QuestionRegistry,
+) -> Result<QuestionRegistry, ProcessesError> {
+    let kind = rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND;
+    if registry.binds_kind(kind) || registry.question(kind).is_some() {
+        return Err(ProcessesError::Duplicate {
+            path: processes_dir(root).display().to_string(),
+            detail: format!(
+                "the gate kind `{kind}` is the kernel's own (the refused landing's gate, ADR-0188), \
+                 and a pack file may not declare or bind it"
+            ),
+        });
+    }
+    Ok(registry
+        .with_question(kind, rk_kernel::runtime::tier_one::landing_question())
+        .bind(kind, kind))
+}
+
 /// One `[question."<id>"]` table: the question, and the further gate kinds it binds.
 fn question_from(id: &str, table: &toml::Value) -> Result<(Question, Vec<String>), String> {
     let table = table

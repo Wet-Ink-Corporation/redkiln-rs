@@ -760,6 +760,52 @@ fixes three things:
   whose dirty arm's premise (*"edited by the scripted step, landed by nothing"*) N10 removes: the step's commit
   now lands the edit, so the tree is clean at the `closed` mark. Returned for a ruling (the package report).
 
+*(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E)* **What the end-to-end package built** (ADR-0188,
+`proposed`; D21-108, TAKEN PROVISIONALLY). Each of P2's five owed items is discharged:
+- **The heal's step-checkpoint arm (finding 11).** `tier_one::heal` reads every commit on `rk-run/<item>` whose subject
+  is `rk step <item> …` and whose sha anchors no row, and re-appends its body's `rk-step-row` row anchored to it. The
+  key the subject names must equal the key inside the row, and the row must be canonical JSON, or the heal refuses by
+  name (`TierOneError::StepCheckpointUnreadable`, naming the commit). The step is served, never re-dispatched over its
+  own landed edit. `landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit` measures a real crash
+  window: the test holds the store's write lock once the scripted step has answered, so the landing commits and its
+  row's append fails (*"the store refused a tier-1 row after its commit (the next entry heals it)"*).
+- **The `landing.refused-path` gate.** `rk-cli`'s `run` answers the kernel's `LandingRefused` with an explicit arm (not
+  the catch-all): the gate opens through a sibling of the stage's boundary (`tier_one::refused_landing_act`,
+  `Act::marked_empty`), its tree the refusal's no-checkpoint-due derivation, its `gate_opened` row naming every path
+  under `refused` as `{ path, rule }`, and `run` exits 0. The question is the kernel's own
+  (`tier_one::landing_question`: `exclude` | `abort`), added over the loaded registry by
+  `processes::with_kernel_questions` in `answer` only; `processes::load` is unchanged, and a pack file that declares
+  or binds the kind is refused by name. An applied `exclude` binds its paths through `Boundary::with_excluded` to every
+  boundary the next `run` makes; an applied `abort` stops the lane before any tree effect.
+- **Re-entry subtracts the journalled baseline.** `run` reads the baseline off the item's journal
+  (`tier_one::journalled_baseline`) before it enters, and `rk_git::worktree::enter_with_baseline` hands it to the
+  discard: a baseline path is neither discarded nor named (`clean -f -- <path>…` with literal pathspecs when a
+  baseline exists; `s8d-ii`'s `clean -fd` when none is journalled).
+- **The `rk-cli` arms of M1, M7 and M8** are killed (§8f.12's table; the P3 rows of the mutant log).
+- **Defect (b).** P2 built both halves (`prepare_inputs` over the run-owned tree; the opening's token re-minted over T).
+  `landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it` proves them end to end with the
+  operator's checkout dirty.
+
+**Readings this package took, named for the review packet** (each reversible, none in an accepted record):
+1. `abort` exits `0`: the lane stops at an operator's answer, which is an outcome and not a refusal; `run` prints
+   *"`<item>`'s lane was aborted at its `landing.refused-path` gate"* and mints nothing.
+2. An excluded path is named on stderr once per invocation, at the lane's start, for decision 6's *"names them each
+   time"*; the kernel's staging set also carries them (`StagingSet::excluded`) but prints nothing.
+3. The re-entry discard with exclusions: an excluded untracked path is in-flight dirt and is discarded like any other
+   (the discarded set is the staging set computed without the lane's exclusions). D21-108's arm writes `.env` on every
+   dispatch for this reason.
+4. An answer given AFTER a re-entry is void: the re-entry discarded the refused step's edits, so the tree the answer
+   derives is no longer the gate's (decision 7 presumes the answer comes first). The void gate is terminal, the fold
+   awaits nothing, and the next `run` re-dispatches the step, which is refused again and opens a fresh gate: nothing is
+   silent and nothing lands.
+5. `explain`'s `<base>` is `RK_BASE` while the recorded tree exists, and after the lane's end has removed the tree it
+   is the first parent of the oldest commit on the ref that anchors one of the item's tier-1 rows (the entry act). The
+   test reads both states and the same base.
+6. A gate healed from git carries no `refused` list, so after a deleted database its `exclude` excludes nothing and the
+   next landing refuses again, by name (fail-closed).
+7. The three `explain` insta snapshots of `s7d` (`ac430`, `ac433`, `ac434`) each gain the two lines decision 12 fixes
+   for an item with no run ref (a blank line and `landing: nothing landed (no rk-run/<item>)`); no other byte moves.
+
 ### 8f.5 `rk-store`'s render, write and read path (D21-42 5a; D21-43 N11, N12)
 
 **Layout C, rendered, never parsed.** Human-facing kinds are rendered as layout C (ADR-0006, and ADR-0075, which
@@ -974,6 +1020,47 @@ a committed step that changed the tree, so N10 lands it in the same act (§8f.4)
 runs a `FakeHarness` lane through `verbs::run::run`. It asserts that the emitted artifact's `artifact.write` digest
 equals the `rk-types` digest of the bytes at `rk-run/<item>:<path>`. Those are D21-42 5b's two halves, and `s8j`
 writes them into (1b).
+
+*(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* §8f.5's render, write and read path and §8f.6's
+producer are built. `rk-store` gains `render` (`crates/rk-store/src/render.rs`): the layout-C renderer, the writer
+`ArtifactWriter`, the entry pass `reconcile_entry` (C2's surface-and-restore half), `move_to_prose`, and the reader
+`ArtifactReader`. The `emit` arm hands each provided kind's bound value to the writer. The composition root binds a
+writer and a reader per stage run, and re-points the read seam from `UnwiredReadSeam` to the reader. The stub is
+kept, and `reference_resolver::every_resolved_artifact_input_calls_the_read_seam_once_and_the_stub_emits_no_row` is
+still green. **Not built here:** the drift gate (`render.structured-drift`, the stage-advance check, M23 and M47).
+The pass returns its drifts (`Reconciled::drifts`) for the package that opens the gate. Also not built: the vouched
+root, the `answer` producer's `stage`/`run`, and `RK-D-UNREAD`'s `run_of`.
+
+Readings no record settles, each stated for the review packet:
+1. **The template set.** `Spec@1` is the one human-facing kind. ADR-0006 names `spec.md`, `plan.md` and `story.md`.
+   ADR-0075 decision 4 removes `plan.md`, and `artifacts.toml` registers no `Story`. `Spec@1`'s frontmatter fields
+   are `id`, `status` and `title`, and its prose fields are `context` and `notes`. No `Spec` schema exists to take
+   them from, so these field names are this package's choice. Every other kind is machine-only.
+2. **The entry's reconcile record** (AC-126) is the invocation's `reconcile_started` row naming `rk-run/<item>`. A
+   reader can only be built from the `Reconciled` value the entry pass returns, which carries that entry's ordinal. A
+   read refuses when no such row exists, or when the journal holds a later entry than the one the reader is bound to.
+   The pass runs once per invocation, at the lane's first stage, after `prepare_inputs`, so its rows carry that stage
+   run's `run`.
+3. **The frontmatter stamp is not a heading.** ADR-0189 decision 2's `# rk-stamp …` YAML comment would read as a
+   level-1 heading. `store::locator` therefore treats a leading `---` block as a decoy, and `locator::frontmatter`
+   returns its byte range.
+4. **What `rk-store` is handed.** It depends on neither `rk-ports` nor `rk-git`. The journal arrives as two functions
+   (`render::Journal`), and git reads (the causing commit, the run ref's bytes and tree) arrive as functions the
+   composition root builds over `rk-git`'s wrapper (`GitOp::Log`, `GitOp::RevParse`, `GitOp::CatFile`).
+   The kernel-side hook is a trait, `runtime::reference::ArtifactWriteSeam`, the sibling of `ArtifactReadSeam`. It is
+   not a port trait: `rk-ports` is unchanged, and the writer itself is a struct (decision 7). `ArtifactRead` gains
+   `bound`, the whole committed binding, which the reader's digest check reads.
+5. **Prose acceptance is a write.** A prose edit becomes the field's new value through the writer, as one
+   `artifact.write` naming the sidecar, with no drift record and no gate. When the same entry also restores a
+   structured section, that one write re-renders the file.
+6. **Two edge cases.** A missing rendering of a human-facing kind is one `structured_drift` at anchor `document`,
+   then a restore. A prose edit that adds a heading at level 2 or shallower ends the section at that heading
+   (the locator's end rule), so only the text above it is accepted. This limitation is stated, not fixed.
+7. **M9 as realised.** The writer reads the prior file only to skip rewriting identical bytes. M9 is written as
+   "keep the prior rendering when one exists".
+8. **M24's lane arm is unobservable.** The rk-store arm is killed. The landing arm survives because no lane can reach a
+   read before its entry's reconcile: a reader can only be built from the entry pass's result, and each invocation
+   writes one `reconcile_started` before the pass. The judge panel receives this as a blocker.
 
 ### 8f.7 `DebtRegisterEntry`: the in-repo item write (D21-42 6a, this stage's half), and the `backlog` read (D21-46 R7)
 
@@ -1421,6 +1508,39 @@ D21-46 R7's 15, plus D21-47's 5, plus D21-48 X11's 1.
   - `doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean` (the control; D21-46 R7)
 - **`rk-adapter-claude` `dispatch` (1):**
   - `dispatch::dispatch_completed_carries_activity_id_at_version_or_null`
+
+*(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)* The nine `rk-cli` `landing` tests above that §8f.4
+owns and `explain::explain_prints_the_landed_commit_and_the_merge_command` are built (the explain test is in
+`tests/it/explain.rs`, over `landing`'s helpers). Red first: `a_refused_path_…`, `a_refused_landing_is_not_due_…`,
+`reentry_names_…`, `a_kill_after_…` and `explain_prints_…` were red at their first run for the absent behaviour
+(exit `ConfigError` for the gate; *"the dispatch of `emit-report` … did not commit"* for the heal; no `landing:`
+line); the other five were green at their first run because P2 had built the behaviour, and each was shown red
+under a mutant instead: M1, M7, M-CK (the resync writes the checkout's index), M-REF (a second ref moves) and
+M-CLOSE+SEAL+M8. Mutant log (`target/wt-s8fp3`, a private worktree): M1, M7, M8, M22, M48, M-HEAL, M-EXCL, M-BASE,
+M-CK, M-REF, M-GATE and M-CLOSE+SEAL+M8 killed; S8E-M37 and S8E-M38 killed over the rewritten dirty arm. Informational
+survivors, investigated as unobservable in this lane rather than as gaps: M7a (the kernel's re-mint dropped) and M7b
+(`prepare_inputs` over the checkout) each survive alone, because each half masks the other; M-CLOSE (the `closed`
+act staging nothing) survives because the step and the review seal have already landed every edit before the mark,
+so only all three landings removed together flip the test.
+
+*(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* 21 of the tests above are built: the 15
+`render` tests, the 3 `emit` tests, `landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref`,
+`landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile` and `run::no_cli_flag_skips_the_entry_reconcile`.
+Red first, over an inert `render` stub and an inert kernel seam: every one of the 18 `render` and `emit` tests failed
+for the absent behaviour. `render::ac122_…` compiled a sibling's write. Both landing tests read zero `artifact.write`
+and zero `artifact.read` rows before the root bound the seams. `run::no_cli_flag_…` was green at its first run,
+because a flag's absence is the behaviour, and it was shown red under M-FLAG, a planted `--skip-reconcile`.
+Mutant log (`target/wt-s8fp4`, a private worktree, after a 10/10 green control):
+- **Killed:** M9, M10, M11, M12 and M13, each on its named test; M24 on
+  `render::a_read_before_the_entrys_reconcile_is_refused`; M25 on both of its named tests; M31 and M-FLAG.
+- **Survived, and investigated as unobservable:** M24 on
+  `landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile` (reading 8 in the §8f.6 note).
+
+Whole suite at the main checkout: 1162 passed, 0 failed, 9 ignored over 44 result lines (the prior 1141 + 21). fmt and
+clippy exit 0. Checkpoint 8f (6)'s no-float floor and (6b)'s no-walk floor over `crates/rk-store/src` each read 0 code
+lines, with a planted control first. Census over `crates/*/src` code lines outside `rk-types`: the one `artifact.read`
+construction is `rk-store`'s reader. The other hits are the three kernel fold arms, `doctor`'s `unread`, and the
+reader's own replay filter.
 
 `cost::cost_output_grammar_is_closed` is **amended**, not added. So is `s8e`'s
 `tier_one::every_run_commit_resolves_through_the_worktree_resolver`, widened to the landing's writes (§8f.4; final

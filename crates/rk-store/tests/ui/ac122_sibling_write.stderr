@@ -1,0 +1,10 @@
+error[E0624]: method `write` is private
+ --> tests/ui/ac122_sibling_write.rs:8:17
+  |
+8 |     let _ = dir.write("Spec.json", b"{}");
+  |                 ^^^^^ private method
+  |
+ ::: src/render.rs
+  |
+  |     fn write(&self, name: &str, bytes: &[u8]) -> Result<(), RenderError> {
+  |     -------------------------------------------------------------------- private method defined here

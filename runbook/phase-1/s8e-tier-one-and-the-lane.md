@@ -868,6 +868,19 @@ empty stage records `stage_empty { reason }`."*
   registration with it. The second item's scripted `FakeHarness` step writes a tracked file that nothing lands, so
   its tree is dirty at the mark. That tree is kept, and `s8d-ii`'s named reason is printed. Mutants S8E-M37 and
   S8E-M38 (§8e.12) redden one arm each.
+  *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; D21-108.)* ~~The second item's scripted `FakeHarness`
+  step writes a tracked file that nothing lands~~: under D21-43 N10 and ADR-0188 decision 2 (proposed) that edit
+  lands at the step's own commit, so the tree was clean at the mark and ADR-0180's removal rule correctly removed it
+  (the arm read red at `afb60ff`, the whole suite 1130/1/9). The dirty arm is rewritten as D21-108 rules, over a
+  real `answer … exclude`: the scripted step writes the denylisted untracked `.env` on EVERY dispatch; invocation 1
+  stops at the `landing.refused-path` gate (exit 0); `exclude` is answered and applies; invocation 2 re-dispatches
+  and walks to `closed` with `.env` unstaged at every landing; the tree is kept, registered and dirty with `?? .env`,
+  and `.env` is not on the run ref, with PREMISE asserts on the gate row, the answer and the closed mark. The test
+  name and Checkpoint 8e's `sel rk-cli 38` line are byte-unchanged, and nothing is `#[ignore]`d. S8E-M37 and
+  S8E-M38 were re-run in the private worktree `target/wt-s8fp3` over the rewritten arm: each still flips it (M37:
+  *"the clean, landed tree … was not removed at its closed mark"*; M38: *"the dirty tree … was removed"*). S8F-P3's
+  mutant M-EXCL (*a landing stages excluded paths*) flips it too: invocation 2 re-opens the gate instead of reaching
+  `closed`.
 - **What `s8` gains, and what it does not.** D21-42 7 says *"s8 asserts set and order equality mechanically from the
   lane's own trailer commits"*. That amendment is `s8j`'s. This stage proves the property over a fixture lane
   (`lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order`), with no pack literal: the
@@ -1356,6 +1369,9 @@ same reason, the item that `exit/findings-block/` runs gains a `slice`, or its s
   an **ignored** file after invocation 1 and asserts it is still there after invocation 2, which a re-creation would
   delete.
 - `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one` (N9's removal trigger, §8e.6).
+  *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; D21-108.)* Its dirty arm is rewritten by `s8f`: the
+  dirt is an excluded, denylisted `.env` left unstaged after a real `answer … exclude`, not a tracked edit
+  (N10 lands a tracked edit at its step). See §8e.6's dated note.
 - `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit` (AC-163's replay instrument, over the fixture lane).
   After a lane that writes every tier-1 kind, three things hold:
   - each `t1_*` row's `anchor_sha` names a commit on `rk-run/<item>` whose trailer matches the row's kind and value;
@@ -1595,7 +1611,7 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M35 | the interim key written into `payload` | `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` (its second arm) |
 | S8E-M36 | `doctor --rebuild` opens the old store through the identity check before rebuilding | `doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two` |
 | S8E-M37 | the `closed` mark does not invoke `s8d-ii`'s removal rule | `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one` (its clean arm) |
-| S8E-M38 | the trigger removes the tree with `--force`, skipping the clean check | `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one` (its dirty arm) |
+| S8E-M38 | the trigger removes the tree with `--force`, skipping the clean check | `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one` (its dirty arm) *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; D21-108: the dirty arm is rewritten over a real `answer … exclude` to the `landing.refused-path` gate, the tree dirty with an excluded `.env`; re-run in a private worktree over the rewritten arm, it still flips it: "the dirty tree … was removed")* |
 | S8E-M39 | the SQLite registry's `rebuild` row restored to `Probe::None` | `registry::snapshot_and_rebuild_rows_carry_a_recorded_probe` |
 | S8E-M40 | the version-1 open stamps the identity row before it refuses | `store::a_checked_in_version_one_store_is_refused_and_its_bytes_are_unchanged` |
 | S8E-M41 | `worktree_assigned` written with `reused: false` and an empty `discarded` on re-entry | `worktree_assigned::a_reentry_records_reused_and_its_discard_list` |

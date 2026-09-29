@@ -531,6 +531,11 @@ pub struct ArtifactRead<'a> {
     pub producer: &'a str,
     /// The value served.
     pub value: &'a Json,
+    /// The WHOLE committed `emit` binding `value` was read from (a field reference serves part of
+    /// it). *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; the render record
+    /// ADR-0189 decision 9, proposed.)* The rk-store seam checks the bytes it serves from the run
+    /// ref against THIS value's digest: a mismatch is a halt (Halt 4), never a silent choice.
+    pub bound: &'a Json,
 }
 
 /// **The read seam** (N12). `s8f`'s rk-store seam is the ONLY emitter of `artifact.read`
@@ -555,6 +560,78 @@ pub struct UnwiredReadSeam;
 impl ArtifactReadSeam for UnwiredReadSeam {
     fn read(&self, _read: &ArtifactRead<'_>) -> Result<(), String> {
         Ok(())
+    }
+}
+
+/// **`s8f`'s read seam: `rk-store`'s reader** (N12; D21-47; the render record ADR-0189 decision 9,
+/// proposed). *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* The composition
+/// root binds an [`rk_store::render::ArtifactReader`] per stage run in place of
+/// [`UnwiredReadSeam`]; each resolved `artifact:` input reaches it through
+/// [`read_artifact_input`]'s one call, and it appends that input's ONE `artifact.read` — this crate
+/// appends none. It refuses before the entry's reconcile (AC-126) and halts on a served digest that
+/// is not the committed binding's.
+impl ArtifactReadSeam for rk_store::render::ArtifactReader {
+    fn read(&self, read: &ArtifactRead<'_>) -> Result<(), String> {
+        self.serve(read.kind, Some(read.bound))
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+}
+
+/// **What one `emit` writes** (ADR-0116's forbids: *"an activity output with no `artifact.write`
+/// event"*; `s8f` §8f.6). *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)*
+#[derive(Debug, Clone, Copy)]
+pub struct ArtifactWrite<'a> {
+    pub item: &'a str,
+    /// The stage whose `emit` wrote it.
+    pub stage: &'a str,
+    /// The provided kind.
+    pub kind: &'a str,
+    /// The value the resolver bound to it.
+    pub value: &'a Json,
+}
+
+/// **The write seam** — the `emit` arm's one call per provided kind, the read seam's sibling.
+/// *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* This crate opens no files:
+/// the write, and its ONE `artifact.write`, are `rk-store`'s writer's (AC-122; ADR-0189 decisions 7
+/// and 8), bound by the composition root.
+pub trait ArtifactWriteSeam: Send + Sync {
+    /// Write one provided kind's value.
+    ///
+    /// # Errors
+    /// The writer's refusal, which stops the activation by name.
+    fn write(&self, write: &ArtifactWrite<'_>) -> Result<(), String>;
+}
+
+/// **The machinery suites' value: a named, NON-WRITING stub.** A runtime with no composition root
+/// behind it (the kernel's machinery suites, the golden-log recorder) holds no managed directory to
+/// write into. The production path binds `rk-store`'s writer. *(dated 2026-09-28, s8f build,
+/// package S8F-P4-RENDER-WRITE-READ.)*
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UnwiredWriteSeam;
+
+impl ArtifactWriteSeam for UnwiredWriteSeam {
+    fn write(&self, _write: &ArtifactWrite<'_>) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+/// **`s8f`'s write seam: `rk-store`'s writer** (the render record ADR-0189 decisions 7 and 8,
+/// proposed). *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* The writer is bound
+/// per stage run, so its rows carry that stage and run; a write for another item or stage is
+/// refused by name rather than filed under the wrong stage run.
+impl ArtifactWriteSeam for rk_store::render::ArtifactWriter {
+    fn write(&self, write: &ArtifactWrite<'_>) -> Result<(), String> {
+        let at = self.stage_run();
+        if at.item != write.item || at.stage != write.stage {
+            return Err(format!(
+                "the writer is bound to `{}` at `{}`, not `{}` at `{}`",
+                at.item, at.stage, write.item, write.stage
+            ));
+        }
+        Self::write(self, write.kind, write.value)
+            .map(|_| ())
+            .map_err(|e| e.to_string())
     }
 }
 
@@ -1067,6 +1144,7 @@ pub fn read_artifact_input(env: &Env<'_>, input: &ArtifactInput<'_>) -> Result<J
             binding: input.binding,
             producer,
             value,
+            bound,
         })
         .map_err(|e| site.refuse(format!("the read seam refused it: {e}")))?;
     Ok(value.clone())

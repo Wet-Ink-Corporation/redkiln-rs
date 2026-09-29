@@ -226,6 +226,11 @@ pub struct ToolRouting {
     /// amended, proposed.)* The item's run-branch changeset reader, which `"affected"` reads inside
     /// `Changeset`'s own producer. Unbound: such a selection refuses by name.
     run_branch: RunBranchSlot,
+    /// *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; the render record ADR-0189
+    /// decisions 7 and 9, proposed.)* `rk-store`'s reader and writer for this stage run, bound by
+    /// the composition root and applied by `replay::resume_routed` to the runtime it builds.
+    /// Unbound: the runtime keeps its non-emitting stubs.
+    artifact_seams: ArtifactSeamSlot,
 }
 
 impl ToolRouting {
@@ -241,7 +246,31 @@ impl ToolRouting {
             sources: None,
             row_inputs: BTreeMap::new(),
             run_branch: RunBranchSlot(None),
+            artifact_seams: ArtifactSeamSlot(None),
         }
+    }
+
+    /// Bind `rk-store`'s reader and writer for this stage run (the render record ADR-0189,
+    /// proposed). *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)*
+    #[must_use]
+    pub fn with_artifact_seams(
+        mut self,
+        read: std::sync::Arc<dyn super::reference::ArtifactReadSeam>,
+        write: std::sync::Arc<dyn super::reference::ArtifactWriteSeam>,
+    ) -> Self {
+        self.artifact_seams = ArtifactSeamSlot(Some((read, write)));
+        self
+    }
+
+    /// The bound reader and writer, when the composition root bound them.
+    #[must_use]
+    pub fn artifact_seams(
+        &self,
+    ) -> Option<(
+        std::sync::Arc<dyn super::reference::ArtifactReadSeam>,
+        std::sync::Arc<dyn super::reference::ArtifactWriteSeam>,
+    )> {
+        self.artifact_seams.0.clone()
     }
 
     /// Bind the item's run-branch changeset reader (D21-74 ruling 2; R2 = ADR-0173 decision 9 as
@@ -419,6 +448,39 @@ impl PartialEq for RunBranchSlot {
             (None, None) => true,
             (Some(a), Some(b)) => {
                 std::ptr::addr_eq(std::sync::Arc::as_ptr(a), std::sync::Arc::as_ptr(b))
+            }
+            _ => false,
+        }
+    }
+}
+
+/// The bound reader and writer, compared by identity as [`RunBranchSlot`] is. *(dated 2026-09-28,
+/// s8f build, package S8F-P4-RENDER-WRITE-READ.)*
+#[derive(Clone, Default)]
+struct ArtifactSeamSlot(
+    Option<(
+        std::sync::Arc<dyn super::reference::ArtifactReadSeam>,
+        std::sync::Arc<dyn super::reference::ArtifactWriteSeam>,
+    )>,
+);
+
+impl std::fmt::Debug for ArtifactSeamSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(if self.0.is_some() {
+            "ArtifactSeamSlot(bound)"
+        } else {
+            "ArtifactSeamSlot(unbound)"
+        })
+    }
+}
+
+impl PartialEq for ArtifactSeamSlot {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (None, None) => true,
+            (Some((ar, aw)), Some((br, bw))) => {
+                std::ptr::addr_eq(std::sync::Arc::as_ptr(ar), std::sync::Arc::as_ptr(br))
+                    && std::ptr::addr_eq(std::sync::Arc::as_ptr(aw), std::sync::Arc::as_ptr(bw))
             }
             _ => false,
         }
@@ -1585,6 +1647,31 @@ impl super::Runtime {
                     Ok(emitted) => emitted,
                     Err(err) => return Ok(Flow::Halt(Halt::Stop(err.to_step_error()))),
                 };
+                // *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; `s8f` §8f.6;
+                // the render record ADR-0189 decisions 7 and 8, proposed.)* **The `emit` arm stops
+                // being inert.** Each provided kind's bound value goes to the write seam, whose
+                // `rk-store` writer writes it into the managed directory and appends that output's
+                // ONE `artifact.write` (ADR-0116's forbids). The writes precede the completion row,
+                // so its step landing commits them (N10). A refused write stops the activation by
+                // name, and it does not complete.
+                if let Some(emitted) = emitted.as_ref() {
+                    for (kind, value) in &emitted.artifacts {
+                        let written = self.write_seam().write(&super::reference::ArtifactWrite {
+                            item,
+                            stage: self.stage(),
+                            kind,
+                            value,
+                        });
+                        if let Err(e) = written {
+                            return Ok(Flow::Halt(Halt::Stop(StepError::Unsupported {
+                                capability: format!(
+                                    "the `emit` step `{}` could not write `{kind}` through                                      rk-store's writer: {e} (ADR-0189 decision 7)",
+                                    step.id
+                                ),
+                            })));
+                        }
+                    }
+                }
                 let outcome = self.commit_completion(
                     item,
                     activity_id_at_version,

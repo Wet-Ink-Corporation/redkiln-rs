@@ -1892,6 +1892,10 @@ pub fn resume_routed(
     // agent step dispatches, the executor folds the store's family-scoped rows with this pack's `K`
     // and refuses a family whose mark is open. Each value is read where it is needed and refused
     // there by name when the pack declares none.
+    // *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ; the render record ADR-0189
+    // decisions 7 and 9, proposed.)* The composition root's rk-store reader and writer for this
+    // stage run replace the runtime's non-emitting stubs.
+    let seams = routing.artifact_seams();
     let rt = Runtime::new(ports, &run_id, &inputs.stage)
         .with_tool_routing(routing)
         .with_breaker(crate::runtime::BreakerBinding::of(&pack))
@@ -1900,6 +1904,10 @@ pub fn resume_routed(
         .with_item(item.id());
     let rt = match boundary {
         Some(boundary) => rt.with_boundary(boundary),
+        None => rt,
+    };
+    let rt = match seams {
+        Some((read, write)) => rt.with_read_seam(read).with_write_seam(write),
         None => rt,
     };
     let mut selection: Selection =

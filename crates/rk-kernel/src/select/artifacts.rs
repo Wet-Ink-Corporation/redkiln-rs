@@ -217,6 +217,13 @@ impl ArtifactRegistry {
         self.kinds.get(name)
     }
 
+    /// Every registered kind, in name order. *(dated 2026-09-28, s8f build, package
+    /// S8F-P4-RENDER-WRITE-READ: the composition root reads each kind's `schema` for the
+    /// `schema_version` member `rk-store`'s writer and reader carry, ADR-0189 decision 8.)*
+    pub fn kinds(&self) -> impl Iterator<Item = &ArtifactKind> {
+        self.kinds.values()
+    }
+
     /// `true` when the kind is a vouched root's kind — registered `source = "human"`.
     ///
     /// **This, and not `derived_from = []`, is AC-067's test** (§7b.9(6)).

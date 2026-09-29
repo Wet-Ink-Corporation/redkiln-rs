@@ -51,15 +51,18 @@ use crate::support::{self, PackVariant};
 // *(dated 2026-09-28, `s8e` build, package S8E-P7.)* The lane seam and its helpers below are
 // `pub(crate)`: `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` runs the same
 // fixture lane before it deletes the store (`s8e` §8e.9).
+// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)* More of them are `pub(crate)` now
+// (the item constants, `ScriptedFactory::over` and `dispatches`, the two scripted elements and the
+// git and store readers): `landing`'s end-to-end tests drive the same lane over the same seam.
 
 /// `pack-min/config.toml`'s `[project] name` (ADR-0159).
-const PROJECT: &str = "rk-fixture";
+pub(crate) const PROJECT: &str = "rk-fixture";
 /// `lane/items/lane-gate.toml`: omits `has_repro`, so `implement` opens the abstention gate.
 pub(crate) const GATE_ITEM: &str = "lane-1";
 /// `lane/items/lane-through.toml`: declares `has_repro`, so the lane walks to its end.
-const THROUGH_ITEM: &str = "lane-2";
+pub(crate) const THROUGH_ITEM: &str = "lane-2";
 /// `lane/items/lane-dirty.toml`: `lane-2`'s twin, for the removal trigger's dirty arm.
-const DIRTY_ITEM: &str = "lane-3";
+pub(crate) const DIRTY_ITEM: &str = "lane-3";
 /// The shared gate item of `pack-min`'s single-stage variants (`items/gate-item.toml`).
 const BASE_GATE_ITEM: &str = "gate-1";
 
@@ -91,7 +94,7 @@ impl ScriptedFactory {
         Self::over(Box::new(FakeHarness::scripted(script)))
     }
 
-    fn over(inner: Box<dyn Harness>) -> Self {
+    pub(crate) fn over(inner: Box<dyn Harness>) -> Self {
         Self {
             harness: Arc::new(Counting {
                 inner,
@@ -105,7 +108,7 @@ impl ScriptedFactory {
         self.builds.load(Ordering::SeqCst)
     }
 
-    fn dispatches(&self) -> usize {
+    pub(crate) fn dispatches(&self) -> usize {
         self.harness.dispatches.load(Ordering::SeqCst)
     }
 }
@@ -122,13 +125,13 @@ impl HarnessFactory for ScriptedFactory {
 }
 
 /// `implement`'s one dispatch (`emit-report`, `value:ImplReport`).
-fn implement() -> Result<Typed, StepError> {
+pub(crate) fn implement() -> Result<Typed, StepError> {
     Ok(support::impl_report())
 }
 
 /// `review`'s one dispatch (`review-min`, `value:Findings`): an EMPTY finding set, so nothing
 /// blocks and the review stage's outcome is `approved`.
-fn review() -> Result<Typed, StepError> {
+pub(crate) fn review() -> Result<Typed, StepError> {
     Ok(Typed::new(
         SchemaId::new("Findings"),
         serde_json::json!({ "items": [] }),
@@ -266,7 +269,7 @@ pub(crate) fn walk_the_lane_through_a_void(root: &Path) {
     reason = "reading a fixture repository with git's own parser; the product's git goes through \
               rk-git's one GitExec wrapper"
 )]
-fn git_read(cwd: &Path, args: &[&str]) -> Option<String> {
+pub(crate) fn git_read(cwd: &Path, args: &[&str]) -> Option<String> {
     let out = std::process::Command::new("git")
         .args(args)
         .current_dir(cwd)
@@ -283,7 +286,7 @@ fn git_read(cwd: &Path, args: &[&str]) -> Option<String> {
     clippy::disallowed_types,
     reason = "reading a fixture repository with git itself; see `git_read`"
 )]
-fn git_rc(cwd: &Path, args: &[&str]) -> Option<i32> {
+pub(crate) fn git_rc(cwd: &Path, args: &[&str]) -> Option<i32> {
     std::process::Command::new("git")
         .args(args)
         .current_dir(cwd)
@@ -295,7 +298,7 @@ fn git_rc(cwd: &Path, args: &[&str]) -> Option<i32> {
         .code()
 }
 
-fn run_ref(item: &str) -> String {
+pub(crate) fn run_ref(item: &str) -> String {
     format!("refs/heads/rk-run/{item}")
 }
 
@@ -315,7 +318,7 @@ fn trailer_values(root: &Path, item: &str, key: &str) -> Vec<String> {
 /// The stage token of every `Story:` mark for `item` on its run ref, oldest first. A legacy
 /// stage-less mark reads `<stage-less>`, and a value of three or more tokens reads as itself, so a
 /// comparison against a stage list fails on either rather than skipping it.
-fn story_stages(root: &Path, item: &str) -> Vec<String> {
+pub(crate) fn story_stages(root: &Path, item: &str) -> Vec<String> {
     let qualified = format!("{PROJECT}/{item}");
     trailer_values(root, item, "Story")
         .into_iter()
@@ -332,14 +335,14 @@ fn story_stages(root: &Path, item: &str) -> Vec<String> {
 }
 
 /// Every `Gate:` mark on `item`'s run ref, as its whitespace tokens, oldest first.
-fn gate_marks(root: &Path, item: &str) -> Vec<Vec<String>> {
+pub(crate) fn gate_marks(root: &Path, item: &str) -> Vec<Vec<String>> {
     trailer_values(root, item, "Gate")
         .into_iter()
         .map(|v| v.split_whitespace().map(str::to_owned).collect())
         .collect()
 }
 
-fn ref_sha(root: &Path, item: &str) -> Option<String> {
+pub(crate) fn ref_sha(root: &Path, item: &str) -> Option<String> {
     git_read(root, &["rev-parse", "--verify", "--quiet", &run_ref(item)])
         .map(|s| s.trim().to_owned())
 }
@@ -358,7 +361,7 @@ fn answerable_tokens(rows: &[Event]) -> Vec<String> {
 
 /// Rows whose kind's wire name is `wire` — by NAME, so a kind this tree does not mint yet is read
 /// as absent rather than failing to compile.
-fn rows_named<'a>(rows: &'a [Event], wire: &str) -> Vec<&'a Event> {
+pub(crate) fn rows_named<'a>(rows: &'a [Event], wire: &str) -> Vec<&'a Event> {
     rows.iter().filter(|e| e.kind.wire_name() == wire).collect()
 }
 
@@ -386,7 +389,7 @@ fn delete_store(root: &Path) {
 }
 
 /// Read-only SQL over the store under `common_dir`, every column as text (the query CASTs).
-fn sql_rows(common_dir: &Path, sql: &str) -> Result<Vec<Vec<Option<String>>>, String> {
+pub(crate) fn sql_rows(common_dir: &Path, sql: &str) -> Result<Vec<Vec<Option<String>>>, String> {
     let reader = rk_store::conn::Reader::open(common_dir).map_err(|e| format!("{e:?}"))?;
     let conn = reader.conn();
     let mut stmt = conn.prepare(sql).map_err(|e| format!("`{sql}`: {e}"))?;
@@ -1527,18 +1530,26 @@ fn a_second_invocation_reuses_the_run_worktree() {
     );
 }
 
-/// A harness that dirties a TRACKED file of the run tree on every dispatch, then answers from its
-/// script: the change is landed by nothing.
+/// ~~A harness that dirties a TRACKED file of the run tree on every dispatch, then answers from its
+/// script: the change is landed by nothing.~~ *(dated 2026-09-28, s8f build, package
+/// S8F-P3-LANDING-E2E; D21-108.)* Under N10 a tracked edit IS landed, at the step's own commit
+/// (ADR-0188 decision 2), so that premise is gone. This harness writes a DENYLISTED untracked path,
+/// `.env`, on every dispatch: the landing refuses it by name, and once `exclude` is answered every
+/// later landing leaves it unstaged. It is written on EVERY dispatch because the re-entry discard
+/// removes it between invocations.
 struct Dirtying {
     inner: FakeHarness,
     tree: PathBuf,
 }
 
+/// The denylisted path [`Dirtying`] writes (`rk_git::landing::DENYLIST`'s `.env`).
+const DIRTY_PATH: &str = ".env";
+
 impl Harness for Dirtying {
     fn dispatch(&self, spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
         let _ = std::fs::write(
-            self.tree.join("README"),
-            b"edited by the scripted step, landed by nothing\n",
+            self.tree.join(DIRTY_PATH),
+            b"API_TOKEN=written-by-the-scripted-step\n",
         );
         self.inner.dispatch(spec, store)
     }
@@ -1547,8 +1558,13 @@ impl Harness for Dirtying {
 /// **N9's removal trigger at lane level** (§8e.6; `s8d-ii`'s rule: clean, landed, marked, unlocked,
 /// never `--force`). Two items walk to their `closed` mark in one repository. The first leaves a
 /// clean tree whose `HEAD` is the run-ref tip: it is gone afterwards, and its registration with it.
-/// The second's scripted step edits a tracked file that nothing lands: its tree is dirty at the
-/// mark and is kept. Red under S8E-M37 (the clean arm) and S8E-M38 (the dirty arm).
+/// ~~The second's scripted step edits a tracked file that nothing lands: its tree is dirty at the
+/// mark and is kept.~~ *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; D21-108.)* The
+/// second's scripted step writes a denylisted untracked `.env` on every dispatch: invocation 1 stops
+/// at the `landing.refused-path` gate, `answer … exclude` applies, and invocation 2 walks to the
+/// `closed` mark with `.env` unstaged at every landing, so its tree is dirty at the mark and is
+/// kept. Red under S8E-M37 (the clean arm), S8E-M38 (the dirty arm) and S8F-P3's M-EXCL (a landing
+/// stages excluded paths).
 #[test]
 fn a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one() {
     // One repository per arm: the arms are independent, and one store holding both items would
@@ -1601,35 +1617,73 @@ fn a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one() {
         "the removal took the run ref with the tree"
     );
 
-    // ---- the dirty arm: the scripted step edits a tracked file nothing lands; the tree is kept.
+    // ---- the dirty arm: ~~the scripted step edits a tracked file nothing lands; the tree is kept.~~
+    // *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; D21-108.)* The scripted step writes
+    // a denylisted untracked path on every dispatch; invocation 1 stops at the landing gate, `exclude`
+    // is answered, and invocation 2 walks to `closed` with the path left unstaged: the tree is dirty
+    // at the mark and is kept.
     let dirty_repo = lane_repo();
     let dirty_root = dirty_repo.path();
     let dirty_tree = crate::run_tree(dirty_root, DIRTY_ITEM).path;
-    let dirtying = ScriptedFactory::over(Box::new(Dirtying {
-        inner: FakeHarness::scripted(through()),
-        tree: dirty_tree.clone(),
-    }));
-    assert_eq!(
-        ran(
+    let dirty_run = |script: Vec<Result<Typed, StepError>>| {
+        let factory = ScriptedFactory::over(Box::new(Dirtying {
+            inner: FakeHarness::scripted(script),
+            tree: dirty_tree.clone(),
+        }));
+        let exit = ran(
             rk_cli::verbs::run::run(
                 &cli(dirty_root, DIRTY_ITEM),
                 &args(DIRTY_ITEM),
                 &support::clean_env(),
-                seam(&dirtying)
+                seam(&factory),
             ),
-            DIRTY_ITEM
-        ),
-        Exit::Success
+            DIRTY_ITEM,
+        );
+        (exit, factory.dispatches())
+    };
+    assert_eq!(
+        dirty_run(vec![implement()]),
+        (Exit::Success, 1),
+        "PREMISE: invocation 1 dispatches `implement` once and exits 0 at the landing gate"
+    );
+    let landing_gates: Vec<Event> = support::store_rows(dirty_root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::GateOpened)
+        .filter(|e| {
+            e.payload.get("kind").and_then(serde_json::Value::as_str)
+                == Some("landing.refused-path")
+        })
+        .collect();
+    assert!(
+        landing_gates.len() == 1
+            && landing_gates[0]
+                .payload
+                .get("refused")
+                .is_some_and(|r| r.to_string().contains(DIRTY_PATH)),
+        "PREMISE: exactly one `landing.refused-path` gate opened, naming {DIRTY_PATH}: \
+         {landing_gates:?}"
     );
     assert_eq!(
+        answer_item(dirty_root, DIRTY_ITEM, "exclude"),
+        Exit::Success,
+        "PREMISE: `exclude` applies"
+    );
+    assert!(
+        support::store_rows(dirty_root).iter().any(|e| {
+            e.kind == EventKind::GateAnswered
+                && e.payload.get("verdict").and_then(serde_json::Value::as_str) == Some("exclude")
+        }),
+        "PREMISE: the `exclude` answer is recorded"
+    );
+    let (walked, dispatched) = dirty_run(through());
+    assert_eq!(
         (
-            dirtying.dispatches(),
-            story_stages(dirty_root, DIRTY_ITEM)
-                .last()
-                .map(String::as_str)
+            walked,
+            dispatched,
+            story_stages(dirty_root, DIRTY_ITEM).last().cloned()
         ),
-        (2, Some("closed")),
-        "PREMISE: the dirty item's steps ran and its lane walked to its closed mark"
+        (Exit::Success, 2, Some("closed".to_owned())),
+        "PREMISE: invocation 2 re-dispatches `implement` and `review` and walks to the closed mark"
     );
     assert!(
         dirty_tree.is_dir() && registered(dirty_root, &dirty_tree),
@@ -1639,8 +1693,23 @@ fn a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one() {
         registered(dirty_root, &dirty_tree)
     );
     assert!(
-        git_read(&dirty_tree, &["status", "--porcelain"]).is_some_and(|s| !s.trim().is_empty()),
-        "PREMISE: the kept tree is dirty"
+        git_read(
+            &dirty_tree,
+            &["status", "--porcelain", "--untracked-files=all"]
+        )
+        .is_some_and(|s| s.lines().any(|l| l.trim() == format!("?? {DIRTY_PATH}"))),
+        "the kept tree is not dirty with the excluded path {DIRTY_PATH}"
+    );
+    assert!(
+        git_rc(
+            dirty_root,
+            &[
+                "cat-file",
+                "-e",
+                &format!("{}:{DIRTY_PATH}", run_ref(DIRTY_ITEM))
+            ]
+        ) != Some(0),
+        "the excluded path {DIRTY_PATH} landed on the run ref"
     );
 }
 

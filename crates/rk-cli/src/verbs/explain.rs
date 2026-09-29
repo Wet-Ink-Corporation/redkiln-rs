@@ -91,6 +91,10 @@ pub fn run_to(
 /// The type is the second guard and it is `rk_git`'s: `Entry` is exactly `{ Run, Answer, Doctor }`,
 /// so there is no `Entry::Explain` to pass.
 ///
+/// *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 12, proposed.)*
+/// ~~`exec` and `worktree` are not used~~: the landing block READS git through them
+/// (`rev-parse`, `log`), which is not a reconcile — `reconciler` is still called by nothing.
+///
 /// # Errors
 /// [`Halt::PoisonedLock`] naming this verb.
 #[expect(
@@ -138,7 +142,176 @@ pub fn run_with(
         eprintln!("redkiln: the resolution could not be written: {e}");
         return Ok(Exit::ConfigError);
     }
+
+    // ---- THE HAND-OFF (`s8f` §8f.4; the landing record ADR-0188 decision 12, proposed). *(dated
+    // 2026-09-28, s8f build, package S8F-P3-LANDING-E2E.)* After the recorded resolution, read from
+    // git and from the tier-1 rows' `anchor_sha` — never from a selection (AC-432).
+    let block = match landing_block(exec, worktree, store, item)? {
+        Ok(block) => block,
+        Err(exit) => return Ok(exit),
+    };
+    if let Err(e) = out.write_all(block.as_bytes()) {
+        eprintln!("redkiln: the landing block could not be written: {e}");
+        return Ok(Exit::ConfigError);
+    }
     Ok(Exit::Success)
+}
+
+/// **The landing block** (ADR-0188 decision 12): exactly
+///
+/// ```text
+/// landing: rk-run/<item> at <sha>
+/// landing: <n> commits ahead of <base>, <c> with content
+/// landing: git merge --no-ff rk-run/<item>
+/// ```
+///
+/// or, with no run ref, `landing: nothing landed (no rk-run/<item>)`. `<base>` is the run tree's
+/// `RK_BASE` fork (ADR-0180) while the recorded tree exists; once the lane's end has removed it,
+/// the first parent of the OLDEST commit on the ref that anchors one of the item's tier-1 rows —
+/// the lane's entry act, whose parent is the fork. A commit has content when its tree differs
+/// from its first parent's. Every git call is a read (`GitOp::RevParse`, `GitOp::Log`). No squash
+/// and no rebase: tier-1 state is keyed by commit SHA (ADR-0018), and a squashed hand-off would
+/// orphan every trailer the run wrote.
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the acquisition; a git read or a store read that fails is exit
+/// `3`, named.
+fn landing_block(
+    exec: &GitExec,
+    worktree: &WorktreePath,
+    store: &Arc<Mutex<dyn EventStore>>,
+    item: &str,
+) -> Result<Result<String, Exit>, Halt> {
+    use rk_git::git_exec::GitOp;
+    let run_ref = format!("refs/heads/rk-run/{item}");
+    let branch = format!("rk-run/{item}");
+    let refuse = |what: &str, e: &dyn std::fmt::Debug| {
+        eprintln!("redkiln: the landing block of `{item}`: {what}: {e:?}");
+        Exit::ConfigError
+    };
+    let Ok(tip) = exec
+        .run(
+            GitOp::RevParse,
+            worktree,
+            ["rev-parse", "--verify", "--quiet", run_ref.as_str()],
+        )
+        .map(|o| o.stdout_trimmed())
+    else {
+        return Ok(Ok(format!("\nlanding: nothing landed (no {branch})\n")));
+    };
+
+    let guard = store::acquire(store, "explain")?;
+    let events = guard.query(rk_kernel::runtime::journal_query(item));
+    let snapshot = guard.snapshot();
+    drop(guard);
+    let (events, snapshot) = match (events, snapshot) {
+        (Ok(events), Ok(snapshot)) => (events, snapshot),
+        (Err(e), _) | (_, Err(e)) => return Ok(Err(refuse("the store could not be read", &e))),
+    };
+
+    // The base: the recorded tree's RK_BASE fork, or the anchored entry act's parent.
+    let recorded = rk_kernel::runtime::tier_one::assigned_ownership(&events, item)
+        .map(|o| o.worktree)
+        .filter(|tree| tree.is_dir())
+        .and_then(|tree| rk_git::worktree::read_rk_base(exec, &tree).ok().flatten())
+        .filter(|base| base.item == item)
+        .map(|base| base.fork);
+    let base = if let Some(fork) = recorded {
+        fork
+    } else {
+        let anchored: std::collections::BTreeSet<&str> = snapshot
+            .rows()
+            .iter()
+            .filter(|r| r.event.item() == Some(item))
+            .filter_map(|r| r.anchor_sha.as_deref())
+            .collect();
+        let on_ref = match exec.run(
+            GitOp::Log,
+            worktree,
+            ["log", "--reverse", "--format=%H", run_ref.as_str()],
+        ) {
+            Ok(out) => out.stdout_trimmed(),
+            Err(e) => return Ok(Err(refuse("the run ref's log could not be read", &e))),
+        };
+        let Some(entry) = on_ref
+            .lines()
+            .map(str::trim)
+            .find(|sha| anchored.contains(sha))
+        else {
+            return Ok(Ok(format!(
+                "\nlanding: {branch} at {tip}\nlanding: no base is recorded (no RK_BASE and no \
+                 anchored commit)\nlanding: git merge --no-ff {branch}\n"
+            )));
+        };
+        let parent = format!("{entry}^1");
+        match exec.run(
+            GitOp::RevParse,
+            worktree,
+            ["rev-parse", "--verify", "--quiet", parent.as_str()],
+        ) {
+            Ok(out) => out.stdout_trimmed(),
+            Err(e) => return Ok(Err(refuse("the entry act's parent could not be read", &e))),
+        }
+    };
+
+    // The commits ahead, and which carry content: `%H %T %P` over `<base>..<tip>`.
+    let range = format!("{base}..{tip}");
+    let listed = match exec.run(
+        GitOp::Log,
+        worktree,
+        ["log", "--format=%H%x1f%T%x1f%P", range.as_str()],
+    ) {
+        Ok(out) => out.stdout_trimmed(),
+        Err(e) => return Ok(Err(refuse("the landed range could not be read", &e))),
+    };
+    let commits: Vec<(String, String, Option<String>)> = listed
+        .lines()
+        .filter_map(|l| {
+            let mut f = l.split('\u{1f}');
+            let sha = f.next()?.trim().to_owned();
+            let tree = f.next()?.trim().to_owned();
+            let parent = f
+                .next()
+                .and_then(|p| p.split_whitespace().next())
+                .map(str::to_owned);
+            (!sha.is_empty()).then_some((sha, tree, parent))
+        })
+        .collect();
+    let mut trees: std::collections::BTreeMap<String, String> = commits
+        .iter()
+        .map(|(sha, tree, _)| (sha.clone(), tree.clone()))
+        .collect();
+    let mut content = 0_usize;
+    for (_, tree, parent) in &commits {
+        let parent_tree = match parent {
+            None => None,
+            Some(p) => {
+                if let Some(t) = trees.get(p) {
+                    Some(t.clone())
+                } else {
+                    let spec = format!("{p}^{{tree}}");
+                    match exec.run(GitOp::RevParse, worktree, ["rev-parse", spec.as_str()]) {
+                        Ok(out) => {
+                            let t = out.stdout_trimmed();
+                            trees.insert(p.clone(), t.clone());
+                            Some(t)
+                        }
+                        Err(e) => {
+                            return Ok(Err(refuse("a landed commit's parent tree", &e)));
+                        }
+                    }
+                }
+            }
+        };
+        if parent_tree.as_deref() != Some(tree.as_str()) {
+            content += 1;
+        }
+    }
+    Ok(Ok(format!(
+        "\nlanding: {branch} at {tip}\nlanding: {} commits ahead of {base}, {content} with \
+         content\nlanding: git merge --no-ff {branch}\n",
+        commits.len()
+    )))
 }
 
 /// The item's most recent run id, off the store.
