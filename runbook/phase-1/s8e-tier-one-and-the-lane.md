@@ -607,6 +607,18 @@ ADR-0181 (proposed).** What landed, and the choices the section left to the reco
   migration commit's body. Until §8e.9 lands, that rebuild writes the anchored `t2_event` rows only (no `t1_*` row and
   no interim key), so running it after §8e.9 re-derives more; the section's *"in the migration's commit"* is the
   orchestrator's to schedule.
+- *(dated 2026-09-28, `s8e` build, the operator-approved rebuild (Weigh-In `wi-ef7b00`, run by the orchestrator from the
+  main checkout at `7bec7cd`).)* **The shipped store is rebuilt and stamps version 2.** Backup (store, `-wal`, `-shm`,
+  `rebuilt`) at `target/store-backups/s8e-migration-7bec7cd/`. Run exactly as prepared above: `nodispatch target/debug/redkiln
+  doctor --rebuild` → rc 0, *"rebuilt 1 tier-1 row(s) from git at 7bec7cd…"*, *"rebuilt-store-identity ok
+  root_commit=cc5a2589… schema_version=2"*; `nd_check` clean (trap empty). **Before:** schema version 1, user_version 0;
+  `t1_gate` 0, `t1_slice_seal` 0, `t1_stage_transition` 0; `t2_event` 11 (`reconcile_started` 7, `stage_transition` 2,
+  `dag_assembled` 1, `gate_opened` 1), none anchored; sha256 `e83d295e…`. **After:** schema version 2, user_version 2;
+  `t1_gate_transition` 0, `t1_slice_seal` 0, `t1_stage_transition` 0; `t2_event` 1 (`stage_transition`, anchored and keyed)
+  — the legacy fixture's one stage-less `Story:` mark, a lane entry, which ADR-0181 decision 3 maps to the anchored
+  `t2_event` row only; the ten tier-2 rows are dropped, as §8e.13 item 13 records; sha256 `09020ee9…`. The rebuild's
+  *"tier-1 row(s)"* wording counts that anchored entry row (a minor, named). `rk-run/rk-fix-doctor-test-count` still at
+  `73c087a` with its worktree.
 
 ### 8e.3 Git-first, owned by the kernel (D21-42 8a; D21-43 N6, N7 and N10's seam)
 
