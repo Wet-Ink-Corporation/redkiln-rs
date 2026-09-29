@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-104), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-105), and what they license
 
 *(Title moved 2026-09-28 at `s8e`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-96)"**, true when package R2FIX-8e recorded it (the note below); `D21-97` … `D21-104` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 104, the last `D21-104`.)*
 
@@ -4310,3 +4310,26 @@ paragraph's `null` bullet, whose `check` sentence stands; the replay sentence's 
 stays `accepted`. **The flip commit writes the `superseded_by` back-link**, `0187` appended to ADR-0174's list, with
 its README status cell and one Supersessions-table row, as its decision 4 requires. D21-92 is the ruling it records,
 and D21-77 ruling 1 stands. **Checkpoint 8e is re-run after this flip commit.**
+
+---
+
+## D21-105 · The AFK run over `s8f` … Step 8: flip authority extends, spend is S-BIN only under a US$30 cap, one-way doors are taken reversibly, and `s8g` weighs the `Findings` producer
+
+**Taken 2026-09-28 by the operator, in the session that closed `s8e`, on four questions with options and a
+recommendation, before an extended AFK session.**
+
+**Ruled.**
+1. **Flip authority extends.** D21-64 ruling 10's standing flip authority (*"for the rest of this session"*) carries
+   into the AFK session for `s8f`, `s8g`, `s8h`, `s8i`, `s8j` and Step 8: each stage's own records flip at that
+   stage's close under ruling 9's two conditions (the formal checkpoint passes whole, and a refuting round finds no
+   blocker or major), each on its own dated ledger line citing this entry.
+2. **Spend.** The ONLY spend authorised is `s8i`'s S-BIN dispatches against the real account, capped at **US$30
+   total**, run in the main session in the foreground, with a spend table. Every other live or paid step (the live
+   probes of `s8h` and `s8j`, `s8j`'s paid runs, Checkpoint 7c's paid re-run, any OpenRouter or Jev use) is prepared to
+   its go-ahead line and deferred to the review packet.
+3. **One-way doors.** A decision that is hard to reverse is taken in its most reversible form (a `proposed` record, no
+   irreversible act), recorded TAKEN PROVISIONALLY, and the session continues; never anything destructive, remote or
+   paid beyond item 2. Decisions that arise are taken by the weigh-in method and recorded both in the weigh-in ledger
+   and as provisional D-entries, for the operator's review.
+4. **The shipped `Findings` producer (D21-95 item 2)** is decided in `s8g` by the weigh-in method: measure both routes
+   and take the recommendation provisionally.
