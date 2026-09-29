@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-118), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-119), and what they license
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-118)"**; `D21-119` is appended with this move.)*
 
 *(Title moved 2026-09-29 at `s8f`'s close: it read **"(D21-1 … D21-115)"**; `D21-116` … `D21-118` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 118, the last `D21-118`.)*
 
@@ -5054,3 +5056,64 @@ flip commit writes the `superseded_by` back-link**, `0189` appended to ADR-0173'
 cell and one Supersessions-table row. ADR-0005, ADR-0006 (as refined by ADR-0075), ADR-0025 and ADR-0116 stand and are
 cited. The same commit shortens Checkpoint 8f (2)'s `FLIP_PENDING` to `"0190"` by a dated line, so (2) asserts
 ADR-0189 accepted, flipped and back-linked. **Checkpoint 8f is re-run after this flip commit.**
+
+---
+
+## D21-119 · `s8g`: the shipped `Findings` producer: both readers key on the review verdict kind, and the seal reads only a review activation's row
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105, items 3 and 4) of 2026-09-29, pending the operator's
+confirmation — Weigh-In wi-e8a53d** (two-way door, judgment; defaulted to A). This is the decision D21-105 item 4 assigns
+to `s8g`: *"measure both routes … and take the recommendation provisionally"*. The ruling moves accepted ADR-0186 in
+part, so a `proposed` record carries it. Under D21-105 AFK rule 4 that record flips at `s8g`'s close only if the
+operator has not objected in this ledger. The ruling is on the review packet's confirm list.
+
+**Measured by package S8G-P1** (at `178868f`, code read). Four findings:
+
+1. **No shipped activity provides `Findings`.** None of the 102 shipped activities does. The review stage's verdict
+   producers (adversarial-review, checklist-review, code-review, formal-inspection and spike-decision-review) provide
+   `["ReviewVerdict"]`.
+2. **The lanes select adversarial-review, not code-review.** Both lanes do. Code-review's `max_rigor` keeps it out of
+   a mandatory review stage, so D21-95's first route (*"`code-review` provides `Findings`"*) would not reach the seal.
+3. **The entry check is inert.** `findings_stage_reached` tests `provides.first() == "Findings"`.
+4. **The seal is not inert.** `review_pass::findings_in` takes the last committed row whose step schema is `Findings`,
+   from any activation. About 40 shipped agent steps outside the review stage emit `value:Findings`, among them
+   fix-spec/adversary and root-cause/adversary. So a non-review adversary can trigger the review seal or displace the
+   review verdict. ADR-0186's *"both the entry check and the seal are inert"* is false on its seal half.
+
+**Ruled** (blocker panel, option 1, unanimous: 8.5 / 8 / 8.5). This is D21-95 item 2's second route: *"the pass keys on
+what the shipped review provides"*.
+
+1. **One shared predicate.** `review_pass::REVIEW_VERDICT_KIND = "ReviewVerdict"` and `is_review_activity`
+   (*provides first* is that kind) are matched by exact element equality, never by substring. security-review's
+   `SecurityReviewVerdict` is the near miss. Both readers call it, so they cannot diverge.
+2. **The seal side.** A candidate row is a committed row whose schema is `Findings` and whose
+   `activity_id_at_version` resolves, against the catalog loaded in the same invocation, to a review activity. The seal
+   takes the last such row. An unresolvable id is refused by name.
+3. **The entry side.** `findings_stage_reached` keys on the same predicate, so the entry check becomes live.
+4. **Two commits.** The first scopes the seal; it narrows the rows and fails closed. The second makes the entry check
+   live. Before the second, the full suite and the replayed guards run. A fixture that starts refusing for lack of a
+   slice gets a declared slice; the check is never weakened.
+5. **Tests.** Seven red-first tests, (a) to (g), cover:
+   - (a) the entry refusal;
+   - (b) review seals, approved and changes-requested;
+   - (c) a fix-spec/adversary row does not seal;
+   - (d) a post-review adversary does not displace the review verdict;
+   - (e) security-review and design-review do not seal;
+   - (f) an unresolvable id is refused;
+   - (g) formal-inspection's two Findings steps.
+
+   Mutants M1 to M5 are each killed.
+6. **Records.**
+   - A new `proposed` ADR (next free id) supersedes in part only ADR-0186's *"whose `provides` first is `Findings`"*
+     sentences, *"The key is the one `review_pass` selects its committed activation by"*, and the inert-seal gap
+     statement.
+   - ADR-0162's decisions 3 and 5 stand whole, and decision 5 is now enforced.
+   - D21-95 item 1's *"provides first is `Findings`"* is read as *the review verdict kind*.
+   - No catalog version, CHANGELOG, `artifacts.toml`, lattice or Checkpoint 8b pin moves.
+
+**Rejected.**
+- Route one, retargeted to adversarial-review, means catalog churn and still mis-seals without this scoping.
+- A one-constant move of `FINDINGS_SCHEMA` to `ReviewVerdict` is non-viable: no committed step row carries that schema.
+- Deferring leaves a live mis-seal hazard.
+
+**Reversal.** Revert the two commits and the proposed record.
