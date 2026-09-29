@@ -273,6 +273,24 @@ it."*
   the title, written at writing, is not re-worded; ADR-0105's `superseded_by` back-link to `0188` moves at this
   record's flip, as clause 5's does. D21-112's ruling 3 (*"No accepted Decision moves."*) takes a dated note
   beneath it saying so.
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R7FIX-8f); refuting round 7's
+spec-conformance major; no ruling is needed for the route, which is this decision's own.)* **The drift gate's landing
+is a refusal site too.** When the entry pass both drifted and wrote, its writes land through the drift gate's `Gate:`
+commit (ADR-0189 decision 4), not the entry landing (decision 2's D21-114 note), and that act stages exactly as any
+landed act does. A refusal there is routed as every other: the drift gate's act lands nothing and appends no row, the
+`landing.refused-path` gate opens over an empty commit (decision 7) through the same boundary, and `run` exits `0`
+at it. As first built it exited `3` with no gate, and every later invocation did the same, since the re-entry
+discard and the causing commit reproduce the same writes. The drift gate's opening is now routed to the gate beside
+the kernel's acts (`run`'s `ReplayError` arm) and the entry landing. **A stated reading:** the drift
+gate does not open at the refusal. It opens at the next entry once the answer is in force: after `exclude` the entry
+pass surfaces the same drift again and the drift gate's landing leaves the excluded paths unstaged; after `abort`
+the lane stops before any entry pass, and no drift gate opens. Pinned by
+`landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck`. **A residual, named and not
+settled here:** when the excluded paths are the item's managed artifacts (`.redkiln/artifacts/<item>/…`), the
+restore can never land, so every later entry surfaces the drift again and opens a fresh drift gate, and answering it
+does not release the stage's exit (measured at R7FIX-8f: after `exclude` and `confirm-restore`, two further
+invocations each exited `0` at a new drift gate, three in all, and the lane stayed in `review`). It is returned to
+the orchestrator for a ruling.
 
 **7. What "due" means, and the gate's tree at a refused landing** (ADR-0105 clause 4's *"When a checkpoint commit is
 due"*). A checkpoint commit is **due** when a landing **will commit**: its staging set passes every refusal and its T

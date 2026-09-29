@@ -4855,7 +4855,9 @@ fn blocking_drift_json(item: &str, drift: &rk_types::drift::Drift) -> serde_json
 /// *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
 ///
 /// # Errors
-/// [`Halt::PoisonedLock`] from the store; a refusal is the inner `Exit` (`3`), named.
+/// [`Halt::PoisonedLock`] from the store; a refusal is the inner `Exit` (`3`), named. *(dated
+/// 2026-09-29, s8f build, package R7FIX-8f.)* A refused landing is not: its gate opens and the
+/// inner `Exit` is `0` (ADR-0188 decision 7).
 fn open_drift_gate(
     resolved: &Resolved,
     store: &Arc<Mutex<dyn EventStore>>,
@@ -4865,7 +4867,9 @@ fn open_drift_gate(
     now: i64,
     run_id: &str,
 ) -> Result<Result<(), Exit>, Halt> {
-    use rk_kernel::runtime::tier_one::{DRIFT_KIND, drift_gate_act, drift_gate_record};
+    use rk_kernel::runtime::tier_one::{
+        DRIFT_KIND, TierOneError, drift_gate_act, drift_gate_record,
+    };
     let item = resolved.item.id();
     let state = match folded_state(resolved, store)? {
         Ok(state) => state,
@@ -4893,9 +4897,33 @@ fn open_drift_gate(
         .and_then(|record| drift_gate_act(&record, &resolved.stage, drifts))
         .map(|act| act.opened_by(&resolved.stage, run_id));
     let committed = act.and_then(|act| boundary.act(store, act));
-    if let Err(e) = committed {
-        eprintln!("redkiln: the drift gate of `{item}` could not be opened: {e}");
-        return Ok(Err(Exit::ConfigError));
+    match committed {
+        Ok(_) => {}
+        // *(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7's spec-conformance
+        // major; ADR-0188 decisions 6-7, proposed.)* **The FOURTH refusal site, an explicit arm.**
+        // When the entry drifted, its own writes land through THIS `Gate:` commit, not
+        // `land_entry`, so a refused path here is routed exactly as there: the drift gate's act
+        // landed nothing and appended no row, the `landing.refused-path` gate opens over an EMPTY
+        // commit through the same boundary, and `run` exits `0` at it. The drift gate does not
+        // open now; it opens at the next entry once the answer is in force (`exclude`: the entry
+        // pass surfaces the same drift again and this landing leaves the excluded paths unstaged;
+        // `abort`: the lane stops before any entry pass).
+        Err(TierOneError::LandingRefused { refusals, tree }) => {
+            return Ok(Err(open_refused_landing_gate(
+                resolved,
+                store,
+                Some(boundary),
+                &state,
+                &refusals,
+                &tree,
+                now,
+                run_id,
+            )));
+        }
+        Err(e) => {
+            eprintln!("redkiln: the drift gate of `{item}` could not be opened: {e}");
+            return Ok(Err(Exit::ConfigError));
+        }
     }
     eprintln!(
         "redkiln: a `{DRIFT_KIND}` gate is open for `{item}` over {}: the stage's steps continue, \

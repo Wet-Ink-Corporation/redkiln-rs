@@ -2597,6 +2597,258 @@ fn a_drift_entry_lands_its_accepted_write_once_through_its_gate() {
     );
 }
 
+// --------------------------- a refusal on the drift gate's landing, and an unchanged entry tree
+//
+// *(Added 2026-09-29, s8f build, package R7FIX-8f; refuting round 7's two majors; D21-114, TAKEN
+// PROVISIONALLY under D21-105; ADR-0188 decisions 2, 6 and 7, proposed.)* When the entry also
+// drifted, the entry's writes land through the drift gate's `Gate:` commit, not `land_entry`, so a
+// refusal there is the FOURTH refusal site (a step's act, the entry landing, `answer`'s gate rows,
+// and this one). And the entry landing's `allow_empty` false arm: an entry whose writes leave the
+// run tree unchanged makes no `rk entry` commit.
+
+/// Invocation 1 emits `Spec` and stops in `review`; a human's ONE commit then edits the structured
+/// `summary` (a drift) AND writes prose over the blob limit into `context` (an accepted write), so
+/// invocation 2's entry both drifts and writes, and both managed files go over the limit.
+/// Returns the human's commit.
+fn a_human_drifts_the_spec_over_the_blob_limit(root: &Path, item: &str) -> String {
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    let tree = crate::run_tree(root, item).path;
+    let md = tree.join(spec_md(item));
+    let text = std::fs::read_to_string(&md).expect("PREMISE: the rendering is in the run tree");
+    let over = usize::try_from(rk_git::landing::MAX_LANDED_BLOB_BYTES).expect("fits") + 10;
+    let prose = "x".repeat(over);
+    let edited = text
+        .replace("\"pack-min\"", "\"a human edited this\"")
+        .replace("## context\n", &format!("## context\n{prose}\n"));
+    assert_ne!(edited, text, "PREMISE: the rendering is edited");
+    std::fs::write(&md, edited).expect("the rendering is edited");
+    assert_eq!(git_rc(&tree, &["add", "--", &spec_md(item)]), Some(0));
+    assert_eq!(
+        git_rc(
+            &tree,
+            &[
+                "commit",
+                "--quiet",
+                "-m",
+                "a human drifts the spec and writes prose over the limit"
+            ]
+        ),
+        Some(0),
+        "PREMISE: the human's edit is a commit on the run ref"
+    );
+    lane_e2e::ref_sha(root, item).expect("the run ref names the human's commit")
+}
+
+/// **A refusal on the drift gate's landing opens the `landing.refused-path` gate, and the lane is
+/// not stuck** (ADR-0188 decisions 6-7; `s8f` §8f.4's R7FIX-8f note). The entry both drifts and
+/// accepts prose over the blob limit, so the drift gate's `Gate:` commit would land both managed
+/// files and refuses them by size. Invocation 2 then opens ONE `landing.refused-path` gate over an
+/// EMPTY commit naming both paths with `size:<bytes>`, opens no drift gate, dispatches nothing,
+/// lands nothing and exits `0`. The follow-up proceeds for each answer: after `exclude`, invocation
+/// 3 opens the drift gate (the stated reading: it opens at the next entry once the exclusion is in
+/// force), refuses nothing again, lands neither path and exits `0`; after `abort`, invocation 3
+/// stops the lane, exit `0`, and the run ref does not move. Red before the fix: invocation 2 exits
+/// `3` with no gate, and so does every later invocation. Red under M-DRIFT-REFUSED.
+#[test]
+fn a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck() {
+    for option in ["exclude", "abort"] {
+        let repo = drift_lane();
+        let root = repo.path();
+        let item = THROUGH_ITEM;
+        let human = a_human_drifts_the_spec_over_the_blob_limit(root, item);
+        let run_ref = lane_e2e::run_ref(item);
+        let json_before = blob(root, &human, &spec_json(item));
+        assert!(
+            json_before.is_some(),
+            "PREMISE: `Spec.json` is on the run ref"
+        );
+
+        let second = ScriptedFactory::new(vec![lane_e2e::review()]);
+        assert_eq!(
+            run(root, item, &second),
+            Exit::Success,
+            "[{option}] `run` does not exit 0 at the drift gate landing's refusal"
+        );
+        let tree = crate::run_tree(root, item).path;
+        let size_of = |rel: &str| {
+            std::fs::metadata(tree.join(rel))
+                .unwrap_or_else(|e| panic!("PREMISE: {rel} is in the run tree: {e}"))
+                .len()
+        };
+        let mut expected = vec![
+            (
+                spec_json(item),
+                format!("size:{}", size_of(&spec_json(item))),
+            ),
+            (spec_md(item), format!("size:{}", size_of(&spec_md(item)))),
+        ];
+        expected.sort();
+        let gates = landing_gates(root);
+        assert_eq!(
+            gates.len(),
+            1,
+            "[{option}] the refused drift-gate landing opened no single `{LANDING_KIND}` gate: \
+             {gates:?}"
+        );
+        let mut refused = refused_of(&gates[0]);
+        refused.sort();
+        assert_eq!(
+            refused, expected,
+            "[{option}] the gate does not name both refused paths with `size:<bytes>`"
+        );
+        assert!(
+            drift_gates(root).is_empty(),
+            "[{option}] a drift gate opened over a refused landing"
+        );
+        assert_eq!(
+            second.dispatches(),
+            0,
+            "[{option}] a step dispatched past the refused landing"
+        );
+        let tip = lane_e2e::ref_sha(root, item).expect("the run ref exists");
+        assert!(
+            gate_commits(root, item).iter().any(|(sha, _)| *sha == tip),
+            "[{option}] the run ref's tip is not the refused landing's `Gate:` commit"
+        );
+        let after: Vec<String> = git_read(root, &["rev-list", &format!("{human}..{run_ref}")])
+            .unwrap_or_default()
+            .lines()
+            .map(str::to_owned)
+            .collect();
+        assert!(
+            !after.is_empty() && after.iter().all(|c| is_empty_commit(root, c)),
+            "[{option}] a content commit followed the refused drift-gate landing: {after:?}"
+        );
+        assert_eq!(
+            blob(root, &run_ref, &spec_json(item)),
+            json_before,
+            "[{option}] the refused `Spec.json` landed"
+        );
+        let token = gates[0].payload["token"]
+            .as_str()
+            .expect("the gate's token")
+            .to_owned();
+        assert_eq!(
+            lane_e2e::answer_item(root, item, option),
+            Exit::Success,
+            "[{option}] the refused landing's gate is not answerable"
+        );
+        assert_eq!(
+            answered_and_void(root, &token),
+            (1, 0),
+            "[{option}] the answer was not APPLIED"
+        );
+
+        let third = ScriptedFactory::new(vec![lane_e2e::review()]);
+        let tip_before = lane_e2e::ref_sha(root, item);
+        assert_eq!(
+            run(root, item, &third),
+            Exit::Success,
+            "[{option}] the lane is stuck: the follow-up invocation does not exit 0"
+        );
+        assert_eq!(
+            landing_gates(root).len(),
+            1,
+            "[{option}] the follow-up refused again"
+        );
+        assert_eq!(
+            blob(root, &run_ref, &spec_json(item)),
+            json_before,
+            "[{option}] a refused path landed on the follow-up"
+        );
+        if option == "exclude" {
+            assert_eq!(
+                drift_gates(root).len(),
+                1,
+                "the drift gate did not open at the next entry once the exclusion was in force"
+            );
+        } else {
+            assert!(
+                drift_gates(root).is_empty() && third.dispatches() == 0,
+                "the aborted lane walked on"
+            );
+            assert_eq!(
+                lane_e2e::ref_sha(root, item),
+                tip_before,
+                "the aborted lane moved the run ref"
+            );
+        }
+    }
+}
+
+/// **An entry whose writes leave the run tree unchanged makes NO `rk entry` commit** (D21-114;
+/// `s8f` §8f.4: *"with `allow_empty` false: an unchanged tree makes no commit"*). Invocation 2
+/// finds a `document` drift (the human deleted the rendering), restores it and lands the restore
+/// through the drift gate's `Gate:` commit. `answer … move-to-prose:notes` applies at invocation 3's
+/// entry: a typed write of `Spec.json` (so the entry WROTE, and the entry landing runs), whose bytes
+/// the gate's commit already landed. The tree is unchanged, so no `rk entry <item> ` commit is made,
+/// empty or not. The control: the move's `Spec.json` write follows the answer. Red under
+/// M-ENTRY-EMPTY (the Entry arm's `allow_empty` true: an EMPTY `rk entry` commit lands).
+#[test]
+fn an_entry_whose_writes_leave_the_tree_unchanged_makes_no_entry_commit() {
+    let repo = drift_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    let tree = crate::run_tree(root, item).path;
+    assert_eq!(
+        git_rc(&tree, &["rm", "--quiet", "--", &spec_md(item)]),
+        Some(0),
+        "PREMISE: the human deletes the rendering"
+    );
+    assert_eq!(
+        git_rc(
+            &tree,
+            &[
+                "commit",
+                "--quiet",
+                "-m",
+                "a human deletes the spec's rendering"
+            ]
+        ),
+        Some(0),
+        "PREMISE: the deletion is a commit on the run ref"
+    );
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(vec![lane_e2e::review()])),
+        Exit::Success,
+        "PREMISE: `run` exits 0 at the drift gate"
+    );
+    assert_eq!(
+        drift_gates(root).len(),
+        1,
+        "PREMISE: the drift gate is open"
+    );
+    assert_eq!(
+        answer(root, item, "move-to-prose:notes", None),
+        Exit::Success,
+        "PREMISE: the offered answer is accepted"
+    );
+    let writes_before = spec_json_writes(root, item).len();
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success,
+        "PREMISE: invocation 3 applies the move and walks on"
+    );
+    assert!(
+        spec_json_writes(root, item).len() > writes_before,
+        "CONTROL: the applied move wrote no `Spec.json`, so the entry landing never ran"
+    );
+    assert_eq!(
+        entry_landings(root, item),
+        Vec::<(String, String)>::new(),
+        "an entry whose writes left the tree unchanged made an `rk entry` commit"
+    );
+}
+
 // ------------------------- the entry landing's vouched-root arm and its refusal arm (D21-114)
 //
 // *(Added 2026-09-29, s8f build, package R6FIX-8f; refuting round 6's tests-mutants major and its

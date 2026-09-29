@@ -430,6 +430,11 @@ Each is read-only. A 🛑 line is a STOP. The stage does not choose around it: t
    `render::a_read_with_no_recorded_write_of_its_path_is_checked_against_the_binding` (`rk-store`); each is
    selected in Checkpoint 8f (4). D21-106's two stay outside the floor, so the suite is expected to read
    1119 + 121 = 1240 passed and 9 ignored. Checkpoint 8f (5) reads `FLOOR=1238` by the same dated edit.
+   *(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7.)* **Re-derived: 1119 + 121 = 1240.** The
+   recorded base is unchanged. Two tests join the count: `landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck` and
+   `landing::an_entry_whose_writes_leave_the_tree_unchanged_makes_no_entry_commit` (`rk-cli`); each is selected in
+   Checkpoint 8f (4). D21-106's two stay outside the floor, so the suite is expected to read 1119 + 123 = 1242
+   passed and 9 ignored. Checkpoint 8f (5) reads `FLOOR=1240` by the same dated edit.
 10. 🛑 **The `artifact:` arm's stub, and that nothing outside the seam emits (D21-47).** N12 reads *"`artifact.read`
     is emitted by s8d's resolver through s8f's rk-store read seam"*. D21-47 settles who owns it: *"`artifact.read`
     has exactly one emitter: rk-store's read seam (s8f). s8d's kernel function calls a named, non-emitting stub
@@ -813,6 +818,27 @@ neither discards nor re-stores it; M-ENTRY-VOUCHED), and the refusal by
 `landing::a_refused_entry_landing_opens_its_gate_over_an_empty_commit_and_lands_nothing` (a root one byte over the blob limit:
 the `landing.refused-path` gate over an empty commit naming `size:<bytes>`, `run` exits `0`, no dispatch, nothing
 lands; M-ENTRY-REFUSED and M-ENTRY-SWALLOW).
+*(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7's two majors.)* **The drift gate's landing is a
+refusal site too, and the unchanged-tree arm is pinned.** (1) When the entry both drifted and wrote, its writes land
+through the drift gate's `Gate:` commit, and `run::open_drift_gate` sent a refusal there to the catch-all: exit `3`,
+no gate, and the same at every later invocation (the finder measured *"the landing refused 2 path(s), and nothing
+landed: … Spec.json (size:2097201), … Spec.md (size:2097447)"*). It now has an explicit
+`TierOneError::LandingRefused { refusals, tree }` arm, as `land_entry` does: the `landing.refused-path` gate opens
+over an empty commit through the same boundary (`run::open_refused_landing_gate`, over the state folded before the
+act, which appended nothing) and `run` exits `0`. **A stated reading** (ADR-0188 decision 6's R7FIX-8f note,
+`proposed`): the drift gate does not open at the refusal; it opens at the next entry once the answer is in force.
+After `exclude` the entry pass surfaces the same drift again and the drift gate's landing leaves the excluded paths
+unstaged, so it opens; after `abort` the lane stops before any entry pass. The code does exactly that with no further
+change. Pinned by `landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck` (M-DRIFT-REFUSED,
+M-DRIFT-SWALLOW; §8f.12's R7FIX-8f list). **A residual, returned for a ruling:** when the excluded paths are the
+item's managed artifacts, the restore can never land, so each later entry surfaces the drift again and opens a fresh
+drift gate, and `confirm-restore` does not release the stage's exit (measured at R7FIX-8f by a probe, since removed:
+after `exclude` and `confirm-restore`, invocations 4 and 5 each exited `0` at a new drift gate, three in all, with the
+lane still in `review`). (2) The entry landing's *"with `allow_empty` false: an unchanged tree makes no commit"*
+was claimed pinned and was not: a mutant setting the `Content::Entry` arm's `allow_empty` to `true` passed every
+`rk-cli` test. `landing::an_entry_whose_writes_leave_the_tree_unchanged_makes_no_entry_commit` now pins it
+(M-ENTRY-EMPTY): an applied `move-to-prose` of a `document` drift writes `Spec.json` with the bytes the drift gate's
+`Gate:` commit already landed, and no `rk entry <item> ` commit, empty or not, is made.
 *(dated 2026-09-29, s8f build, package R4FIX-8f; refuting round 4's blocker.)* **Nor does the escalation `answer`'s
 expiry pass opens.** When a due gate's class declares `escalate`, the pass writes `gate_expired` and an
 escalation's `gate_opened`. As first built the second rode the LANDED arm (`Act::gate_opened` builds with
@@ -1817,7 +1843,11 @@ were written by S8F-P6. **Also owed and written:** the stale `s7h` §7h.2 prose 
 line flips it, ADR-0155 remains the accepted record"*) is struck with a dated note (ADR-0183 accepted since `abeb578`,
 D21-100); `s8d`'s *"ADR-0187, proposed"* was already corrected by S8F-P6. **Verified, no edit:** `s8h`'s gate-expiry
 table already carries both classes this stage mints, `landing.refused-path` and `render.structured-drift` (`s8h`
-§8h.10's rows), spelled as the code spells them (`LANDING_KIND`; `fsm::DRIFT_GATE_KIND`).
+§8h.10's rows), spelled as the code spells them (~~`LANDING_KIND`~~ `tier_one::LANDING_REFUSED_KIND`;
+`fsm::DRIFT_GATE_KIND`). *(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7's crossfile-safety
+minor.)* `LANDING_KIND` is a test-local constant (`crates/rk-cli/tests/it/landing.rs`: *"const LANDING_KIND: &str =
+"landing.refused-path";"*); the product constant is `pub const LANDING_REFUSED_KIND: &str = "landing.refused-path";`
+in `crates/rk-kernel/src/runtime/tier_one.rs`. The spelled value was right, and nothing else moves.
 
 ### 8f.11 Acceptance set
 
@@ -2530,6 +2560,15 @@ journalled `git_op` rows"*); M-D113-1 (the latest write selected by kind) by T2 
 dispatched: its `artifact:Spec` read was refused"*); M-D113-5 (always compared against the binding) by T1
 (*"left: Unsupported"*).
 
+*(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7's records minor.)* **Two attributions above are
+corrected** (and D21-114 carries the same note beneath its built note; the ruling is not rewritten). The list's
+heading, *"the ruling's list, which it names R6FIX-8f"*, and the later *"(the ruling's R6FIX-8f)"* in the mutant table
+and §8f.13: D21-114's Ruled section names no package, so the ruling names none; R5FIX2-8f is the package that built
+it. And the drift-entry test's *"the ruling's *"new assertion that exactly one content commit follows a drift
+entry"*"*: the phrase is not in D21-114 (its item 4 lists four tests and three mutants and names no drift-entry
+assertion). It was this package's own wording; the test is a fifth beyond the ruling's four, as the same entry
+already says. Nothing selected, counted or floored moves.
+
 *(dated 2026-09-29, s8f build, package R6FIX-8f; refuting round 6.)* **Refuting round 6's tests (the R6FIX-8f
 list). Three join Checkpoint 8f (4), and the floor moves to 1119 + 119 = 1238 (§8f.2 item 9).** Each drives an arm
 that was already built, so each was green when written; each is shown red under its mutant below.
@@ -2558,6 +2597,36 @@ arm returns `Ok(Ok(()))` on a refusal) by the refusal test (*"a step dispatched 
 left: 1, right: 0"*); M-READ-FALLBACK (`(None, Some(bound))` guarded `if false`, `(None, None)` widened to
 `(None, _)`) by the fallback test (*"bytes that are not the binding's, with no recorded write, were not a halt
 naming the binding's canonical digest: Ok(Served { … })"*).
+
+*(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7.)* **Refuting round 7's tests (the R7FIX-8f
+list). Two join Checkpoint 8f (4), and the floor moves to 1119 + 121 = 1240 (§8f.2 item 9).**
+- `landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck` (the spec-conformance major; run
+  once per answer, `exclude` and `abort`, each over a fresh lane: a human's one commit edits the structured
+  `summary` and writes `context` prose `MAX_LANDED_BLOB_BYTES + 10` bytes long; invocation 2 exits `0`, opens one
+  `landing.refused-path` gate naming `Spec.json` and `Spec.md` each with `size:<bytes>` read off the run tree, opens
+  no drift gate, dispatches nothing, and every commit after the human's is empty with the run ref's tip the gate's
+  `Gate:` commit and `Spec.json` unmoved; the answer is applied; invocation 3 exits `0` with no second refusal and
+  `Spec.json` unmoved, and opens the drift gate after `exclude`, or stops with no dispatch, no drift gate and no ref
+  move after `abort`). **Red before the fix:** *"[exclude] `run` does not exit 0 at the drift gate landing's refusal
+  … left: ConfigError, right: Success"*, the run printing *"the drift gate of `lane-2` could not be opened: the
+  landing refused 2 path(s), and nothing landed: .redkiln/artifacts/lane-2/Spec.json (size:2097201),
+  .redkiln/artifacts/lane-2/Spec.md (size:2097447) (ADR-0188)"*. Green after `open_drift_gate`'s arm.
+- `landing::an_entry_whose_writes_leave_the_tree_unchanged_makes_no_entry_commit` (the tests-mutants major: a
+  `document` drift, restored and landed by the drift gate's `Gate:` commit, is answered `move-to-prose:notes`;
+  invocation 3's entry writes `Spec.json` (the control: a new `Spec.json` write follows the answer, so the entry
+  landing runs) over an unchanged tree, and `entry_landings` is empty). Green when written, since the arm was built;
+  its red is M-ENTRY-EMPTY's below.
+
+Mutant log (`target/wt-r7fix`, a private worktree on a detached `HEAD` `0792244` with this package's two changed code
+files copied in, built with `cargo build --workspace` first and removed after; driver `R7FIX-8f-mutants.py`, a
+module-level literal table; log `R7FIX-8f-mutants.log`; each anchor asserted once, each restore verified by sha256; a
+2/2 `rk-cli` green control ran first). **All three killed**: M-DRIFT-REFUSED (`open_drift_gate`'s `LandingRefused`
+arm guarded `if false`, so the catch-all takes it) by the drift-gate test (*"[exclude] `run` does not exit 0 at the
+drift gate landing's refusal … left: ConfigError, right: Success"*); M-DRIFT-SWALLOW (the arm returns `Ok(Ok(()))` on
+a refusal) by the drift-gate test (*"[exclude] a step dispatched past the refused landing … left: 1, right: 0"*);
+M-ENTRY-EMPTY (the `Content::Entry` arm's `allow_empty` `false` set to `true` in `commit_act`) by the unchanged-tree
+test (*"an entry whose writes left the tree unchanged made an `rk entry` commit … left: [("05f741f3…", "rk entry
+lane-2 review review-22025437e33b9fbf")], right: []"*).
 
 **Mutants.** Each is authored, run and **must flip the named test**. A survivor blocks (golden constraint 12). The
 mutant cycles run **from Python**, never the shell: a backtick once swallowed a restore, and the next backup
@@ -2650,6 +2719,8 @@ table-driven, each arm has its own row (*a fixture per function is not a fixture
 | M-ENTRY-VOUCHED | *(dated 2026-09-29, R6FIX-8f; refuting round 6)* the vouched arm of the entry pass's `wrote` dropped | `landing::a_vouched_root_stored_at_entry_lands_at_entry_before_any_step_checkpoint` (killed) |
 | M-ENTRY-REFUSED, M-ENTRY-SWALLOW | *(dated 2026-09-29, R6FIX-8f; refuting round 6)* `land_entry`'s `LandingRefused` arm never taken (the catch-all exits `3`); the refusal swallowed (the lane walks on) | `landing::a_refused_entry_landing_opens_its_gate_over_an_empty_commit_and_lands_nothing` (each, killed) |
 | M-READ-FALLBACK | *(dated 2026-09-29, R6FIX-8f; refuting round 6)* the reader's `canonical_digest(bound)` fallback dropped (a read with no recorded write of its path is never checked) | `render::a_read_with_no_recorded_write_of_its_path_is_checked_against_the_binding` (killed) |
+| M-DRIFT-REFUSED, M-DRIFT-SWALLOW | *(dated 2026-09-29, R7FIX-8f; refuting round 7)* `open_drift_gate`'s `LandingRefused` arm never taken (the catch-all exits `3`); the refusal swallowed (the lane walks on) | `landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck` (each, killed) |
+| M-ENTRY-EMPTY | *(dated 2026-09-29, R7FIX-8f; refuting round 7)* the `Content::Entry` arm's `allow_empty` set `true` (an unchanged tree makes an empty `rk entry` commit) | `landing::an_entry_whose_writes_leave_the_tree_unchanged_makes_no_entry_commit` (killed) |
 
 ### 8f.13 Checkpoint 8f
 
@@ -2670,6 +2741,15 @@ refusal arm untested; the README's supersession census, its `0189` and `0188` ro
 ADR-0189 decision 9's quotation). The sixth minor, a finder's process disclosure, changes no tree and is the
 orchestrator's to log. Three tests join (4) and the floor moves to 1238 (§8f.2 item 9). The formal Checkpoint 8f
 waits on the orchestrator's next refuting round or its close.
+
+*(dated 2026-09-29, s8f build, package R7FIX-8f.)* **Refuting round 7's findings are fixed as R7FIX-8f**: both majors
+(a refusal on the drift gate's landing exited `3` with no gate, §8f.4's R7FIX-8f note; the entry landing's
+`allow_empty` false arm untested) and two minors (D21-114's and §8f.12's attributions, §8f.12's R7FIX-8f note;
+§8f.10's `LANDING_KIND`, now `tier_one::LANDING_REFUSED_KIND`). Two minors are not this package's: Checkpoint 7d's
+`[[bin]]` count predates `s8f`, and a finder's process disclosure changes no tree; the orchestrator logs both. Two
+tests join (4) and the floor moves to 1240 (§8f.2 item 9). **One residual is returned for a ruling** (§8f.4's
+R7FIX-8f note): an `exclude` of the item's managed artifacts leaves the drift gate re-opening at every entry. The
+formal Checkpoint 8f waits on the orchestrator.
 
 - **The three records exist and are accepted.** Each is located by the id written into its `REC_` line at writing,
   never by a title phrase (D21-47). Each has two or more `### Option — ` headings and a **What this forbids** block.
@@ -2706,7 +2786,9 @@ waits on the orchestrator's next refuting round or its close.
   are ignored and not selected). *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114, TAKEN PROVISIONALLY under D21-105.)* **All 118 named tests, 128 selections in all** (118 = 111 +
   R5FIX2-8f's 7: T1, T2 and five new; 128 = (4)'s counts 12 + 35 + 15 + 2 + 64; nothing is ignored in (4)).
   *(dated 2026-09-29, s8f build, package R6FIX-8f; refuting round 6.)* **All 121 named tests, 131 selections in all**
-  (121 = 118 + R6FIX-8f's 3; 131 = (4)'s counts 12 + 36 + 15 + 2 + 66). The
+  (121 = 118 + R6FIX-8f's 3; 131 = (4)'s counts 12 + 36 + 15 + 2 + 66).
+  *(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7.)* **All 123 named tests, 133 selections in all**
+  (123 = 121 + R7FIX-8f's 2; 133 = (4)'s counts 12 + 36 + 15 + 2 + 68). The
   amended tests are the grammar test,
   `s8e`'s AC-518 lint as §8f.4 widens it (final consistency pass 2026-09-24), and
   `answer::ac410_admitted_attachment_stored_as_human_root`, whose *"exactly four members"* S8F-P5 amended to the
@@ -2937,11 +3019,14 @@ run_sel() {     # $1 crate  $2 exact count  $3.. module-qualified names
 # ---- move (struck: `run_sel rk-store 35`, `run_sel rk-cli 64`): rk-store +1 (the reader's binding-digest fallback
 # ---- with no recorded write of the path), rk-cli +2 (a vouched root stored at entry lands at entry before any step
 # ---- checkpoint; a refused entry landing opens its gate over an empty commit and lands nothing).
+# ---- (dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7's two majors) two more tests are selected and
+# ---- one count moves (struck: `run_sel rk-cli 66`): rk-cli +2 (a refused drift-gate landing opens its gate and the
+# ---- lane is not stuck; an entry whose writes leave the tree unchanged makes no entry commit).
 run_sel rk-git 12 tree::working_state_less_drops_exactly_the_excluded_paths landing::a_name_refusal_and_a_size_refusal_are_named_at_once landing::a_staged_path_over_the_worst_case_length_is_refused_by_name landing::run_created_file_is_staged_and_an_ignored_file_is_not landing::baseline_untracked_file_is_never_staged landing::tracked_modification_and_deletion_are_staged landing::not_due_makes_an_empty_commit_and_due_makes_one_content_commit landing::denylisted_path_is_refused_by_name_and_no_ref_moves landing::blob_at_the_limit_lands_and_one_byte_over_is_refused landing::the_trailer_tree_is_the_commits_own_tree landing::replay_serves_the_journal_and_performs_zero_writes landing::a_repository_hook_does_not_run_on_a_landing_commit
 run_sel rk-store 36 render::a_read_with_no_recorded_write_of_its_path_is_checked_against_the_binding render::an_out_of_band_sidecar_edit_with_no_writer_row_still_halts render::a_replayed_read_serves_the_recorded_trees_blob_not_the_binding render::a_replayed_entry_pass_refuses_a_drift_the_journal_does_not_record render::move_to_prose_of_a_document_drift_moves_nothing_and_applies render::move_to_prose_of_a_frontmatter_drift_is_stable_at_the_next_entry render::a_replaying_reader_serves_the_recorded_read_and_appends_nothing render::a_replayed_entry_pass_restores_nothing_and_appends_nothing vouched::a_replayed_pass_stores_nothing_and_appends_no_advisory render::layout_c_renders_frontmatter_stamped_sections_and_prose render::render_is_a_function_of_value_and_template_only render::render_is_byte_identical_twice_and_lf_only render::structured_edit_emits_structured_drift_then_restores render::prose_edit_is_accepted_with_no_drift_record render::one_artifact_write_per_write_carrying_the_rk_types_digest render::no_artifact_type_carries_a_drift_or_signature_field render::typed_value_reads_back_from_the_store_never_from_the_markdown render::machine_only_kind_reads_its_sidecar_and_survives_md_deletion render::ac122_a_sibling_crate_cannot_write_a_managed_path render::replay_performs_zero_writes render::move_to_prose_appends_the_drifted_bytes_from_the_causing_commit render::drift_text_never_reaches_a_deserializer render::read_appends_one_artifact_read_naming_kind_and_id render::a_read_before_the_entrys_reconcile_is_refused item_write::debt_item_is_written_under_items_with_its_provenance item_write::human_sourced_facets_are_never_written_and_are_named item_write::an_existing_item_id_is_refused_never_overwritten item_write::a_byte_identical_re_execution_is_served_and_writes_nothing backlog::reads_only_the_items_the_store_names_each_by_exact_path backlog::a_named_item_with_no_record_is_listed_absent_never_dropped backlog::the_snapshot_is_canonical_ordered_by_id_and_byte_identical_twice vouched::ac127_four_outcomes_over_root_and_section_by_changed_and_unchanged vouched::the_attached_root_is_stored_at_the_next_entry_under_its_vouched_digest vouched::a_changed_root_is_never_restored_rewritten_or_gated vouched::one_advisory_per_run_for_one_observed_digest render::a_reconciled_is_built_only_by_the_entry_pass
 run_sel rk-kernel 15 reference_resolver::the_resolver_serves_the_value_the_read_seam_served_not_the_binding tier_one::every_run_commit_resolves_through_the_worktree_resolver advisory::an_own_change_advisory_writes_upstream_null_with_all_four_fields advisory::ac525_drift_advisory_once emit::every_activity_output_appends_one_artifact_write emit::an_emit_replayed_writes_nothing_and_serves_its_recorded_digest emit::every_artifact_input_resolution_appends_one_artifact_read step_landing::a_committed_step_that_changed_the_tree_lands_before_its_commit_row step_landing::a_committed_step_that_changed_nothing_makes_no_commit feed::closure_record_audit_resolves_toolchain_backlog_through_the_store_route feed::every_shipped_unprovided_feed_is_reached_only_as_optional recorded_log::the_activity_member_moves_no_specs_json_byte_no_run_id_and_no_memo_key recorded_log::the_activity_member_is_repopulated_from_the_recorded_binding_on_read feed::an_unbound_store_route_refuses_by_name_and_never_serves_empty feed::a_git_route_feed_and_a_store_route_feed_with_an_input_still_refuse
 run_sel rk-adapter-claude 2 dispatch::dispatch_completed_carries_activity_id_at_version_or_null dispatch::ac360_one_event_per_termination_path
-run_sel rk-cli 66 landing::a_vouched_root_stored_at_entry_lands_at_entry_before_any_step_checkpoint landing::a_refused_entry_landing_opens_its_gate_over_an_empty_commit_and_lands_nothing landing::an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read landing::a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read landing::an_accepted_prose_edit_lands_at_entry_before_the_first_read landing::an_entry_landing_is_ignored_by_heal_and_the_tier1_folds landing::an_entry_that_writes_nothing_makes_no_entry_act landing::a_replayed_entry_landing_makes_no_git_write landing::a_drift_entry_lands_its_accepted_write_once_through_its_gate landing::a_gate_escalating_during_answer_lands_nothing landing::a_refused_landings_gate_escalating_during_answer_is_not_refused landing::a_tracked_exclusion_leaves_the_next_gates_answer_applied landing::a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied landing::a_refused_landing_under_a_tracked_exclusion_is_answerable answer::ac410_admitted_attachment_stored_as_human_root landing::a_tree_recreated_on_an_existing_branch_lands_the_entrys_stored_root landing::a_document_drift_answered_move_to_prose_applies_and_the_lane_walks_on root::adr0118_a_poisoned_store_lock_inside_a_kernel_called_seam_halts_exit_70 doctor_journal::unread_reads_a_cross_stage_read_as_consuming_the_write landing::a_refused_landing_is_not_due_and_answer_derives_the_gates_tree landing::debt_logging_walks_past_file_through_item_create doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes doctor_journal::unread_reads_a_null_run_as_an_unknown_run_never_a_match doctor::ac426_ac472_unread_window_49_not_flagged_51_flagged doctor::ac426_rule_fire_leaves_write_set_unchanged landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it landing::the_user_checkout_is_unchanged_across_a_landing_lane landing::only_the_run_ref_moves_across_a_lane landing::a_refused_path_stops_the_lane_at_a_landing_gate_with_nothing_landed landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit landing::reentry_names_every_discarded_path landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref landing::the_lane_end_lands_the_final_stages_work landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered landing::answering_the_drift_gate_either_way_releases_the_stage_exit landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile explain::explain_prints_the_landed_commit_and_the_merge_command item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run cost::per_activity_breakdown_from_owned_dispatch_completed_rows cost::per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero cost::no_breakdown_for_an_item_that_owns_no_dispatch_completed_row cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected status::status_prints_every_flag_beside_its_reading status::status_prints_no_headroom_line_for_an_item_with_no_reading run::no_cli_flag_skips_the_entry_reconcile doctor_journal::a_present_store_is_the_journal doctor_journal::events_jsonl_is_read_only_in_fixture_mode doctor_journal::headroom_margin_fires_on_a_flat_last_reading doctor_journal::headroom_margin_reads_the_latest_five_hour_bearing_reading doctor_journal::the_doctor_verb_never_selects_the_fixture_source doctor_artifact::an_out_of_band_structured_edit_is_reported_as_an_unrecorded_mutation doctor_artifact::a_rewrite_through_the_store_is_not_reported doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read cost::cost_output_grammar_is_closed cost::render_empty_is_nothing_to_attribute_never_low_sample run::ac438_table_driven_exit_codes_over_fixtures_binary_arm doctor::ac415_every_rule_id_has_a_rejecting_fixture landing::closure_record_walks_past_audit_on_the_backlog_feed landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported doctor_drift::a_structured_drift_with_no_drift_gate_is_reported doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean cost::a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed
+run_sel rk-cli 68 landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck landing::an_entry_whose_writes_leave_the_tree_unchanged_makes_no_entry_commit landing::a_vouched_root_stored_at_entry_lands_at_entry_before_any_step_checkpoint landing::a_refused_entry_landing_opens_its_gate_over_an_empty_commit_and_lands_nothing landing::an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read landing::a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read landing::an_accepted_prose_edit_lands_at_entry_before_the_first_read landing::an_entry_landing_is_ignored_by_heal_and_the_tier1_folds landing::an_entry_that_writes_nothing_makes_no_entry_act landing::a_replayed_entry_landing_makes_no_git_write landing::a_drift_entry_lands_its_accepted_write_once_through_its_gate landing::a_gate_escalating_during_answer_lands_nothing landing::a_refused_landings_gate_escalating_during_answer_is_not_refused landing::a_tracked_exclusion_leaves_the_next_gates_answer_applied landing::a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied landing::a_refused_landing_under_a_tracked_exclusion_is_answerable answer::ac410_admitted_attachment_stored_as_human_root landing::a_tree_recreated_on_an_existing_branch_lands_the_entrys_stored_root landing::a_document_drift_answered_move_to_prose_applies_and_the_lane_walks_on root::adr0118_a_poisoned_store_lock_inside_a_kernel_called_seam_halts_exit_70 doctor_journal::unread_reads_a_cross_stage_read_as_consuming_the_write landing::a_refused_landing_is_not_due_and_answer_derives_the_gates_tree landing::debt_logging_walks_past_file_through_item_create doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes doctor_journal::unread_reads_a_null_run_as_an_unknown_run_never_a_match doctor::ac426_ac472_unread_window_49_not_flagged_51_flagged doctor::ac426_rule_fire_leaves_write_set_unchanged landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it landing::the_user_checkout_is_unchanged_across_a_landing_lane landing::only_the_run_ref_moves_across_a_lane landing::a_refused_path_stops_the_lane_at_a_landing_gate_with_nothing_landed landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit landing::reentry_names_every_discarded_path landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref landing::the_lane_end_lands_the_final_stages_work landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered landing::answering_the_drift_gate_either_way_releases_the_stage_exit landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile explain::explain_prints_the_landed_commit_and_the_merge_command item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run cost::per_activity_breakdown_from_owned_dispatch_completed_rows cost::per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero cost::no_breakdown_for_an_item_that_owns_no_dispatch_completed_row cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected status::status_prints_every_flag_beside_its_reading status::status_prints_no_headroom_line_for_an_item_with_no_reading run::no_cli_flag_skips_the_entry_reconcile doctor_journal::a_present_store_is_the_journal doctor_journal::events_jsonl_is_read_only_in_fixture_mode doctor_journal::headroom_margin_fires_on_a_flat_last_reading doctor_journal::headroom_margin_reads_the_latest_five_hour_bearing_reading doctor_journal::the_doctor_verb_never_selects_the_fixture_source doctor_artifact::an_out_of_band_structured_edit_is_reported_as_an_unrecorded_mutation doctor_artifact::a_rewrite_through_the_store_is_not_reported doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read cost::cost_output_grammar_is_closed cost::render_empty_is_nothing_to_attribute_never_low_sample run::ac438_table_driven_exit_codes_over_fixtures_binary_arm doctor::ac415_every_rule_id_has_a_rejecting_fixture landing::closure_record_walks_past_audit_on_the_backlog_feed landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported doctor_drift::a_structured_drift_with_no_drift_gate_is_reported doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean cost::a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed
 
 # ---- (4b) (dated 2026-09-29, s8f build, package R5FIX-8f; D21-113) A FLOOR, CODE LINES ONLY, beneath the rk-kernel
 # ---- resolver test: `read_artifact_input` no longer returns the binding's `Ok(value.clone())`, and the rk-store seam
@@ -2995,7 +3080,9 @@ out=$(python -c "$d113" 2>&1); rc=$?
 # ---- arithmetic.
 # ---- (dated 2026-09-29, s8f build, package R6FIX-8f) FLOOR re-derived: the recorded 1119 + 119 (116 + the three
 # ---- round-6 tests (4) now selects) = 1238 (struck: FLOOR=1235). §8f.2 item 9 carries the arithmetic.
-FLOOR=1238
+# ---- (dated 2026-09-29, s8f build, package R7FIX-8f) FLOOR re-derived: the recorded 1119 + 121 (119 + the two
+# ---- round-7 tests (4) now selects) = 1240 (struck: FLOOR=1238). §8f.2 item 9 carries the arithmetic.
+FLOOR=1240
 out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 nd_check "(5)'s whole suite" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|^test result:' | head -30; exit 1; }

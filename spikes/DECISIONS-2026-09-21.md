@@ -4734,3 +4734,13 @@ M-ENTRY-HEAL, M-ENTRY-GATE, D21-113's owed M1 and M5 and a control mutant M-ENTR
 worktree. Two existing tests asserted the superseded binding-only halt and take dated notes (`s8f` §8f.5). ADR-0188
 decisions 2, 3 and 14 and ADR-0189 decision 9 carry dated in-record notes (both `proposed`). Checkpoint 8f (4)
 selects 64 in `rk-cli`, and (5)'s floor is 1119 + 116 = 1235.
+
+*(dated 2026-09-29, s8f build, package R7FIX-8f; refuting round 7's records minor.)* **Two attributions in the built
+note above are corrected; the ruling is not rewritten.** (a) *"(the ruling's list names the package R6FIX-8f)"*: the
+Ruled section above (items 1 to 5 and the Reversal) names no package, and the panel draft this entry was written from
+names none either; the attribution is struck in effect, and its source is unrecorded. (b) *"the ruling's *"new
+assertion that exactly one content commit follows a drift entry"*"*: that phrase is not in the ruling, whose item 4
+lists four tests and three mutants and says nothing of a drift entry. It was the builder's wording, not a quotation.
+The fifth test, `landing::a_drift_entry_lands_its_accepted_write_once_through_its_gate`, is the builder's addition
+beyond the ruling's four, taken because no drift-gate test drove an entry that both drifts and writes. Nothing
+selected, counted or floored moves. `s8f` §8f.12 carries the same correction.
