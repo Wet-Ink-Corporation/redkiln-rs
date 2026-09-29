@@ -1,4 +1,8 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-109), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-111), and what they license
+
+*(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-110)"**; `D21-111` is appended with this move.)*
+
+*(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-109)"**; `D21-110` is appended with this move.)*
 
 *(Title moved 2026-09-28 during `s8f`: it read **"(D21-1 … D21-108)"**; `D21-109` is appended with this move.)*
 
@@ -4468,3 +4472,81 @@ constraint 12 blocks on a survivor.
 
 **Reversal:** delete the lint and M24-G, restore the landing test to M24's must-flip column, and take (b) or a measured
 (c).
+
+---
+
+## D21-110 · `s8f`: ADR-0189 decision 9's reader root arm is deferred to `s8j`, and decision 9 is narrowed in-record before the flip
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-18a1cc** (two-way door, judgment; defaulted to A).
+
+**The blocker.** S8F-P8 found that ADR-0189 decision 9's last sentence (*"A vouched root has no `emit` binding, so the
+reader serves its bytes and digest without that check."*) has no caller at `7168908`:
+- `rk_kernel::runtime::reference::read_artifact_input` resolves an `artifact:` input only from `emit_binding_of(…)`.
+  With no committed emit binding, it returns *"no committed `emit` binding of … is in the journal"* before any seam
+  call.
+- `ArtifactReader::serve` reads only `<Kind>.json`, while a root is stored as `<Kind>.root<ext>`.
+- No shipped question carries an `attaches` option.
+
+**Ruled** (blocker panel; option A as all three judges refined it: defer to a named owner, fail closed, and narrow
+the record before it flips):
+1. **No code at `s8f`.** The interim behaviour stands:
+   - a mandatory `artifact:` input naming a root refuses by name;
+   - an optional one resolves to `null`, per ADR-0173's `?` arm. This is a stated residual.
+2. **The owner is `s8j` §8j.2.** It is the first stage that authors `attaches` options (`root.bug-report`,
+   `root.intake-record`) whose lanes require them. `s8j` builds the resolver's root arm and the reader's root arm
+   together, if a lane reads a root's **bytes** through an `artifact:` input.
+   - The value is typed by the kind's declared source or schema, never by whether the bytes parse as JSON.
+   - The widening of ADR-0173's `artifact:` row is carried by a record superseding ADR-0173 in part, written
+     `proposed` there.
+   - If `s8j`'s lanes need only a `requires` presence check, `s8j`'s close states that the arm stays owed to the
+     first consumer of a root's bytes.
+3. **ADR-0189**, while still `proposed`, takes a dated in-record correction to decision 9's last sentence naming this
+   deferral and the interim behaviour. It may then flip at `s8f`'s close with the residual stated.
+4. The dated notes go in `s8f` §8f.5, §8f.11 and its owed list, and in `s8j` §8j.2 as a forward pointer.
+
+**Reversal:** build option C (end to end) or B (the `rk-store` half) at `s8f`, and strike the correction.
+
+---
+
+## D21-111 · `s8f`: `RK-D-UNREAD`'s read side is keyed by kind; any stage and any run consumes a write
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-93039a** (two-way door, judgment; defaulted to D).
+
+**The blocker.** S8F-P7 found that `RK-D-UNREAD` (`crates/rk-cli/src/doctor/rules.rs`, `fn unread`) keys both
+`artifact.write` and `artifact.read` by each row's own `(stage, kind)`. As a result, a kind written at one stage and
+read only at a later stage counts as unread at the writing stage. The fixture lane's `ImplReport`, written at
+`implement` and read at `review`, is the case. The lane test
+`doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes` stays green only through a test-local
+`check-report` activity.
+
+**Ruled.** The blocker panel chose option D. One judge preferred A, the residual-only option, on reversibility.
+
+1. **The read side.**
+   - It becomes the set of `kind` over every `artifact.read` row, whatever its stage or run.
+   - The write side is unchanged: the `(stage, kind)` key, `run_of` (null or absent means unknown), the distinct-run
+     count, the window and `Warning` severity.
+   - The filter is `!read.contains(&kind)`.
+2. **`run` is never matched.** A `run_id` is `<stage>-<digest>` (ADR-0152), so a same-run join can never pair an
+   implement write with a review read. That rules out options B and C.
+3. **Item and journal-order matching are not added.** ADR-0116 d4 and AC-472 are kind-level. Both matches are a named
+   residual owed to the operator. The precision cost is accepted: a kind read for one item silences writes of that kind
+   for other items.
+4. **Doc comments.** The one on `fn unread` and the one on `ArtifactRead::stage` in `runtime/reference.rs` are
+   corrected.
+5. **Tests and mutants.**
+   - A red-first test over a 51-run cross-stage fixture: `ImplReport` is written at implement and read at review, and
+     a control kind is never read. At N = 50 exactly one finding appears, and it is the control.
+   - The lane test drops its workaround and asserts that `ImplReport` is not flagged.
+   - The s7d 49/51 and write-set tests and the RK-D-UNREAD doctor fixture pass unedited.
+   - Mutants M-a (the (stage, kind) read key restored), M-b (keyed on (kind, run)) and M-c (the read filter dropped),
+     each killed in a private worktree.
+6. **Records.**
+   - No accepted Decision moves. The change conforms the rule to ADR-0116 decision 4 and ADR-0075 decision 5 (*"zero
+     downstream reads"*).
+   - The per-stage read key came from the RT-48 routing and a code doc comment, not from a Decision sentence.
+   - ADR-0190's As-built sentence on cross-stage consumption is closed by a dated note citing this entry.
+
+**Reversal:** revert the one-function change and the fixture, restore the lane test's workaround labelled as a proxy,
+and strike this entry.
