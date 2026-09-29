@@ -2662,7 +2662,7 @@ lane-2 review review-22025437e33b9fbf")], right: []"*).
 - **Re-shaped by dated in-test note:** `landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck`.
   Its `exclude` arm now asserts the refusal (`answer_item … exclude` is `Exit::Usage`, the token answered
   `(0, 0)`), then answers `abort`; both arms assert the aborted lane at invocation 3. Every other test that answers
-  `exclude` was re-checked by grep (`landing.rs`'s four, `lane_e2e.rs`'s one): each excludes `.env` or `id_map.rs`,
+  `exclude` was re-checked by grep (~~`landing.rs`'s four~~ `landing.rs`'s six tests: four direct answers and the three callers of the `refuse_and_exclude_id_map` helper, among them `a_refused_landings_gate_escalating_during_answer_is_not_refused` *(corrected 2026-09-29, `s8f` refuting round 8's two minors)*; `lane_e2e.rs`'s one): each excludes `.env` or `id_map.rs`,
   not a managed path, and none moves.
 
 Mutant log (`target/wt-D21115`, a private worktree on a detached `HEAD` `7e7acd7` with this package's two changed
