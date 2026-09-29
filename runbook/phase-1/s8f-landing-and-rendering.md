@@ -2607,7 +2607,7 @@ root arm, when built, uses the same latest-write-of-path rule on `<Kind>.root<ex
 *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114, TAKEN PROVISIONALLY under D21-105.)* **R5FIX2-8f (the ruling's R6FIX-8f): D21-113 step 3
 is built with D21-114's entry landing; the reversal line to option (1) A-tightened is recorded in D21-114.** T1 and
 T2 are un-ignored and selected in (4), so the ruling this note waited on is taken. The formal Checkpoint 8f still
-waits on refuting round 6. The interim commit that carries this note is the orchestrator's R5FIX2-8f commit.
+waits on refuting round 6. The interim commit that carries this note is the orchestrator's R5FIX2-8f commit, `b0e288a`.
 
 - **The three records exist and are accepted.** Each is located by the id written into its `REC_` line at writing,
   never by a title phrase (D21-47). Each has two or more `### Option — ` headings and a **What this forbids** block.
