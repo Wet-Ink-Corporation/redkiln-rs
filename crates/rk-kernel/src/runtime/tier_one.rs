@@ -58,6 +58,7 @@ use std::sync::{Arc, Mutex};
 use rk_git::error::GitError;
 use rk_git::git_exec::{GitExec, GitOp};
 use rk_git::gitops::{GitInvocation, GitJournal, GitOps, Mode};
+use rk_git::landing::{self, Baseline, Landed, Refusal, Request, Staged};
 use rk_git::path::WorktreePath;
 use rk_git::reconcile::{CommitTrailers, read_commits};
 use rk_git::trailer::grammar::{GateExpiry, GateState, ParsedTrailer, StoryStage, Verdict};
@@ -107,12 +108,76 @@ pub enum Mark {
     Seal { slice: String, verdict: Verdict },
 }
 
-/// What the act's commit holds besides its trailer. **One arm at Checkpoint 8e**: the empty
-/// `--allow-empty` trailer commit. `s8f`'s landed arm changes what the commit holds and not the
+/// What the act's commit holds besides its trailer. ~~**One arm at Checkpoint 8e**: the empty
+/// `--allow-empty` trailer commit.~~ `s8f`'s landed arm changes what the commit holds and not the
 /// order (N10: *"The commit and the content checkpoint are one boundary act"*).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; the landing record ADR-0188
+/// decisions 2, 3, 7 and 14, proposed.)* Three arms. Every one commits through `rk-git`'s landing
+/// primitive (`commit-tree` + `update-ref`), never through porcelain `commit`.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Content {
+    /// No staging: the trailer rides an empty commit over `HEAD`'s tree. An answer's transition
+    /// (`answer` does not land, decision 14) and a refused landing's gate (decision 7). With no
+    /// trailer it is refused ([`TierOneError::EmptyAct`]).
     Empty,
+    /// **A tier-1 boundary** (decision 2): the run-owned tree is staged; the trailer rides a
+    /// content commit when a checkpoint is due, and an empty commit otherwise.
+    Landed,
+    /// **A step checkpoint** (decisions 2 and 3): trailer-less; a content commit when the step
+    /// changed the tree, and NO commit when it did not. Its rows are anchored to the commit it
+    /// made, or appended unanchored when it made none.
+    Step(StepCheckpoint),
+}
+
+/// The message a step checkpoint carries (ADR-0188 decision 3): the subject names the step-grain
+/// key, and the body carries the exact row the act appends, so `reconcile`'s heal can re-append a
+/// row a crash lost. Neither line is in trailer form.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StepCheckpoint {
+    /// `rk step <item> <activity_id@version> <step_id> <iteration-path>`.
+    pub subject: String,
+    /// `rk-step-row <canonical {kind, payload}>`.
+    pub body: String,
+}
+
+/// The subject line's prefix, which the heal reads.
+pub const STEP_SUBJECT_PREFIX: &str = "rk step ";
+/// The body line's prefix, which the heal reads.
+pub const STEP_ROW_PREFIX: &str = "rk-step-row ";
+
+impl StepCheckpoint {
+    /// The checkpoint for the step-grain key `(item, activity_id@version, step_id,
+    /// iteration_path)` and the row the act appends.
+    ///
+    /// # Errors
+    /// [`TierOneError::Journal`] when the row or the path does not serialise canonically.
+    pub fn of(
+        item: &str,
+        activity_id_at_version: &str,
+        step_id: &str,
+        iteration_path: &serde_json::Value,
+        row: &Event,
+    ) -> Result<Self, TierOneError> {
+        let canon = |v: &serde_json::Value| {
+            rk_store::canon::canonical(v)
+                .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+                .map_err(|e| TierOneError::Journal {
+                    detail: format!("a step checkpoint's value is not canonical: {e:?}"),
+                })
+        };
+        let path = canon(iteration_path)?;
+        let body = canon(&serde_json::json!({
+            "kind": row.kind.wire_name(),
+            "payload": row.payload,
+        }))?;
+        Ok(Self {
+            subject: format!(
+                "{STEP_SUBJECT_PREFIX}{item} {activity_id_at_version} {step_id} {path}"
+            ),
+            body: format!("{STEP_ROW_PREFIX}{body}"),
+        })
+    }
 }
 
 /// One boundary act: an optional trailer, the act's content, and the rows the act anchors.
@@ -127,12 +192,39 @@ pub struct Act {
 }
 
 impl Act {
-    /// An act carrying `mark`, with the empty content arm.
+    /// An act carrying `mark`, ~~with the empty content arm~~ with the **landed** arm: the
+    /// boundary stages the run-owned tree (ADR-0188 decision 2). *(dated 2026-09-28, s8f build,
+    /// package S8F-P2-LANDING-CORE.)*
     #[must_use]
     pub const fn marked(mark: Mark, rows: Vec<Event>) -> Self {
         Self {
             mark: Some(mark),
+            content: Content::Landed,
+            rows,
+            opening_run: None,
+        }
+    }
+
+    /// An act carrying `mark` over an EMPTY commit, staging nothing: an answer's transition and a
+    /// refused landing's gate (ADR-0188 decisions 7 and 14). *(dated 2026-09-28, s8f build,
+    /// package S8F-P2-LANDING-CORE.)*
+    #[must_use]
+    pub const fn marked_empty(mark: Mark, rows: Vec<Event>) -> Self {
+        Self {
+            mark: Some(mark),
             content: Content::Empty,
+            rows,
+            opening_run: None,
+        }
+    }
+
+    /// **The step-grain act** (N10; ADR-0188 decision 2): no trailer, the step's checkpoint, and
+    /// the step's commit row. *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    #[must_use]
+    pub const fn step(checkpoint: StepCheckpoint, rows: Vec<Event>) -> Self {
+        Self {
+            mark: None,
+            content: Content::Step(checkpoint),
             rows,
             opening_run: None,
         }
@@ -165,7 +257,15 @@ impl Act {
     /// `verdict`, or an `expired` row with no `action`.
     pub fn gate(row: Event, opening: &GateRecord) -> Result<Self, TierOneError> {
         let state = gate_state_of(&row)?;
-        Ok(Self::marked(
+        // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decisions 12 and
+        // 14.)* An opening lands (its tree is the landing's T); an answer, an expiry and a void do
+        // not: their mark rides an empty commit and carries the OPENING record's tree.
+        let build = if state == GateState::Opened {
+            Self::marked
+        } else {
+            Self::marked_empty
+        };
+        Ok(build(
             Mark::Gate {
                 token: opening.token().as_str().to_owned(),
                 tree_hash: opening.tree_hash().to_owned(),
@@ -278,6 +378,10 @@ pub enum Committed {
     /// is ALREADY on `rk-run/<item>` at `sha`, so the act committed nothing and wrote no row: the
     /// mint is idempotent per `(item, stage)`, and a mark whose row is missing is the heal's.
     AlreadyMarked { sha: String },
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decision 2.)* Live, a
+    /// step act over a tree the step did not change: no commit was made, and the act's rows were
+    /// appended unanchored.
+    Unchanged,
 }
 
 impl Committed {
@@ -288,7 +392,7 @@ impl Committed {
             Self::Live { sha, .. } | Self::Replayed { sha, .. } | Self::AlreadyMarked { sha } => {
                 Some(sha)
             }
-            Self::NoGitWrite => None,
+            Self::NoGitWrite | Self::Unchanged => None,
         }
     }
 }
@@ -320,6 +424,14 @@ pub enum TierOneError {
         item: String,
         slice: Option<String>,
         reason: SliceRefusal,
+    },
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decisions 5-7.)* The
+    /// landing refused at least one path, by name: **nothing landed**, no ref moved and no row of
+    /// the act was written (the step did not commit). `tree` is ADR-0105 clause 4's
+    /// no-checkpoint-due derivation over the run-owned tree, the `landing.refused-path` gate's.
+    LandingRefused {
+        refusals: Vec<Refusal>,
+        tree: String,
     },
 }
 
@@ -358,6 +470,7 @@ impl TierOneError {
             Self::Store { .. } => "store",
             Self::Journal { .. } => "journal",
             Self::SliceRefused { .. } => "slice_refused",
+            Self::LandingRefused { .. } => "landing_refused",
         }
     }
 }
@@ -395,6 +508,15 @@ impl core::fmt::Display for TierOneError {
                  {detail}"
             ),
             Self::Journal { detail } => write!(f, "a recorded `git_op` row: {detail}"),
+            Self::LandingRefused { refusals, .. } => {
+                let named: Vec<String> = refusals.iter().map(ToString::to_string).collect();
+                write!(
+                    f,
+                    "the landing refused {} path(s), and nothing landed: {} (ADR-0188)",
+                    refusals.len(),
+                    named.join(", ")
+                )
+            }
             Self::SliceRefused {
                 item,
                 slice,
@@ -623,9 +745,15 @@ fn subject(mark: &Mark, item: &str) -> String {
 /// **The one boundary function** — see the module header for its four steps and why their order
 /// is the criterion.
 ///
+/// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; the landing record ADR-0188,
+/// proposed.)* The store is locked for the whole act, so an act is one critical section; the body
+/// is [`land_act`], which a caller that already holds the store's guard calls through
+/// [`Boundary::act_locked`] (the step-grain act, AC-012).
+///
 /// # Errors
 /// [`TierOneError::EmptyAct`] for an act with neither trailer nor content; a render refusal; the
-/// typed [`TierOneError::Git`] for a foreign target or a failed commit (**no row is written**); or
+/// typed [`TierOneError::Git`] for a foreign target or a failed commit (**no row is written**);
+/// [`TierOneError::LandingRefused`] when the landing refuses a path (nothing lands, no row); or
 /// [`TierOneError::Store`] when the store refuses a row after the commit (the heal's case).
 pub fn commit_act(
     git: &mut GitOps<'_>,
@@ -634,15 +762,83 @@ pub fn commit_act(
     target: &Target,
     act: Act,
 ) -> Result<Committed, TierOneError> {
-    let Some(mark) = act.mark.as_ref() else {
-        // One content arm at Checkpoint 8e, the empty one: a trailer-less act has nothing to
-        // commit. `s8f`'s landed arm is the one a trailer-less act may carry.
-        match act.content {
-            Content::Empty => return Err(TierOneError::EmptyAct),
-        }
+    let mut guard = store.lock().expect(LOCK_HALTS);
+    land_act(git, recorder, &mut *guard, target, &BTreeSet::new(), act)
+}
+
+/// Where the act's baseline comes from (ADR-0188 decision 4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum BaselineRead {
+    /// The item's journal holds it: the first `status` `git_op` row after the latest
+    /// `worktree_assigned` row whose `reused` is `false`.
+    Journalled(BTreeSet<String>),
+    /// The tree was created and no act has read it since: THIS act takes the baseline, as its
+    /// first journalled invocation.
+    ThisAct,
+    /// No baseline can be read (no creation row, or a reused tree whose creation's read is not in
+    /// the journal — a deleted database): fail-closed.
+    Unknown,
+}
+
+/// **The baseline, read from the item's journal** (ADR-0188 decision 4).
+fn baseline_of(events: &[Event], item: &str) -> BaselineRead {
+    let assigned = |e: &Event| {
+        e.kind == EventKind::WorktreeAssigned
+            && e.payload.get("item").and_then(serde_json::Value::as_str) == Some(item)
     };
-    let trailer = render(mark, target)?;
-    let message = subject(mark, &target.item);
+    let latest = events.iter().rposition(assigned);
+    let created = events.iter().rposition(|e| {
+        assigned(e) && e.payload.get("reused").and_then(serde_json::Value::as_bool) == Some(false)
+    });
+    let Some(created) = created else {
+        return BaselineRead::Unknown;
+    };
+    let read = events[created + 1..].iter().find(|e| {
+        e.kind == EventKind::GitOp
+            && e.payload.get("op").and_then(serde_json::Value::as_str)
+                == Some(GitOp::Status.as_str())
+            && e.payload.get("status").and_then(serde_json::Value::as_i64) == Some(0)
+    });
+    match read {
+        Some(row) => {
+            let stdout = row
+                .payload
+                .get("stdout")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default();
+            BaselineRead::Journalled(
+                landing::parse_status(stdout.as_bytes())
+                    .into_iter()
+                    .filter(landing::StatusEntry::is_untracked)
+                    .map(|e| e.path)
+                    .collect(),
+            )
+        }
+        None if latest == Some(created) => BaselineRead::ThisAct,
+        None => BaselineRead::Unknown,
+    }
+}
+
+/// **The act, over a store the caller holds** — the body of [`commit_act`].
+///
+/// Live: authorise; the `Story:` idempotence read; the baseline; the landing's staging (a refusal
+/// returns here, before any commit and any row); a gate opening's tree becomes the landing's T and
+/// its token is re-minted over it (defect (b), ADR-0188 decision 12); the commit (content when due;
+/// empty for a boundary otherwise; none for a step otherwise); then every row and every `git_op`
+/// row, anchored to the commit, or unanchored when a step made none.
+fn land_act(
+    git: &mut GitOps<'_>,
+    recorder: &GitOpRecorder,
+    store: &mut dyn EventStore,
+    target: &Target,
+    excluded: &BTreeSet<String>,
+    mut act: Act,
+) -> Result<Committed, TierOneError> {
+    // One arm may carry no trailer: the step checkpoint (N10).
+    if act.mark.is_none() && !matches!(act.content, Content::Step(_)) {
+        return Err(TierOneError::EmptyAct);
+    }
+    let trailer = act.mark.as_ref().map(|m| render(m, target)).transpose()?;
     let replaying = git.mode() == Mode::Replay;
 
     // 1. LIVE: the target is the run-owned tree the STORE records, on its branch — or the write is
@@ -662,38 +858,155 @@ pub fn commit_act(
             .clone()
     };
 
+    // The baseline (ADR-0188 decision 4), read from the item's journal before any git call.
+    let events = store
+        .query(Query::ByItem(target.item.clone()))
+        .map_err(|e| TierOneError::Store {
+            detail: format!("{e:?}"),
+        })?;
+    let baseline_read = baseline_of(&events, &target.item);
+
     // 1b. *(dated 2026-09-28, `s8e` build, package S8E-P6; `s8e` §8e.5; ADR-0183 decision 6,
     //     proposed.)* LIVE, a `Story:` mark: the idempotence read is *"this `(item, stage)` already
     //     committed"* (not ADR-0155's *"item already committed"*), read off git itself. A mark
     //     already on the run ref commits nothing and writes no row.
     if !replaying
-        && let Some(stage) = story_stage_of(mark)
+        && let Some(stage) = act.mark.as_ref().and_then(story_stage_of)
         && let Some(sha) = stage_already_marked(git.exec(), &cwd, target, &stage)?
     {
+        // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)* An already-marked entry
+        // that is the first act after creation still takes the baseline, so a later step's
+        // creations are never read as the baseline; its one `status` row is journalled
+        // unanchored, and nothing else is written.
+        if baseline_read == BaselineRead::ThisAct {
+            landing::staging_set(
+                git,
+                &cwd,
+                &Baseline::Known(BTreeSet::new()),
+                &BTreeSet::new(),
+            )?;
+            for inv in recorder.take() {
+                store
+                    .append(git_op_event(&inv, &target.item))
+                    .map_err(|e| TierOneError::Store {
+                        detail: format!("{e:?}"),
+                    })?;
+            }
+        }
         return Ok(Committed::AlreadyMarked { sha });
     }
 
-    // 2. The commit, through the journalled seam (on replay, SERVED from it); 3. the re-read of
-    //    HEAD (inside the call) and of the tree. A failure at either returns BEFORE any row:
-    //    AC-162 by construction.
-    let committed = git
-        .commit_with_trailers(&cwd, &message, std::slice::from_ref(&trailer), true)
-        .and_then(|sha| {
-            git.run(GitOp::RevParse, &cwd, &["rev-parse", "HEAD^{tree}"])
-                .map(|out| (sha, out.stdout_trimmed()))
-        });
+    let baseline = match baseline_read {
+        BaselineRead::Journalled(set) => Baseline::Known(set),
+        BaselineRead::Unknown => Baseline::Unknown,
+        BaselineRead::ThisAct => {
+            // The first act after creation: its first invocation IS the baseline's read.
+            let first = landing::staging_set(
+                git,
+                &cwd,
+                &Baseline::Known(BTreeSet::new()),
+                &BTreeSet::new(),
+            )?;
+            Baseline::Known(first.untracked.into_iter().collect())
+        }
+    };
+
+    // 2. Stage (or, for the empty arm, take HEAD's tree), then the commit, through the journalled
+    //    seam (on replay, SERVED from it). A refusal or a failure returns BEFORE any row: AC-162
+    //    by construction, and a refused landing lands nothing.
+    let staged = match &act.content {
+        Content::Empty => landing::prepare_empty(git, &cwd, &target.item)?,
+        Content::Landed | Content::Step(_) => landing::stage(
+            git,
+            &Request {
+                cwd: &cwd,
+                item: &target.item,
+                baseline: &baseline,
+                excluded,
+            },
+        )?,
+    };
+    let prepared = match staged {
+        Staged::Ready(prepared) => prepared,
+        Staged::Refused { refusals, tree, .. } => {
+            drop(recorder.take());
+            return Err(TierOneError::LandingRefused { refusals, tree });
+        }
+    };
+
+    // Defect (b): a gate OPENED by a landing act binds the landing's T over the run-owned tree,
+    // and its token is re-minted over that tree (the token is derived from it, so the fold reads
+    // the row back as this record).
+    let mut trailer = trailer;
+    if matches!(act.content, Content::Landed)
+        && let Some(Mark::Gate {
+            token,
+            tree_hash,
+            deadline,
+            kind,
+            reach,
+            state: GateState::Opened,
+        }) = act.mark.as_mut()
+    {
+        let landed_tree = prepared.tree().to_owned();
+        let record = GateRecord::derive_reach(
+            kind,
+            &landed_tree,
+            rk_types::time::Timestamp::from_unix_seconds(*deadline),
+            *reach,
+        )
+        .map_err(|e| TierOneError::NotAGateRow {
+            detail: format!("the gate's token cannot be minted over the landed tree: {e:?}"),
+        })?;
+        *token = record.token().as_str().to_owned();
+        *tree_hash = landed_tree.clone();
+        let minted = token.clone();
+        for row in &mut act.rows {
+            if row.kind == EventKind::GateOpened
+                && let Some(map) = row.payload.as_object_mut()
+            {
+                map.insert("token".to_owned(), serde_json::Value::from(minted.clone()));
+                map.insert(
+                    "tree_hash".to_owned(),
+                    serde_json::Value::from(landed_tree.clone()),
+                );
+            }
+        }
+        trailer = act.mark.as_ref().map(|m| render(m, target)).transpose()?;
+    }
+
+    let (message, allow_empty) = match (&act.mark, &act.content) {
+        (Some(mark), _) => (
+            landing::Message {
+                subject: subject(mark, &target.item),
+                body: None,
+                trailer,
+            },
+            true,
+        ),
+        (None, Content::Step(checkpoint)) => (
+            landing::Message {
+                subject: checkpoint.subject.clone(),
+                body: Some(checkpoint.body.clone()),
+                trailer: None,
+            },
+            false,
+        ),
+        (None, _) => return Err(TierOneError::EmptyAct),
+    };
+    let landed = landing::commit(git, &prepared, &message, allow_empty);
+
     if replaying {
-        let (sha, tree) = committed?;
-        return Ok(Committed::Replayed { sha, tree });
+        return match landed? {
+            Landed::Commit { sha, tree, .. } => Ok(Committed::Replayed { sha, tree }),
+            Landed::Nothing { .. } => Ok(Committed::NoGitWrite),
+        };
     }
     let invocations = recorder.take();
-    let (sha, tree) = committed?;
+    let landed = landed?;
 
-    // 4. Every row of the act, then its `git_op` rows, each anchored to the one commit.
-    let mut anchor = TierOneAnchor::new(&sha, &tree);
-    if let Some((stage, run_id)) = &act.opening_run {
-        anchor = anchor.with_opening_run(stage, run_id);
-    }
+    // 4. Every row of the act, then its `git_op` rows, each anchored to the one commit — or, for a
+    //    step that changed nothing, appended unanchored as a tier-2 row is.
     let rows = act
         .rows
         .into_iter()
@@ -703,16 +1016,30 @@ pub fn commit_act(
                 .iter()
                 .map(|inv| git_op_event(inv, &target.item)),
         );
-    let mut guard = store.lock().expect(LOCK_HALTS);
-    for row in rows {
-        guard
-            .append_tier1(row, &anchor)
-            .map_err(|e| TierOneError::Store {
-                detail: format!("{e:?}"),
-            })?;
+    match landed {
+        Landed::Commit { sha, tree, .. } => {
+            let mut anchor = TierOneAnchor::new(&sha, &tree);
+            if let Some((stage, run_id)) = &act.opening_run {
+                anchor = anchor.with_opening_run(stage, run_id);
+            }
+            for row in rows {
+                store
+                    .append_tier1(row, &anchor)
+                    .map_err(|e| TierOneError::Store {
+                        detail: format!("{e:?}"),
+                    })?;
+            }
+            Ok(Committed::Live { sha, tree })
+        }
+        Landed::Nothing { .. } => {
+            for row in rows {
+                store.append(row).map_err(|e| TierOneError::Store {
+                    detail: format!("{e:?}"),
+                })?;
+            }
+            Ok(Committed::Unchanged)
+        }
     }
-    drop(guard);
-    Ok(Committed::Live { sha, tree })
 }
 
 /// The `Story:` stage a mark carries, if it is a `Story:` mark.
@@ -883,6 +1210,9 @@ pub struct Boundary {
     target: Target,
     mode: Mode,
     writes: usize,
+    /// The paths the lane's `landing.refused-path` `exclude` answers leave unstaged (ADR-0188
+    /// decision 6). *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    excluded: BTreeSet<String>,
 }
 
 impl Boundary {
@@ -895,7 +1225,15 @@ impl Boundary {
             target,
             mode: Mode::Live,
             writes: 0,
+            excluded: BTreeSet::new(),
         }
+    }
+
+    /// The same boundary, leaving `excluded` unstaged at every landing (ADR-0188 decision 6).
+    #[must_use]
+    pub fn with_excluded(mut self, excluded: BTreeSet<String>) -> Self {
+        self.excluded = excluded;
+        self
     }
 
     /// What this boundary writes against.
@@ -915,6 +1253,7 @@ impl Boundary {
             target: self.target.clone(),
             mode: self.mode,
             writes: 0,
+            excluded: self.excluded.clone(),
         }
     }
 
@@ -933,9 +1272,31 @@ impl Boundary {
         store: &Mutex<dyn EventStore>,
         act: Act,
     ) -> Result<Committed, TierOneError> {
+        let mut guard = store.lock().expect(LOCK_HALTS);
+        self.act_locked(&mut *guard, act)
+    }
+
+    /// One act over a store the CALLER holds locked: the step-grain act, whose journal re-read,
+    /// landing and append are one critical section (AC-012; ADR-0188 decision 2).
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    ///
+    /// # Errors
+    /// As [`commit_act`].
+    pub fn act_locked(
+        &mut self,
+        store: &mut dyn EventStore,
+        act: Act,
+    ) -> Result<Committed, TierOneError> {
         let recorder = self.journal.recorder();
         let mut ops = GitOps::new(self.exec.clone(), &mut self.journal, self.mode);
-        let out = commit_act(&mut ops, &recorder, store, &self.target, act);
+        let out = land_act(
+            &mut ops,
+            &recorder,
+            store,
+            &self.target,
+            &self.excluded,
+            act,
+        );
         self.writes += ops.writes_performed();
         out
     }

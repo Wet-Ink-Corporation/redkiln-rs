@@ -67,6 +67,12 @@ pub enum GitError {
     WorktreeRefused {
         refusal: crate::worktree::WorktreeRefusal,
     },
+
+    /// The landing's `commit-tree` object does not re-read as the tree the landing derived (the
+    /// landing record, ADR-0188 decision 9 step 5; `s6` §6.2 constraint 4: *"anything written by the
+    /// executable and then read is RE-READ, never assumed"*). No ref moved.
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    LandingReread { expected: String, found: String },
 }
 
 impl GitError {
@@ -82,9 +88,10 @@ impl GitError {
             | Self::ForeignWorktree { .. }
             | Self::CarryRefused { .. }
             | Self::WorktreeRefused { .. } => true,
-            Self::Spawn { .. } | Self::NonZeroExit { .. } | Self::WorktreeRemoveFailed { .. } => {
-                false
-            }
+            Self::Spawn { .. }
+            | Self::NonZeroExit { .. }
+            | Self::WorktreeRemoveFailed { .. }
+            | Self::LandingReread { .. } => false,
         }
     }
 }

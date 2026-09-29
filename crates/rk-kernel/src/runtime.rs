@@ -466,6 +466,51 @@ impl Runtime {
         }
     }
 
+    /// **A gate's opening, as one tier-1 act**, returning the token the fold will read.
+    ///
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; the landing record ADR-0188
+    /// decision 12, proposed; defect (b).)* Bound, the opening lands: the gate binds the landing's
+    /// T over the run-owned tree, and its token is re-minted over T by the boundary, so the token
+    /// returned here is derived from the committed tree. Unbound, the record's own token.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::tier_one_act`]; [`RuntimeError::TierOne`] when the token cannot be re-derived.
+    pub fn open_gate_act(
+        &self,
+        record: &crate::workflow::fsm::GateRecord,
+    ) -> Result<rk_types::digest::Digest, RuntimeError> {
+        let act = tier_one::Act::gate(gate_opened_event(record), record)?
+            .opened_by(&self.stage, &self.run_id);
+        let Some(boundary) = &self.boundary else {
+            self.tier_one_act(act)?;
+            return Ok(record.token().clone());
+        };
+        let committed = boundary
+            .lock()
+            .expect(LOCK_HALTS)
+            .act(&self.ports.store, act)?;
+        match committed {
+            tier_one::Committed::Live { tree, .. } | tier_one::Committed::Replayed { tree, .. } => {
+                let landed = crate::workflow::fsm::GateRecord::derive_reach(
+                    record.kind(),
+                    &tree,
+                    record.deadline(),
+                    record.reach(),
+                )
+                .map_err(|e| {
+                    RuntimeError::TierOne(tier_one::TierOneError::NotAGateRow {
+                        detail: format!("the landed gate's token cannot be derived: {e:?}"),
+                    })
+                })?;
+                Ok(landed.token().clone())
+            }
+            tier_one::Committed::NoGitWrite
+            | tier_one::Committed::AlreadyMarked { .. }
+            | tier_one::Committed::Unchanged => Ok(record.token().clone()),
+        }
+    }
+
     /// Bind the breaker (R4 = ADR-0176 decision 4). The composition root's run path binds the
     /// selected pack here; before an agent step dispatches, the executor folds the store's
     /// family-scoped rows with the pack's `K` and refuses a family whose mark is open.
@@ -611,13 +656,10 @@ impl Runtime {
                 // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6.)* ~~`self.append(
                 // gate_opened_event(record))?;`~~ — the opening is a tier-1 act: its `Gate: … opened`
                 // mark first, then the row anchored to it, carrying the opening stage run.
-                self.tier_one_act(
-                    tier_one::Act::gate(gate_opened_event(record), record)?
-                        .opened_by(&self.stage, &self.run_id),
-                )?;
-                Ok(StepOutcome::GateOpened {
-                    token: record.token().clone(),
-                })
+                // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)* The opening
+                // lands, and the token is the landed record's (defect (b)).
+                let token = self.open_gate_act(record)?;
+                Ok(StepOutcome::GateOpened { token })
             }
             // ADR-0022: escalation is a kernel-owned durable `Gate:` mark and **the kernel takes no
             // action until it is answered**. Appending anything here — even a "still waiting" row —

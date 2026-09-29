@@ -1245,9 +1245,27 @@ fn a_failed_answer_commit_leaves_zero_rows() {
     let tip_before = tip(root);
     let before = crate::support::store_rows(root);
 
+    // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; the landing record ADR-0188
+    // decision 9, proposed.)* The boundary commits through the landing primitive now:
+    // `commit-tree` takes no lock, and `update-ref` takes the run ref's `<ref>.lock` and refuses
+    // when it exists. So the run ref's lock is jammed beside `index.lock`.
+    let ref_lock = {
+        let out = rk_git::git_exec::run(
+            &owned,
+            ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        )
+        .expect("git rev-parse runs");
+        std::path::PathBuf::from(out.stdout_trimmed())
+            .join("refs")
+            .join("heads")
+            .join("rk-run")
+            .join("gate-1.lock")
+    };
     std::fs::write(&lock_path, b"").expect("jam the run tree's commit");
+    std::fs::write(&ref_lock, b"").expect("jam the run ref");
     let out = spawn_answer(root, "gate-1", "approve", &BOTH_FLAGS);
     std::fs::remove_file(&lock_path).expect("unjam");
+    std::fs::remove_file(&ref_lock).expect("unjam the run ref");
     let stderr = String::from_utf8_lossy(&out.stderr);
 
     assert_eq!(

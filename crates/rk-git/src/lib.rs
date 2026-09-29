@@ -23,6 +23,7 @@ pub mod error;
 pub mod git_exec;
 pub mod gitops;
 pub mod head;
+pub mod landing;
 pub mod path;
 pub mod reconcile;
 pub mod reconciled;

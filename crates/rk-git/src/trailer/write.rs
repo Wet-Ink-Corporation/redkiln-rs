@@ -79,6 +79,29 @@ pub fn commit_with_trailers(
 }
 
 impl crate::gitops::GitOps<'_> {
+    /// [`interpret_trailers_in_place`], **through the journalled seam**: the landing composes its
+    /// message with it (ADR-0188 decision 9 step 3), so on replay the invocation is served and the
+    /// file is never touched. The wrapper adds `interpret-trailers --if-exists=add` and the
+    /// `trailer.ifexists=add` prelude (clause 3), exactly as for the free function.
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    ///
+    /// # Errors
+    /// Propagates [`GitError`] from the seam.
+    pub fn interpret_trailers_in_place(
+        &mut self,
+        cwd: &WorktreePath,
+        file: &WorktreePath,
+        trailer: &Trailer,
+    ) -> Result<(), GitError> {
+        let line = trailer.to_line();
+        self.run(
+            GitOp::InterpretTrailers,
+            cwd,
+            &["--in-place", "--trailer", line.as_str(), file.as_str()],
+        )?;
+        Ok(())
+    }
+
     /// [`commit_with_trailers`], **through the journalled seam** (ADR-0105 clause 1).
     ///
     /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3; D21-42 8a; D21-43 N7.)* The

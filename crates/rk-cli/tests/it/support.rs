@@ -1406,7 +1406,9 @@ pub fn resolved_over_pack_min(root: &Path, item: &str) -> rk_cli::verbs::run::Re
 pub fn inputs_over_pack_min(
     resolved: &rk_cli::verbs::run::Resolved,
 ) -> (rk_kernel::replay::RunInputs, String) {
-    rk_cli::verbs::run::prepare_inputs(resolved, FIXED_NOW)
+    // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)* The in-process harness has
+    // no run-owned tree, so the hash is taken over its checkout.
+    rk_cli::verbs::run::prepare_inputs(resolved, &resolved.worktree, FIXED_NOW)
         .unwrap_or_else(|e| panic!("the input set builds over the fixture repository: {e:?}"))
 }
 

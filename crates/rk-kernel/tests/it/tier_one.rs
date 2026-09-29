@@ -164,10 +164,20 @@ fn act_live(
 /// Make the NEXT commit in `root` fail: git takes `index.lock` for every commit, `--allow-empty`
 /// included, and refuses when it exists (measured 2026-09-28: `fatal: Unable to create
 /// '…/.git/index.lock': File exists.`, rc 128).
-fn jam_the_commit(root: &Path) -> PathBuf {
-    let lock = root.join(".git").join("index.lock");
-    std::fs::write(&lock, b"").expect("index.lock");
-    lock
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; the landing record ADR-0188
+/// decision 9, proposed.)* The boundary now commits through the landing primitive: `commit-tree`
+/// (which takes no lock) and `update-ref` on the run ref, which takes `<ref>.lock` and refuses
+/// when it exists (`cannot lock ref`). So the run ref's lock is jammed as well; `index.lock` is
+/// kept, and now jams only the worktree index's re-sync, which runs after the ref moved.
+fn jam_the_commit(root: &Path) -> Vec<PathBuf> {
+    let index = root.join(".git").join("index.lock");
+    std::fs::write(&index, b"").expect("index.lock");
+    let refs = root.join(".git").join("refs").join("heads").join("rk-run");
+    std::fs::create_dir_all(&refs).expect("the run ref's directory");
+    let reference = refs.join("tier-1.lock");
+    std::fs::write(&reference, b"").expect("the run ref's lock");
+    vec![index, reference]
 }
 
 /// A store that records, at every append, which commit `HEAD` was on — so "the commit exists
@@ -257,9 +267,11 @@ fn assert_committed_before_rows(fx: &Fx, act: Act, kind: EventKind, expect_trail
 fn assert_failed_commit_leaves_nothing(fx: &Fx, act: Act) {
     let store = store();
     let before = head(&fx.root);
-    let lock = jam_the_commit(&fx.root);
+    let locks = jam_the_commit(&fx.root);
     let refused = act_live(fx, &store, act);
-    std::fs::remove_file(&lock).expect("unjam");
+    for lock in &locks {
+        std::fs::remove_file(lock).expect("unjam");
+    }
     assert!(
         matches!(refused, Err(TierOneError::Git(_))),
         "a failed commit must be the act's git error, got {refused:?}"
@@ -557,12 +569,18 @@ fn the_boundary_journals_a_git_op_row_per_invocation() {
         "the seam made {invocations} invocation(s) and {} `git_op` row(s) were anchored",
         ops.len()
     );
-    assert_eq!(
-        ops[0].payload.get("op").and_then(serde_json::Value::as_str),
-        Some("commit"),
-        "the first journalled invocation is the commit: {:?}",
-        ops[0].payload
-    );
+    // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decision 9.)*
+    // ~~the first journalled invocation is the commit~~ — the boundary lands through the
+    // primitive, so the commit is ONE `commit-tree` and the ref move ONE `update-ref`, both
+    // journalled, and no porcelain `commit` is made.
+    let named = |op: &str| {
+        ops.iter()
+            .filter(|e| e.payload.get("op").and_then(serde_json::Value::as_str) == Some(op))
+            .count()
+    };
+    assert_eq!(named("commit-tree"), 1, "one `commit-tree` is journalled");
+    assert_eq!(named("update-ref"), 1, "one `update-ref` is journalled");
+    assert_eq!(named("commit"), 0, "no porcelain `commit` is made");
     for op in &ops {
         let mut members: Vec<&str> = op
             .payload
@@ -1009,12 +1027,68 @@ fn stray_commits(hits: &[(String, usize, String)]) -> Vec<(String, usize, String
         .collect()
 }
 
+/// The landing primitive's calls (`rk_git::landing::stage`, `commit` and `prepare_empty`): every
+/// code line naming one, under `rk-cli/src` and `rk-kernel/src`, outside the boundary.
+/// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+fn stray_landings(files: &[(String, String)]) -> Vec<(String, usize, String)> {
+    let mut hits = Vec::new();
+    for needle in LANDING_CALLS {
+        for (path, text) in files {
+            for (i, line) in text.lines().enumerate() {
+                if is_code(line) && line.contains(needle) {
+                    hits.push((path.clone(), i + 1, line.to_owned()));
+                }
+            }
+        }
+    }
+    stray_commits(&hits)
+}
+
+/// The primitive's three entry points, as a call names them.
+const LANDING_CALLS: [&str; 3] = [
+    "landing::stage(",
+    "landing::commit(",
+    "landing::prepare_empty(",
+];
+
+/// The landing record's three write variants (ADR-0188 decision 10).
+const LANDING_WRITES: [&str; 3] = ["CommitTree", "UpdateRef", "ResyncIndex"];
+
+/// Every code line naming `GitOp::<variant>` for a landing write, outside `rk-git`'s primitive.
+fn stray_landing_writes(files: &[(String, String)]) -> Vec<(String, usize, String)> {
+    let mut hits = Vec::new();
+    for variant in LANDING_WRITES {
+        let needle = format!("GitOp::{variant}");
+        for (path, text) in files {
+            for (n, line) in text.lines().enumerate() {
+                if is_code(line) && names(line, &needle) && path != LANDING_PRIMITIVE {
+                    hits.push((path.clone(), n + 1, line.to_owned()));
+                }
+            }
+        }
+    }
+    hits
+}
+
+/// `rk-git`'s landing primitive.
+const LANDING_PRIMITIVE: &str = "crates/rk-git/src/landing.rs";
+
 /// **AC-518's write-path lint, at this stage's scope: the commit write.** Every code-line call of
 /// `commit_with_trailers` under `crates/rk-cli/src/` and `crates/rk-kernel/src/` is in the
 /// boundary, where `authorise_tier1_write` precedes it. Workspace-wide, the only other callers are
 /// `rk-git`'s own definitions and `redkiln-migrate`'s one call, named with its reason: it commits a
 /// migration branch, not a run (`s8e` §8e.14). The file-write and index-change halves are `s8f`'s
 /// landing. Red at entry because `run.rs` and `answer.rs` call it directly. Red under S8E-M44.
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; `s8f` §8f.4; the landing record
+/// ADR-0188 decision 11, proposed.)* **Widened, not added**, to AC-518's file-write and
+/// index-change halves: every code-line call of `rk-git`'s landing primitive under
+/// `crates/rk-cli/src/` and `crates/rk-kernel/src/` is in the boundary, after its authorisation,
+/// and the record's `GitOp::CommitTree`, `GitOp::UpdateRef` and `GitOp::ResyncIndex` are named on
+/// code lines only inside the primitive, `crates/rk-git/src/landing.rs`. ~~The boundary must
+/// authorise and then call `commit_with_trailers`~~: it commits through the primitive now, and
+/// `commit_with_trailers` keeps no caller under `rk-cli` or `rk-kernel`. Red under M51 (the
+/// landing call moved into a helper outside the boundary).
 #[test]
 fn every_run_commit_resolves_through_the_worktree_resolver() {
     let files = src_files();
@@ -1040,22 +1114,48 @@ fn every_run_commit_resolves_through_the_worktree_resolver() {
             .find(|(_, l)| l.contains(needle))
             .map(|(i, _)| *i)
     };
-    let (Some(authorise), Some(commit)) = (
+    let (Some(authorise), Some(stage), Some(commit)) = (
         first("authorise_tier1_write("),
-        first("commit_with_trailers("),
+        first("landing::stage("),
+        first("landing::commit("),
     ) else {
         panic!(
-            "PREMISE: {BOUNDARY} must authorise and then commit; authorise at {:?}, commit at {:?}",
+            "PREMISE: {BOUNDARY} must authorise and then land; authorise at {:?}, stage at {:?}, commit at {:?}",
             first("authorise_tier1_write("),
-            first("commit_with_trailers(")
+            first("landing::stage("),
+            first("landing::commit(")
         );
     };
     assert!(
-        authorise < commit,
-        "the boundary commits (line {}) before it authorises (line {})",
+        authorise < stage && stage < commit,
+        "the boundary lands (stage at line {}, commit at line {}) before it authorises (line {})",
+        stage + 1,
         commit + 1,
         authorise + 1
     );
+    let landings = stray_landings(&files);
+    assert!(
+        landings.is_empty(),
+        "a landing outside the boundary, past no worktree resolver: {landings:#?}"
+    );
+    let writes = stray_landing_writes(&files);
+    assert!(
+        writes.is_empty(),
+        "a landing write variant named outside rk-git's primitive: {writes:#?}"
+    );
+    let primitive = files
+        .iter()
+        .find(|(p, _)| p == LANDING_PRIMITIVE)
+        .map(|(_, t)| t.clone())
+        .unwrap_or_default();
+    for variant in LANDING_WRITES {
+        assert!(
+            primitive
+                .lines()
+                .any(|l| is_code(l) && names(l, &format!("GitOp::{variant}"))),
+            "PREMISE: the primitive names `GitOp::{variant}` on a code line"
+        );
+    }
 
     // Workspace-wide: rk-git's definitions and write path, the boundary, and redkiln-migrate's one
     // call. Nothing else.
@@ -1097,5 +1197,49 @@ fn every_run_commit_resolves_through_the_worktree_resolver() {
         1,
         "CONTROL: the filter kept {} of one stray call, one comment and one boundary call",
         kept.len()
+    );
+
+    // CONTROL (the widening): a landing call in a helper outside the boundary is kept, its comment
+    // and the boundary's own call are dropped; a write variant named outside the primitive is kept
+    // and the primitive's own is dropped.
+    let synthetic = vec![
+        (
+            "crates/rk-kernel/src/runtime/activity.rs".to_owned(),
+            "    let staged = rk_git::landing::stage(git, &req)?;
+    // landing::commit( belongs to the boundary
+"
+            .to_owned(),
+        ),
+        (
+            BOUNDARY.to_owned(),
+            "        Content::Landed => landing::stage(
+    let landed = landing::commit(git, &p, &m, true);
+"
+            .to_owned(),
+        ),
+        (
+            "crates/rk-git/src/worktree.rs".to_owned(),
+            "    git.run(GitOp::UpdateRef, cwd, &args)?;
+"
+            .to_owned(),
+        ),
+        (
+            LANDING_PRIMITIVE.to_owned(),
+            "    git.run(GitOp::CommitTree, cwd, &args)?;
+"
+            .to_owned(),
+        ),
+    ];
+    assert_eq!(
+        stray_landings(&synthetic).len(),
+        1,
+        "CONTROL: the landing filter kept {:?}",
+        stray_landings(&synthetic)
+    );
+    assert_eq!(
+        stray_landing_writes(&synthetic).len(),
+        1,
+        "CONTROL: the write-variant filter kept {:?}",
+        stray_landing_writes(&synthetic)
     );
 }

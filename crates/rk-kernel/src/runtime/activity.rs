@@ -683,6 +683,11 @@ impl Runtime {
         // taking that advice is exactly the defect this function exists to prevent — which is why
         // the exception is `#[expect]` and not `#[allow]` (ADR-0102 decision 3): if the lint ever
         // stops firing here, the span has narrowed and the build says so.
+        //
+        // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decision 2.)* At
+        // the STEP grain with a boundary bound, the landing is inside the same section: the
+        // boundary is taken first (the order `tier_one_act` takes them in), then the store.
+        let mut boundary = self.step_boundary(at.is_some());
         let mut guard = self.store_guard();
         let events =
             guard
@@ -712,10 +717,13 @@ impl Runtime {
             || activity_committed_event(key, typed, self.run_id(), now),
             |at| step_committed_event(key, at, typed, self.run_id(), now),
         );
-        guard.append(row).map_err(|e| RuntimeError::Store {
-            op: "append",
-            detail: format!("{e:?}"),
-        })?;
+        let commit_key = at.map(|at| at.commit_key(&key.item, &key.activity_id_at_version));
+        land_step_row(
+            &mut *guard,
+            boundary.as_deref_mut(),
+            commit_key.as_ref(),
+            row,
+        )?;
         Ok(CommitOutcome::Committed { key: key.clone() })
     }
 
@@ -823,6 +831,10 @@ impl Runtime {
         emitted: Option<&super::reference::Emitted>,
         now: JournaledNow,
     ) -> Result<CommitOutcome, RuntimeError> {
+        // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decision 2.)* A
+        // side-effecting tool step's commit and an activation's `emit` completion are step-grain
+        // acts too: boundary first, then the store, one section.
+        let mut boundary = self.step_boundary(true);
         let mut guard = self.store_guard();
         let events = guard
             .query(super::journal_query(item))
@@ -873,11 +885,22 @@ impl Runtime {
                 row
             }
         };
-        guard.append(row).map_err(|e| RuntimeError::Store {
-            op: "append",
-            detail: format!("{e:?}"),
-        })?;
+        land_step_row(&mut *guard, boundary.as_deref_mut(), Some(&commit_key), row)?;
         Ok(CommitOutcome::Committed { key })
+    }
+
+    /// The tier-1 boundary, locked, for a step-grain act: when one is bound and the commit is at
+    /// the step grain. *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    fn step_boundary(
+        &self,
+        step_grain: bool,
+    ) -> Option<std::sync::MutexGuard<'_, super::tier_one::Boundary>> {
+        if !step_grain {
+            return None;
+        }
+        self.boundary
+            .as_ref()
+            .map(|b| b.lock().expect(super::LOCK_HALTS))
     }
 
     /// **The retry loop.** One activation, from its next attempt number to its terminal outcome.
@@ -1195,6 +1218,40 @@ pub fn activity_committed_event(
             "schema": typed.schema.as_str(),
         }),
     )
+}
+
+/// **N10: a committed step's row, landed first** (the landing record ADR-0188 decision 2,
+/// proposed). *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+///
+/// With a boundary bound and a step-grain key, the row rides ONE step-grain act of
+/// `tier_one::commit_act`'s body: the run-owned tree is landed first (a content checkpoint commit
+/// when the step changed it), and the row is appended anchored to that commit, or unanchored when
+/// the step changed nothing. Unbound (the machinery suites and the golden-log recorder) or at the
+/// activation grain, the row is appended as it was before `s8f`. The caller holds the store's
+/// guard across this call, so the journal re-read, the landing and the append are one section.
+fn land_step_row(
+    store: &mut dyn rk_ports::event_store::EventStore,
+    boundary: Option<&mut super::tier_one::Boundary>,
+    commit_key: Option<&CommitKey>,
+    row: Event,
+) -> Result<(), RuntimeError> {
+    match (boundary, commit_key) {
+        (Some(boundary), Some(key)) => {
+            let checkpoint = super::tier_one::StepCheckpoint::of(
+                &key.item,
+                &key.activity_id_at_version,
+                &key.step_id,
+                &key.iteration_path.to_json(),
+                &row,
+            )?;
+            boundary.act_locked(store, super::tier_one::Act::step(checkpoint, vec![row]))?;
+            Ok(())
+        }
+        _ => store.append(row).map_err(|e| RuntimeError::Store {
+            op: "append",
+            detail: format!("{e:?}"),
+        }),
+    }
 }
 
 /// **R1: one step activation's commit row** — [`activity_committed_event`]'s row plus the two

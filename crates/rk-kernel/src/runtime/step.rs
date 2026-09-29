@@ -1994,14 +1994,12 @@ impl super::Runtime {
                 })));
             }
         };
-        let token = record.token().clone();
         // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6.)*
         // ~~`self.append(super::gate_opened_event(&record))?;`~~ — a gate step's opening is a
         // tier-1 act like `OpenGate`'s: its `Gate: … opened` mark first, the row anchored to it.
-        self.tier_one_act(
-            super::tier_one::Act::gate(super::gate_opened_event(&record), &record)?
-                .opened_by(self.stage(), self.run_id()),
-        )?;
+        // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)* The opening lands, and the
+        // token is the landed record's (defect (b); ADR-0188 decision 12).
+        let token = self.open_gate_act(&record)?;
         Ok(Flow::Halt(Halt::Gated(token)))
     }
 

@@ -1450,29 +1450,26 @@ pub fn release(
 
 /// One `status --porcelain=v1 -z --untracked-files=all` read: the number of entries, and every
 /// path they name (a rename or copy names two).
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decision 13, proposed.)*
+/// The read is parsed by the landing's own parser, [`crate::landing::parse_status`], the one the
+/// staging set is computed with, so the discard names its paths as a landing would stage them.
 fn in_flight(exec: &GitExec, at: &WorktreePath) -> Result<(usize, Vec<String>), GitError> {
     let out = exec.run(
         GitOp::Status,
         at,
         ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
     )?;
-    let mut fields = out.stdout.split(|b| *b == 0).filter(|f| !f.is_empty());
-    let mut entries = 0usize;
+    let entries = crate::landing::parse_status(&out.stdout);
+    let count = entries.len();
     let mut paths = Vec::new();
-    while let Some(f) = fields.next() {
-        if f.len() < 4 {
-            continue;
-        }
-        entries += 1;
-        let (xy, path) = f.split_at(3);
-        paths.push(String::from_utf8_lossy(path).into_owned());
-        if (matches!(xy[0], b'R' | b'C') || matches!(xy[1], b'R' | b'C'))
-            && let Some(orig) = fields.next()
-        {
-            paths.push(String::from_utf8_lossy(orig).into_owned());
+    for entry in entries {
+        paths.push(entry.path);
+        if let Some(orig) = entry.orig {
+            paths.push(orig);
         }
     }
-    Ok((entries, paths))
+    Ok((count, paths))
 }
 
 /// The discard (W2; N10's semantics): read every in-flight path, then `reset --hard HEAD` and

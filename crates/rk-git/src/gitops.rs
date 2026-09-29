@@ -135,6 +135,25 @@ impl<'j> GitOps<'j> {
         cwd: &WorktreePath,
         args: &[&str],
     ) -> Result<GitOutput, GitError> {
+        self.run_with_env(op, cwd, args, &[])
+    }
+
+    /// [`Self::run`], with `env` set on the live child — the form an invocation over a
+    /// **temporary index** needs (`GIT_INDEX_FILE`; ADR-0105 clause 4's derivation and the
+    /// landing's staging, ADR-0188 decision 9). The environment is never journalled (clause 7):
+    /// only the argv digest, the status and stdout are, exactly as for [`Self::run`], and on
+    /// replay the recorded result is served and `env` is never read.
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    ///
+    /// # Errors
+    /// As [`Self::run`].
+    pub fn run_with_env(
+        &mut self,
+        op: GitOp,
+        cwd: &WorktreePath,
+        args: &[&str],
+        env: &[(std::ffi::OsString, std::ffi::OsString)],
+    ) -> Result<GitOutput, GitError> {
         // The mode is matched FIRST. There is no path from Replay to `self.exec`.
         match self.mode {
             Mode::Replay => {
@@ -162,7 +181,11 @@ impl<'j> GitOps<'j> {
             }
             Mode::Live => {
                 self.writes_performed += 1;
-                let result = self.exec.run(op, cwd, args);
+                let result = if env.is_empty() {
+                    self.exec.run(op, cwd, args)
+                } else {
+                    self.exec.run_env(op, cwd, args, env)
+                };
                 let inv = match &result {
                     Ok(out) => GitInvocation {
                         op: op.as_str(),

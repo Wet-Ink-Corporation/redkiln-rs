@@ -284,7 +284,8 @@ names this stage as the candidate owner of its read (`s8c` §8c.12 item 3). D21-
   8d **provisional**, and Checkpoint 8f (9) re-runs it whole.
 
 **Order.** (i) The stage-open measurements (§8f.2). (ii) The three records, written `proposed` before any code they
-authorise. (iii) The landing: `rk-git`'s primitive, then the kernel wiring on `s8e`'s seam (the step-grain act and
+authorise. *(dated 2026-09-28, s8f build, package S8F-P1-RECORDS)* Done before any code: the landing record is ADR-0188, the render record ADR-0189 and the telemetry-key record
+ADR-0190, each `proposed` (§8f.3's dated note). (iii) The landing: `rk-git`'s primitive, then the kernel wiring on `s8e`'s seam (the step-grain act and
 the boundary act), then the `rk-cli` end-to-end tests. (iv) The render, write and read paths, then the drift gate
 and the stage advance's refusal on it, then the vouched-root store and its advisory, then the emit producer and the
 resolver's read, then the item write, then the `backlog` read and the two feed rows. (v) The `activity_id_at_version` member, then
@@ -356,7 +357,13 @@ Each is read-only. A 🛑 line is a STOP. The stage does not choose around it: t
    740 passed, 0 failed and 9 ignored over 44 results (ADR-0164's evidence, `992d257`). *Final consistency pass
    2026-09-24:* the stages then add, as each file now states its new tests, `s8a` 9, `s8b` 25, `s8c` 78, `s8d` 62,
    `s8d-ii` 50 and `s8e` 74. That gives 740 + 9 + 25 + 78 + 62 + 50 + 74 = 1038 at Checkpoint 8e, and 1038 + 85 =
-   **1123** here. *(This supersedes 984 + 84 = 1068, whose base took the predecessors' counts before their D21-47
+   ~~**1123**~~ **1204** here. *(dated 2026-09-28, s8f build, package S8F-P1-RECORDS)* **Re-derived at stage open from Checkpoint 8e's RECORDED count**:
+   `spikes/DECISIONS-2026-09-21.md` D21-97 records *"(8) the whole suite **1119 passed / 0 failed / 9 ignored over 44
+   result lines** (FLOOR 1119)"*, and §8f.12 reads *"**85 new tests**"* (10 + 26 + 8 + 1 + 40 across its lists), so
+   1119 + 85 = **1204**. The chain's expected 1038 is superseded by the recorded 1119; the recorded count governs.
+   Re-measured before any code, at `37bba5c` in the main checkout through the no-dispatch helper (`cargo test
+   --workspace --no-fail-fast`): rc 0, **1119 passed / 0 failed / 9 ignored over 44 results**. Checkpoint 8f (5)
+   reads `FLOOR=1204` by the same dated edit. *(This supersedes 984 + 84 = 1068, whose base took the predecessors' counts before their D21-47
    fixes, and 1021 + 84 = 1105, before D21-48 X11's test. *D21-48 (2026-09-24), floor propagation:* and 1021 + 85 = 1106,
    before `s8c`'s 78, `s8d`'s 62 and `s8d-ii`'s 50.)* The recorded count governs. Replace 1123 with the
    recorded count plus 85, by a dated edit of that line,
@@ -431,6 +438,80 @@ Each is read-only. A 🛑 line is a STOP. The stage does not choose around it: t
     formula and its constant from the record as `s8d-ii` wrote it. §8f.4's length rule uses those values and
     derives neither.
 
+*(dated 2026-09-28, s8f build, package S8F-P1-RECORDS)* **The stage-open measurements, re-taken at `37bba5c`** (HEAD after Checkpoint 8e passed whole at
+`492e516` and was re-run green after `abeb578`; tracker `78e6922`). Each read-only; the checkout clean; the shipped
+store backed up to `target/store-backups/s8f-open/` (sha256 `09020ee9…`, unchanged after the baseline run);
+`crates/rk-adapter-toolchain-node/tests/fixtures/project/node_modules` present.
+- **Item 1 — does not fire.** Every tier-1 commit is made in `rk-kernel`'s `runtime/tier_one.rs`, `commit_act`, through
+  the journalled seam (*"`.commit_with_trailers(&cwd, &message, std::slice::from_ref(&trailer), true)`"*), and each row
+  is appended through `append_tier1` with a `TierOneAnchor` (sha and tree). The only other code-line caller of
+  `commit_with_trailers` outside `rk-git` is `redkiln-migrate`'s `run_contract.rs`.
+- **Item 2 — does not fire.** `tier_one::close_act` mints `Story: <project>/<item> closed`; `rk-cli`'s `run.rs` calls it
+  at the lane's end, and `lane_e2e::the_lane_end_mints_a_terminal_closed_mark` pins it.
+- **Item 3 — does not fire.** `Act` carries `rows: Vec<Event>`, all anchored to one commit, and `commit_act`'s order is
+  authorise, commit, re-read, rows; a trailer-less act is refused only because `Content` has one arm (*"`s8f`'s landed
+  arm is the one a trailer-less act may carry"*), so the widening keeps the order. The step commit row is appended by
+  `Runtime::commit_at` and `commit_walk_row_emitting` (`runtime/activity.rs`), each under ONE store-lock acquisition
+  that re-reads the journal and appends (AC-012), with no git write of their own: movable into an act that holds the
+  guard across the landing, which ADR-0188 decision 2 states. Neither STOP case holds.
+- **Item 4 — does not fire, with a correction to the heading.** The one golden log under `CORPUS_PIN` holds **no**
+  `dispatch_completed` row. The heading's *"or pinned fixture"* is false as measured: 26 `-text`-pinned files hold
+  hand-authored rows (`crates/rk-cli/tests/fixtures/cost/**` 23, `doctor/RK-D-CREDENTIAL-RETAINED/**` 2,
+  `exit/README.md` 1). They are test inputs, not a producer's recorded output, and no test pins a producer's
+  `dispatch_completed` bytes, so the member moves none of them (ADR-0190's evidence). `s8e` answered the N5 key by
+  carrying it outside the payload (ADR-0182 decision 6).
+- **Item 5.** `ActivitySpec` derives no `Serialize`; its serialised form is `RecordedSpec::spec_json`'s explicit
+  five-member object in `inputs/specs.json`, and the pinned golden log's `specs.json` already records
+  `activity_id_at_version` per node as `RecordedSpec`'s own member. The memo key reads `inputs`, `card_digest` and
+  `schema` field by field. So omitting the carrier from `spec_json` moves no byte (ADR-0190 decision 2). **Found
+  here, not foreseen by this file:** `ActivitySpec`'s doc reads *"ADR-0099:61's five fields and no sixth"*, and
+  ADR-0138 (accepted; its `superseded_by` `0141` and `0174` leave the bullet whole) forbids *"adding a step list, or
+  any sixth field, to `rk_types::activity::ActivitySpec`"*. §8f.8's carrier is a sixth field. Returned for a ruling.
+- **Item 6.** The shipped store (`mode=ro`): `rk_identity.schema_version` 2; `t1_gate` absent, `t1_gate_transition`
+  present; `t2_event` 1 row (`stage_transition`), `t1_stage_transition` 0, `t1_gate_transition` 0, `t1_slice_seal` 0,
+  equal to `s8e`'s rebuild after-counts (*"1 `t2_event` row and 0 `t1_*` rows"*, D21-97). The legacy tree
+  `rk-fix-doctor-test-count` is at `73c087a`, its `status --porcelain=v1 --untracked-files=all` empty.
+- **Item 7.** **0** of **2,043** tracked paths match the denylist (ADR-0188 decision 5's seventeen globs, final
+  component, ASCII case-insensitive); the largest tracked blob is still **1,439,568** bytes
+  (`references/audit/2026-09-10/GROUNDING-MERGED.json`); the longest tracked path is 140 characters.
+- **Item 8.** Every module name is free: `rk-git` `landing`; `rk-store` `render`, `item_write`, `backlog`, `vouched`;
+  `rk-kernel` `emit`, `step_landing`, `feed` (`emit_binding` exists and is a different module); `rk-cli` `landing`,
+  `item_create`, `status`, `doctor_journal`, `doctor_artifact`, `doctor_drift`.
+- **Item 10 — does not fire.** `runtime::reference::read_artifact_input` makes the one call `env.seam.read(…)`;
+  `UnwiredReadSeam::read` returns `Ok(())` and holds no store; the composition root's value is set in `runtime.rs`
+  (`read_seam: std::sync::Arc::new(reference::UnwiredReadSeam)`, rebound by `with_read_seam`, which nothing calls
+  yet). Code lines naming `EventKind::ArtifactRead` / `"artifact.read"` under `crates/*/src` outside `rk-types`: the
+  three fold arms and `doctor`'s `of_kind(ctx, "artifact.read")` read, and no append.
+- **Item 11 — FIRES on its first bullet.** The feed rows read as `s8c` §8c.4 lands them (`backlog`, `logs`, `sbom`
+  `unprovided` on both toolchains), and `item_create` is `route = "store"`. But the resolver reaches a feed's verb
+  through `Runtime::call_feed` (`runtime/step.rs`), which refuses every route but `toolchain`: *"the feed verb
+  `{verb}` takes the `{}` route with {} declared input(s); a feed is produced by a `toolchain` row with no inputs"*.
+  So there is **no path from a feed's `verb` to a `store`-route handler**. No accepted record fixes the rule (ADR-0170
+  decision 8 admits *"a registry verb"*). Returned for a ruling; ADR-0189 decision 12 takes a `store` arm
+  PROVISIONALLY. The other bullets do not fire: `lane_walk`'s two lanes record `closure-record` as
+  `Verdict::Refuses("`feed.rust.backlog` is mandatory")`, never walking; no `lane_e2e` test reaches `closeout`; and
+  two tests pin `backlog` as `unprovided` over the shipped registry, so they move by §8f.10's dated line when the feed
+  rows flip: `s8c`'s `source_registry::the_catalog_source_census_is_fifty_with_fourteen_declared` and `s8d`'s
+  `reference_resolver::kb_checklist_and_feed_keys_resolve_through_the_declared_tables_and_an_undeclared_key_refuses_by_name`
+  (with `reference_resolver::every_input_source_form_resolves_or_refuses_by_name`'s `refused(r("toolchain:backlog"), …)`,
+  if that test reads the shipped registry).
+- **Item 12 — does not fire.** The golden log holds no `artifact.write` row. The `-text`-pinned doctor fixtures
+  `RK-D-CREDENTIAL-RETAINED`, `RK-D-SINK-COUNT` and `RK-D-UNREAD` hold hand-authored `artifact.write` rows that are
+  rule inputs, so the carrier moves none of them. `store_attachments` still journals `kind`, `item`,
+  `schema_version` and `digest` (the attachment's own `attachment.path` is read and not journalled). ADR-0189 names
+  the carrier `attached_path`, and says why it is not `path`.
+- **Item 13.** `crates/rk-cli/tests/fixtures/doctor/` holds **39** `RK-D-` rule directories, and the raw id grep over
+  `crates/rk-cli/src/doctor/` reads 42 tokens, the same 42 as at `c5d19d7` (two are prefix fragments,
+  `RK-D-DANGLING-` and `RK-D-ROLE-`, and one, `RK-D-NEVER-EXECUTED`, has no fixture directory). The base is
+  unchanged: 39 → **41**.
+- **Item 14 — does not fire.** `0002_gate_transitions.sql`'s `t1_gate_transition` has `stage TEXT` and `run_id TEXT`
+  columns (*"The opening run's `stage` and `run_id` sit on the `opened` row only"*), written through
+  `TierOneAnchor::with_opening_run` from `Act::opened_by` (`run.rs`, `step.rs`, `runtime.rs`).
+- **Item 15.** ADR-0180 decision 16, verbatim: *"The bound is `len(root) + 20 + len(item) + 11 + 1 +` the longest
+  path tracked at the fork commit … Creation refuses by name when the bound exceeds **259** (Windows' 260-character
+  `MAX_PATH` leaves 259 usable) and `core.longpaths` is not `true`"*, computed *"on the **actual** item"*. ADR-0188
+  decision 5 uses those values with the landed path in place of the fork's longest.
+
 ### 8f.3 The three records
 
 Each record is written in ADR-0085's form: frontmatter, context, drivers, `### Option — <name>` headings (D21-42 24a
@@ -448,6 +529,24 @@ to the superseded record's `superseded_by` (ADR-0092).
 | **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit, the path-length bound and the form of the refusal; how each commit is made; what "due" means, and the gate's tree at a refused landing; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–4 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*, and its reading of clause 4's *"when a checkpoint commit is due"* (§8f.4: a landing that refuses lands nothing, so none is due). **Supersedes in part: ADR-0105 clause 5** (*"Anything not listed is a successor"*) and its bullet *"Forbids a wrapper write not on clause 5's list"*, for three writes: `commit-tree`, `update-ref refs/heads/rk-run/<item>`, and `read-tree HEAD` on the run-owned worktree's own index. D21-47 reads clause 5 one way: *"A git WRITE not on its closed list is a supersession in part"*. Clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* is the design warrant, and it does not substitute for the supersession. **One consolidated clause-5 list**, each part in its own record with no operation in two: `s8d-ii`'s worktree record (`worktree lock`/`unlock`, the `RK_BASE` marker, `reset --hard`, `clean -fd`); `s8g`'s R3 (`tag`, `apply`); this record (the three above). Reads are not supersessions (D21-47), so `status` and `rev-parse` here are none. Clause 6's *"re-created, never reused"* is `s8d-ii`'s D21-44/W2 record's to supersede (D21-46 R1), and this record cites it |
 | **the render record** | `render and write path` | §8f.5–§8f.7 and §8f.9's AC-159 rule: layout-C rendering, section stamps, prose, the drift pass (C2) and its drift gate (N11), where the canonical typed value is kept, the managed directory, the write seam, the read seam (N12), one `artifact.write` per write and one `artifact.read` per read, `.redkiln/items/` as a managed tree, and the unrecorded-mutation rule. Under D21-46 R7 it also decides the `backlog` read and its output shape (§8f.7), the vouched root's store and its advisory drift (§8f.5), the carrier of an attach's path (§8f.2 item 12) and `RK-D-DRIFT-KIND` (§8f.9) | It owns AC-411, AC-477 and AC-478, which are RAISED with no owner record. ADR-0005/0006 (as refined by ADR-0075) and ADR-0116 stand. It drives dated register amendments (§8f.10). It states N11's reading of AC-125 and records that AC-127 holds unamended (§8f.5). It states its reading of ADR-0025 for a vouched root's own change, and ADR-0025 stands unamended (§8f.5) |
 | **the telemetry-key record** | `dispatch_completed carries` | §8f.8–§8f.9: the `activity_id_at_version` member and its carrier, the breakdown grammar, the `status` renderer, AC-372's doctor clause read as a renderer test (N12), and `doctor`'s journal source and five-hour reading | **Supersedes in part:** ADR-0131's first forbids bullet, for `dispatch_completed.activity_id_at_version` alone, until 0131's tag is wired: that member is a **payload** member on D21-42 12b's ADR-0163 route. The `item` key is N5's, carried beside the payload by `s8e`'s record under D21-46 R3, which supersedes nothing; this record cites it. It also supersedes in part ADR-0163 decision 4's closed-grammar sentence, decision 5's not-delivered list and its sentence on `doctor`'s journal, and ADR-0163's bullet on *"any other payload correlation key"* for this one member (§8f.8). *Added 2026-09-24 (D21-47, review M5):* it also supersedes in part ADR-0163's bullet *"Forbids reading item ownership off `dispatch_completed` rows, which carry none, or off journal position"*. That covers the first half only: `cost`'s breakdown reads ownership off the `item` key `s8e` carries beside the row. The journal-position half stands. The record quotes the bullet, and Checkpoint 8f (2) reads the quotation |
+
+*(dated 2026-09-28, s8f build, package S8F-P1-RECORDS)* **The ids taken at writing.** `references/adr/README.md` read **`0188`** as the next free
+number at stage open (on 2026-09-24 it read `0165`, the sentence above). The records took, in the order written:
+the landing record **ADR-0188** (`0188-the-landed-commit-is-a-kernel-made-content-checkpoint-on-the-run-ref.md`), the
+render record **ADR-0189** (`0189-rk-store-renders-writes-and-reads-and-structured-drift-is-surfaced-restored-and-gated.md`)
+and the telemetry-key record **ADR-0190** (`0190-dispatch-completed-carries-activity-id-at-version-and-cost-breaks-down-by-activity.md`),
+each `status: proposed`, each in ADR-0085's form with its `### Option — ` headings and **What this forbids** block;
+Checkpoint 8f (2)'s `REC_` lines carry the three ids by the same package's dated edit, and the README's next free
+number reads `0191`. **The `superseded_by` back-links move in each record's flip commit**, not at writing, on
+`s8e`'s stated precedent (D21-97: *"Back-links and the README Supersessions-table rows move in each flip commit, as
+`0181`'s do."*): `0105` gains `0188`, and `0131`, `0138` and `0163` gain `0190`, with the README Supersessions rows,
+when those records flip. Until then Checkpoint 8f (2) fails on *"not accepted"*, *"no dated DECISIONS heading
+flips"* and the three `superseded_by` lines, and on nothing else. **Two findings the records carry, each TAKEN
+PROVISIONALLY and returned for a ruling** (§8f.2's dated note): the render record's decision 12 (the resolver's
+feed call has no `store` arm, §8f.2 item 11's STOP), and the telemetry-key record's decision 2 (ADR-0138's forbids
+bullet *"Forbids adding a step list, or any sixth field, to `rk_types::activity::ActivitySpec`"* binds the
+`ActivitySpec` carrier §8f.8 settles, and this table did not name ADR-0138; the record names it in `supersedes`
+provisionally).
 
 ### 8f.4 The landing checkpoint (D21-41 (b); D21-42 9; D21-43 N10)
 
@@ -628,6 +727,38 @@ fixes three things:
 3. **A human's edit to a run's artifact is a commit on `rk-run/<item>`.** An uncommitted edit left in the run-owned
    worktree is in-flight dirt: it is named and discarded at the next entry. A committed edit reaches the render pass
    (§8f.5). There prose is accepted, and structure is surfaced, restored and gated.
+
+*(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE)* **What the landing core built** (ADR-0188, `proposed`):
+- `rk-git`'s primitive is `crates/rk-git/src/landing.rs`: `staging_set` (the one function; `worktree.rs`'s
+  discard now parses its `status` read through the same `landing::parse_status`), `stage` (the refusals, then
+  `read-tree HEAD` / `add -u -- <tracked>` / `add -- <created>` on `<common-dir>/redkiln/tmp/landing-<item>.index`
+  with `GIT_LITERAL_PATHSPECS=1`, the size check by `ls-files -s` + `cat-file -s`, and T through `tree.rs`'s one
+  `write-tree` site), `prepare_empty` (an answer's and a refused landing's empty commit) and `commit`
+  (`interpret-trailers --in-place` through the seam, `commit-tree`, the re-read by `TreeBasis::CheckpointCommit`,
+  `update-ref` with the old value, `read-tree HEAD`). `GitOp` gains `CommitTree`, `UpdateRef` and `ResyncIndex`
+  (writes) and `CatFile` (a read); `commit-tree` and `update-ref` run under clause 2's empty `core.hooksPath`
+  (the `reference-transaction` hook ran on `update-ref` before that, measured red). `GitOps` gains
+  `run_with_env`, `tree_hash` and `interpret_trailers_in_place`, so every landing invocation is journalled and
+  served on replay.
+- `rk-kernel`'s `runtime/tier_one.rs`: `Content` has three arms (`Empty`, `Landed`, `Step`); every marked act
+  lands (`Act::marked`), an answer, expiry or void rides an empty commit (`Act::gate`), and a step act
+  (`Act::step`) commits only when the step changed the tree. `Runtime::commit_at` (step grain) and
+  `commit_walk_row_emitting` take the boundary, then the store, and land through `Boundary::act_locked` in one
+  section (AC-012). The baseline is read from the item's journal (the first `status` `git_op` row after the
+  latest `worktree_assigned { reused: false }`), taken by the first act after creation, and `Unknown`
+  otherwise. A gate opened by a landing act binds T and its token is re-minted over T (defect (b)), and
+  `prepare_inputs` hashes the run-owned tree; the lint
+  `tier_one::every_run_commit_resolves_through_the_worktree_resolver` is widened (M51 and a stray-helper M51b
+  both turn it red).
+- **Owed forward, by name:** `reconcile`'s heal arm for a step checkpoint (the `rk step ` subject and
+  `rk-step-row ` body are written; the arm that reads them is not built, and
+  `landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit` is where it is proved); the
+  `landing.refused-path` gate, `exclude` and `abort` (`TierOneError::LandingRefused` and `Content::Empty` are the
+  kernel's half; the boundary's `with_excluded` exists and `rk-cli` does not yet bind it); the re-entry discard
+  subtracting the journalled baseline (it still discards every in-flight path, which equals the staging set only
+  while the baseline is empty); and `s8e`'s `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one`,
+  whose dirty arm's premise (*"edited by the scripted step, landed by nothing"*) N10 removes: the step's commit
+  now lands the edit, so the tree is clean at the `closed` mark. Returned for a ruling (the package report).
 
 ### 8f.5 `rk-store`'s render, write and read path (D21-42 5a; D21-43 N11, N12)
 
@@ -1461,9 +1592,11 @@ store_before=$(python -c "$rows" "$store"); rc=$?
 # ---- (2) THE THREE RECORDS, located by the id each took AT WRITING (D21-47; §8f.3), never by a title phrase: s8g's
 # ---- tag-release record also says "landed commit". Each REC_ line is written by a dated edit in the commit that
 # ---- writes its record. BEFORE: all three read `unassigned`, so (2) is red until the records exist and are accepted.
-REC_LANDING=unassigned
-REC_RENDER=unassigned
-REC_TELEMETRY=unassigned
+# ---- (dated 2026-09-28, s8f build, package S8F-P1-RECORDS) the ids each record took at writing, all three
+# ---- `proposed` (struck: REC_LANDING=unassigned, REC_RENDER=unassigned, REC_TELEMETRY=unassigned).
+REC_LANDING=0188
+REC_RENDER=0189
+REC_TELEMETRY=0190
 recs='import glob,re,sys
 names=("landing","render","telemetry")
 ids=dict(zip(names,sys.argv[1:4]))
@@ -1559,7 +1692,9 @@ run_sel rk-cli 46 landing::a_refused_landing_is_not_due_and_answer_derives_the_g
 # ---- D21-48 floor propagation moved it from 1021 + 85 = 1106), by a
 # ---- dated edit of the line below before the first run. A filtered green can select around every catching test; the whole suite cannot. Every cargo run is under
 # ---- the (0b) wrapper, and nd_check follows each one.
-FLOOR=1123
+# ---- (dated 2026-09-28, s8f build, package S8F-P1-RECORDS) FLOOR re-derived at stage open from Checkpoint 8e's
+# ---- RECORDED count (D21-97: 1119 passed / 0 failed / 9 ignored over 44) + 85 = 1204 (struck: FLOOR=1123).
+FLOOR=1204
 out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 nd_check "(5)'s whole suite" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|^test result:' | head -30; exit 1; }

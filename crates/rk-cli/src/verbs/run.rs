@@ -634,7 +634,18 @@ fn run_lane(
         if let Err(exit) = bind_answered_facets(&mut resolved, store)? {
             return Ok(exit);
         }
-        let (inputs, tree_hash) = match prepare_inputs(&resolved, now) {
+        // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; defect (b); the landing
+        // record ADR-0188 decision 12, proposed.)* ~~over `resolved.worktree`, the checkout~~ —
+        // the inputs are hashed over the RUN-OWNED tree, the one the stage's inputs come from and
+        // the one `answer` hashes.
+        let owned_at = match rk_git::path::WorktreePath::new(&owned) {
+            Ok(at) => at,
+            Err(e) => {
+                eprintln!("redkiln: the run-owned worktree's path is refused: {e:?}");
+                return Ok(Exit::ConfigError);
+            }
+        };
+        let (inputs, tree_hash) = match prepare_inputs(&resolved, &owned_at, now) {
             Ok(pair) => pair,
             Err(exit) => return Ok(exit),
         };
@@ -1885,15 +1896,23 @@ fn build_item(
 /// the value returned here. Taking it twice would be two `git` invocations over one worktree and
 /// two values that are only *probably* equal; returning it is one reading, used twice.
 ///
+/// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; defect (b); the landing record
+/// ADR-0188 decision 12, proposed.)* `tree` is the tree the hash is taken over: the lane passes
+/// the **run-owned** worktree, since that is the tree the stage's inputs come from and the one
+/// `answer` hashes; ~~`resolved.worktree`, the checkout~~. `run_id` is derived over the inputs, so
+/// its values move for new runs and its grain does not (ADR-0152). The in-process harness, which
+/// has no run-owned tree, passes its checkout.
+///
 /// # Errors
 /// An [`Exit`] row when a registry will not read, or the tree hash cannot be taken.
 pub fn prepare_inputs(
     resolved: &Resolved,
+    tree: &rk_git::path::WorktreePath,
     now: i64,
 ) -> Result<(rk_kernel::replay::RunInputs, String), Exit> {
     let tree_hash = rk_git::tree::tree_hash(
         &resolved.exec,
-        &resolved.worktree,
+        tree,
         &resolved.common_dir,
         &rk_git::tree::TreeBasis::WorkingState,
     )

@@ -55,6 +55,17 @@ pub enum GitOp {
     ResetHard,
     /// `clean -fd`, WITHOUT `-x`, the discard's second half: ignored files survive re-entry.
     Clean,
+    // --- s8f's landing writes: the landing record (ADR-0188 decision 10, proposed) supersedes
+    // clause 5 IN PART for exactly these three, on the run-owned tree only (D21-47: *"A git WRITE
+    // not on its closed list is a supersession in part. That covers s8f's
+    // `commit-tree`/`update-ref`"*). Named on code lines only inside `crate::landing`.
+    // *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    /// `commit-tree <T> -p <tip> -F <message>`: the landing's commit of the tree it derived.
+    CommitTree,
+    /// `update-ref refs/heads/rk-run/<item> <new> <tip>`: the run ref, the old value guarding a race.
+    UpdateRef,
+    /// `read-tree HEAD` on the run-owned worktree's OWN index, after the ref moved (step 7).
+    ResyncIndex,
 
     // --- reads ---
     /// Includes `rev-parse --git-common-dir` (s8d-ii §8d-ii.6's re-entry read) and
@@ -90,6 +101,10 @@ pub enum GitOp {
     /// HEAD, run-branch tip)`"*). A read, so it supersedes nothing (D21-47: *"A READ is not a
     /// supersession"*). *(dated 2026-09-28, s8d-ii build, package R1FIX-8dii.)*
     MergeBase,
+    /// `cat-file -s <blob>`: a staged blob's size, for the landing's size limit (ADR-0188 decision
+    /// 5). A read, so it supersedes nothing. *(dated 2026-09-28, s8f build, package
+    /// S8F-P2-LANDING-CORE.)*
+    CatFile,
 }
 
 impl GitOp {
@@ -97,7 +112,7 @@ impl GitOp {
     /// package S8E-P5; `s8e` §8e.3, D21-43 N7*): replay serves the kernel boundary's git writes from
     /// its `git_op` rows, and a row carries the name [`Self::as_str`] wrote. Adding a variant here
     /// adds nothing to the write set; the set is the enum.
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 27] = [
         Self::WorktreeAdd,
         Self::WorktreeRemove,
         Self::Add,
@@ -111,6 +126,9 @@ impl GitOp {
         Self::WorktreeUnlock,
         Self::ResetHard,
         Self::Clean,
+        Self::CommitTree,
+        Self::UpdateRef,
+        Self::ResyncIndex,
         Self::RevParse,
         Self::Status,
         Self::Log,
@@ -121,6 +139,7 @@ impl GitOp {
         Self::Config,
         Self::CheckAttr,
         Self::MergeBase,
+        Self::CatFile,
     ];
 
     /// The operation a journalled name names, or `None` for a name no variant writes.
@@ -145,6 +164,9 @@ impl GitOp {
             Self::WorktreeUnlock => "worktree unlock",
             Self::ResetHard => "reset --hard",
             Self::Clean => "clean",
+            Self::CommitTree => "commit-tree",
+            Self::UpdateRef => "update-ref",
+            Self::ResyncIndex => "read-tree HEAD",
             Self::RevParse => "rev-parse",
             Self::Status => "status",
             Self::Log => "log",
@@ -155,6 +177,7 @@ impl GitOp {
             Self::Config => "config",
             Self::CheckAttr => "check-attr",
             Self::MergeBase => "merge-base",
+            Self::CatFile => "cat-file",
         }
     }
 
@@ -175,7 +198,10 @@ impl GitOp {
             | Self::WorktreeLock
             | Self::WorktreeUnlock
             | Self::ResetHard
-            | Self::Clean => true,
+            | Self::Clean
+            | Self::CommitTree
+            | Self::UpdateRef
+            | Self::ResyncIndex => true,
             Self::RevParse
             | Self::Status
             | Self::Log
@@ -185,14 +211,20 @@ impl GitOp {
             | Self::LsTree
             | Self::Config
             | Self::CheckAttr
-            | Self::MergeBase => false,
+            | Self::MergeBase
+            | Self::CatFile => false,
         }
     }
 
     /// Does this operation create a commit, so that the target repository's hooks must not run?
+    ///
+    /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; ADR-0188 decision 9, proposed.)*
+    /// `commit-tree` creates the landing's commit, and `update-ref` moves the run ref, which runs
+    /// the target's `reference-transaction` hook (git 2.28 and later): both run under clause 2's
+    /// empty `core.hooksPath`, as `commit` does.
     #[must_use]
     pub const fn creates_a_commit(self) -> bool {
-        matches!(self, Self::Commit)
+        matches!(self, Self::Commit | Self::CommitTree | Self::UpdateRef)
     }
 
     /// Does this operation touch trailers, so `trailer.ifexists=add` must be in force?
@@ -304,6 +336,35 @@ impl GitExec {
             op,
             spawn(Path::new(cwd.as_str()), all, self.child_env.clone(), None),
         )
+    }
+
+    /// [`GitExec::run`], with `env` set on the child after the wrapper's own `child_env` and before
+    /// `LC_ALL`: the temporary-index form (`GIT_INDEX_FILE`) the journalled seam's
+    /// `run_with_env` reaches. The same `-c` prelude applies, so a commit made over a temporary
+    /// index runs no hook either. *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
+    ///
+    /// # Errors
+    /// As [`GitExec::run`].
+    pub fn run_env<I, S>(
+        &self,
+        op: GitOp,
+        cwd: &WorktreePath,
+        args: I,
+        env: &[(OsString, OsString)],
+    ) -> Result<GitOutput, GitError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let mut all = self.config_prelude(op);
+        if op == GitOp::InterpretTrailers {
+            all.push("interpret-trailers".into());
+            all.push("--if-exists=add".into());
+        }
+        all.extend(args.into_iter().map(|a| a.as_ref().to_os_string()));
+        let mut child_env = self.child_env.clone();
+        child_env.extend(env.iter().cloned());
+        relabel(op, spawn(Path::new(cwd.as_str()), all, child_env, None))
     }
 
     /// Run `op` in `cwd` with `stdin` written to the child's standard input — the form
