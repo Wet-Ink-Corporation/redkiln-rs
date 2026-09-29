@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-113), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-114), and what they license
+
+*(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-113)"**; `D21-114` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-112)"**; `D21-113` is appended with this move.)*
 
@@ -4676,3 +4678,48 @@ Measured in a private worktree with step 3 applied: every invocation of T1's lan
 dispatch, re-entry discards the unlanded `Spec.json` (*"not landed at a committed step"*), the next entry accepts
 the edit again, and the run ref's sidecar never moves. T1 and T2 are written, red, and `#[ignore]`d; M1 and M5 are
 owed with step 3. `s8f` §8f.5's R5FIX-8f note carries the measurement.
+
+---
+
+## D21-114 · `s8f`: amends D21-113 step 3 only; the entry pass's own writes land at entry, so the latest-write check cannot livelock
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-eda716** (two-way door, judgment; defaulted to B).
+
+**The blocker.** Package R5FIX-8f found that D21-113 step 3 livelocks when built as ruled. It measured this in a
+private worktree: invocations 2, 3 and 4 each exit `Unsupported` with 0 dispatches, and the `Spec.json` writes go
+2 → 3 → 4.
+- The entry pass writes into the run-owned worktree: an accepted prose edit, an applied `move-to-prose`, or a stored
+  vouched root.
+- These writes land only at the stage's first committed step, and that step's read comes first.
+- The reader reads `rk-run/<item>` (ADR-0189 decision 9), so the latest recorded write never matches the ref.
+- The re-entry discard throws the write away, and the next entry writes it again.
+
+**Ruled** (blocker panel, option B hardened as B′, 2–1; the engineering lens preferred A-tightened).
+
+1. **The kernel.** `tier_one` gains `Content::Entry`, a trailerless content commit with the subject `rk entry <item>
+   <stage> <run_id>` and no body, through `commit_act`.
+   - It stages with the journalled baseline, the lane's exclusions and the denylist, size and path checks.
+   - It appends only its existing `git_op` rows. There is no new row kind, no change to a row's shape, and no
+     completion-shaped row, so D21-113 step 5 holds.
+   - It makes zero git writes on replay.
+   - `heal`, `step_checkpoints` and `marked_commits` ignore it by construction: its subject has no trailer and no
+     `rk step ` prefix.
+2. **The composition root.** The entry landing runs after the re-entry discard, `move_to_prose`, `reconcile_entry`
+   and the vouched pass, and before any seam is handed to the kernel. It runs only when the entry pass wrote something
+   and no drift gate's `Gate:` commit landed it. A refusal opens the `landing.refused-path` gate over an empty commit.
+3. **The reader.** D21-113 step 3 is built exactly as ruled.
+4. **Tests.** T1 and T2 are un-ignored as written. They are joined by:
+   - `landing::an_accepted_prose_edit_lands_at_entry_before_the_first_read`
+   - `landing::an_entry_landing_is_ignored_by_heal_and_the_tier1_folds`
+   - `landing::an_entry_that_writes_nothing_makes_no_entry_act`
+   - `landing::a_replayed_entry_landing_makes_no_git_write`
+
+   Mutants M-ENTRY-LAND, M-ENTRY-HEAL and M-ENTRY-GATE are added, plus D21-113's owed M1 and M5.
+5. **The records.** ADR-0188 (proposed) takes a dated in-record note on decision 2 naming this third landing point,
+   and on decision 3's commit forms. No accepted Decision moves.
+
+**Reversal.** Delete the one call site and the Entry arm, and take A-tightened: the run-ref blob is accepted when its
+digest is among the recorded writes of the exact path at or after the emit's origin write, with the same-entry stale
+read as a named residual. Commits already made are content-identical to what the next committed step would have
+landed.
