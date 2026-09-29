@@ -530,7 +530,7 @@ const fn resets_at_of(error: &StepError) -> Option<Timestamp> {
 ///
 /// **The kernel is genuinely powerless to close this at Step 7b, and that is the reason rather than
 /// an excuse.** The charge unit is *"one charge per recorded `system/api_retry` event"* (ADR-0122
-/// decision 1), and the kernel has no way to observe one: `EventKind` is closed at 38 variants *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125 and 37 until ADR-0126, all 2026-09-17)* with
+/// decision 1), and the kernel has no way to observe one: `EventKind` is closed (`EventKind::ALL`; ~~at 38 variants~~ *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125 and 37 until ADR-0126, all 2026-09-17)*; R4FIX-8e 2026-09-28: ADR-0185's three kinds made `ALL` 41) with
 /// **no `system/api_retry` member**, ADR-0122 decision 6 deliberately mints none, and the stream
 /// those events arrive on is the *adapter's* — AC-232 is `rk-adapter-claude`'s criterion and
 /// `rk-adapter-*` does not exist until **Step 7c**. *(Corrected 2026-09-17, Step 7c Slice 1: this

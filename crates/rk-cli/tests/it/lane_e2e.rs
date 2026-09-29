@@ -1069,17 +1069,59 @@ fn the_binary_crosses_a_process_boundary_over_the_fixture_child() {
     );
 
     let markers = root.join(".rk-markers");
-    let spawned_before = std::fs::read_dir(&markers).map_or(0, Iterator::count);
+    let marker_names = || -> std::collections::BTreeSet<std::path::PathBuf> {
+        std::fs::read_dir(&markers).map_or_else(
+            |_| std::collections::BTreeSet::new(),
+            |dir| {
+                dir.filter_map(Result::ok)
+                    .map(|e| e.path())
+                    .filter(|p| p.extension().is_some_and(|x| x == "marker"))
+                    .collect()
+            },
+        )
+    };
+    let spawned_before = marker_names();
     let out = spawn_run_replaying(root, GATE_ITEM);
     let after = story_stages(root, GATE_ITEM);
-    let spawned_after = std::fs::read_dir(&markers).map_or(0, Iterator::count);
-    assert!(
-        spawned_after > spawned_before,
-        "the second `redkiln run` spawned no fixture child: its implement stage never dispatched \
-         (exit {:?}). stderr:\n{}",
+    // *(dated 2026-09-28, `s8e` build, package R4FIX-8e; refuting round 4's minor.)* ~~`spawned_after
+    // > spawned_before`~~, which `review-min`'s spawn alone satisfied: the second process spawns
+    // EXACTLY two fixture children, one per dispatch, and each marker's `--json-schema` argv names
+    // its stage's schema — one `ImplReport` (`implement`'s dispatch) and one `Findings`
+    // (`review-min`'s). A process whose implement stage never dispatched fails here.
+    let spawned: Vec<_> = marker_names()
+        .difference(&spawned_before)
+        .cloned()
+        .collect();
+    let schema_title = |marker: &std::path::Path| -> Option<String> {
+        let text = std::fs::read_to_string(marker).ok()?;
+        let mut lines = text.lines();
+        lines.by_ref().find(|l| *l == "arg=--json-schema")?;
+        let schema: serde_json::Value =
+            serde_json::from_str(lines.next()?.strip_prefix("arg=")?).ok()?;
+        schema.get("title")?.as_str().map(str::to_owned)
+    };
+    let titles: Vec<Option<String>> = spawned.iter().map(|m| schema_title(m)).collect();
+    assert_eq!(
+        spawned.len(),
+        2,
+        "the second `redkiln run` must spawn exactly two fixture children (`implement`'s \
+         dispatch and `review-min`'s); it spawned {} with schema titles {titles:?} (exit {:?}). \
+         stderr:\n{}",
+        spawned.len(),
         out.status.code(),
         String::from_utf8_lossy(&out.stderr)
     );
+    for title in ["ImplReport", "Findings"] {
+        assert_eq!(
+            titles
+                .iter()
+                .filter(|t| t.as_deref() == Some(title))
+                .count(),
+            1,
+            "exactly one of the second process's two fixture children must carry the `{title}` \
+             `--json-schema`; titles {titles:?}"
+        );
+    }
     assert!(
         after.iter().any(|s| s == "review") && !before.iter().any(|s| s == "review"),
         "the second process did not cross into `review` (exit {:?}); marks before {before:?}, \

@@ -1304,7 +1304,7 @@ fn ac530_advisory_ledger_imbalance_doctor_row() {
 ///
 /// 🛑 **The record is a FILE.** §7d.8 sketched this as an `events.jsonl` row and also called the
 /// corpus path *"a `ConfigFile` key"*; measured 2026-09-21, neither can carry it — `EventKind::ALL`
-/// is closed at 38 with no regression kind, and `ConfigFile` is `deny_unknown_fields` over three
+/// is closed (~~at 38~~, R4FIX-8e 2026-09-28: ADR-0185's three kinds made `ALL` 41) with no regression kind, and `ConfigFile` is `deny_unknown_fields` over three
 /// tables with no corpus key. The fixture's README records it.
 #[test]
 fn ac314_regression_corpus_sha_unresolvable_doctor_row() {

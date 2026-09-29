@@ -69,7 +69,7 @@
 //! [`appetite_raise_from_activity_result`] is and all of it.
 //!
 //! The resolution's warrant is that the hatch was **not buildable at all**: it needs a typed
-//! budget-change `EventKind`, `rk_types::event_kind::EventKind` is closed at 38 variants *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125 and 37 until ADR-0126, all 2026-09-17)* and
+//! budget-change `EventKind`, `rk_types::event_kind::EventKind` is closed (`EventKind::ALL`; ~~at 38 variants~~ *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125 and 37 until ADR-0126, all 2026-09-17)*; R4FIX-8e 2026-09-28: ADR-0185's three kinds made `ALL` 41) and
 //! carries no budget or appetite change, and minting one takes a record (ADR-0116 clause 5;
 //! ADR-0120 is the precedent). **AC-396 still routes the appetite VALUE to a human gate**, so
 //! *"refused outright"* refuses the in-run mechanism and not the quantity.
@@ -901,7 +901,7 @@ pub fn evaluate_gate(
 /// > writes a durable mark and exits 0; no thread sleeps waiting for the budget to be extended.
 ///
 /// The **carrier** is [`EventKind::GateOpened`] with `kind = "budget_extension"`, and that is a
-/// reading of design §2.9's table rather than a record's word: `EventKind` is closed at 38 variants *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126)*
+/// reading of design §2.9's table rather than a record's word: `EventKind` is closed (`EventKind::ALL`; ~~at 38 variants~~ *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126)*; R4FIX-8e 2026-09-28: ADR-0185's three kinds made `ALL` 41)
 /// (ADR-0116's *"a kind in the design table and not in the enum … is schema drift"*) and none of
 /// them is a budget mark, so the choice is between existing kinds. `GateOpened` is the one AC-024's
 /// own `decisions:` line points at — ADR-0017 defines the gate record `(token, tree_hash, deadline)`

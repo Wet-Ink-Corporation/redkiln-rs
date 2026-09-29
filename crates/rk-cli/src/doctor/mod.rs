@@ -269,7 +269,7 @@ pub enum TimeoutTable {
 /// Two measured reasons. **`rk_types::event::Event` does not implement `Deserialize`** [measured
 /// 2026-09-21, `crates/rk-types/src/event.rs`:32] and `rk-types` is a closed crate `s7d` §7d.1 does
 /// not permit this stage to edit, so a fixture journal cannot be parsed into it at all. And the
-/// kind vocabulary is **closed at 38** (`EventKind::ALL`): parsing straight into it would make a
+/// kind vocabulary is **closed** (`EventKind::ALL`; ~~closed at 38~~, R4FIX-8e 2026-09-28: ADR-0185's three kinds made `ALL` 41): parsing straight into it would make a
 /// row whose kind is outside the set a *parse failure* rather than a finding — a defect `doctor`
 /// exists to report would instead stop the table from running.
 ///

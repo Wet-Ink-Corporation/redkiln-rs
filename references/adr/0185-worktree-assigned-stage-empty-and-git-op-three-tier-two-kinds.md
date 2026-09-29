@@ -182,5 +182,15 @@ green — `worktree_assigned::` (five, over the real `run` and `answer` binaries
 `tier_one::replay_serves_the_boundary_from_its_git_op_rows`,
 `tier_one::a_journal_without_git_op_rows_replays_as_no_git_writes` (over the committed golden log, untouched) and
 `tier_one::a_boundary_anchors_every_row_of_the_act_to_its_commit`; and the mutants S8E-M9, M29, M41 and M42, each
-killed for its stated reason. **Not measured, and named:** the `stage_empty` producer (§8e.6's). This record is
+killed for its stated reason. ~~**Not measured, and named:** the `stage_empty` producer (§8e.6's).~~ This record is
 `proposed` and flips only on the operator's dated ledger line.
+
+*(dated 2026-09-28, `s8e` build, package R4FIX-8e, recording package R3FIX-8e's measurement; refuting round 4's
+minor.)* **The `stage_empty` producer is now measured, with decision 4's anchor and reason set.**
+`lane_e2e::an_empty_stage_records_stage_empty_with_its_reason` asserts, over `verbs::run::run`, that the lane's
+empty first stage writes one `stage_empty` row anchored to the entry act's `Story:` commit sha, whose reason is a
+member of `STAGE_EMPTY_REASONS` (`s8e` §8e.6, §8e.12). The mutants that redden it for their stated reasons:
+S8E-M14 (*"`stage_empty` not appended"*), S8E-M60 (the entry act takes the entry row alone, so the row is
+appended beside it, unanchored) and S8E-M61 (a reason outside the closed set). M60 and M61 were measured
+surviving at `259f714` and were killed after R3FIX-8e's re-point (`s8e` §8e.12's rows). Still unmeasured, as
+decision 9 names: whether any shipped stage other than `triage` selects an empty plan at some rigor.

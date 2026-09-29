@@ -1387,8 +1387,23 @@ before any dispatch, so the transcript is not read), and its exit `0` is asserte
 opened. The second process's exit is asserted too: **`Schema` (11)**, measured. After it crosses into `review`, that
 stage's `review-min` dispatch replays the same `implement-frames.jsonl` transcript, which yields no `Findings`, and the
 process prints *"the dispatch of `review-min` (review-min@1) did not commit"*. The crossing is this section's claim
-(the `review` mark, and a fixture-child spawn marker). The exit pins where the process stopped after crossing, so a
+(the `review` mark, and ~~a fixture-child spawn marker~~ *(R4FIX-8e: two, below)*). The exit pins where the process stopped after crossing, so a
 second process that halts or refuses before the boundary fails by name. Green after the edit.
+
+*(dated 2026-09-28, s8e build, package R4FIX-8e; refuting round 4's tests-mutants minor.)* **The spawn assertion is
+pinned.** It read ~~`spawned_after > spawned_before`~~, which `review-min`'s spawn alone satisfied, so its message
+(*"its implement stage never dispatched"*) claimed more than it checked. The second process now spawns **exactly
+two** fixture children, counted as the `*.marker` files it added, and exactly one marker's `--json-schema` argv
+carries the title `ImplReport` (`implement`'s dispatch) and exactly one the title `Findings` (`review-min`'s).
+Measured green (*"test lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child ... ok"*). Two
+synthetic controls, run from a restore-verified driver: expecting three spawns reddens it with *"it spawned 2 with
+schema titles [Some("Findings"), Some("ImplReport")] (exit Some(11))"*, and renaming `pack-min`'s `Findings.json`
+title reddens it with *"exactly one of the second process's two fixture children must carry the `Findings`
+`--json-schema`; titles [Some("ImplReport"), Some("FindingsX")]"*. Both files were byte-identical after restore.
+**The second process's `Schema` (11) exit is a fixture artifact, not a product defect**, as round 4 judged:
+`RK_FIXTURE_MODE=replay:<implement-frames.jsonl>` feeds the same `ImplReport` transcript to every dispatch in the
+process, so `review-min`'s dispatch reads no `Findings` and does not commit. The exit assertion stays: it pins where
+the process stopped, and a per-dispatch replay is outside this stage's scope.
 
 ### 8e.12 Named tests, red first, and the mutants
 
@@ -1855,7 +1870,12 @@ major; the raw findings in the session scratchpad, `s8e-r3.json`). **No blocker.
     (a) The docs in `fsm.rs`, `breaker.rs` and `memo.rs` counted 38 closed kinds and named a *"thirty-ninth"*. They
         now name no count (the closed set, `EventKind::ALL`), with the old words struck and dated. The same sweep
         re-worded the other *"closed 38"* docs (`budget.rs`, `degrade.rs`, `rk-cli`'s `doctor/mod.rs` and
-        `doctor/rules.rs`). `grep -rn 'closed 38\|thirty-ninth' crates --include=*.rs` now finds only struck text.
+        `doctor/rules.rs`). ~~`grep -rn 'closed 38\|thirty-ninth' crates --include=*.rs` now finds only struck text.~~
+        *(dated 2026-09-28, s8e build, package R4FIX-8e; refuting round 4's minor, item 29 (a).)* That grep could not
+        match the spelling *"closed at 38"*, and six live docs said it. They are now struck and dated like the
+        others. The claim grep is widened to
+        `grep -rnE '(EventKind|kinds?|variants?|vocabulary)[^.]{0,60}\b(38|thirty-eight)\b' crates --include=*.rs | grep -v '~~'`,
+        and item 29 (a) records what it returns.
     (b) The process-boundary test ran its first invocation in process. Both are now the binary, and both exits are
         asserted (§8e.11's R3FIX-8e note).
     (c) S8E-M43c's only killer, `answer::ac248_answer_without_live_token_exits_named_outcome`, was not in Checkpoint
@@ -1877,6 +1897,31 @@ major; the raw findings in the session scratchpad, `s8e-r3.json`). **No blocker.
     (g) `s8g`'s `verify_completed` will move 7c's amended `[Self; 41]` guard with no receiver note. A dated receiver
         note now sits at `s8g` §8g.1, move 2: it amends the line in its work commit (D21-47).
     (h) `s8j`'s head note listed `s8c`'s 7c amendment but not `s8e`'s. A dated `s8e` clause is added there.
+
+*(dated 2026-09-28, s8e build, package R4FIX-8e)* **Refuting round 4** (five finders, two refuters per blocker or
+major; the raw findings in the session scratchpad, `s8e-r4.json`). **DRY: no blocker and no major.** Three distinct
+minors (four finders filed the kind-count sweep), each fixed:
+
+29. *Minors, each fixed:*
+    (a) Item 28 (a)'s sweep missed the spelling *"closed at 38"*: six live docs, in `rk-kernel`'s
+        `workflow/budget.rs` (two) and `workflow/retry.rs`, and in `rk-cli`'s `doctor/mod.rs`, `doctor/rules.rs` and
+        `tests/it/doctor.rs`. Each now names the closed set (`EventKind::ALL`) with no count, with the old words
+        struck and dated (R4FIX-8e). The widened grep of item 28 (a), with its `grep -v '~~'`, now returns ONE line:
+        `crates/rk-kernel/tests/it/fsm.rs`'s assertion message *"EventKind is closed at 41 (… s8e's three-kinds
+        record the three beyond 38)"*. That line is not a stale count: it states the current 41, and its 38 is
+        the history of the three kinds, so it stays. Without the `grep -v`, the same grep returns 12 lines: those
+        11 carry `~~`, and the twelfth is that assertion message. The narrower `grep -rnE 'closed (at )?\**38|38 variants|38 kinds|thirty-ninth'
+        crates --include=*.rs | grep -v '~~'` returns 0, and a multi-line scan found no unstruck count
+        wrapped across a doc line. The *"thirty-eight"* hits in `doctor/rules.rs`, `no_dispatch.rs` and
+        `tests/it/doctor.rs` count `doctor`'s rules, not kinds, and are outside this sweep.
+    (b) ADR-0185's Evidence still said the `stage_empty` producer was *"Not measured"*. That clause is struck,
+        and a dated note (R4FIX-8e, recording R3FIX-8e's measurement) cites
+        `lane_e2e::an_empty_stage_records_stage_empty_with_its_reason` and S8E-M14, M60 and M61. The record stays
+        `proposed`.
+    (c) The process-boundary test's spawn assertion (`>`) was satisfied by `review-min`'s spawn alone. It is
+        pinned to exactly two spawns, one carrying the `ImplReport` schema title and one the `Findings` title,
+        with two synthetic controls. The `Schema` (11) exit is recorded as a fixture artifact (§8e.11's R4FIX-8e
+        note). No test is added, so the floor does not move.
 
 ### 8e.14 Acceptance set
 
