@@ -234,9 +234,14 @@ from.** An accepted prose edit (decision 4's last paragraph; AC-152, *"THEN the 
 value"*) and an applied `move-to-prose:<section>` (decision 5) each rewrite the sidecar through the writer, with its
 own `artifact.write`, and append no new `emit` binding. As first built, every later `artifact:` read of that kind
 was refused as Halt 4, and with the check gone the resolver would still have served the stale binding. D21-113 rules:
-the committed `emit` binding stays the only presence and origin gate; the reader *"checks that digest equals the
+the committed `emit` binding stays the only presence and origin gate; the reader ~~*"checks that digest equals the
 latest `artifact.write` of its sidecar path, the emit's own write at origin (a mismatch is a halt, Halt 4), and
-serves that value"*, which is decision 13's as-built LATEST-write rule (*"it first checks the sidecar against the
+serves that value"*~~ *(corrected 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R6FIX-8f);
+refuting round 6's records minor: the struck italic is not D21-113's text but this record's own rewording of this
+decision's first sentence, so it is no longer presented as a quotation)* checks the served digest against the latest
+`artifact.write` of its sidecar path, the emit's own write at origin, and serves that value. D21-113 step 3's own
+words are *"`ArtifactReader::serve` checks against the latest `artifact.write` whose item matches and whose `path` is
+the kind's sidecar, `<Kind>.json`"* and *"A digest that equals neither is still Halt 4"*. That is decision 13's as-built LATEST-write rule (*"it first checks the sidecar against the
 LATEST write of its path"*), so the reader and `doctor` share one notion of the authoritative sidecar; with no such
 row it checks against the binding's canonical digest, as before. The seam returns the value it served, and the
 resolver serves THAT value (a field reference takes its field of it), never the binding (AC-477, *"the typed value

@@ -952,6 +952,84 @@ fn an_out_of_band_sidecar_edit_with_no_writer_row_still_halts() {
     );
 }
 
+/// **D21-113 step 3's fallback: with NO recorded write of the sidecar's path, the read is checked
+/// against the binding's canonical digest** (*"With no such row it falls back to the binding's
+/// canonical digest, which is byte-identical to today"*; `s8f` §8f.5's R5FIX2-8f note; ADR-0189
+/// decision 9's dated note, proposed). *(Added 2026-09-29, s8f build, package R6FIX-8f; refuting
+/// round 6's tests-mutants minor.)* The journal holds the entry's reconcile and NO `artifact.write`
+/// of `Spec.json` (a pre-`s8f` journal's shape), and the sidecar's bytes are put at the path
+/// outside the writer. Bytes whose digest is the binding's canonical digest are served; other bytes
+/// are a `DigestMismatch` naming the binding's canonical digest, and append nothing. Red under
+/// M-READ-FALLBACK (the fallback arm dropped: a read with no recorded write is never checked).
+#[test]
+fn a_read_with_no_recorded_write_of_its_path_is_checked_against_the_binding() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    let done = render::reconcile_entry(&w, &no_commit).expect("the pass runs");
+    let v = spec_value();
+    let bound = rk_store::canon::canonical(&v).expect("canonical");
+    let bound_digest = rk_store::canon::canonical_digest(&v).expect("canonical digest");
+    assert_eq!(
+        sha256(&bound).as_str(),
+        bound_digest.as_str(),
+        "PREMISE: the canonical bytes hash to the canonical digest"
+    );
+    let sidecar = ManagedDir::of(dir.path(), ITEM).abs("Spec.json");
+    std::fs::create_dir_all(sidecar.parent().expect("a parent")).expect("the managed dir");
+    let path = render::managed_path(ITEM, "Spec.json");
+    let written_of_path = || {
+        rows_of(&rows, EventKind::ArtifactWrite)
+            .iter()
+            .filter(|e| e.payload.get("path").and_then(Json::as_str) == Some(path.as_str()))
+            .count()
+    };
+
+    // Other bytes, no recorded write: a halt naming the binding's canonical digest.
+    let other = rk_store::canon::canonical(&json!({ "id": "SPEC-1", "status": "shipped",
+        "title": "not the binding", "acceptance": [], "boundary": { "crates": [] },
+        "context": "", "notes": "" }))
+    .expect("canonical");
+    std::fs::write(&sidecar, &other).expect("the bytes are put at the path");
+    assert_eq!(
+        written_of_path(),
+        0,
+        "PREMISE: no `artifact.write` names the sidecar's path"
+    );
+    let halted = reader(dir.path(), &rows, &done).serve("Spec", Some(&v));
+    assert!(
+        matches!(
+            &halted,
+            Err(RenderError::DigestMismatch { kind, served, bound })
+                if kind == "Spec"
+                    && served == sha256(&other).as_str()
+                    && bound == bound_digest.as_str()
+        ),
+        "bytes that are not the binding's, with no recorded write, were not a halt naming the \
+         binding's canonical digest: {halted:?}"
+    );
+    assert_eq!(
+        rows_of(&rows, EventKind::ArtifactRead).len(),
+        0,
+        "a halted read appended a row"
+    );
+
+    // The binding's own bytes, no recorded write: served.
+    std::fs::write(&sidecar, &bound).expect("the bytes are put at the path");
+    let served = reader(dir.path(), &rows, &done)
+        .serve("Spec", Some(&v))
+        .expect("the binding's bytes with no recorded write are served");
+    assert_eq!(served.digest.as_str(), bound_digest.as_str());
+    assert_eq!(served.value, v, "the served value is not the sidecar's");
+    assert_eq!(
+        written_of_path(),
+        0,
+        "PREMISE: still no `artifact.write` names the sidecar's path"
+    );
+    assert_eq!(rows_of(&rows, EventKind::ArtifactRead).len(), 1);
+}
+
 /// **T4 (D21-113 step 4): a replayed read serves the blob at the RECORDED tree, checked against the
 /// recorded digest, never the journalled binding, and appends nothing** (ADR-0189 decision 9's
 /// dated note, proposed). *(Added 2026-09-29, s8f build, package R5FIX-8f.)* The journal records

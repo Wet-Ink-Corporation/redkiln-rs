@@ -2597,6 +2597,261 @@ fn a_drift_entry_lands_its_accepted_write_once_through_its_gate() {
     );
 }
 
+// ------------------------- the entry landing's vouched-root arm and its refusal arm (D21-114)
+//
+// *(Added 2026-09-29, s8f build, package R6FIX-8f; refuting round 6's tests-mutants major and its
+// crossfile-safety minor; D21-114, TAKEN PROVISIONALLY under D21-105; ADR-0188 decision 2's dated
+// note, proposed.)* §8f.4 names three entry writes the entry landing lands: an accepted prose
+// edit, an applied `move-to-prose` and a STORED VOUCHED ROOT. The tests above drive the first two;
+// these drive the third, and the landing's refusal arm (`landing.refused-path` over an empty
+// commit), which a stored root over the blob limit reaches.
+
+/// Invocation 1 opens `lane-1`'s abstention gate (a pack question whose `vouch` option attaches a
+/// `Findings` root), and `answer … vouch` attaches `bytes` from the checkout. The root is stored at
+/// the NEXT entry. Returns the root's repo-relative path in the run tree.
+fn vouch_a_findings_root(root: &Path, item: &str, bytes: &[u8]) -> String {
+    let processes = root.join(".redkiln").join("processes");
+    std::fs::create_dir_all(&processes).expect("the processes directory");
+    std::fs::write(
+        processes.join("vouch.toml"),
+        r#"[question."unknown_facet:has_repro"]
+text = "Does the item reproduce? `vouch` attaches the human's findings."
+options = ["approve", { id = "vouch", attaches = "Findings" }]
+"#,
+    )
+    .expect("the question is written");
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success,
+        "PREMISE: the abstention gate opens"
+    );
+    write(root, "notes/brief.json", bytes);
+    assert_eq!(
+        answer(
+            root,
+            item,
+            "vouch",
+            Some(("Findings", root.join("notes/brief.json")))
+        ),
+        Exit::Success,
+        "PREMISE: the root is attached"
+    );
+    format!(".redkiln/artifacts/{item}/Findings.root.json")
+}
+
+/// Every writer `artifact.write` (not an attach row) naming `path`, in journal order.
+fn root_writes(root: &Path, path: &str) -> Vec<Event> {
+    support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::ArtifactWrite)
+        .filter(|e| e.payload.get("attached_path").is_none())
+        .filter(|e| e.payload.get("path").and_then(serde_json::Value::as_str) == Some(path))
+        .collect()
+}
+
+/// **D21-114: a vouched root stored at entry lands AT ENTRY, in one `rk entry <item> ` commit,
+/// before any step checkpoint** (§8f.4's R5FIX2-8f note: *"a stored vouched root"*). `answer …
+/// vouch` attaches a `Findings` root; invocation 2's entry stores it (one writer `artifact.write`)
+/// and, with no step committing (an empty script), lands it: exactly one `rk entry lane-1 ` content
+/// commit carries `.redkiln/artifacts/lane-1/Findings.root.json`, whose parent lacks it. Invocation
+/// 3 re-enters, again with no committed step: the stored root is NOT discarded (still in the run
+/// tree with its vouched bytes), NOT stored again (no second writer row) and NOT seen as changed
+/// (no `drift_advisory`), and no second entry landing is made. Invocation 4 dispatches `implement`
+/// and its step writes a file, so it commits a step checkpoint: every step checkpoint follows the
+/// entry landing, and no commit before the entry landing carries the root. Red under
+/// M-ENTRY-VOUCHED (the vouched arm of the entry pass's `wrote` dropped): no `rk entry` commit, the
+/// root rides no commit at invocation 2, and invocation 3's re-entry discards it.
+#[test]
+fn a_vouched_root_stored_at_entry_lands_at_entry_before_any_step_checkpoint() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = GATE_ITEM;
+    let root_rel = vouch_a_findings_root(root, item, VOUCHED_ROOT);
+    let run_ref = lane_e2e::run_ref(item);
+    assert!(
+        root_writes(root, &root_rel).is_empty(),
+        "PREMISE: nothing stored the root before the next entry"
+    );
+    assert!(
+        entry_landings(root, item).is_empty(),
+        "PREMISE: no entry landing before the root is stored"
+    );
+
+    // ---- invocation 2: the entry stores the root; no step commits ------------------------------
+    run(root, item, &ScriptedFactory::new(Vec::new()));
+    assert_eq!(
+        root_writes(root, &root_rel).len(),
+        1,
+        "PREMISE: invocation 2's entry stored the root once"
+    );
+    let landings = entry_landings(root, item);
+    assert_eq!(
+        landings.len(),
+        1,
+        "invocation 2's stored root made no single `rk entry {item} ` commit: {:?}",
+        subjects(root, item)
+    );
+    let (entry_sha, _) = landings[0].clone();
+    assert_eq!(
+        blob(root, &entry_sha, &root_rel).as_deref(),
+        Some(VOUCHED_ROOT),
+        "the entry landing {entry_sha} does not carry the stored root"
+    );
+    assert_eq!(
+        blob(root, &format!("{entry_sha}^1"), &root_rel),
+        None,
+        "the root was on the run ref before the entry landing"
+    );
+    assert!(
+        step_checkpoints(root, item).is_empty(),
+        "PREMISE: invocation 2 committed no step"
+    );
+
+    // ---- invocation 3: re-entry with no committed step -------------------------------------------
+    let run_tree = crate::run_tree(root, item).path;
+    run(root, item, &ScriptedFactory::new(Vec::new()));
+    assert_eq!(
+        std::fs::read(run_tree.join(&root_rel)).ok().as_deref(),
+        Some(VOUCHED_ROOT),
+        "invocation 3's re-entry discarded the stored root"
+    );
+    assert_eq!(
+        root_writes(root, &root_rel).len(),
+        1,
+        "the root was stored again at invocation 3"
+    );
+    assert_eq!(
+        count_kind(root, EventKind::DriftAdvisory),
+        0,
+        "invocation 3 saw the stored root as changed"
+    );
+    assert_eq!(
+        entry_landings(root, item).len(),
+        1,
+        "invocation 3 made a second entry landing"
+    );
+
+    // ---- invocation 4: a committed step (it writes a file) follows the entry landing -----------
+    let fourth = writing(&run_tree, vec![lane_e2e::implement()], |n, tree| {
+        if n == 0 {
+            write(tree, "landed.txt", LANDED);
+        }
+    });
+    run(root, item, &fourth);
+    let all = subjects(root, item);
+    let entry_at = all
+        .iter()
+        .position(|(sha, _)| *sha == entry_sha)
+        .expect("the entry landing is on the run ref");
+    let steps: Vec<usize> = all
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, s))| s.starts_with(&format!("rk step {item} ")))
+        .map(|(n, _)| n)
+        .collect();
+    assert!(
+        !steps.is_empty(),
+        "PREMISE: invocation 4 committed a step: {all:?}"
+    );
+    assert!(
+        steps.iter().all(|n| *n > entry_at),
+        "a step checkpoint precedes the entry landing: {all:?}"
+    );
+    assert!(
+        all[..entry_at]
+            .iter()
+            .all(|(sha, _)| blob(root, sha, &root_rel).is_none()),
+        "a commit before the entry landing carries the root: {all:?}"
+    );
+    assert_eq!(
+        blob(root, &run_ref, &root_rel).as_deref(),
+        Some(VOUCHED_ROOT),
+        "the stored root is not on {run_ref}"
+    );
+}
+
+/// **D21-114 item 2: a refused entry landing opens the `landing.refused-path` gate over an EMPTY
+/// commit, `run` exits `0` at it, and nothing lands** (§8f.4's R5FIX2-8f note; ADR-0188 decision
+/// 7). The attached root is one byte over `MAX_LANDED_BLOB_BYTES`, so the entry pass stores it and
+/// the entry landing refuses it by size, before any seam reaches the kernel: no step dispatches, no
+/// `rk entry` or `rk step` commit is made, the run ref's tip is the gate's empty `Gate:` commit, the
+/// gate's row names the root's path and `size:<bytes>`, and the root is not on the run ref. Red
+/// under M-ENTRY-REFUSED (the `LandingRefused` arm of `land_entry` removed: the catch-all exits
+/// `3`) and M-ENTRY-SWALLOW (the refusal swallowed: the lane walks on and `implement` dispatches).
+#[test]
+fn a_refused_entry_landing_opens_its_gate_over_an_empty_commit_and_lands_nothing() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = GATE_ITEM;
+    let over = usize::try_from(rk_git::landing::MAX_LANDED_BLOB_BYTES).expect("fits") + 1;
+    let mut big = b"{\"items\":[]}".to_vec();
+    big.resize(over - 1, b' ');
+    big.push(b'\n');
+    assert_eq!(
+        big.len(),
+        over,
+        "PREMISE: the root is one byte over the limit"
+    );
+    let root_rel = vouch_a_findings_root(root, item, &big);
+    let run_tree = crate::run_tree(root, item).path;
+    let dispatched = Arc::new(AtomicUsize::new(0));
+    let counted = Arc::clone(&dispatched);
+    let second = writing(&run_tree, vec![lane_e2e::implement()], move |_, _| {
+        counted.fetch_add(1, Ordering::SeqCst);
+    });
+    let before = subjects(root, item).len();
+
+    assert_eq!(
+        run(root, item, &second),
+        Exit::Success,
+        "`run` does not exit 0 at the refused entry landing's gate"
+    );
+    assert_eq!(
+        root_writes(root, &root_rel).len(),
+        1,
+        "PREMISE: the entry pass stored the root"
+    );
+    assert_eq!(
+        dispatched.load(Ordering::SeqCst),
+        0,
+        "a step dispatched past the refused entry landing"
+    );
+    let gates = landing_gates(root);
+    assert_eq!(
+        gates.len(),
+        1,
+        "the refused entry landing opened no single `{LANDING_KIND}` gate: {gates:?}"
+    );
+    assert_eq!(
+        refused_of(&gates[0]),
+        vec![(root_rel.clone(), format!("size:{over}"))],
+        "the gate does not name the refused root and its rule"
+    );
+    assert!(
+        entry_landings(root, item).is_empty() && step_checkpoints(root, item).is_empty(),
+        "a content commit was made past a refused entry landing: {:?}",
+        subjects(root, item)
+    );
+    let tip = lane_e2e::ref_sha(root, item).expect("the run ref exists");
+    assert!(
+        subjects(root, item).len() > before,
+        "PREMISE: the gate's commit is on the run ref"
+    );
+    assert!(
+        gate_commits(root, item).iter().any(|(sha, _)| *sha == tip),
+        "the run ref's tip is not the gate's `Gate:` commit"
+    );
+    assert!(
+        is_empty_commit(root, &tip),
+        "the refused entry landing's gate commit is not empty"
+    );
+    assert_eq!(
+        blob(root, &lane_e2e::run_ref(item), &root_rel),
+        None,
+        "the refused root landed"
+    );
+}
+
 // ------------------------------------------ an `exclude` over a TRACKED path (D21-112)
 //
 // *(Added 2026-09-29, s8f build, package R3FIX-8f; refuting round 3's spec-conformance major;
