@@ -359,10 +359,22 @@ pub fn run_with(
     };
     // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3, N6.)* ~~store-only~~: each
     // expiry row is a tier-1 act through the boundary, its `Gate: … expired` mark first.
+    //
+    // *(dated 2026-09-29, s8f build, package R4FIX-8f; refuting round 4's blocker; §8f.4, ADR-0188
+    // decision 14, proposed.)* **`answer` does not land**, and that holds for an escalation too:
+    // its `gate_opened` rides an EMPTY commit (`run::Opens::Empty`) and binds `tree_hash` above,
+    // the no-checkpoint-due derivation, so the run tree's in-flight dirt is not committed, a
+    // refused landing's paths are not restaged, and a later answer derives the same tree.
     let mut boundary = boundary_of(resolved, &ownership, &args.item);
     if !expiry_events.is_empty()
-        && let Err(exit) =
-            run::gate_rows_through(store, Some(&mut boundary), &state, expiry_events, None)?
+        && let Err(exit) = run::gate_rows_through(
+            store,
+            Some(&mut boundary),
+            &state,
+            expiry_events,
+            None,
+            run::Opens::Empty,
+        )?
     {
         return Ok(exit);
     }
@@ -597,11 +609,16 @@ fn answer_the_gate(
     // so a commit git refuses leaves no row. A SPENT token's `gate_answer_spent` row is tier 2 and
     // records a refusal, not a transition, so it is appended as before.
     let rows_written = match outcome.disposition {
-        gate::Disposition::Applied | gate::Disposition::Void => {
-            run::gate_rows_through(store, Some(boundary), state, outcome.events, None)?
-        }
+        gate::Disposition::Applied | gate::Disposition::Void => run::gate_rows_through(
+            store,
+            Some(boundary),
+            state,
+            outcome.events,
+            None,
+            run::Opens::Empty,
+        )?,
         gate::Disposition::RefusedSpent => {
-            run::gate_rows_through(store, None, state, outcome.events, None)?
+            run::gate_rows_through(store, None, state, outcome.events, None, run::Opens::Empty)?
         }
     };
     if let Err(exit) = rows_written {

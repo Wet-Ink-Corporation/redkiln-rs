@@ -320,6 +320,21 @@ impl Act {
             vec![row],
         ))
     }
+
+    /// The act a runtime-shaped `gate_opened` row takes when its caller must NOT land: the same
+    /// mark as [`Act::gate_opened`], over an EMPTY commit that stages nothing, so the mark keeps
+    /// the row's own tree hash. `answer`'s expiry pass opens an escalation this way (ADR-0188
+    /// decision 14: *"`answer` does not land"*). *(Added 2026-09-29, s8f build, package R4FIX-8f;
+    /// refuting round 4's blocker.)*
+    ///
+    /// # Errors
+    /// As [`Act::gate_opened`].
+    pub fn gate_opened_empty(row: Event) -> Result<Self, TierOneError> {
+        Self::gate_opened(row).map(|act| Self {
+            content: Content::Empty,
+            ..act
+        })
+    }
 }
 
 /// The state a gate transition row's kind names.

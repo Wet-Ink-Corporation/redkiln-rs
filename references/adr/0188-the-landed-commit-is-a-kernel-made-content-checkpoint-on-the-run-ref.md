@@ -226,6 +226,30 @@ the next gate's answer is applied, not void (AC-176), and a drift gate's `move-t
 not restricted to untracked paths (D21-112's rejected option B): a tracked false hit such as `id_map.rs` keeps its
 remedy. Pinned by `landing::a_tracked_exclusion_leaves_the_next_gates_answer_applied` and
 `landing::a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied`.
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R4FIX-8f); refuting round 4's records
+minor.)* **How the excluded form reads against ADR-0105 clause 4, which is accepted.** Clause 4 reads, in full:
+*"**4. `tree_hash` is one algorithm, written once, used at gate open and at answer.** When a checkpoint commit is due,
+the recorded tree is that commit's tree. Otherwise it is `git write-tree` on a **temporary index** built from the
+current index plus tracked modifications; **untracked files are excluded**, and the design says so. The same
+derivation is used for AC-245's `gate_opened`, for the answer record and for AC-254's diff ("commits since the trailer
+commit, and paths differing between the two trees"). The op is on the wrapper's write-side list."*
+Its forbids bullet reads *"Forbids a second `tree_hash` derivation, and forbids including untracked files in
+it."*
+- **The ban on a second derivation holds.** `WorkingStateLess` is an arm of the one `rk_git::tree::tree_hash`, over
+  the one routine the plain arm calls (`derive_working_state`); with no exclusion its argv is the plain case's,
+  argument for argument; and the two sides clause 4 names, gate open (a refused landing's gate, decision 7) and
+  answer, read the same set off the same fold (`landing_answers`), so gate open and answer still take one
+  derivation.
+- **"built from the current index plus tracked modifications" does not hold for an excluded tracked path.** The
+  excluded form leaves that path's modification out, as `HEAD` has it. That is a **departure from the accepted
+  clause**, not a reading of it, so this record **supersedes ADR-0105 clause 4 in part**, for this case only:
+  once the lane's journal records an `exclude`, the no-checkpoint-due derivation is the current index plus
+  tracked modifications **less the lane's excluded paths**. Every other word of clause 4 stands, including
+  *"untracked files are excluded"* (decision 8) and the due case, *"the recorded tree is that commit's tree"*.
+  The `supersedes:` line already names `0105` (clause 5 in part, decision 10), so the id list does not move, and
+  the title, written at writing, is not re-worded; ADR-0105's `superseded_by` back-link to `0188` moves at this
+  record's flip, as clause 5's does. D21-112's ruling 3 (*"No accepted Decision moves."*) takes a dated note
+  beneath it saying so.
 
 **7. What "due" means, and the gate's tree at a refused landing** (ADR-0105 clause 4's *"When a checkpoint commit is
 due"*). A checkpoint commit is **due** when a landing **will commit**: its staging set passes every refusal and its T
@@ -240,6 +264,9 @@ awareness line); an untracked refused file never enters it. *(Corrected 2026-09-
 note), the refused landing's gate tree is that derivation **less the lane's excluded paths**, as `answer`'s is, so
 *"`answer`'s identical derivation gives the same tree"* holds with an exclusion in force; a later refused landing
 under a tracked exclusion is answerable (`landing::a_refused_landing_under_a_tracked_exclusion_is_answerable`).
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R4FIX-8f).)* That form is the same
+departure from ADR-0105 clause 4's *"current index plus tracked modifications"* that decision 6's R4FIX-8f note
+states, under the same supersession in part; it is not a second derivation, for the reasons given there.
 
 **8. This record's reading of ADR-0105's bullet *"forbids including untracked files in it"*.** The bullet's *"it"* is
 the `tree_hash` derivation, and the rule it protects is clause 4's no-checkpoint-due basis. At a due checkpoint, and
@@ -335,6 +362,18 @@ uncommitted edit left in the run-owned worktree is in-flight dirt, named and dis
 **14. `answer` does not land.** After a landing, the owned worktree's no-checkpoint-due tree equals `HEAD`'s tree, so
 an answer's derivation matches its gate's. An answer's effect on an artifact is performed by the next `run` at entry
 and lands there.
+*(Corrected 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R4FIX-8f); refuting round 4's
+blocker.)* **Nor does the escalation `answer`'s expiry pass opens.** When a due gate's class declares `escalate`,
+`answer`'s expiry pass writes the `gate_expired` row and an escalation's `gate_opened` row (ADR-0105 clause 10;
+AC-259). Both ride EMPTY commits: the escalation's act is `Act::gate_opened_empty` (`run::Opens::Empty`), stages
+nothing, and binds the tree `answer` derived above its expiry pass (clause 4's no-checkpoint-due derivation less
+the lane's excluded paths, decision 6). So the run tree's in-flight dirt is not committed onto `rk-run/<item>`, a
+refused landing's own gate expiring into an escalation does not restage its refused paths (no `LandingRefused`,
+no exit `3`), and a later answer to the escalation derives the same tree. As first built the row took the landed
+arm (`Act::gate_opened` builds with `Act::marked`) and did both. An escalation `run`'s expiry pass opens is
+unchanged: `run` is a tier-1 boundary and lands (decision 2). Pinned by
+`landing::a_gate_escalating_during_answer_lands_nothing` and
+`landing::a_refused_landings_gate_escalating_during_answer_is_not_refused`.
 
 ## Consequences
 

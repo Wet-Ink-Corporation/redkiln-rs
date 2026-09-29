@@ -2590,3 +2590,326 @@ fn closure_record_walks_past_audit_on_the_backlog_feed() {
         "the lane walks to its end past `closure-record`"
     );
 }
+
+// ------------------------------------------ `answer`'s expiry pass does not land (§8f.4)
+//
+// *(Added 2026-09-29, s8f build, package R4FIX-8f; refuting round 4's blocker; ADR-0188 decision
+// 14, proposed.)* §8f.4: *"`answer` does not land."* A gate whose class declares `escalate` and
+// whose deadline has passed is expired by `answer`'s expiry pass, which writes a `gate_expired`
+// row and an escalation's `gate_opened` row. Both ride EMPTY commits: the escalation binds the
+// no-checkpoint-due derivation `answer` took, so the run tree's in-flight dirt is not committed and
+// a later answer to the escalation derives the same tree.
+
+/// What the tests below leave uncommitted in the run tree before `answer` runs.
+const DIRT: &[u8] = b"IN-FLIGHT DIRT, NEVER COMMITTED BY A STEP\n";
+
+/// Give `emit-report` a catalog `gate` step after its agent step, asking `probe.accept`.
+fn add_probe_gate(root: &Path) {
+    let catalog = root
+        .join(".redkiln")
+        .join("catalog")
+        .join("emit-report.toml");
+    let src = std::fs::read_to_string(&catalog).expect("emit-report.toml reads");
+    assert_eq!(
+        src.matches("[[step]]").count(),
+        1,
+        "PREMISE: emit-report.toml has its one agent step"
+    );
+    std::fs::write(
+        &catalog,
+        format!(
+            "{src}\n[[step]]\nid       = \"probe\"\nkind     = \"gate\"\nquestion = \"probe.accept\"\n"
+        ),
+    )
+    .expect("the gate step is written");
+    let processes = rk_cli::processes::processes_dir(root);
+    std::fs::create_dir_all(&processes).expect("the processes directory");
+    std::fs::write(
+        processes.join("questions.toml"),
+        "[question.\"probe.accept\"]\ntext = \"Accept the probe?\"\noptions = [\"accept\", \"reject\"]\n",
+    )
+    .expect("the question is declared");
+}
+
+/// Declare `escalate` as the expiry action of gate class `class`, in both installed pack files.
+fn escalate_on_expiry(root: &Path, class: &str) {
+    for name in ["bug-standard.toml", "story.toml"] {
+        let path = root.join(".redkiln").join("packs").join(name);
+        let src = std::fs::read_to_string(&path).expect("the pack reads");
+        assert!(
+            !src.contains(&format!("class = \"{class}\"")),
+            "PREMISE: {name} declares no expiry row for `{class}` yet"
+        );
+        std::fs::write(
+            &path,
+            format!("{src}\n[[gate_expiry]]\nclass = \"{class}\"\naction = \"escalate\"\n"),
+        )
+        .expect("the expiry row is written");
+    }
+}
+
+/// `answer <item> <option>` in process, exactly as the verb's outer half builds it, with the one
+/// wall-clock read replaced by `now` (so a deadline is passed without a sleep).
+fn answer_at(root: &Path, item: &str, option: &str, now: i64) -> Exit {
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let run_args = rk_cli::cli::RunArgs {
+        item: item.to_owned(),
+        lane: None,
+    };
+    let resolved = rk_cli::verbs::run::through_step_seven(
+        &cli,
+        &run_args,
+        &support::clean_env(),
+        rk_cli::verbs::Startup::real(),
+        rk_git::reconciled::Entry::Answer,
+    )
+    .unwrap_or_else(|e| panic!("`answer {item}`'s steps (1)-(7) resolve: {e:?}"));
+    let opened = rk_adapter_sqlite::SqliteStore::open(&resolved.exec, &resolved.worktree)
+        .unwrap_or_else(|e| panic!("the store opens: {e:?}"));
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(opened));
+    let at = Path::new(resolved.worktree.as_str());
+    let registry = rk_cli::processes::load(at)
+        .and_then(|loaded| rk_cli::processes::with_kernel_questions(at, loaded))
+        .unwrap_or_else(|e| panic!("the question registry loads: {e:?}"));
+    let args = rk_cli::cli::AnswerArgs {
+        item: item.to_owned(),
+        option: option.to_owned(),
+        attach: Vec::new(),
+        explain_sufficed: rk_cli::cli::YesNo::Yes,
+        toml_opened: rk_cli::cli::YesNo::No,
+    };
+    rk_cli::verbs::answer::run_with(
+        rk_cli::verbs::answer::Channel::Cli,
+        &registry,
+        &resolved,
+        &args,
+        &store,
+        now,
+    )
+    .unwrap_or_else(|halt| panic!("`answer {item}` halted: {halt:?}"))
+}
+
+/// `answer`'s derivation over the run tree with no path excluded: the working state LESS nothing.
+fn answers_derivation(root: &Path, tree: &Path) -> String {
+    let discovered = rk_cli::repo::discover(Some(root)).expect("the repository discovers");
+    let owned = rk_git::path::WorktreePath::new(tree).expect("the run tree's path");
+    rk_git::tree::tree_hash(
+        &discovered.exec,
+        &owned,
+        &discovered.common_dir,
+        &rk_git::tree::TreeBasis::WorkingStateLess(std::collections::BTreeSet::new()),
+    )
+    .expect("the no-checkpoint-due derivation")
+    .as_str()
+    .to_owned()
+}
+
+/// The escalation gates the journal opened (`gate_opened` rows of class `escalation`).
+fn escalations(root: &Path) -> Vec<Event> {
+    support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::GateOpened)
+        .filter(|e| e.payload.get("kind").and_then(serde_json::Value::as_str) == Some("escalation"))
+        .collect()
+}
+
+/// The `gate_expired` rows for `token` whose action is `escalate`.
+fn escalated(root: &Path, token: &str) -> usize {
+    support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::GateExpired)
+        .filter(|e| e.payload.get("token").and_then(serde_json::Value::as_str) == Some(token))
+        .filter(|e| e.payload.get("action").and_then(serde_json::Value::as_str) == Some("escalate"))
+        .count()
+}
+
+/// The token and deadline of a runtime-shaped `gate_opened` row.
+fn token_and_deadline(row: &Event) -> (String, i64) {
+    (
+        row.payload["token"]
+            .as_str()
+            .expect("the gate's token")
+            .to_owned(),
+        row.payload["deadline"]
+            .as_i64()
+            .expect("the gate's deadline"),
+    )
+}
+
+/// **A gate that expires into an escalation during `answer` lands nothing** (§8f.4 *"`answer` does
+/// not land"*; ADR-0188 decision 14). `implement` lands a README edit and its catalog gate step
+/// opens `probe.accept`, whose class declares `escalate`. Dirt is then left uncommitted in the run
+/// tree, and `answer` runs past the gate's deadline: the gate expires, the escalation opens, and
+/// the run ref's TREE does not move, the dirt stays uncommitted, and the escalation binds `answer`'s
+/// own derivation. A later `answer … approve` to the escalation is APPLIED. Red while the
+/// escalation's `gate_opened` rides the landed arm (the dirt is committed onto `rk-run/<item>`),
+/// and under M-ESC-K / M-ESC-C.
+#[test]
+fn a_gate_escalating_during_answer_lands_nothing() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    add_probe_gate(root);
+    escalate_on_expiry(root, "probe.accept");
+    let tree = crate::run_tree(root, item).path;
+
+    let first = writing(&tree, vec![lane_e2e::implement()], |_, t| {
+        append(t, "README", EDIT);
+    });
+    assert_eq!(
+        run(root, item, &first),
+        Exit::Success,
+        "PREMISE: exit 0 at the probe gate"
+    );
+    let probes: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::GateOpened)
+        .filter(|e| {
+            e.payload.get("kind").and_then(serde_json::Value::as_str) == Some("probe.accept")
+        })
+        .collect();
+    assert_eq!(
+        probes.len(),
+        1,
+        "PREMISE: the probe gate opened: {probes:?}"
+    );
+    let (token, deadline) = token_and_deadline(&probes[0]);
+    let run_ref = lane_e2e::run_ref(item);
+    let tip = lane_e2e::ref_sha(root, item).expect("the run ref");
+    let landed = tree_of(root, &tip);
+    assert!(
+        blob(root, &run_ref, "README").is_some_and(|b| b.ends_with(EDIT)),
+        "PREMISE: the step's landing landed the README edit"
+    );
+
+    append(&tree, "README", DIRT);
+    let derived = answers_derivation(root, &tree);
+    assert_ne!(
+        derived, landed,
+        "PREMISE: the dirt moves `answer`'s derivation off the landed tree"
+    );
+
+    let exit = answer_at(root, item, "accept", deadline + 1);
+    assert_ne!(
+        exit,
+        Exit::ConfigError,
+        "`answer`'s expiry pass was refused at the escalation"
+    );
+    assert_eq!(
+        escalated(root, &token),
+        1,
+        "PREMISE: the probe gate expired into an escalation"
+    );
+    let opened = escalations(root);
+    assert_eq!(
+        opened.len(),
+        1,
+        "PREMISE: one escalation opened: {opened:?}"
+    );
+
+    let tip_after = lane_e2e::ref_sha(root, item).expect("the run ref");
+    assert_eq!(
+        tree_of(root, &tip_after),
+        landed,
+        "`answer` LANDED the run tree on `{run_ref}`: its tree moved from the probe gate's"
+    );
+    assert!(
+        blob(root, &run_ref, "README").is_some_and(|b| !b.ends_with(DIRT)),
+        "`answer` committed the run tree's in-flight dirt onto `{run_ref}`"
+    );
+    assert!(
+        git_read(&tree, &["status", "--porcelain", "--", "README"])
+            .is_some_and(|s| s.contains("README")),
+        "the dirt is no longer uncommitted in the run tree"
+    );
+    let (escalation, _) = token_and_deadline(&opened[0]);
+    assert_eq!(
+        opened[0].payload["tree_hash"].as_str(),
+        Some(derived.as_str()),
+        "the escalation does not bind `answer`'s own derivation"
+    );
+
+    assert_eq!(lane_e2e::answer_item(root, item, "approve"), Exit::Success);
+    assert_eq!(
+        answered_and_void(root, &escalation),
+        (1, 0),
+        "a later answer to the escalation was not APPLIED"
+    );
+}
+
+/// **A refused landing's own gate escalating during `answer` is not refused** (§8f.4; ADR-0188
+/// decisions 7 and 14). `implement` writes `.env` and edits README; the landing refuses `.env` and
+/// opens its gate, whose class declares `escalate`. `answer` past the deadline expires it into an
+/// escalation that rides an EMPTY commit, so the refused paths are not restaged: no
+/// `LandingRefused`, no exit 3, nothing lands, and the escalation binds `answer`'s derivation. Red
+/// while the escalation rides the landed arm (the restage refuses `.env` again and the escalation's
+/// row is never written), and under M-ESC-K / M-ESC-C.
+#[test]
+fn a_refused_landings_gate_escalating_during_answer_is_not_refused() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    escalate_on_expiry(root, LANDING_KIND);
+    let tree = crate::run_tree(root, item).path;
+
+    let first = writing(&tree, vec![lane_e2e::implement()], |_, t| {
+        write(t, ".env", b"API_TOKEN=not-a-real-secret\n");
+        append(t, "README", EDIT);
+    });
+    assert_eq!(
+        run(root, item, &first),
+        Exit::Success,
+        "PREMISE: exit 0 at the landing gate"
+    );
+    let gates = landing_gates(root);
+    assert_eq!(gates.len(), 1, "PREMISE: one landing gate: {gates:?}");
+    let (token, deadline) = token_and_deadline(&gates[0]);
+    let run_ref = lane_e2e::run_ref(item);
+    let tip = lane_e2e::ref_sha(root, item).expect("the run ref");
+    let landed = tree_of(root, &tip);
+    let derived = answers_derivation(root, &tree);
+
+    let exit = answer_at(root, item, "exclude", deadline + 1);
+    assert_ne!(
+        exit,
+        Exit::ConfigError,
+        "`answer`'s expiry pass restaged the refused paths: a gate transition was refused"
+    );
+    assert_eq!(
+        escalated(root, &token),
+        1,
+        "PREMISE: the landing gate expired into an escalation"
+    );
+    let opened = escalations(root);
+    assert_eq!(
+        opened.len(),
+        1,
+        "the escalation's row was never written: {opened:?}"
+    );
+    assert_eq!(
+        opened[0].payload["tree_hash"].as_str(),
+        Some(derived.as_str()),
+        "the escalation does not bind `answer`'s own derivation"
+    );
+    let tip_after = lane_e2e::ref_sha(root, item).expect("the run ref");
+    assert_eq!(
+        tree_of(root, &tip_after),
+        landed,
+        "`answer` LANDED the run tree on `{run_ref}`"
+    );
+    assert!(
+        blob(root, &run_ref, ".env").is_none(),
+        "the refused `.env` reached `{run_ref}`"
+    );
+
+    let (escalation, _) = token_and_deadline(&opened[0]);
+    assert_eq!(lane_e2e::answer_item(root, item, "approve"), Exit::Success);
+    assert_eq!(
+        answered_and_void(root, &escalation),
+        (1, 0),
+        "a later answer to the escalation was not APPLIED"
+    );
+}

@@ -4603,3 +4603,14 @@ untracked paths.
 **Rejected:** option B, which makes `exclude` untracked-only and refuses it over a tracked path. It would leave a
 tracked denylist false hit such as `id_map.rs` with no remedy, and the denylist's own doc names `exclude` as that
 remedy. **Reversal:** take B, and revert the one derivation.
+
+*(dated 2026-09-29, s8f build, package R4FIX-8f; refuting round 4's records minor.)* **Ruling 3's "No accepted
+Decision moves" is corrected: one moves, in part.** ADR-0105 clause 4 (accepted) reads *"`git write-tree` on a
+**temporary index** built from the current index plus tracked modifications"*, and `WorkingStateLess` leaves an
+excluded tracked path's modification out. It is not a second derivation (one routine, the plain argv with no
+exclusion, and gate open and answer read the same set), so the forbids bullet's *"Forbids a second `tree_hash`
+derivation"* holds; the *"plus tracked modifications"* sentence does not, for an excluded path. ADR-0188
+(proposed) now names it a **supersession of ADR-0105 clause 4 in part**, with the clause quoted in full, in
+decision 6's R4FIX-8f note (decision 7 cites it). Its `supersedes:` line already names `0105`; ADR-0105's
+`superseded_by` back-link moves at ADR-0188's flip. For the review packet: confirm D21-112 together with this
+supersession. The option taken and the reversal are unchanged.

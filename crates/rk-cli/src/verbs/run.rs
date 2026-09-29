@@ -1932,6 +1932,7 @@ fn open_derived_facet_gates(
         &state,
         rows,
         run_id.map(|run| (resolved.stage.as_str(), run)),
+        Opens::Landed,
     )
 }
 
@@ -2288,6 +2289,7 @@ fn resume_and_read(
                 &resolved.stage,
                 inputs.run_id().ok().as_deref().unwrap_or_default(),
             )),
+            Opens::Landed,
         )? {
             return Ok(exit);
         }
@@ -3084,10 +3086,26 @@ fn open_refused_landing_gate(
     Exit::Success
 }
 
+/// Which arm a gate's `opened` row takes in [`gate_rows_through`]. *(Added 2026-09-29, s8f build,
+/// package R4FIX-8f; ADR-0188 decision 14, proposed.)*
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Opens {
+    /// The landed arm: the boundary stages the run-owned tree (`run`).
+    Landed,
+    /// An empty commit that stages nothing (`answer`, which does not land).
+    Empty,
+}
+
 /// **Gate transition rows, each as its own tier-1 act** (`s8e` §8e.3, N6): an expiry, an answer, a
 /// void or an opening — its `Gate:` mark first, the row anchored to it. An `opened` row carries the
 /// opening stage run when `opening` names one. Unbound (`run_with`'s machinery seam), the rows are
 /// appended as they were before `s8e`. *(dated 2026-09-28, `s8e` build, package S8E-P5.)*
+///
+/// *(dated 2026-09-29, s8f build, package R4FIX-8f; refuting round 4's blocker; §8f.4 and ADR-0188
+/// decision 14, proposed.)* An `opened` row takes the arm `opens` names: [`Opens::Landed`] for
+/// `run` (a gate `run` opens is a tier-1 boundary that lands), [`Opens::Empty`] for `answer`
+/// (*"`answer` does not land"*: an escalation its expiry pass opens rides an empty commit and binds
+/// the derivation `answer` took). Every other transition row rides an empty commit either way.
 ///
 /// # Errors
 /// [`Halt::PoisonedLock`] from a store acquisition; a refusal is the inner `Exit` (`3`), named.
@@ -3097,6 +3115,7 @@ pub fn gate_rows_through(
     state: &rk_kernel::workflow::fsm::RunState,
     rows: Vec<rk_types::event::Event>,
     opening: Option<(&str, &str)>,
+    opens: Opens,
 ) -> Result<Result<(), Exit>, Halt> {
     let Some(boundary) = boundary else {
         let mut guard = crate::store::acquire(store, "the gate rows")?;
@@ -3112,7 +3131,11 @@ pub fn gate_rows_through(
     };
     for row in rows {
         let act = if row.kind == rk_types::event_kind::EventKind::GateOpened {
-            rk_kernel::runtime::tier_one::Act::gate_opened(row).map(|act| match opening {
+            let opened = match opens {
+                Opens::Landed => rk_kernel::runtime::tier_one::Act::gate_opened(row),
+                Opens::Empty => rk_kernel::runtime::tier_one::Act::gate_opened_empty(row),
+            };
+            opened.map(|act| match opening {
                 Some((stage, run_id)) if !run_id.is_empty() => act.opened_by(stage, run_id),
                 _ => act,
             })
