@@ -1015,7 +1015,7 @@ echo "fixture-proofs $head recorded, with $(printf '%s\n' $S8J_MUTANTS | grep -c
    trap config and the fake `claude`. Only its live-probe portion runs under `wrap`. Launch-gate tests build their
    `Env` explicitly, enforced by a lint."* The lint is `s8h`'s `run::every_binary_spawn_withholds_or_supplies_the_launch_record`
    (§8j.4). The whole of 7c still runs, and nothing in `s7c-adapters.md` is edited except A12's `-H` (§8j.8), which
-   moves no reading *(dated 2026-09-26, s8c build, refuting round 4, receiver note: nor `s8c`'s dated AC-329 exclusion amendment to 7c's `rk_absent` line, which this stage does not edit either and which moves no reading of the split; see the note at the head of this file)*:
+   moves no reading *(dated 2026-09-26, s8c build, refuting round 4, receiver note: nor `s8c`'s dated AC-329 exclusion amendment to 7c's `rk_absent` line, which this stage does not edit either and which moves no reading of the split; see the note at the head of this file)* *(dated 2026-09-28, s8e build, package R2FIX-8e, receiver note: nor `s8e`'s dated amendment of 7c's `EventKind::ALL` guard from `[Self; 38]` to `[Self; 41]`, ADR-0185's three kinds (`proposed`; D21-47's time-bound rule; `s8e` §8e.13 finding 24). It sits in 7c's suite portion, before the split's cut line, and moves no reading of the split; the whole re-run reads 41)*:
    - **The split.** The block is extracted verbatim from `runbook/phase-1/s7c-adapters.md`, as the last fenced
      block that echoes `CP7C-END-OF-BLOCK reached`, into a file under `target/`. It is cut at its line that opens
      `# ---- THE FIFTEENTH LINE, as statements.` The **suite portion** is everything above that line, with a sentinel

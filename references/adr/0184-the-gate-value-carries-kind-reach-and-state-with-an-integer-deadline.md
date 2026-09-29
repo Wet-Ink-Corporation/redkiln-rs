@@ -108,7 +108,8 @@ state does not take) is **malformed drift** (`MalformedReason::MalformedGateValu
 `unparsable_trailer` on the `Gate` key).
 
 **2. The record-owned choice on the option: `answered` carries it,** by the deleted-database test, as the
-table says. `s8e` §8e.7 asked the record to decide this *"by that test, and say so"*. The same test,
+table says. `s8e` §8e.7 asked the record to decide this *"by that test, and says so"* *(dated 2026-09-28, s8e build, package R2FIX-8e: the quotation corrected to the
+stage file's words, "The record decides, by that test, and says so."; it read "say so")*. The same test,
 applied to the other states, gives `expired` its action and `auto-decide`'s verdict; this record takes that
 extension and names it for the adversarial pass, because §8e.7 did not raise it. The answered row of
 `t1_gate_transition` writes the option into its `option_id` column (ADR-0181 decision 5).

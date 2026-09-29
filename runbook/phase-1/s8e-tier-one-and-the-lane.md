@@ -1172,7 +1172,9 @@ presents the ANSWERED token 3d264e16… over the awaited 019d34cc…"*); its thi
 *(dated 2026-09-28, s8e build, package D2196-8e)* **Defect (c) is repaired, as D21-96 rules it** (*"The live `answered` row of `t1_gate_transition` carries the
 gate's **bound** tree, taken from the gate record, so the tier-1 row equals what its mark carries and a rebuild
 reproduces it byte for byte. The answer's observed tree is not lost: it stays in the anchored tier-2
-`gate_answer_void` row."*; ADR-0181 decision 3's dated note, `proposed`).
+`gate_answer_void` row."*; ADR-0181 decision 3's dated note, `proposed`). *(dated 2026-09-28, s8e build, package
+R2FIX-8e: the ruling is quoted verbatim; its "tier-2" names the `t2_event` table the anchored row lives in. The kind
+is tier 1, ADR-0184's *"`gate_answer_void` moves to tier 1"*; nothing is reclassified.)*
 - **The writer.** `rk_store::tier_one::append` takes an `answered` row's `tree_hash` from its token's `opened` row in
   `t1_gate_transition` — the gate record the store holds, whose tree is the gate's bound tree (ADR-0184 decision 1:
   *"the gate's bound tree (ADR-0105 clause 4), the same on every mark for the token"*) — and no longer from the
@@ -1623,6 +1625,12 @@ The arm still cannot dispatch at this stage, because 0 shipped cards carry `perm
 that before it re-runs 7f. From `s8h` on, the brief's no-accidental-dispatch rule applies: 7f's arm runs only through
 `s8h`'s fixture-child route, and Checkpoint 8e **refuses** to re-run 7f once a card carries `permission_mode`.
 
+*(dated 2026-09-28, s8e build, package R2FIX-8e)* **Checkpoint 7c is amended, dated, and re-run at `s8j`, not
+here.** ADR-0185's three kinds move `EventKind::ALL` from 38 to 41, the premise of 7c's ALL-count guard, so that line
+moves to 41 by D21-47's time-bound rule (finding 24). **Checkpoint 8d was amended, dated, by package S8E-RULINGS**
+(D21-92's two `on_false_exec` names replace the one the ruling reverses in its `run_named` list), and `s8f`'s
+Checkpoint 8f (9) re-runs it whole (finding 25). Both join the provisional set (§8e.15); Checkpoint 8e replays neither.
+
 **How Checkpoints 7h and 7i stay runnable.** Both read `rk-run/rk-fix-doctor-test-count`, and 7i also reads the
 shipped store and `redkiln cost`.
 
@@ -1777,6 +1785,39 @@ scratchpad, `s8e-r1.json`):
     *"still lists"* tier 2: a dated note; (g) `rk-kernel`'s `tests/it/main.rs` said `replay` is gated whole: a
     dated note; (h) `rk-adapter-sqlite`'s conformance docs described the pre-P7 unsupported arm: dated re-points.
 
+*(dated 2026-09-28, s8e build, package R2FIX-8e)* **Refuting round 2** (five finders, two refuters per blocker or
+major; the raw findings in the session scratchpad, `s8e-r2.json`). **No blocker.** Two majors and five minors (the first minor names two quotations, 26 (a) and (b)):
+
+24. **Checkpoint 7c's `EventKind::ALL` guard went stale** (major, both refuters): this stage's three kinds (ADR-0185,
+    `proposed`) moved `pub const ALL: [Self; 38]` to `[Self; 41]`, and 7c's line
+    `grep -qE 'pub const ALL: \[Self; 38\]' crates/rk-types/src/event_kind.rs || …` printed its FAIL on the tree. D21-47:
+    *"A time-bound guard in an earlier checkpoint is amended by the stage that moves its premise, in the same
+    commit."* *Fixed:* the line is amended in `s7c-adapters.md` by dated in-place edit to `\[Self; 41\]` (ADR-0126's 38
+    plus ADR-0185's three), the replaced line kept struck in a dated comment, and `s7c`'s AC-367 table row carries a
+    dated note. Extracted from 7c's own bytes and run READ-ONLY, the amended line passes on the tree, and fails over
+    `766854c`'s `event_kind.rs` (38) and over a synthetic 42 (the controls). **Every other stage file was grepped** for
+    a literal `EventKind` count, an `ALL` size or a kind list a checkpoint line asserts: no other checkpoint line reads
+    one (the `ALL.len()` pins live in test code, which the suite runs). 7c joins this stage's provisional set
+    (§8e.15); its whole re-run is `s8j`'s, and `s8j` §8j.6's *"nothing in `s7c-adapters.md` is edited except A12's
+    `-H`"* carries a dated receiver note. `PROGRESS.md` §1's 7c row reads `passed 2791f1d, re-run pending`.
+25. **Checkpoint 8d's block was edited by this stage and not marked provisional** (major; one refuter minor, citing
+    `s8f`'s whole re-run of 8d). Package S8E-RULINGS's dated edit to 8d's `run_named rk-kernel "on_false, telemetry,
+    breaker"` list (D21-92; ADR-0187, `proposed`) removed `on_false_exec::a_null_until_or_gate_when_is_not_journaled`
+    and added `on_false_exec::a_null_until_or_gate_when_whose_route_continues_is_journaled_and_replayed` and
+    `on_false_exec::a_null_until_routed_to_a_refusal_is_not_journaled_so_a_fixed_re_run_completes` (`want` is `$#`,
+    so no count literal moves; both names resolve to one `fn` each in `rk-kernel`'s `tests/it/on_false_exec.rs`, the
+    removed one to none). The preamble's *"A checkpoint that changed after it passed is provisional"* applies.
+    *Fixed:* `PROGRESS.md` §1's 8d row reads `passed b183eb9/0b470ee, re-run pending`, and §8e.15 names 8d provisional
+    with its re-run at `s8f`'s Checkpoint 8f (9), whole, rather than an 8d replay added here.
+26. *Minors, each fixed:* (a) ADR-0186's `source:` quoted a D21-41 row e sentence the ledger does not carry: replaced
+    by the ledger's exact row e text, dated; (b) ADR-0184 quoted §8e.7 as *"by that test, and say so"*: now *"by that
+    test, and says so"*, dated; (c) `gate_answer_void` was called a tier-2 row in ADR-0181's own prose, §8e.9's
+    D2196-8e note and `doctor.rs`'s ac184 comments, though it is tier 1 (ADR-0184; `EventKind::tier()`): corrected to
+    the anchored `t2_event` row, with D21-96's quoted text left verbatim and a dated note beside it in ADR-0181;
+    (d) the ledger's title moved 91 → 96 with no dated title note: one added, with its measured count; (e) `PROGRESS.md`
+    §1's 8e row still read *"Not started"*: in progress through interim 5; (f) the 7a and 7i rows lacked the
+    re-run pending marks §8e.15 implies: added, cleared by Checkpoint 8e (10b) and (10g).
+
 ### 8e.14 Acceptance set
 
 **Claimed: AC-160, AC-161, AC-162, AC-163, AC-184 (re-measured), AC-529, AC-174 (reconcile still writes nothing to
@@ -1872,8 +1913,19 @@ S8E-P5's, and it gains one line that the seal's commit rides the same boundary. 
   version 2).** `s8` (2) re-runs whole with the store restored byte-for-byte around its `doctor --rebuild`. That
   block runs the kernel half (`rebuild_differential`, `stage_level_next_action`) and AC-427's operator path; D21-42
   8c's re-measurement is `doctor::ac184_…`, selected in (2). So does `s8` (3)'s asserted half, the kill-and-resume
-  property the seed change touches. Nothing older is re-run: 7b, 7c and
-  7g are not this stage's provisional set. The block skips all of these nested re-runs when it is itself run with
+  property the seed change touches. ~~Nothing older is re-run: 7b, 7c and
+  7g are not this stage's provisional set.~~ *(dated 2026-09-28, s8e build, package R2FIX-8e; refuting round 2's two
+  majors.)* Two more checkpoints are provisional by this stage's edits, and **Checkpoint 8e re-runs neither**; each is
+  re-run whole by the stage that already owns its re-run. **Checkpoint 7c:** this stage's three kinds (ADR-0185,
+  `proposed`) move `EventKind::ALL` from 38 to 41, so 7c's guard over `pub const ALL: [Self; 38]` is amended by dated
+  edit to 41 (D21-47's time-bound rule; §8e.13, finding 24). Its whole re-run is `s8j`'s (*"The whole of 7c still
+  runs"*, `s8j` §8j.6, split under D21-47), because 7c's live-probe half cannot run here. **Checkpoint 8d:** package
+  S8E-RULINGS edited its `run_named rk-kernel "on_false, telemetry, breaker"` list by dated edit under D21-92
+  (§8e.13, finding 25). Under `RK_CP_NESTED=1`, (10a)'s 8d-ii replay skips its own nested 8d re-run, so no block on
+  this stage's chain runs the edited text; `s8f`'s Checkpoint 8f does, whole: *"It also re-runs two checkpoints this
+  stage makes provisional. Checkpoint 8d is one"*, and its block carries `replay_whole
+  runbook/phase-1/s8d-step-grain-and-resolver.md CP8D …` (`s8f` §8f.13, its (9)). No 8d replay is added to Checkpoint 8e; the two D21-92 names
+  run in this block's own (2) selection (`sel rk-kernel 28`). 7b and 7g stay outside the provisional set. The block skips all of these nested re-runs when it is itself run with
   `RK_CP_NESTED=1`, D21-46's one convention (*"running as another checkpoint's entry gate: skip your own nested whole
   re-runs"*). It sets the same variable for the checkpoints it calls. A checkpoint that does not honour the variable
   still runs correctly, only slower.
@@ -2161,6 +2213,9 @@ stale=$(git worktree prune --dry-run -v 2>&1); rc=$?
 # ---- (the seed change). Nothing older. SKIPPED WHOLE under RK_CP_NESTED=1 (D21-46: running as another checkpoint's
 # ---- entry gate), and set for every block this one calls. Every replay runs through (0w)'s `nd` wrapper (D21-47),
 # ---- and nd_check follows it.
+# ---- (dated 2026-09-28, s8e build, package R2FIX-8e) Two more are provisional and NOT replayed here (section 8e.15):
+# ---- 7c (its ALL-count guard amended 38 -> 41; its whole re-run is s8j's) and 8d (S8E-RULINGS's run_named edit;
+# ---- s8f's Checkpoint 8f (9) re-runs it whole). This block's replay set is unchanged.
 # ---- The extractor takes the ONE bash block of a file that contains a needle, and refuses on zero or two. The fence
 # ---- string is built from chr(96), so no triple backtick appears inside this block.
 cat > "$scratch/extract.py" <<'PY'

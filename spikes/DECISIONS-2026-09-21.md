@@ -1,5 +1,7 @@
 # Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-96), and what they license
 
+*(Title moved 2026-09-28 during `s8e`'s build, recorded by package R2FIX-8e (refuting round 2's minor): it read **"(D21-1 … D21-91)"** at `s8d-ii`'s close, and each move since was made in the commit that appended the entry without a dated note: `D21-92` and `D21-93` at `d80609b` (title → D21-93), `D21-94` at `9293882` (→ D21-94), `D21-95` at `ea62c62` (→ D21-95), `D21-96` at `a404cf3` (→ D21-96). No entry is added with this note. Measured: `grep -c '^## D21-'` over this file → 96, the last `D21-96`.)*
+
 *(Title moved 2026-09-28 at `s8d-ii`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-89)"**, true when package R2FIX-8dii corrected it; `D21-90` and `D21-91` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 91, the last `D21-91`.)*
 
 *(Title corrected 2026-09-28 at `s8d-ii`'s build, package R2FIX-8dii (refuting round 2's minor): it read **"2026-09-21 … 2026-09-27 (D21-1 … D21-86)"** while the file carried **D21-89**, three entries and one date stale: `D21-87` … `D21-89` were appended during `s8d-ii` without moving it, and `D21-89` is dated 2026-09-28. No entry is added with this correction. Measured: `grep -c '^## D21-'` over this file → 89, the last `D21-89`.)*

@@ -131,7 +131,9 @@ insert fails, neither row exists. The mapping is by kind and it is closed:
   member, and the transaction rolls back to zero rows. A nullable member the payload does not carry (`t1_gate_transition`'s
   `tree_hash` on an expiry, `deadline`, `kind`, `reach`, `option_id`, `stage`, `run_id`) is written `NULL`.
 - *(dated 2026-09-28, `s8e` build, package D2196-8e; D21-96.)* **An `answered` row's `tree_hash` is the gate's BOUND tree, read from its token's `opened` row.**
-  D21-96: *"The live `answered` row of `t1_gate_transition` carries the gate's **bound** tree, taken from the gate record, so the tier-1 row equals what its mark carries and a rebuild reproduces it byte for byte. The answer's observed tree is not lost: it stays in the anchored tier-2 `gate_answer_void` row."* The mapping above wrote the `gate_answered` payload's `tree_hash`, the answer's OBSERVED tree; over a
+  D21-96: *"The live `answered` row of `t1_gate_transition` carries the gate's **bound** tree, taken from the gate record, so the tier-1 row equals what its mark carries and a rebuild reproduces it byte for byte. The answer's observed tree is not lost: it stays in the anchored tier-2 `gate_answer_void` row."* *(dated 2026-09-28, s8e build, package R2FIX-8e: the
+ruling's words are quoted verbatim; its "tier-2" names the `t2_event` table the anchored row is stored in, not the
+kind's tier, which is 1 under ADR-0184, *"`gate_answer_void` moves to tier 1"*. Nothing is reclassified.)* The mapping above wrote the `gate_answered` payload's `tree_hash`, the answer's OBSERVED tree; over a
   void that differs from the bound tree ADR-0184 decision 1 puts on every `Gate:` mark for the token (*"the gate's
   bound tree (ADR-0105 clause 4), the same on every mark for the token"*), so the rebuilt row differed from the live one
   and decision 11's claim failed (measured: *"only recorded: …answered|6aaf314e…"*, *"only rebuilt:
@@ -260,8 +262,10 @@ gate's bound tree; the live row carried the answer's observed tree, so `doctor::
 through a void. Decision 3's dated bullet makes the live row carry the bound tree, through the one writer every path
 calls, so a rebuilt `answered` row is again *"the row the live act anchored to that commit"*, byte for byte. The
 ac184 lane now walks through a void (`lane_e2e::walk_the_lane_through_a_void`) and is green; a rebuilt store keeps no
-observed tree, because the `Gate:` value carries none — the observed tree is a fact of the live store's tier-2 rows,
-outside AC-184's `t1_*` projection.
+observed tree, because the `Gate:` value carries none — the observed tree is a fact of the live store's ~~tier-2 rows~~
+anchored `t2_event` rows *(dated 2026-09-28, s8e build, package R2FIX-8e: `gate_answer_void` is a tier-1 kind,
+ADR-0184's *"`gate_answer_void` moves to tier 1"* and `EventKind::tier()`'s `Tier::One` arm; its row is stored in the
+`t2_event` table, which is what "tier-2" misnamed)*, outside AC-184's `t1_*` projection.
 
 **12. `BySha` selects by anchor.** `Query::BySha(sha)` returns the rows whose `anchor_sha` is `sha`, in append order,
 in `rk-store`'s SQL and in `VecStore`. A row appended through `append` has no anchor and never matches. That is how

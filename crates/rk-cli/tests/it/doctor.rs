@@ -2957,6 +2957,9 @@ fn tier_one_projection(root: &std::path::Path) -> BTreeSet<String> {
 /// `t1_gate_transition` carries the gate's **bound** tree, taken from the gate record, so the
 /// tier-1 row equals what its mark carries and a rebuild reproduces it byte for byte. The
 /// answer's observed tree is not lost: it stays in the anchored tier-2 `gate_answer_void` row."*
+/// *(dated 2026-09-28, `s8e` build, package R2FIX-8e: quoted verbatim; the ruling's "tier-2"
+/// names the `t2_event` table the anchored row lives in. `gate_answer_void` is a tier-1 kind,
+/// ADR-0184 and `EventKind::tier()`.)*
 /// RED at this package's entry for exactly the reported reason (*"only recorded:
 /// …|answered|<observed tree>…"*, *"only rebuilt: …|answered|<bound tree>…"*); green once
 /// `rk_store::tier_one::append` reads an `answered` row's tree from its token's `opened` row. The
@@ -2998,7 +3001,8 @@ fn ac184_rebuild_differential_over_anchored_tier_one_rows() {
         )
     );
 
-    // ---- the observed tree stays in the anchored tier-2 void row (D21-96's second sentence).
+    // ---- the observed tree stays in the anchored `t2_event` void row, the tier-1 `gate_answer_void`
+    // ---- event (D21-96's second sentence; dated 2026-09-28, s8e R2FIX-8e: it read "tier-2 void row").
     let voids = sql_text_rows(
         root,
         "SELECT CAST(anchor_sha AS TEXT), json_extract(payload, '$.bound_tree_hash'), \
