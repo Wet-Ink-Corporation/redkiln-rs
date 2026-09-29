@@ -286,7 +286,8 @@ pub struct Row {
 }
 
 impl Row {
-    /// The typed kind, or `None` for a wire name outside the closed 38.
+    /// The typed kind, or `None` for a wire name outside the closed set (`EventKind::ALL`;
+    /// ~~the closed 38~~, R3FIX-8e 2026-09-28).
     #[must_use]
     pub fn kind(&self) -> Option<rk_types::event_kind::EventKind> {
         rk_types::event_kind::EventKind::from_wire(&self.kind)

@@ -39,7 +39,9 @@ Three facts of the tree shape how.
 
 - ADR-0160's first bullet, **in full**: five values a `<slice>` may never be.
 - ADR-0159 decision 2's siting: *"The refusal is at the mint, not at startup: a run that mints no trailer is not affected
-  by the key's absence."*
+  by the key's absence, and failing such a run would refuse work that has nothing to do with this."* *(dated
+  2026-09-28, `s8e` build, package R3FIX-8e: quoted through to the sentence's end; it ended at ~~"absence."~~, a full
+  stop where ADR-0159 has a comma, with no ellipsis.)*
 - AC-162 and ADR-0181: the seal is a tier-1 act, git first, rows anchored to its commit.
 - ADR-0162 decision 2 (*"The `Slice-Verdict:` axis is NOT touched, and the checkpoint enforces that"*), scoped to that
   record's work; D21-47's time-bound rule: *"A time-bound guard in an earlier checkpoint is amended by the stage that

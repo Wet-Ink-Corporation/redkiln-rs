@@ -296,7 +296,14 @@ line in the earlier stage's file, in that commit:
    `EventKind::ALL` against that list, so a kind added later without a decision fails it"*. `verify_completed` is such
    a kind, so this stage's variant turns the test red until the list names it. R1 names the kind item-scoped, with its
    reason (§8g.4). The list the test reads gains it in the work commit, and `s8e`'s record takes a dated line naming
-   R1.
+   R1. *(dated 2026-09-28, s8e build, package R3FIX-8e; receiver note; `s8e` §8e.13 finding 24 and round 3.)* **The
+   same variant moves Checkpoint 7c's `EventKind::ALL` guard.** `s8e` amended 7c's line to
+   `grep -qE 'pub const ALL: \[Self; 41\]' crates/rk-types/src/event_kind.rs` (ADR-0126's 38 plus ADR-0185's three,
+   `proposed`). `verify_completed` makes `ALL` 42 (41 + n for n new kinds), so this stage's work commit amends that
+   `s7c-adapters.md` line by dated in-place edit to the new size, keeping the replaced line struck in a dated comment,
+   as `s8e` did. D21-47: *"A time-bound guard in an earlier checkpoint is amended by the stage that moves its premise,
+   in the same commit."* Otherwise `s8j` §8j.6's whole re-run of 7c fails on *"EventKind::ALL is not 41"*. 7c is
+   already provisional (`PROGRESS.md` §1's 7c row), and its re-run stays `s8j`'s.
 3. **`s8d-ii`'s item-id validator.** The mutation tree is `<item>.mut` (§8g.5). An item id ending `.mut` would collide
    with another item's mutation tree, as one ending `.review-ref` would with its reference tree. `s8d-ii`
    §8d-ii.2's rules gain *"no `.mut` suffix"* by a dated line, and its table-driven test

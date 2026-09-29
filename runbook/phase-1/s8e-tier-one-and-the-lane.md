@@ -1379,6 +1379,17 @@ bound"*.
 - **The reuse test runs over `gate-1`** (`PackVariant::Base`, one stage), so its second invocation awaits the same gate on today's binary and on the stage's. It plants its ignored file under the run tree's `.redkiln/worktrees/`, which `info/exclude`'s run-root row ignores in every worktree of the repository. Green at the build, and red under S8E-M20.
 - **`[project] name` and `slice` landed with the tests, ahead of the mint that forces them.** `pack-min/config.toml` declares `name = "rk-fixture"`, and `items/review-item.toml` (the item `exit/findings-block/` runs) declares `slice = "review-1-fix"`. Both are inert until §8e.6 and §8e.8 mint. AC-438's table, `cost`'s run and `exit/findings-block/` keep their exits (measured green after the edit). `change_deriver`'s fixture had appended its own `[project]` table, which is now a duplicate key, so it asserts the shared one instead.
 
+*(dated 2026-09-28, s8e build, package R3FIX-8e; refuting round 3's minor.)* **The process-boundary test now runs both
+`run` invocations through the binary**, as this section prescribes. Its first invocation had been in process
+(`verbs::run::run(` over an empty scripted factory), a departure no instrument note above recorded. It is now
+`redkiln -C <root> run lane-1` over the fixture child, with `RK_FIXTURE_MODE=replay:<frames>` (the lane's gate opens
+before any dispatch, so the transcript is not read), and its exit `0` is asserted, with exactly one answerable gate
+opened. The second process's exit is asserted too: **`Schema` (11)**, measured. After it crosses into `review`, that
+stage's `review-min` dispatch replays the same `implement-frames.jsonl` transcript, which yields no `Findings`, and the
+process prints *"the dispatch of `review-min` (review-min@1) did not commit"*. The crossing is this section's claim
+(the `review` mark, and a fixture-child spawn marker). The exit pins where the process stopped after crossing, so a
+second process that halts or refuses before the boundary fails by name. Green after the edit.
+
 ### 8e.12 Named tests, red first, and the mutants
 
 **Every test of a NEW behaviour is written before the code it covers and watched RED for the reason in its row.** A
@@ -1505,6 +1516,15 @@ run-worktree names, one of them a rename, moved to `s8d-ii` (`s8d-ii` §8d-ii.8)
 
 *(dated 2026-09-28, s8e build, package D2196-8e)* **92 names** (~~91~~): `rk-store` **7** (~~6~~), with D21-96's `store::an_answered_row_carries_its_gates_bound_tree_and_is_refused_without_an_opening` (the writer's refusal branch, which no lane reaches). So **85** are new (~~84~~), the suite gains **85** (~~84~~), and the floor is 1034 + 85 = **1119**. **Also re-pointed, none deleted:** `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` (its lane walks through a void, and it pins the observed tree in the live `gate_answer_void` row).
 
+*(dated 2026-09-28, s8e build, package R3FIX-8e)* **92 names, unchanged; no test is new, so the floor stays 1034 + 85
+= 1119.** Checkpoint 8e (2)'s `rk-cli` selection names one more existing test, `answer::ac248_answer_without_live_token_exits_named_outcome`
+(S8E-M43c's only killer, re-pointed by R1FIX-8e), so it reads `sel rk-cli 38` (~~`sel rk-cli 37`~~); it is outside this
+table's count, as the other re-pointed pre-existing tests are. **Also re-pointed, none deleted:**
+`lane_e2e::an_empty_stage_records_stage_empty_with_its_reason` (the row's `anchor_sha` is the `Story: … triage` entry
+commit's sha, and its reason is a member of `STAGE_EMPTY_REASONS`; S8E-M60, S8E-M61) and
+`lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child` (both `run` invocations are the binary, and both
+exits are asserted; §8e.11's R3FIX-8e note).
+
 The existing `story_axis::adr0155_…` tests and `doctor::ac427_…`'s synthetic repository are **re-pointed** in the
 record's commit, and none is deleted. `story_value` gains the stage, and the old single-mark assertions become the
 legacy-mark fixture. The six test sites that derived the old root were re-pointed by `s8d-ii` (`s8d-ii` §8d-ii.1).
@@ -1574,6 +1594,8 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M57 *(dated 2026-09-28, s8e build, package R1FIX-8e)* | `answer`'s presented gate restored to `open_gates().filter(not expired).last()` | `answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher` (*"answer presents the ANSWERED token … over the awaited …"*); `answer::ac407_…` stays green (the fallback) |
 | S8E-M58 *(dated 2026-09-28, s8e build, package D2196-8e)* | the `answered` row's tree restored to the payload's observed tree (`text(event, "tree_hash")` first, the bound tree only as its fallback) | `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` (only recorded `…\|answered\|af107778…`, only rebuilt `…\|answered\|3a288bb5…`), `store::an_answered_row_carries_its_gates_bound_tree_and_is_refused_without_an_opening` (*"left: 0000…"*, *"right: bbbb…"*) |
 | S8E-M59 *(dated 2026-09-28, s8e build, package D2196-8e)* | the payload's tree taken when the store holds no `opened` row (the refusal dropped) | `store::an_answered_row_carries_its_gates_bound_tree_and_is_refused_without_an_opening` (*"was not refused by the bound-tree rule: Ok(())"*); no lane reaches the branch |
+| S8E-M60 *(dated 2026-09-28, s8e build, package R3FIX-8e; refuting round 3's major)* | `replay::resume_routed`'s entry act takes the entry row alone: `1 + usize::from(empty_row.is_some())` → `1`, so the `stage_empty` row is appended beside the act, unanchored | `lane_e2e::an_empty_stage_records_stage_empty_with_its_reason` (*"the `stage_empty` row is not anchored to the entry act's `Story: rk-fixture/lane-2 triage` commit … left: None, right: Some("e475104c…")"*). Measured SURVIVING the test at `259f714` (*"ok. 1 passed"*), which read no anchor (a missing assertion), in a private worktree; KILLED after the re-point |
+| S8E-M61 *(dated 2026-09-28, s8e build, package R3FIX-8e)* | the `stage_empty` reason outside the closed set: `STAGE_EMPTY_REASONS[0]` → `"no applicable activity"` | `lane_e2e::an_empty_stage_records_stage_empty_with_its_reason` (*"the row's reason Some("no applicable activity") is not one of the closed set ["no_applicable_activity"]"*). Measured SURVIVING at `259f714` (the test accepted any non-empty reason); KILLED after the re-point |
 | S8E-M49 | `run()`'s `routing.with_review_routes(..)` binding removed (`s8d` R2FIX-8d's review-routes mutant; *(dated 2026-09-28, s8e build, package S8E-P2)*) | `lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step` |
 
 A mutant that survives is not waved through. It is either an **unobservable property**, which moves to a source lint
@@ -1818,6 +1840,44 @@ major; the raw findings in the session scratchpad, `s8e-r2.json`). **No blocker.
     §1's 8e row still read *"Not started"*: in progress through interim 5; (f) the 7a and 7i rows lacked the
     re-run pending marks §8e.15 implies: added, cleared by Checkpoint 8e (10b) and (10g).
 
+*(dated 2026-09-28, s8e build, package R3FIX-8e)* **Refuting round 3** (five finders, two refuters per blocker or
+major; the raw findings in the session scratchpad, `s8e-r3.json`). **No blocker.** One major and eight minors:
+
+27. **The empty first stage's `stage_empty` anchor was untested** (major, both refuters). §8e.6: *"On the entry
+    `resume_routed` takes itself (the lane's first stage), the row is a second row of the entry act, anchored to its
+    commit."* `lane_e2e::an_empty_stage_records_stage_empty_with_its_reason` never read `anchor_sha`, and it accepted
+    any non-empty reason. *Fixed:* the test asserts the row's `anchor_sha` equals the sha of the one
+    `Story: rk-fixture/lane-2 triage` commit on the run ref, and that the reason is a member of `STAGE_EMPTY_REASONS`.
+    Measured in a private worktree at `259f714`: S8E-M60 (`1 + usize::from(empty_row.is_some())` → `1`) and S8E-M61 (a
+    reason outside the set) each SURVIVED the old test (*"ok. 1 passed"*) and are KILLED by the new one (§8e.12's rows).
+    `replay.rs` was byte-identical after each cycle (sha256 `7991293d…`).
+28. *Minors, each fixed:*
+    (a) The docs in `fsm.rs`, `breaker.rs` and `memo.rs` counted 38 closed kinds and named a *"thirty-ninth"*. They
+        now name no count (the closed set, `EventKind::ALL`), with the old words struck and dated. The same sweep
+        re-worded the other *"closed 38"* docs (`budget.rs`, `degrade.rs`, `rk-cli`'s `doctor/mod.rs` and
+        `doctor/rules.rs`). `grep -rn 'closed 38\|thirty-ninth' crates --include=*.rs` now finds only struck text.
+    (b) The process-boundary test ran its first invocation in process. Both are now the binary, and both exits are
+        asserted (§8e.11's R3FIX-8e note).
+    (c) S8E-M43c's only killer, `answer::ac248_answer_without_live_token_exits_named_outcome`, was not in Checkpoint
+        8e (2). It is named now: `sel rk-cli 38`, by dated edit. The floor does not move, because the test is not new.
+    (d) ADR-0186 quoted ADR-0159 decision 2 with a full stop where the source has a comma. It now quotes through
+        *"…nothing to do with this."*, by a dated note (the record is `proposed`).
+    (e) Checkpoint 8e (5)'s probe-less floor was `grep -cF` on the tag, a colon, one space and a brace, over every line.
+        It is now whitespace-robust (`"none"[[:space:]]*:[[:space:]]*[{]`) and reads code lines only, with a synthetic
+        control. Extracted from this file's bytes and run READ-ONLY: it passes on the tree. Over a copy of
+        `registry.rs` with a compact row (`{"none":{`) or a space-before-colon row planted, it FAILS, naming the row.
+        The old line counted 0 on both planted copies, so it passed them. A copy that differs only by a doc line naming
+        the compact tag passes. `registry.rs`'s *"spelled without the space"* doc sentence carries a dated note.
+    (f) Checkpoint 5 was neither marked provisional nor re-run, though this stage moves `crates/rk-types`. `s8d`'s
+        precedent is a replay (§8d.11; its Checkpoint 8d (13)). So Checkpoint 8e gains (10i), a conditional whole
+        replay of Checkpoint 5 (§8e.15). `PROGRESS.md` §1's row 5 reads `passed 0b470ee, re-run pending`. Its READ-ONLY
+        parts were run from this file's bytes. The extractor takes Checkpoint 5's one block (166 lines), and the
+        backtick scan reads 0. The `git diff --quiet 766854c` arm reads 1 (moved), and the same arm against `HEAD` reads
+        0 (the control). Checkpoint 5 itself runs at Checkpoint 8e's formal run.
+    (g) `s8g`'s `verify_completed` will move 7c's amended `[Self; 41]` guard with no receiver note. A dated receiver
+        note now sits at `s8g` §8g.1, move 2: it amends the line in its work commit (D21-47).
+    (h) `s8j`'s head note listed `s8c`'s 7c amendment but not `s8e`'s. A dated `s8e` clause is added there.
+
 ### 8e.14 Acceptance set
 
 **Claimed: AC-160, AC-161, AC-162, AC-163, AC-184 (re-measured), AC-529, AC-174 (reconcile still writes nothing to
@@ -1925,7 +1985,16 @@ S8E-P5's, and it gains one line that the seal's commit rides the same boundary. 
   this stage's chain runs the edited text; `s8f`'s Checkpoint 8f does, whole: *"It also re-runs two checkpoints this
   stage makes provisional. Checkpoint 8d is one"*, and its block carries `replay_whole
   runbook/phase-1/s8d-step-grain-and-resolver.md CP8D …` (`s8f` §8f.13, its (9)). No 8d replay is added to Checkpoint 8e; the two D21-92 names
-  run in this block's own (2) selection (`sel rk-kernel 28`). 7b and 7g stay outside the provisional set. The block skips all of these nested re-runs when it is itself run with
+  run in this block's own (2) selection (`sel rk-kernel 28`). 7b and 7g stay outside the provisional set.
+  *(dated 2026-09-28, s8e build, package R3FIX-8e; refuting round 3's crossfile minor.)* **Checkpoint 5 is
+  provisional too, and Checkpoint 8e re-runs it whole** (its (10i)): this stage moves `crates/rk-types`
+  (ADR-0185's three kinds and ADR-0182's interim item key, both `proposed`; `git diff --stat 766854c HEAD --
+  crates/rk-types` reads four files, 189 insertions, 13 deletions at `259f714`), and `s8d`'s precedent is a
+  conditional replay, not a mark: *"Checkpoint 5 re-runs when `crates/rk-types` differs from the commit this stage
+  was entered at"* (`s8d` §8d.11). (10i) decides with `git diff --quiet 766854c -- crates/rk-types` against a root-commit
+  control, extracts Checkpoint 5's block by its `deny.toml` line, appends an end marker, and brackets the replay with
+  the advisory databases' commits, as Checkpoint 8d (13) does. `PROGRESS.md` §1's row 5 reads re-run pending until it
+  passes. The block skips all of these nested re-runs when it is itself run with
   `RK_CP_NESTED=1`, D21-46's one convention (*"running as another checkpoint's entry gate: skip your own nested whole
   re-runs"*). It sets the same variable for the checkpoints it calls. A checkpoint that does not honour the variable
   still runs correctly, only slower.
@@ -2046,7 +2115,9 @@ sel rk-kernel 28 on_false_exec::a_null_until_or_gate_when_whose_route_continues_
 # entry refusal (as D21-95 rules it), its control, and the mint's backstop pin are named (ADR-0186 amended, proposed).
 # (dated 2026-09-28, s8e build, package R1FIX-8e) sel rk-cli 37, was 35 (struck: sel rk-cli 35): refuting round 1's
 # answer-selection test and the entry check's forbidden-stage pin are named.
-sel rk-cli 37 answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit worktree_assigned::a_reentry_records_reused_and_its_discard_list worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two root::adr0118_a_poisoned_writer_mutex_halts_exit_70 lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step
+# (dated 2026-09-28, s8e build, package R3FIX-8e) sel rk-cli 38, was 37 (struck: sel rk-cli 37): S8E-M43c's only
+# killer, answer::ac248_answer_without_live_token_exits_named_outcome (re-pointed by R1FIX-8e, not new), is named.
+sel rk-cli 38 answer::ac248_answer_without_live_token_exits_named_outcome answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit worktree_assigned::a_reentry_records_reused_and_its_discard_list worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two root::adr0118_a_poisoned_writer_mutex_halts_exit_70 lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step
 nd_check "named selections" || exit 1
 
 # ---- (3) THE ARMED LINT IS DISCHARGED — its ignore reason is gone, not reworded (ADR-0160's bullet; D21-41 e).
@@ -2070,8 +2141,18 @@ hits=$(grep -nF 'append_tier1' references/2026-09-08-architecture-design.md); rc
 # (2)'s two registry tests are the assertion.
 reg=crates/rk-adapter-sqlite/src/registry.rs
 test -f "$reg" || { echo "FAIL: the SQLite registry file is absent (Halt 8)"; exit 1; }
-n=$(grep -cF '"none": {' "$reg"); rc=$?
-[ "$rc" -le 1 ] && [ "$n" -eq 0 ] || { echo "FAIL: the SQLite registry still declares $n probe-less row(s) (grep rc=$rc) — snapshot and rebuild flip together (section 8e.9)"; exit 1; }
+# (dated 2026-09-28, s8e build, package R3FIX-8e; refuting round 3) The count reads CODE lines only and is
+# whitespace-robust: the tag, any spacing, a colon, any spacing, a brace. It replaced (struck) a grep -cF on the exact
+# bytes of the tag, colon, one space and brace, which a compact or space-before-colon row passed and which a doc line
+# could satisfy.
+NONE_TAG='"none"[[:space:]]*:[[:space:]]*[{]'
+raw=$(grep -nHE "$NONE_TAG" "$reg"); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the probe-less search could not run (grep rc=$rc)"; exit 1; }
+n=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep -c .)
+[ "$n" -eq 0 ] || { echo "FAIL: the SQLite registry still declares $n probe-less row(s) — snapshot and rebuild flip together (section 8e.9):"; printf '%s\n' "$raw" | grep -vE "$CODE_ONLY"; exit 1; }
+# CONTROL: a compact row and a space-before-colon row are COUNTED, and a doc line naming the tag is DROPPED.
+ctl=$(printf '%s\n' '    "probe": {"none":{"reason": "x"}}' '    "probe": { "none" : { "reason": "x" } }' '//! `{"none": {"reason": …}}` names the tag' | grep -nHE "$NONE_TAG" --label="$reg" - | grep -vE "$CODE_ONLY" | grep -c .)
+[ "$ctl" -eq 2 ] || { echo "FAIL: CONTROL — the probe-less count kept $ctl of two rows and one doc line"; exit 1; }
 
 # ---- (6) AC-162's REACHABILITY FLOOR: every use of the writer, in EVERY call form (a method call, a path call such as
 # ---- EventStore::append_tier1(...), a bare path handed on as a function value), is in the kernel's boundary module.
@@ -2216,6 +2297,8 @@ stale=$(git worktree prune --dry-run -v 2>&1); rc=$?
 # ---- (dated 2026-09-28, s8e build, package R2FIX-8e) Two more are provisional and NOT replayed here (section 8e.15):
 # ---- 7c (its ALL-count guard amended 38 -> 41; its whole re-run is s8j's) and 8d (S8E-RULINGS's run_named edit;
 # ---- s8f's Checkpoint 8f (9) re-runs it whole). This block's replay set is unchanged.
+# ---- (dated 2026-09-28, s8e build, package R3FIX-8e) One more joins the replay set: Checkpoint 5, whole, when
+# ---- crates/rk-types moved since the entry commit (10i), on Checkpoint 8d (13)'s precedent (section 8e.15).
 # ---- The extractor takes the ONE bash block of a file that contains a needle, and refuses on zero or two. The fence
 # ---- string is built from chr(96), so no triple backtick appears inside this block.
 cat > "$scratch/extract.py" <<'PY'
@@ -2417,6 +2500,39 @@ else
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7i, re-run whole over the rebuilt shipped store, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
   printf '%s\n' "$out" | grep -qxF 'CP7I-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 7i exited 0 without reaching its end marker"; exit 1; }
   nd_check "Checkpoint 7i replay" || exit 1
+
+  # (10i) (dated 2026-09-28, s8e build, package R3FIX-8e; refuting round 3's crossfile minor, on s8c's and s8d's
+  # precedent: Checkpoint 8d (13) re-runs Checkpoint 5 whole when crates/rk-types moved since its entry commit.)
+  # CHECKPOINT 5, ONLY IF crates/rk-types MOVED since this stage's entry commit 766854c (Checkpoint 8d-ii's close;
+  # section 8e.0's stage-open readings). This stage moves it (ADR-0185's three kinds, ADR-0182's interim item key),
+  # so the arm is expected to run. Checkpoint 5's block carries no end marker; it is extracted by its deny.toml line and
+  # one is appended, as (10b) does for 7a. Its cargo audit and cargo deny FETCH the advisory databases
+  # run::advisory_db_row_inputs binds for sca_scan, so the replay is bracketed by their commits (8d (13)'s dbs()).
+  # SYNTHETIC CONTROL first: the diff must see a change against the root commit, which carries no crates/rk-types.
+  entry8e=766854c
+  git cat-file -e "$entry8e^{commit}" 2>/dev/null || { echo "FAIL: the s8e entry commit $entry8e names no commit"; exit 1; }
+  git merge-base --is-ancestor "$entry8e" HEAD || { echo "FAIL: HEAD does not descend from the s8e entry commit $entry8e"; exit 1; }
+  root8e=$(git rev-list --max-parents=0 HEAD | tail -1)
+  git diff --quiet "$root8e" -- crates/rk-types; rc=$?
+  [ "$rc" -eq 1 ] || { echo "FAIL: CONTROL — git diff --quiet over crates/rk-types against the root commit returned $rc, not 1"; exit 1; }
+  git diff --quiet "$entry8e" -- crates/rk-types; rc=$?
+  if [ "$rc" -eq 1 ]; then
+    dbs() { for d in "$HOME/.cargo/advisory-db" "$HOME"/.cargo/advisory-dbs/*/; do [ -d "$d" ] || continue; h=$(git -C "$d" rev-parse HEAD 2>/dev/null); printf '%s=%s ' "$d" "${h:-none}"; done; }
+    ext runbook/phase-1/s5-workspace-ci-rk-types.md 'FAIL: deny.toml absent' "$scratch/cp5.sh"
+    printf '\necho "CP5-EXTRACTED-END reached"\n' >> "$scratch/cp5.sh" || { echo "FAIL: the Checkpoint 5 end marker could not be appended"; exit 1; }
+    db_before_5=$(dbs)
+    out=$(nd env RK_CP_NESTED=1 bash "$scratch/cp5.sh" 2>&1); rc=$?
+    echo "ADVISORY-DBS before CP5: $db_before_5"
+    echo "ADVISORY-DBS after CP5:  $(dbs)"
+    [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 5, re-run whole over the moved crates/rk-types, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
+    printf '%s\n' "$out" | grep -qxF 'CP5-EXTRACTED-END reached' || { echo "FAIL: Checkpoint 5 stopped before its last line"; exit 1; }
+    nd_check "Checkpoint 5 replay" || exit 1
+    echo "ok: Checkpoint 5 re-run whole (crates/rk-types moved since $entry8e)"
+  elif [ "$rc" -eq 0 ]; then
+    echo "ok: crates/rk-types unchanged since $entry8e — Checkpoint 5 is not re-run"
+  else
+    echo "FAIL: git diff over crates/rk-types could not run (rc=$rc)"; exit 1
+  fi
 
 fi
 

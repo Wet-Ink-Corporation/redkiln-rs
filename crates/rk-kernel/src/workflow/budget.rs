@@ -925,7 +925,8 @@ impl BudgetExtensionMark {
     /// The gate kind this mark opens. A stable tag, matched by tests rather than message text.
     pub const KIND: &'static str = "budget_extension";
 
-    /// The event kind that carries it — one of the closed 38 (37 until ADR-0126, 2026-09-17), minted
+    /// The event kind that carries it — one of the closed set (`EventKind::ALL`; ~~the closed 38~~,
+    /// R3FIX-8e 2026-09-28), minted
     /// by nobody here.
     #[must_use]
     pub const fn event_kind() -> EventKind {
@@ -968,7 +969,8 @@ impl BudgetExtensionMark {
     /// **The payload's field set is a reading, and so is `RetryAtMark`'s**: `rk_types::event::Event`
     /// carries `payload: serde_json::Value` and the typed-payload record, per kind, is **OWED**
     /// (`rk-types/src/event.rs`:53-59). Nothing here mints an `EventKind` — the carrier is
-    /// [`Self::event_kind`], one of the closed 38 (37 until ADR-0126, 2026-09-17).
+    /// [`Self::event_kind`], one of the closed set (`EventKind::ALL`; ~~the closed 38~~, R3FIX-8e
+    /// 2026-09-28).
     #[must_use]
     pub fn to_event(self) -> Event {
         Event::new(

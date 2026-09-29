@@ -7,7 +7,9 @@
 //! harness, so no test builds `ClaudeHarness` and none can dispatch to a real `claude`. The two
 //! arms that need a PROCESS (the process-boundary test, and the stdout half of the terminal-read
 //! test) drive the real `redkiln` binary over the fixture child `rk-fixture-child-claude` after an
-//! in-process first hop.
+//! in-process first hop. *(dated 2026-09-28, `s8e` build, package R3FIX-8e: the process-boundary
+//! test's first hop is the binary too, as §8e.11 prescribes; only the terminal-read arms open their
+//! gate in process.)*
 //!
 //! **The fixture lane** is `pack-min`'s `Lane` variant (`pack.lane.toml`): `triage` (empty),
 //! `discovery` (`forbidden`), `implement` (the abstention gate over an item that omits `has_repro`)
@@ -653,7 +655,9 @@ fn every_non_forbidden_stage_is_entered_and_trailered_in_declared_order() {
 
 /// **An empty stage is entered, trailered and passed, and records `stage_empty { stage, reason }`.**
 ///
-/// `triage` carries no activity in the fixture lane. Red under S8E-M14.
+/// `triage` carries no activity in the fixture lane. Red under S8E-M14; *(dated 2026-09-28, `s8e`
+/// build, package R3FIX-8e)* and under S8E-M60 (the row appended beside the entry act, unanchored)
+/// and S8E-M61 (a reason outside `STAGE_EMPTY_REASONS`).
 #[test]
 fn an_empty_stage_records_stage_empty_with_its_reason() {
     let repo = lane_repo();
@@ -689,13 +693,17 @@ fn an_empty_stage_records_stage_empty_with_its_reason() {
         "the row names the empty stage: {}",
         empty[0].payload
     );
+    // *(dated 2026-09-28, `s8e` build, package R3FIX-8e; refuting round 3's major.)* The reason is
+    // a MEMBER of the closed set the record fixes (§8e.6: *"a closed set that the record fixes"*),
+    // not any non-empty string (~~`is_some_and(|r| !r.trim().is_empty())`~~). Red under S8E-M61.
+    let reason = empty[0]
+        .payload
+        .get("reason")
+        .and_then(serde_json::Value::as_str);
     assert!(
-        empty[0]
-            .payload
-            .get("reason")
-            .and_then(serde_json::Value::as_str)
-            .is_some_and(|r| !r.trim().is_empty()),
-        "the row carries its reason: {}",
+        reason.is_some_and(|r| rk_types::event_kind::STAGE_EMPTY_REASONS.contains(&r)),
+        "the row's reason {reason:?} is not one of the closed set {:?}: {}",
+        rk_types::event_kind::STAGE_EMPTY_REASONS,
         empty[0].payload
     );
     assert!(
@@ -703,6 +711,50 @@ fn an_empty_stage_records_stage_empty_with_its_reason() {
             .iter()
             .any(|s| s == "triage"),
         "the empty stage was skipped rather than entered and trailered"
+    );
+
+    // *(dated 2026-09-28, `s8e` build, package R3FIX-8e; refuting round 3's major.)* **The row is
+    // anchored to the entry's commit** (§8e.6: *"On the entry `resume_routed` takes itself (the
+    // lane's first stage), the row is a second row of the entry act, anchored to its commit."*).
+    // `triage` is the fixture lane's FIRST stage, so its entry is that act: the row's `anchor_sha`
+    // must be the sha of the one `Story: rk-fixture/lane-2 triage` commit on the run ref. A row
+    // appended beside the act instead leaves `anchor_sha` NULL. Red under S8E-M60.
+    let anchors = sql_rows(
+        &crate::common_dir(root),
+        "SELECT CAST(anchor_sha AS TEXT) FROM t2_event WHERE kind = 'stage_empty'",
+    )
+    .unwrap_or_else(|e| panic!("PREMISE: the store must be readable: {e}"));
+    assert_eq!(
+        anchors.len(),
+        1,
+        "PREMISE: one `stage_empty` row in t2_event"
+    );
+    let anchor = anchors[0][0].clone();
+    let entry = format!("{PROJECT}/{THROUGH_ITEM} triage");
+    let entry_commits: Vec<String> = git_read(
+        root,
+        &[
+            "log",
+            "--format=%H%x1f%(trailers:key=Story,valueonly,separator=%x1e)",
+            &run_ref(THROUGH_ITEM),
+        ],
+    )
+    .unwrap_or_default()
+    .lines()
+    .filter_map(|l| l.split_once('\u{1f}'))
+    .filter(|(_, values)| values.split('\u{1e}').any(|v| v.trim() == entry))
+    .map(|(sha, _)| sha.trim().to_owned())
+    .collect();
+    assert_eq!(
+        entry_commits.len(),
+        1,
+        "PREMISE: exactly one `Story: {entry}` commit on rk-run/{THROUGH_ITEM}: {entry_commits:?}"
+    );
+    assert_eq!(
+        anchor.as_deref(),
+        Some(entry_commits[0].as_str()),
+        "the `stage_empty` row is not anchored to the entry act's `Story: {entry}` commit \
+         (section 8e.6: a second row of the entry act)"
     );
 }
 
@@ -981,25 +1033,29 @@ fn terminal_read_reports_only_an_awaited_gate() {
 }
 
 /// **The process boundary, with a process** (D21-47's canonical fixture harness). Invocation 1
-/// (in process) exits 0 at `implement`'s gate; `redkiln answer` applies; `redkiln run` — the real
+/// (~~in process~~ *(dated 2026-09-28, `s8e` build, package R3FIX-8e)* the binary) exits 0 at
+/// `implement`'s gate; `redkiln answer` applies; `redkiln run` — the real
 /// binary, `RK_FIXTURE_MODE=replay:<frames>`, `harness_binary` naming the built
 /// `rk-fixture-child-claude` — crosses `implement -> review` and mints `review`'s mark.
 #[test]
 fn the_binary_crosses_a_process_boundary_over_the_fixture_child() {
     let repo = lane_repo();
     let root = repo.path();
+    // *(dated 2026-09-28, `s8e` build, package R3FIX-8e; refuting round 3's minor.)* Invocation 1
+    // is the real binary too, as §8e.11 prescribes (*"`run` exits 0 at a gate, then `redkiln
+    // answer`, then `redkiln run` crosses the next boundary"*), ~~in process through
+    // `verbs::run::run(`~~. Its exit is read off the process.
+    let first = spawn_run_replaying(root, GATE_ITEM);
     assert_eq!(
-        ran(
-            rk_cli::verbs::run::run(
-                &cli(root, GATE_ITEM),
-                &args(GATE_ITEM),
-                &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
-            ),
-            GATE_ITEM
-        ),
-        Exit::Success,
-        "invocation 1 exits 0 at the gate"
+        first.status.code(),
+        Some(0),
+        "invocation 1 (`redkiln run`, a process) exits 0 at the gate. stderr:\n{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    assert_eq!(
+        answerable_tokens(&support::store_rows(root)).len(),
+        1,
+        "PREMISE: invocation 1 opened exactly one answerable gate"
     );
     let before = story_stages(root, GATE_ITEM);
 
@@ -1029,6 +1085,20 @@ fn the_binary_crosses_a_process_boundary_over_the_fixture_child() {
         "the second process did not cross into `review` (exit {:?}); marks before {before:?}, \
          after {after:?}. stderr:\n{}",
         out.status.code(),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    // *(dated 2026-09-28, `s8e` build, package R3FIX-8e.)* The second process's exit is asserted.
+    // It is `Schema` (11), measured: after crossing into `review`, that stage's `review-min`
+    // dispatch replays the same `implement-frames.jsonl` transcript, whose output is no `Findings`,
+    // so the dispatch does not commit (*"the dispatch of `review-min` (review-min@1) did not
+    // commit"*). The crossing is §8e.11's claim; the exit pins where the process stopped after it,
+    // so a second process that stops anywhere else (a halt, a refusal before the boundary) fails.
+    assert_eq!(
+        out.status.code(),
+        Some(Exit::Schema as i32),
+        "the second `redkiln run` must cross into `review` and stop at `review-min`'s dispatch \
+         (Schema, 11). stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
 }

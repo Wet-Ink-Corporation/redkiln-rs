@@ -1335,8 +1335,8 @@ impl RunState {
 
 /// Fold a recorded journal into a state.
 ///
-/// **Total over the closed 38 kinds (37 until ADR-0126, 2026-09-17), with no catch-all arm**, so a
-/// thirty-ninth kind is an `E0004`
+/// **Total over the closed set (`EventKind::ALL`), with no catch-all arm**, so a new kind is an
+/// `E0004` (~~the closed 38 kinds … a thirty-ninth kind~~ *(dated 2026-09-28, `s8e` build, package R3FIX-8e: ADR-0185's three kinds made `ALL` 41)*)
 /// here exactly as it is in `EventKind::tier()` — *"a kind cannot enter the system without someone
 /// deciding whether losing it would change the next action."*
 ///

@@ -52,7 +52,9 @@
 //! externally tagged — `{"none":{"reason": …}}` / `{"recorded":{"source": …}}`. *(dated
 //! 2026-09-28, `s8e` build, package S8E-P7: spelled without the space after the tag's colon, so
 //! Checkpoint 8e (5)'s count of probe-less rows — `grep -cF` on the tag, colon, space, brace — reads
-//! rows and not this sentence.)*
+//! rows and not this sentence.)* *(dated 2026-09-28, `s8e` build, package R3FIX-8e: that count is
+//! now whitespace-robust and reads code lines only, so a doc line such as this one is dropped by
+//! the filter rather than by its spelling.)*
 
 use serde::Deserialize;
 

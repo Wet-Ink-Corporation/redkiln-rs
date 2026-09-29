@@ -1988,7 +1988,8 @@ fn rebuilt_tier2(ctx: &Ctx) -> Vec<Finding> {
 /// wrong: `first`/`last` are **journal (append) order, not `at` order** (AC-532, D15-4(ii)), and a
 /// row missing `run_id`, `item` or `at` is **refused, never defaulted to a zero or an epoch**.
 ///
-/// A row whose `kind` is outside the closed 38 is skipped here, not refused: `Row::kind` returns
+/// A row whose `kind` is outside the closed set (`EventKind::ALL`; ~~the closed 38~~, R3FIX-8e
+/// 2026-09-28) is skipped here, not refused: `Row::kind` returns
 /// `None` for it, an unknown wire name is another rule's subject, and the ledger's subject is the
 /// `activity_committed` rows alone.
 ///
