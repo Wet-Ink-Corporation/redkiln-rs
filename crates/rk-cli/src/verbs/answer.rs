@@ -158,6 +158,54 @@ pub fn admit(
     registry.validate(registry.question_for(gate_kind), option, attachments)
 }
 
+/// **D21-115: `exclude` refuses a managed artifact path** (ADR-0188 decision 6's D21-115 note,
+/// proposed).
+///
+/// When `option` is `exclude` and `record` is a refused landing's gate whose
+/// `gate_opened` row names a refused path under the item's managed artifact directory (derived from
+/// `rk_store::render::managed_path`, never spelled here), the refusal's message, naming each such
+/// path and `abort` as the remedy. `None` for every other answer, and for an `exclude` whose refused
+/// paths are all outside that directory.
+#[must_use]
+pub fn managed_exclusion_refusal(
+    record: &rk_kernel::workflow::fsm::GateRecord,
+    events: &[rk_types::event::Event],
+    item: &str,
+    option: &str,
+) -> Option<String> {
+    use rk_kernel::runtime::tier_one::{LANDING_ABORT, LANDING_EXCLUDE, LANDING_REFUSED_KIND};
+    if option != LANDING_EXCLUDE || record.kind() != LANDING_REFUSED_KIND {
+        return None;
+    }
+    let dir = rk_store::render::managed_path(item, "");
+    let token = record.token().as_str();
+    let managed: std::collections::BTreeSet<&str> = events
+        .iter()
+        .filter(|e| {
+            e.kind == rk_types::event_kind::EventKind::GateOpened
+                && e.payload.get("token").and_then(serde_json::Value::as_str) == Some(token)
+        })
+        .filter_map(|e| {
+            e.payload
+                .get("refused")
+                .and_then(serde_json::Value::as_array)
+        })
+        .flatten()
+        .filter_map(|r| r.get("path").and_then(serde_json::Value::as_str))
+        .filter(|p| p.starts_with(&dir))
+        .collect();
+    if managed.is_empty() {
+        return None;
+    }
+    let named: Vec<String> = managed.iter().map(|p| format!("`{p}`")).collect();
+    Some(format!(
+        "`{LANDING_EXCLUDE}` is refused on the landing gate of {item}: it refused {} under the \
+         item's managed artifact directory `{dir}`, whose restore could then never land (D21-115). \
+         Answer `{LANDING_ABORT}`, or commit a fix on the run ref first.",
+        named.join(", ")
+    ))
+}
+
 /// The outer verb: steps (1)–(6), the store, then [`run_with`].
 ///
 /// This much is real from the start: every test below drives either the binary (which enters here)
@@ -452,6 +500,18 @@ pub fn run_with(
             .collect();
         if let Err(refused) = admit(registry, record.kind(), &args.option, &attachments) {
             eprintln!("redkiln: {refused}");
+            return Ok(Exit::Usage);
+        }
+        // *(dated 2026-09-29, s8f build, package D21115-8f; D21-115, TAKEN PROVISIONALLY under
+        // D21-105; ADR-0188 decision 6's D21-115 note, proposed.)* `exclude` on a refused landing
+        // whose refused paths include one under the item's managed artifact directory is refused
+        // BY NAME, with the same usage exit and zero rows: the restore of a managed file could then
+        // never land, and each later entry would re-open the drift gate (a silent exit-0 livelock).
+        // `abort` is the remedy, or a fix committed on the run ref first. Other paths stay
+        // excludable.
+        if let Some(message) = managed_exclusion_refusal(record, &events, &args.item, &args.option)
+        {
+            eprintln!("redkiln: {message}");
             return Ok(Exit::Usage);
         }
     }

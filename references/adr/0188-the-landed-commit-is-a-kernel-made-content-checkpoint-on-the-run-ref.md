@@ -291,6 +291,21 @@ restore can never land, so every later entry surfaces the drift again and opens 
 does not release the stage's exit (measured at R7FIX-8f: after `exclude` and `confirm-restore`, two further
 invocations each exited `0` at a new drift gate, three in all, and the lane stayed in `review`). It is returned to
 the orchestrator for a ruling.
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package D21115-8f); D21-115, TAKEN PROVISIONALLY
+under D21-105, pending the operator's confirmation.)* **The residual is ruled: `exclude` refuses a managed artifact
+path.** D21-115 rules option B: *"`answer … exclude` refuses, by name, a gate whose refused paths include a path under
+`.redkiln/artifacts/<item>/`. It appends nothing. Such a gate is answered `abort`, or the operator commits a fix on
+the run ref first. Other paths stay excludable."* So `answer <item> exclude` on a `landing.refused-path` gate whose
+`gate_opened` row names a refused path under the item's managed artifact directory (derived from
+`rk_store::render::managed_path`, never spelled as a literal) prints a refusal naming each such path and `abort` as
+the remedy, appends no row to the item's journal, moves no ref, leaves the gate open, and exits `2`, the usage exit
+`answer` gives any option the gate cannot take (ADR-0129 decision 4's CLI boundary; `exit.rs`'s `Usage` row). `abort`
+is unchanged, and so is `exclude` over every other path. **The stated reading above is superseded for its `exclude`
+arm:** a refused drift-gate landing's paths are the item's managed `Spec.json` and `Spec.md`, so its `exclude` is now
+refused, and the lane is released by `abort`, which stops it before any entry pass. The reading's `abort` arm
+stands. Pinned by `landing::an_exclude_over_a_refused_managed_path_is_refused_by_name_and_abort_stops_the_lane` and
+the re-shaped `landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck` (M-EXCL-MANAGED;
+`s8f` §8f.12). No accepted Decision moves.
 
 **7. What "due" means, and the gate's tree at a refused landing** (ADR-0105 clause 4's *"When a checkpoint commit is
 due"*). A checkpoint commit is **due** when a landing **will commit**: its staging set passes every refusal and its T

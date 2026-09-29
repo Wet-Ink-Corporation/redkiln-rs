@@ -2648,9 +2648,11 @@ fn a_human_drifts_the_spec_over_the_blob_limit(root: &Path, item: &str) -> Strin
 /// accepts prose over the blob limit, so the drift gate's `Gate:` commit would land both managed
 /// files and refuses them by size. Invocation 2 then opens ONE `landing.refused-path` gate over an
 /// EMPTY commit naming both paths with `size:<bytes>`, opens no drift gate, dispatches nothing,
-/// lands nothing and exits `0`. The follow-up proceeds for each answer: after `exclude`, invocation
+/// lands nothing and exits `0`. The follow-up proceeds for each answer: ~~after `exclude`, invocation
 /// 3 opens the drift gate (the stated reading: it opens at the next entry once the exclusion is in
-/// force), refuses nothing again, lands neither path and exits `0`; after `abort`, invocation 3
+/// force), refuses nothing again, lands neither path and exits `0`;~~ *(dated 2026-09-29, s8f build,
+/// package D21115-8f; D21-115)* `exclude` is refused (both paths are the item's managed artifacts)
+/// and `abort` then releases the lane; after `abort`, invocation 3
 /// stops the lane, exit `0`, and the run ref does not move. Red before the fix: invocation 2 exits
 /// `3` with no gate, and so does every later invocation. Red under M-DRIFT-REFUSED.
 #[test]
@@ -2732,15 +2734,33 @@ fn a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck() {
             .as_str()
             .expect("the gate's token")
             .to_owned();
+        // *(dated 2026-09-29, s8f build, package D21115-8f; D21-115, TAKEN PROVISIONALLY under
+        // D21-105; ADR-0188 decision 6's D21-115 note, proposed.)* ~~After `exclude`, invocation 3
+        // opens the drift gate~~: the refused paths are the item's managed `Spec.json` and
+        // `Spec.md`, so `exclude` is now REFUSED (exit `2`, nothing answered, the gate open) and
+        // the lane is released by `abort`, as the `abort` arm is. The livelock the R7FIX-8f reading
+        // left (a drift gate re-opened at every entry) is what D21-115 rules out.
+        if option == "exclude" {
+            assert_eq!(
+                lane_e2e::answer_item(root, item, "exclude"),
+                Exit::Usage,
+                "`exclude` over the item's managed artifacts was not refused (D21-115)"
+            );
+            assert_eq!(
+                answered_and_void(root, &token),
+                (0, 0),
+                "the refused `exclude` answered the gate"
+            );
+        }
         assert_eq!(
-            lane_e2e::answer_item(root, item, option),
+            lane_e2e::answer_item(root, item, "abort"),
             Exit::Success,
-            "[{option}] the refused landing's gate is not answerable"
+            "[{option}] the refused landing's gate is not answerable by `abort`"
         );
         assert_eq!(
             answered_and_void(root, &token),
             (1, 0),
-            "[{option}] the answer was not APPLIED"
+            "[{option}] the `abort` answer was not APPLIED"
         );
 
         let third = ScriptedFactory::new(vec![lane_e2e::review()]);
@@ -2760,24 +2780,131 @@ fn a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck() {
             json_before,
             "[{option}] a refused path landed on the follow-up"
         );
-        if option == "exclude" {
-            assert_eq!(
-                drift_gates(root).len(),
-                1,
-                "the drift gate did not open at the next entry once the exclusion was in force"
-            );
-        } else {
-            assert!(
-                drift_gates(root).is_empty() && third.dispatches() == 0,
-                "the aborted lane walked on"
-            );
-            assert_eq!(
-                lane_e2e::ref_sha(root, item),
-                tip_before,
-                "the aborted lane moved the run ref"
-            );
-        }
+        assert!(
+            drift_gates(root).is_empty() && third.dispatches() == 0,
+            "[{option}] the aborted lane walked on"
+        );
+        assert_eq!(
+            lane_e2e::ref_sha(root, item),
+            tip_before,
+            "[{option}] the aborted lane moved the run ref"
+        );
     }
+}
+
+/// **D21-115: `exclude` over a refused path under the item's managed artifact directory is refused
+/// BY NAME, appends nothing, and `abort` releases the lane** (ADR-0188 decision 6's D21-115 note,
+/// proposed; `s8f` §8f.4). Invocation 2's drift-gate landing refuses `Spec.json` and `Spec.md` by
+/// size, both under `.redkiln/artifacts/<item>/`. `answer … exclude`, driven AS A PROCESS so its
+/// stderr is read, exits `2` (the usage exit `answer` gives an option the gate cannot take),
+/// naming each managed path and `abort` as the remedy; it appends no row to the item's journal
+/// (beyond the process's own startup `reconcile_started`), moves no ref, and the gate stays open (no `gate_answered` for its token). `abort` is then APPLIED, and invocation 3 stops the
+/// lane: exit `0`, no dispatch, no drift gate, the run ref unmoved. Red before the refusal: `exclude`
+/// is APPLIED, exit `0`. Red under M-EXCL-MANAGED (the refusal dropped). *(Added 2026-09-29, s8f
+/// build, package D21115-8f; D21-115, TAKEN PROVISIONALLY under D21-105.)*
+#[test]
+fn an_exclude_over_a_refused_managed_path_is_refused_by_name_and_abort_stops_the_lane() {
+    let repo = drift_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    let human = a_human_drifts_the_spec_over_the_blob_limit(root, item);
+    let run_ref = lane_e2e::run_ref(item);
+    let json_before = blob(root, &human, &spec_json(item));
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(vec![lane_e2e::review()])),
+        Exit::Success,
+        "PREMISE: `run` exits 0 at the drift gate landing's refusal"
+    );
+    let gates = landing_gates(root);
+    assert_eq!(gates.len(), 1, "PREMISE: one landing gate: {gates:?}");
+    let refused: Vec<String> = refused_of(&gates[0]).into_iter().map(|(p, _)| p).collect();
+    let managed = rk_store::render::managed_path(item, "");
+    assert!(
+        refused.contains(&spec_json(item))
+            && refused.contains(&spec_md(item))
+            && refused.iter().all(|p| p.starts_with(&managed)),
+        "PREMISE: the gate refuses the item's managed `Spec.json` and `Spec.md`: {refused:?}"
+    );
+    let token = gates[0].payload["token"]
+        .as_str()
+        .expect("the gate's token")
+        .to_owned();
+
+    // ---- `exclude` is refused, by name, and appends nothing ------------------------------------
+    // Every row but a process's own startup `reconcile_started` (item `None`, written by every
+    // `redkiln` invocation before any verb runs): that one is not the answer's.
+    let journal = || -> Vec<Event> {
+        support::journal_rows(root, item)
+            .into_iter()
+            .filter(|e| !(e.kind == EventKind::ReconcileStarted && e.item().is_none()))
+            .collect()
+    };
+    let rows_before = journal().len();
+    assert!(rows_before > 0, "PREMISE: the item's journal is read");
+    let tip_before = lane_e2e::ref_sha(root, item);
+    let out = crate::answer::spawn_answer(root, item, "exclude", &crate::answer::BOTH_FLAGS);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "`exclude` over a managed path was not refused with the usage exit: stderr {stderr}"
+    );
+    for path in &refused {
+        assert!(
+            stderr.contains(path.as_str()),
+            "the refusal does not name the managed path {path}: {stderr}"
+        );
+    }
+    assert!(
+        stderr.contains("`abort`"),
+        "the refusal does not name `abort` as the remedy: {stderr}"
+    );
+    let rows_after = journal();
+    assert_eq!(
+        rows_after.len(),
+        rows_before,
+        "the refused `exclude` appended a row to the item's journal: {:?}",
+        rows_after.get(rows_before..)
+    );
+    assert_eq!(
+        lane_e2e::ref_sha(root, item),
+        tip_before,
+        "the refused `exclude` moved the run ref"
+    );
+    assert_eq!(
+        answered_and_void(root, &token),
+        (0, 0),
+        "the gate was answered: it does not stay open"
+    );
+
+    // ---- `abort` still works, and stops the lane ------------------------------------------------
+    assert_eq!(
+        lane_e2e::answer_item(root, item, "abort"),
+        Exit::Success,
+        "`abort` is not answerable after the refused `exclude`"
+    );
+    assert_eq!(
+        answered_and_void(root, &token),
+        (1, 0),
+        "`abort` was not APPLIED"
+    );
+    let third = ScriptedFactory::new(vec![lane_e2e::review()]);
+    let tip_after_abort = lane_e2e::ref_sha(root, item);
+    assert_eq!(run(root, item, &third), Exit::Success);
+    assert!(
+        drift_gates(root).is_empty() && third.dispatches() == 0,
+        "the aborted lane walked on"
+    );
+    assert_eq!(
+        lane_e2e::ref_sha(root, item),
+        tip_after_abort,
+        "the aborted lane moved the run ref"
+    );
+    assert_eq!(
+        blob(root, &run_ref, &spec_json(item)),
+        json_before,
+        "a refused managed path landed"
+    );
 }
 
 /// **An entry whose writes leave the run tree unchanged makes NO `rk entry` commit** (D21-114;
