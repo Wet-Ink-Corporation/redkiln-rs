@@ -2951,9 +2951,18 @@ store_before=$(python -c "$rows" "$store"); rc=$?
 REC_LANDING=0188
 REC_RENDER=0189
 REC_TELEMETRY=0190
+# ---- (dated 2026-09-29, s8f close, the formal run; D21-49 option C and the AFK rule D21-105 item 1: "neutralise
+# ---- ONLY the accepted-status assertions, record them as flip-pending") FLIP_PENDING names, by id, each record
+# ---- held `proposed` at this run. For such a record (2) asserts the INVERSE: status `proposed`, no DECISIONS
+# ---- heading flipping it, and no back-link naming it on any record it supersedes (the back-links move in the flip
+# ---- commit). Every other record keeps every accepted check. The form is s8d-ii (9)'s, which branches on status
+# ---- (s8d-ii §8d-ii.11, D21-49 paragraph). The faithful run at 2acb35a, before this line, read rc 1 at (2) on the
+# ---- three records (target/cp-runs/cp8f-formal-MAIN.out). The flip commit shortens the list to what stays held.
+FLIP_PENDING="0188 0189 0190"
 recs='import glob,re,sys
 names=("landing","render","telemetry")
 ids=dict(zip(names,sys.argv[1:4]))
+pending=set(sys.argv[4].split()) if len(sys.argv)>4 else set()
 # (dated 2026-09-29, s8f build, package R1FIX-8f-B-RECORDS; D21-107 item 2, 0174 joins the supersedes of ADR-0190)
 # the telemetry entry read (["0131","0163"],["reading item ownership off"]); ADR-0190 supersedes 0131, 0138, 0163 and
 # 0174 in part. It now names all four and the 0138 needle, and the ids on each record own supersedes line are added
@@ -2967,6 +2976,7 @@ readme=open("references/adr/README.md",encoding="utf-8").read()
 dec="".join(open(f,encoding="utf-8").read() for f in sorted(glob.glob("spikes/DECISIONS-2026-*.md")))
 bad=[]
 if len(set(ids.values()))!=3: bad.append("two REC_ lines name one id")
+if not pending<=set(ids.values()): bad.append("FLIP_PENDING names an id that is not one of the three records")
 for n in names:
     i=ids[n]
     if not re.fullmatch(r"[0-9]{4}",i) or int(i)<165:
@@ -2976,20 +2986,26 @@ for n in names:
     t=open(fs[0],encoding="utf-8").read()
     if len(re.findall("^### Option \u2014 ",t,re.M))<2: bad.append(i+": fewer than two Option headings (ADR-0085; D21-42 24a)")
     if "**What this forbids**" not in t: bad.append(i+": no What this forbids block")
-    if not re.search(r"^status: accepted\s*$",t,re.M): bad.append(i+": not accepted - a record flips only on the operator dated line")
+    held=i in pending
+    if held and not re.search(r"^status: proposed\s*$",t,re.M): bad.append(i+": named flip-pending but not proposed")
+    if not held and not re.search(r"^status: accepted\s*$",t,re.M): bad.append(i+": not accepted - a record flips only on the operator dated line")
     if "["+i+"](" not in readme: bad.append(i+": no README index row")
-    if not re.search(r"^## D[0-9]+-[0-9]+ . ADR-"+i+r"\b[^\n]*flips to `accepted`",dec,re.M): bad.append(i+": no dated DECISIONS heading flips ADR-"+i+" to accepted")
+    flipped=re.search(r"^## D[0-9]+-[0-9]+ . ADR-"+i+r"\b[^\n]*flips to `accepted`",dec,re.M)
+    if held and flipped: bad.append(i+": named flip-pending but a DECISIONS heading flips it")
+    if not held and not flipped: bad.append(i+": no dated DECISIONS heading flips ADR-"+i+" to accepted")
     m=re.search(r"^supersedes:(.*)$",t,re.M); sup=m.group(1) if m else ""
     for a in sorted(set(need[n][0])|set(re.findall("[0-9]{4}",sup))):
         if a not in sup: bad.append("%s: the %s record does not supersede %s in part"%(i,n,a))
         g=glob.glob("references/adr/"+a+"-*.md")
         s2=open(g[0],encoding="utf-8").read() if len(g)==1 else ""
         m2=re.search(r"^superseded_by:(.*)$",s2,re.M)
-        if not (m2 and i in m2.group(1)): bad.append("ADR-%s: superseded_by does not name %s"%(a,i))
+        named=bool(m2 and i in m2.group(1))
+        if held and named: bad.append("ADR-%s: superseded_by names %s, which is flip-pending (the back-link moves in the flip commit)"%(a,i))
+        if not held and not named: bad.append("ADR-%s: superseded_by does not name %s"%(a,i))
     for q in need[n][1]:
         if q not in t: bad.append("%s: the %s record does not quote %r"%(i,n,q))
 print("\n".join(bad)); sys.exit(1 if bad else 0)'
-out=$(python -c "$recs" "$REC_LANDING" "$REC_RENDER" "$REC_TELEMETRY" 2>&1); rc=$?
+out=$(python -c "$recs" "$REC_LANDING" "$REC_RENDER" "$REC_TELEMETRY" "$FLIP_PENDING" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the records this stage owes are missing or malformed:"; printf '%s\n' "$out"; exit 1; }
 # (dated 2026-09-29, s8f build, package R5FIX-8f) the render needle's control: it is a QUOTATION of ADR-0173 decision
 # 8, so a paraphrase in ADR-0189 cannot satisfy it (measured at 153e9d6: 0 hits in ADR-0189, so (2) read it red).
