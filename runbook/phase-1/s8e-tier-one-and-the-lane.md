@@ -1246,6 +1246,12 @@ runs a fix item **and** a story item in one repository.
   these kinds. `s8f` cites this record for it and keeps `activity_id_at_version` and the breakdown (D21-42 12b).
   `rate_limit_reading.item` stays in the payload where ADR-0163 put it, and the record says whether that kind carries
   the key beside it as well.
+  *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; `s8g` §8g.1 move 2 and §8g.4; D21-47.)* **The list gains
+  `verify_completed`, named item-scoped and carried by `s8g`'s verify record R1 = ADR-0191 decision 8 (proposed)**,
+  with its reason: the store cannot scope the row any other way, and D21-46 R3 puts the key beside the payload
+  (*"Carried outside the canonical digest"*), never in it. The variant turned
+  `fsm::every_item_scoped_kind_carries_the_interim_item_key` red first (*"the record's three lists name every kind"*,
+  left 41, right 42), and its `CARRIED` list moves ~~33~~ 34 in the same change, as this bullet's rule asks.
 - **`query(ByItem(x))` returns only rows whose `item` is `x`**, in `rk-store`'s SQL over the `item` column, and in
   `VecStore`. The conformance arm asserts it for both rows. Every reader that folds one item reads through it: the
   kernel's fold input, `answer`'s ownership read (§8e.4), and `explain`. `BySha` and `ByRun` stay as they are, and the

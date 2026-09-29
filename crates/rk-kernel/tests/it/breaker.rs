@@ -555,7 +555,7 @@ fn breaker_ac033_ac035() {
     // is the breaker's carrier — rather than the gap quietly closing or quietly widening.
     assert_eq!(
         EventKind::ALL.len(),
-        41,
+        42,
         // DECIDED HERE 2026-09-17, when ADR-0123 minted the thirtieth and thirty-first: neither
         // `gate_answer_spent` (a refused duplicate answer) nor `gate_resumed` (resume telemetry)
         // is a breaker mark. AC-033's `written` half stays ARMED; only the count moved, 29 -> 31 -> 36 -> 37
@@ -572,7 +572,11 @@ fn breaker_ac033_ac035() {
         // assignment, an empty stage's reason, and one journalled git invocation. None is a
         // breaker mark; the breaker fold routes all three to its no-state-change arm. The
         // `written` half is unchanged by them.
-        "`EventKind` is closed at 41 (29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126, 38 until s8e's three-kinds record) and none of them is a breaker mark: AC-033's `written` half is \
+        // DECIDED AGAIN 2026-09-29 (`s8g` build, package S8G-P2-RKTYPES; the verify record R1 =
+        // ADR-0191 decision 8, proposed; 41 -> 42): `verify_completed` is one completed
+        // `Toolchain::test` port call's tier-2 row. It is not a breaker mark; the breaker fold routes
+        // it to its no-state-change arm, and AC-033's `written` half stays ARMED.
+        "`EventKind` is closed at 42 (29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126, 38 until s8e's three-kinds record, 41 until ADR-0191) and none of them is a breaker mark: AC-033's `written` half is \
          ARMED, NOT DISCHARGED, and no kind is minted at Slice 4d"
     );
 }

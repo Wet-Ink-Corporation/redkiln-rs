@@ -183,3 +183,93 @@ impl VerifyReport {
         Ok(())
     }
 }
+
+/// What a `verify_completed` row says was run.
+///
+/// The closed selection of `rk_ports::toolchain::Selection`, recorded as data (ADR-0191 decision
+/// 8). The whole-suite reason travels in `basis_reason`, and the changed paths in `paths`, so
+/// neither is repeated here.
+///
+/// *(Added 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; `s8g` §8g.4.)*
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum VerifySelection {
+    /// The whole suite.
+    WholeSuite,
+    /// Runner arguments, as passed.
+    Filter { args: Vec<String> },
+    /// The affected set over the row's `paths`.
+    Affected,
+    /// A selection the adapter declares, by name.
+    Named { name: String },
+}
+
+/// The range a `verify_completed` row ran over: AC-321's *"range endpoints"*.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct VerifyRange {
+    pub base: String,
+    pub head: String,
+}
+
+/// Required-present, `null` allowed: without this, serde would read an ABSENT `Option` member as
+/// `None`, and an absent member is the refusal AC-321's *"read back verbatim"* needs.
+fn required_nullable<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(d)
+}
+
+/// **`verify_completed`'s payload** — AC-321's replay event and the toolchain identity carrier
+/// (`s8g`'s verify record, R1 = ADR-0191 decision 8, proposed; D21-42 10b; `s8g` §8g.4).
+///
+/// D21-42 10b's four members (*"report digest, selection with `basis_reason`, counts and adapter
+/// identity"*), AC-321's three (*"the range endpoints, the resolved path list and the toolchain
+/// version are read back from the run event verbatim"*), and `origin` and `stage` (D21-47 review,
+/// finding 4). Every member is required at the boundary; `basis_reason` may be `null` (an
+/// `affected` run carries none) but not absent. Unknown members are refused, so the interim `item`
+/// key, which rides BESIDE the payload on ADR-0182's carrier (D21-46 R3), cannot be put in it, and
+/// neither can a `runner` (D21-48 X15: the runner rides on the report, through `report_digest`).
+///
+/// - `origin` is `"pass"` for the verify pass's call and `"<activity>@<version>/<step>"` for a
+///   catalog step's call; `stage` is the node's stage name, carried as data and never compared.
+/// - `adapter` is the name `detect()` chose, opaque to the kernel (AC-487).
+///
+/// *(Added 2026-09-29, `s8g` build, package S8G-P2-RKTYPES.)*
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct VerifyCompleted {
+    pub report_digest: crate::digest::Digest,
+    pub selection: VerifySelection,
+    pub basis: Basis,
+    #[serde(deserialize_with = "required_nullable")]
+    pub basis_reason: Option<BasisReason>,
+    pub passed: u32,
+    pub failed: u32,
+    pub selected_test_count: u32,
+    pub adapter: String,
+    pub range: VerifyRange,
+    pub paths: Vec<String>,
+    pub toolchain_version: String,
+    pub origin: String,
+    pub stage: String,
+}
+
+impl VerifyCompleted {
+    /// Read a row's payload.
+    ///
+    /// # Errors
+    ///
+    /// The serde error, naming the absent or unknown member.
+    pub fn from_payload(payload: &serde_json::Value) -> Result<Self, serde_json::Error> {
+        Self::deserialize(payload)
+    }
+
+    /// The payload the kernel appends (`kind = verify_completed`; the item key beside it).
+    #[must_use]
+    pub fn to_payload(&self) -> serde_json::Value {
+        serde_json::to_value(self).expect("a verify_completed payload serialises to JSON")
+    }
+}

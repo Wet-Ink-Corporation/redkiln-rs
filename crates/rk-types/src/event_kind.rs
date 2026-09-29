@@ -167,6 +167,15 @@ pub enum EventKind {
     /// anchored to the act's commit, so replay serves the boundary's git writes from the journal.
     /// Tier 2: the commit it describes is the durable fact.
     GitOp,
+    /// *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; `s8g` §8g.4; D21-42 10b; the verify
+    /// record R1 = ADR-0191 decision 8, proposed.)* One **completed** `Toolchain::test` port call,
+    /// whatever activity or pass made it: [`crate::verify::VerifyCompleted`]'s thirteen members,
+    /// appended by the kernel at one site. AC-321's replay reads the range, the path list and the
+    /// toolchain version back from it verbatim, and AC-473/AC-485's toolchain identity half reads
+    /// its `origin = "pass"` rows. Item-scoped, the interim key carried beside the payload
+    /// (ADR-0182; D21-46 R3). Tier 2 by the deleted-database test: the report is recomputable by
+    /// re-running the suite. A call that did not complete writes none; its `StepError` row does.
+    VerifyCompleted,
 }
 
 /// *(dated 2026-09-28, `s8e` build, package S8E-P5; the three-kinds record decision 3, proposed.)*
@@ -178,7 +187,10 @@ pub const STAGE_EMPTY_REASONS: [&str; 1] = ["no_applicable_activity"];
 impl EventKind {
     /// Every kind, for the completeness test. Built from an exhaustive match so a new variant
     /// cannot be added without appearing here.
-    pub const ALL: [Self; 41] = [
+    ///
+    /// *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; ADR-0191 decision 8, proposed.)*
+    /// ~~41~~ 42: `verify_completed` joins `s8e`'s 41.
+    pub const ALL: [Self; 42] = [
         Self::StageTransition,
         Self::GateOpened,
         Self::GateAnswered,
@@ -220,6 +232,7 @@ impl EventKind {
         Self::WorktreeAssigned,
         Self::StageEmpty,
         Self::GitOp,
+        Self::VerifyCompleted,
     ];
 
     /// The wire name, exactly as design §5's table spells it — including the two **dotted** names,
@@ -268,6 +281,7 @@ impl EventKind {
             Self::WorktreeAssigned => "worktree_assigned",
             Self::StageEmpty => "stage_empty",
             Self::GitOp => "git_op",
+            Self::VerifyCompleted => "verify_completed",
         }
     }
 
@@ -325,7 +339,8 @@ impl EventKind {
             | Self::AdvisoryDismissed
             | Self::WorktreeAssigned
             | Self::StageEmpty
-            | Self::GitOp => Tier::Two,
+            | Self::GitOp
+            | Self::VerifyCompleted => Tier::Two,
         }
     }
 
@@ -369,7 +384,9 @@ impl EventKind {
             | Self::ArtifactWrite
             | Self::WorktreeAssigned
             | Self::StageEmpty
-            | Self::GitOp => ItemKey::Carried,
+            | Self::GitOp
+            // *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; ADR-0191 decision 8, proposed.)*
+            | Self::VerifyCompleted => ItemKey::Carried,
 
             // ADR-0163 keys it in its payload; a second source beside it could disagree.
             Self::RateLimitReading => ItemKey::InPayload,

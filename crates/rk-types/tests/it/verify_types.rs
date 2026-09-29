@@ -66,6 +66,81 @@ fn verify_report_has_no_default() {
     );
 }
 
+/// A complete `verify_completed` payload (ADR-0191 decision 8): D21-42 10b's four members plus
+/// AC-321's three, and `origin` and `stage` (D21-47 review, finding 4).
+fn verify_completed_payload() -> serde_json::Value {
+    serde_json::json!({
+        "report_digest": "0".repeat(64),
+        "selection": { "kind": "whole_suite" },
+        "basis": "whole-suite",
+        "basis_reason": "policy-forced",
+        "passed": 3,
+        "failed": 0,
+        "selected_test_count": 3,
+        "adapter": "rust",
+        "range": { "base": "a".repeat(40), "head": "b".repeat(40) },
+        "paths": ["crates/x/src/lib.rs"],
+        "toolchain_version": "rustc 1.90.0",
+        "origin": "pass",
+        "stage": "verify"
+    })
+}
+
+/// **`verify_completed`'s payload refuses an absent member** (`s8g` §8g.4; ADR-0191 decision 8,
+/// proposed). AC-321 reads the range endpoints, the path list and the toolchain version back
+/// *"from the run event verbatim"*, so each member is required at the boundary: an absent one is a
+/// refusal naming it, never a default. `basis_reason` is required-present and may be `null` (an
+/// `affected` run carries none). The interim `item` key rides beside the payload on ADR-0182's
+/// carrier, and the runner rides on the report (D21-48 X15), so a payload carrying either member
+/// is refused too. *(Added 2026-09-29, `s8g` build, package S8G-P2-RKTYPES.)*
+#[test]
+fn verify_completed_payload_refuses_an_absent_member() {
+    use rk_types::verify::VerifyCompleted;
+
+    let full = verify_completed_payload();
+    let row = VerifyCompleted::from_payload(&full).expect("the complete payload parses");
+    assert_eq!(
+        row.to_payload(),
+        full,
+        "the payload round-trips byte for byte"
+    );
+
+    let members = full.as_object().expect("an object").clone();
+    assert_eq!(
+        members.len(),
+        13,
+        "ADR-0191 decision 8 names thirteen members"
+    );
+    for name in members.keys() {
+        let mut spoiled = full.clone();
+        spoiled.as_object_mut().unwrap().remove(name);
+        let err = VerifyCompleted::from_payload(&spoiled)
+            .expect_err(&format!("a payload without `{name}` must be refused"));
+        assert!(
+            err.to_string().contains(name.as_str()),
+            "the refusal names the absent member `{name}`: {err}"
+        );
+    }
+
+    // `null` is `basis_reason`'s affected form, and only that member's.
+    let mut affected = full.clone();
+    affected["basis"] = serde_json::json!("affected");
+    affected["basis_reason"] = serde_json::Value::Null;
+    let row =
+        VerifyCompleted::from_payload(&affected).expect("an affected row carries a null reason");
+    assert_eq!(row.basis_reason, None);
+
+    // Beside the payload, never in it: the interim item key (ADR-0182) and the runner (X15).
+    for extra in ["item", "runner"] {
+        let mut spoiled = full.clone();
+        spoiled[extra] = serde_json::json!("x");
+        assert!(
+            VerifyCompleted::from_payload(&spoiled).is_err(),
+            "a `{extra}` member inside the payload must be refused"
+        );
+    }
+}
+
 /// AC-333: the row's locator round-trips with its three members and `evidence: null` is the
 /// unpinned shape.
 #[test]

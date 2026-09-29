@@ -1,11 +1,13 @@
 //! The single integration binary for `rk-types` (ADR-0083: at most one per crate under test,
 //! structured as `tests/it/main.rs` with `mod` declarations for the cases, never one file per case).
 
+mod acceptance_criterion;
 mod companion_kinds;
 mod digest_compute;
 mod dispatch_record;
 mod event_kinds;
 mod fixtures;
+mod judgement_registry;
 mod repro_ingest;
 mod review_gate;
 mod schema_caps;

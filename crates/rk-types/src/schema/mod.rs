@@ -5,6 +5,7 @@
 //! raw derive. ADR-0095 decision 1 is a rule about the exported shape, and `schemars` does not
 //! enforce it.
 
+pub mod judgement;
 pub mod lint;
 pub mod transform;
 

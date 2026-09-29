@@ -1,0 +1,113 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+assertion_line: 43
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AcceptanceCriterion",
+  "description": "One acceptance criterion.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "criterion": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "gwt": {
+      "description": "AC-137's GIVEN/WHEN/THEN, when the author wrote one.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "given": {
+          "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+          "type": "string"
+        },
+        "when": {
+          "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+          "type": "string"
+        },
+        "then": {
+          "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+          "type": "string"
+        },
+        "and": {
+          "description": "The AND clauses. Optional, so declared LAST (AC-158).",
+          "type": "array",
+          "items": {
+            "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "given",
+        "when",
+        "then"
+      ]
+    },
+    "verification": {
+      "description": "The verification the author points at. Absent is admitted by the type (AC-137); the policy\nrow decides whether it blocks a stage (AC-455, AC-138).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mutation": {
+      "description": "The author's mutation declaration (ADR-0104 decision 1). Absent means none was declared,\nwhich the ledger reads as unpinned (AC-333).\n\nExported as the declaration's own two-branch union and left out of `required`, with no\n`null` branch: a nullable union would be a union nested inside a union, which AC-131\nforbids. The field is omitted when absent and never written as `null`.",
+      "anyOf": [
+        {
+          "description": "A unified diff the harness applies in an ephemeral tree, and the suite it runs.",
+          "type": "object",
+          "properties": {
+            "patch": {
+              "type": "string"
+            },
+            "suite": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "declared"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "patch",
+            "suite"
+          ]
+        },
+        {
+          "description": "The mutation cannot be written, and why (AC-337).",
+          "type": "object",
+          "properties": {
+            "reason": {
+              "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "not_feasible"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reason"
+          ]
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "criterion"
+  ]
+}

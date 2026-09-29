@@ -215,6 +215,68 @@ sentence.
 re-deriving the shape** — the producers below are thin *because* those stages are thick, and a producer written
 against a guessed port is the `s7g` shape (a lint green over code nothing calls).
 
+*(dated 2026-09-29, `s8g` build, package S8G-P1-RECORDS; stage open, read-only, at HEAD `178868f`, tree clean.)*
+**The entry reading.** Checkpoint 8f's recorded count is **1243 passed / 0 failed / 9 ignored over 44** (D21-116, the
+formal reading at `ae38553`); the next free ADR id read **0191** (`references/adr/README.md`; `0190` `proposed`, held
+under D21-107, not flipped); the next ledger id is **D21-119**. Each row of the table above, measured:
+- `crates/rk-ports/src/toolchain.rs`'s `pub trait Toolchain` has **seven** methods (`detect`, `build`, `test`, `lint`,
+  `classify`, `change_summary`, `run_verb`); `test` returns `Result<TestOutcome, StepError>`, whose members are
+  `report`, `passed`, `failed`, `status` and `runner`; `build` returns `Result<BuildReport, StepError>` carrying
+  `status: BuildStatus` (`Passing` | `Failing`). As the table names.
+- `.redkiln/registry.toml`: `[verb.setup]` (`outputs = "SetupResult"`, route `toolchain`); `[toolchain.rust]`'s
+  `setup_projects` value `["crates/rk-adapter-toolchain-node/tests/fixtures/project"]`; `[verb.release_tag]` route `git`,
+  output `ReleaseTag`; `[checklist.smoke]` still `unauthored`. As the table names.
+- `answer` does not pass `QuestionRegistry::default()` (the one `QuestionRegistry::default()` code site is
+  `crates/rk-cli/src/processes.rs`, the loader's own start; `answer.rs` names it only in a doc line).
+  `confirmation.not-fixed` and `scan.accept-findings` are each declared once, in `.redkiln/processes/questions.toml`,
+  which holds **10** `[question.*]` tables; `verify.ac-discriminates` is absent (this stage's). No `rk-cli` test
+  pins the registry total at ten (`grep -rnE "len\(\), 10|== 10\b|ten (gate )?questions"` over `crates/rk-cli/tests` and
+  `processes.rs` → nothing), so the fourth move needs no test edit.
+- `grep -rn "verbs::run::run(" crates/*/tests` is non-empty (`doctor_journal.rs`, `landing.rs`).
+- No `crates/rk-cli/src` code line joins the common dir with `redkiln/worktrees` (the one `common_dir.join` is doctor's
+  read of git's own `<common-dir>/worktrees/`).
+- The one `artifact.write` row builder of `s8f`'s write path is `rk-store`'s `render.rs` (*"The one `artifact.write`
+  row (decision 8)"*). `answer.rs` also builds an `ArtifactWrite` row for a human-supplied root attachment, which
+  predates `s8f` and is not the render path; recorded, not a shape difference.
+- `.redkiln/CHANGELOG.md` exists; `sca-scan`'s `expr` reads *"`report.critical == 0 and report.high == 0 and
+  report.unrated == 0`"*.
+- **CVSS precondition** (as narrowed by D21-64 ruling 7 and D21-67 ruling 7): through the no-dispatch helper,
+  `cargo audit --json --no-fetch --file Cargo.lock`, rc 0, against `~/.cargo/advisory-db` at
+  `f23b768236fe2880e4cfa167da662cad8ca79240` (1277 advisories, 331 dependencies): `vulnerabilities.found = false`,
+  count **0**, so no matched vector exists and the named halt does not fire. One informational `unsound` warning
+  (`RUSTSEC-2026-0306`, `faster-hex`, `cvss` null), which the handler does not count. Both databases have moved
+  since `s8c`'s pin `e2111519` (not carried forward from `5561afa`).
+- **The cold slowest child** (§8g.2): `s8c` §8c.5's re-measure, carried in ADR-0170's (record V's) evidence table,
+  *"`test_timeout` = 60 × ⌈2 × 161 / 60⌉ = **360** (the slowest child, pass 3's nextest run"*, at
+  `2f3f6ab257c4b21c1bd16bcd4781f97475f958f5`: **161 s**, under 3600 s. R1 cites it as ADR-0170, not record B
+  (ADR-0171 carries no figure).
+- **Move 1's baseline**, read from `crates/rk-kernel/tests/it/lane_walk.rs`'s rows at `178868f`: the fix lane has
+  **15** rows, **12** walking (refusing: `confirmation-test`, `smoke-test`, `rolling-deploy`); the story lane **14**
+  rows, **10** walking (refusing: `bdd-scenarios`, `docs-update`, `smoke-test`, `rolling-deploy`). This matches
+  `s8f`'s closing *"12 of 15 and 10 of 14"*. Recomputed from the rows, not from the drafted *"14 of 14 / 12 of 12"*:
+  after this stage the fix lane reads 14 rows (`equivalence-boundary` leaves verify), **14 of 14** only if
+  `confirmation-test`'s emit fields are settled here (§8g.1's D21-73 item 4 note), else 13 of 14; the story lane
+  reads **13** rows, **13 of 13** only if the `lint` port's output is placed here (the same note), else 11 of 13.
+- `pub const ALL: [Self; 41]` in `crates/rk-types/src/event_kind.rs`; Checkpoint 7c's guard in
+  `runbook/phase-1/s7c-adapters.md` reads `grep -qE 'pub const ALL: \[Self; 41\]' crates/rk-types/src/event_kind.rs`.
+  It moves to 42 in the commit that lands `verify_completed` (D21-47).
+- `SpecAc` under `crates/`: **17** `grep -rnw` lines, **15** of them code lines by Checkpoint 8g (4)'s filter.
+- Checkpoint 8g (0a)'s worst case: 39 + 64 + 11 + 1 + 140 = **255** of 259, `core.longpaths` unset; `s8d-ii`'s
+  validator test is `crates/rk-git/tests/it/worktree.rs`'s
+  `an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused`, whose rows carry a `.Review-Ref` suffix and no
+  `.mut` yet.
+- `.redkiln/catalog/equivalence-boundary.toml` is at version **3**; `unit-tests`, `unit-tests-ue`,
+  `property-based-testing` and `integration-tests` at 2; `smoke-test` and `confirmation-test` at 1 (Checkpoint 8g
+  (7c)/(7d) amended by dated lines).
+- **FLIP_PENDING is not needed.** Checkpoint 8g (2) accepts `status: (proposed|accepted)`, and no line of this block,
+  nor of the blocks (12) replays, asserts `status: accepted` for this stage's records.
+- Fresh-tree preconditions: `crates/rk-adapter-toolchain-node/tests/fixtures/project/node_modules` present;
+  `.git/redkiln/store.sqlite3` backed up to `target/store-backups/s8g-p1-open-178868f.sqlite3` (sha256
+  `09020ee9…fad8`); no other workspace suite running.
+- **The ADR-0188/0189 *"proposed"* prose census:** 128 lines outside the two records still call either `proposed`
+  without an acceptance stamp (`git grep` over the tree, `s8f`'s close list read ~123); each package annotates the
+  lines it touches by dated note, and the remainder is swept at this stage's close.
+
 ### 8g.1 What this stage owns, and what it may not decide
 
 It owns **D21-41 (c) as superseded by D21-42 1a, and D21-42 6a, 6b, 10a, 10b and 10c** (the plan's row). From D21-43
@@ -665,6 +727,11 @@ already reads that name:
 2026-09-24 (final consistency pass):* `s8h` §8h.4 now reads *"`Spec`'s criteria member is
 `acceptance_criteria: Vec<rk_types::AcceptanceCriterion>`, and nothing in it is redeclared"*.
 
+*(dated 2026-09-29, s8g build, package S8G-P2-RKTYPES; R2 = ADR-0192 decisions 3 and 8, proposed.)* **Built, red first.** `rk_types::acceptance::{AcceptanceCriterion, Gwt, MutationDeclaration, CriterionIngestError}` with the one door `AcceptanceCriterion::ingest`, which refuses a sentence in place of the declaration (`Malformed`) and a `declared` patch that is not a unified diff, a `declared` arm naming no suite, or a `not_feasible` arm with no reason (`ProseOnlyMutation`, naming the AC). Three build choices the records leave open, each reversible:
+- **`mutation`'s exported shape.** `Option<MutationDeclaration>` rendered as a nullable union would be a union nested inside a union, which AC-131 forbids (measured: mutant K13 turns `acceptance_criterion_is_in_the_exported_registry` red on the closed-output lint). So the field carries `#[schemars(with = "MutationDeclaration")]` with `#[serde(default, skip_serializing_if = "Option::is_none")]`: the schema is the two-branch `anyOf`, not required, with no `null` branch, and an absent declaration is omitted, never written as `null`. `gwt` and `verification` are `Option` members omitted when absent. `exported__AcceptanceCriterion.snap` was accepted once, after review, from the `.snap.new` insta wrote.
+- **AC-133's walk reads NAMED schemas.** The exported shape inlines every subschema, so an enum in it has no name to register. `registry::EXPORTED_NAMED` lists `EXPORTED`'s types in its order, derived with `$defs` kept (`schema::judgement::export_named`), and `judgement_registry::ac133_every_exported_enum_is_registered` asserts the two lists agree. `schema::judgement::REGISTRY` holds four entries at this package: `EvidenceLabel` **yes** (its sibling is `Finding.rationale`), `ReproKind`, `Expected` and `MutationDeclaration` **no**, each with its stated reason; the values are stated, and the classification the operator signs stays `s8h`'s (AC-156).
+- **A hand-off to the package that retires `SpecAc`.** `SpecAc` carries `assertion: Option<AssertionLocator>` (the locator AC-333's ledger reads), and ADR-0192 decision 3's field list has no such member. This package adds none; the retiring package places the locator (or records why the ledger no longer reads it) before `SpecAc` goes.
+
 ### 8g.4 `verify_completed` — AC-321's replay event and the identity carrier (D21-42 10b)
 
 The kind is minted by record on ADR-0116's route (its *Option — mint the kind in the runbook* was rejected *"on
@@ -727,6 +794,8 @@ read and the carrier is routed, RT-41"*) is discharged **for the toolchain adapt
 on AC-485 says so; its harness half stays with RT-41's carrier. **`s8`'s own sentence** *"the verify stage's
 toolchain is rk-adapter-toolchain-rust"* is re-pointed at `verify_completed` by `s8j` (the plan's instrument
 amendments), not here. **D17-4 closes** in the tracker commit, naming the record.
+
+*(dated 2026-09-29, s8g build, package S8G-P2-RKTYPES; R1 = ADR-0191 decision 8, proposed; ADR-0116 decision 5.)* **The variant, the payload type and the design row landed in one change.** `EventKind::VerifyCompleted` (`verify_completed`, tier 2, no trailer, `ItemKey::Carried`) makes `ALL` 42; its payload is `rk_types::verify::VerifyCompleted`, `deny_unknown_fields`, every member required and `basis_reason` required-present but nullable (serde would otherwise read an ABSENT `Option` member as `None`). `selection` is `rk_types::verify::VerifySelection`, a `kind`-tagged record of the port's closed `Selection` (`whole_suite`, `filter { args }`, `affected`, `named { name }`), with the whole-suite reason in `basis_reason` and the changed paths in `paths` rather than repeated; the kernel package that appends the row may widen it by dated note. The three exhaustive telemetry arms in `rk-kernel`'s folds (`workflow::breaker`, `workflow::fsm`, `workflow::memo`) gained the kind, which moves no fold. Move 2 (§8g.1) and Checkpoint 7c's size guard (~~41~~ 42) moved in the same change, each by dated line; `PROGRESS.md` §1 rows 5 and 8e are marked re-run pending.
 
 ### 8g.5 `s7d` §7d.18's verify block, claimed whole (D21-42 10c)
 
@@ -1043,6 +1112,13 @@ each record takes is recorded when it is written**, by a dated edit of the five 
 and the checkpoint locates each record by that id and then checks its slug. D21-47: *"Records are located by the id
 recorded at write time"*. The table:
 
+*(dated 2026-09-29, `s8g` build, package S8G-P1-RECORDS.)* **Written, each `proposed`, at the ids free at writing:**
+R1 = **ADR-0191**, R2 = **ADR-0192**, R3 = **ADR-0193**, R4 = **ADR-0194**, R5 = **ADR-0195**; Checkpoint 8g (2)'s
+`R<n>_ID` lines carry them. ADR-0105's `superseded_by` gains `0193` and ADR-0162's gains `0191`; both stay `accepted`.
+R1 names the test-authoring kind **`AuthoredTests`** (option (a)); R5 names the declared facet **`release_form`**
+(option (a)). The cold slowest-child line in R1 cites ADR-0170 (record V), whose evidence carries `s8c` §8c.5's
+re-measured table: 161 s at `2f3f6ab`.
+
 | | slug | decides | supersedes, amends |
 | --- | --- | --- | --- |
 | R1 | `the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed` | §8g.2, §8g.4, §8g.5: the pass and its composition, `setup` before the whole suite; `KindSource::Pass`; D21-43 N23's re-homing of the four displaced providers to a test-authoring kind at implement, with the escalation row; D21-46 R5's re-homing of `integration-tests` with `story.toml`'s `IntegrationReport` row, and `migration-dry-run` named as AC-347's single residual, its unreachability quoted; `verify_completed`; the verify block's routing, each id's instrument or reason; the cold slowest-child figure cited from `s8c`; the claims column; the mutation harness | **ADR-0162's patch clause in part, unconditionally** (§8g.5; ADR-0162 gains this id in `superseded_by`); R-9 and RT-6 discharged; register: AC-473 *Verified by* (10b), reading only `origin = "pass"` rows; dated notes on AC-320, AC-485, and AC-341 (its CI-green half is Phase 3's); design §5's table row; `verify_completed` named item-scoped for `s8e`'s list; D17-4 closed. It moves `integration-tests` whole, where D21-46 R5's letter names its *"test-writing steps"*, on D21-48 X9's decision *"**The whole activity moves to implement**, because stage membership is per activity."*, quoting both (§8g.2; D21-48 (2026-09-24), which replaces the flag for its flip line) |
@@ -1070,6 +1146,19 @@ left this list because the handlers are `s8c`'s record V, and `s8c`'s own `verbs
 `rk-kernel`'s `lattice::the_report_branches_fixture_exercises_every_unsat_branch` and its five mutants RB1–RB5 (§8g.2's
 named precondition of the lattice re-run). This stage's open adds it to the count, the table below and Checkpoint 8g
 (5) by dated edit.
+*(dated 2026-09-29, s8g build, package S8G-P1-RECORDS; stage open.)* **Added: ~~sixty-six~~ sixty-seven new tests**,
+`rk-types` 9, `rk-kernel` ~~12~~ **13**, `rk-git` 4, `rk-adapter-toolchain-rust` 2, `rk-cli` 39. Checkpoint 8g (5)'s
+`T_KERNEL` list names `lattice::the_report_branches_fixture_exercises_every_unsat_branch`, its `want` is 13, and the
+final `NEW` guard reads 67; (9)'s floor is 1243 + 67 = **1310**. RB1–RB5 join the mutant table below as named in
+§8g.2. The Findings-route record (§8g.1's S8E-D2194-ENTRY note) adds its own tests to this count by a later dated edit.
+
+| # | mutant | must turn red |
+| --- | --- | --- |
+| RB1 | `forbidden_stage` always `false` | `lattice::the_report_branches_fixture_exercises_every_unsat_branch` |
+| RB2 | `unsat_other_stage` never incremented | `lattice::the_report_branches_fixture_exercises_every_unsat_branch` |
+| RB3 | the example's `other_stage` list rendered empty | `lattice::the_report_branches_fixture_exercises_every_unsat_branch` |
+| RB4 | the keyed render drops `{suffix}` | `lattice::the_report_branches_fixture_exercises_every_unsat_branch` |
+| RB5 | the transitive entry is never pushed | `lattice::the_report_branches_fixture_exercises_every_unsat_branch` |
 
 **The mutants**, each authored, run **from Python and never from the shell** (a backtick once swallowed a restore),
 and each must turn its named test red. A survivor blocks the close.
@@ -1147,10 +1236,12 @@ and each must turn its named test red. A survivor blocks the close.
 **Checkpoint 7c is not re-run here.** Its live probe is `s8j`'s (§8g.1).
 
 **The floor is re-derived at stage open.** (9)'s `PREV` is Checkpoint 8f's recorded passed count. *(dated 2026-09-29, `s8f` close: Checkpoint 8f's recorded count is **1243 passed** / 0 failed / 9 ignored over 44 result lines, the formal reading at `ae38553` (D21-116), so `PREV` is written as 1243 by the stage-open dated edit)* It is written in by
-a dated edit before the block's first run and never lowered to make a red run green. The expected value,
+a dated edit before the block's first run and never lowered to make a red run green. *(dated 2026-09-29, s8g build,
+package S8G-P1-RECORDS; stage open.)* **Written: PREV = 1243** (D21-116's recorded count), and (9)'s floor is 1243 + 67
+= **1310** (§8g.9's dated count). The struck text below is the drafted chain, kept for its history. ~~The expected value,
 **re-derived at stage open from Checkpoint 8f's recorded count**, is PREV = **1123**, `s8f`'s Checkpoint 8f `FLOOR`
 (`s8f` §8f.2 item 9: *"That gives 740 + 9 + 25 + 78 + 62 + 50 + 74 = 1038 at Checkpoint 8e, and 1038 + 85 =
-**1123** here"*), so (9)'s floor is 1123 + 66 = **1189**. The chain, recomputed once, is ADR-0164's 740 passed at
+**1123** here"*), so (9)'s floor is 1123 + 66 = **1189**.~~ The chain, recomputed once, is ADR-0164's 740 passed at
 `992d257`, plus `s8a` 9, `s8b` 25, `s8c` 78, `s8d` 62, `s8d-ii` 50, `s8e` 74 and `s8f` 85, each as its file now states
 its new tests. The recorded count governs. *(Final consistency pass 2026-09-24. It supersedes PREV = 1063 and a floor
 of 1129, which took the predecessors' counts before their D21-47 fixes. D21-48 (2026-09-24): `s8f`'s X11 test moves
@@ -1225,11 +1316,14 @@ for cand in ./target/debug/redkiln ./target/debug/redkiln.exe; do [ -f "$cand" ]
 # ---- (2) THE FIVE RECORDS, EACH LOCATED BY THE ID RECORDED WHEN IT WAS WRITTEN (D21-47), THEN CHECKED BY ITS SLUG,
 # ---- EACH EXACTLY ONCE AND IN ADR-0085's FORM (D21-42 24a). This file pre-assigns no number: each R<n>_ID line
 # ---- below takes a dated edit when its record is written. BEFORE: all five are empty, and the loop fails on the first.
-R1_ID=""
-R2_ID=""
-R3_ID=""
-R4_ID=""
-R5_ID=""
+# (dated 2026-09-29, s8g build, package S8G-P1-RECORDS.) Each id recorded when its record was written, at the next
+# free id at writing (references/adr/README.md read 0191 next), all five `proposed` (D21-47: located by the id
+# recorded at write time). Were: R1_ID="" R2_ID="" R3_ID="" R4_ID="" R5_ID="".
+R1_ID="0191"
+R2_ID="0192"
+R3_ID="0193"
+R4_ID="0194"
+R5_ID="0195"
 for spec in "R1@$R1_ID@the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed" "R2@$R2_ID@the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion" "R3@$R3_ID@the-rk-git-write-set-gains-tag-and-apply" "R4@$R4_ID@the-four-verify-and-release-demands-have-producers" "R5@$R5_ID@tag-release-is-the-cli-release-and-enters-by-trial"; do
   r=${spec%%@*}; rest=${spec#*@}; num=${rest%%@*}; slug=${rest#*@}
   case "$num" in [0-9][0-9][0-9][0-9]) ;; *) echo "FAIL: ${r}_ID is '$num', not a four-digit id — record $r's id was not recorded when it was written (s8g section 8g.8)"; exit 1 ;; esac
@@ -1306,12 +1400,14 @@ ctl=$(printf '%s\n%s\n' 'crates/x/src/a.rs:1:pub struct SpecAc {' 'crates/x/src/
 
 # ---- (5) THE NAMED TESTS, per crate, each by its own `... ok` line and an EXACT count.
 T_TYPES="event_kinds::verify_completed_is_tier_two_and_wired verify_types::verify_completed_payload_refuses_an_absent_member acceptance_criterion::ac137_criterion_without_gwt_or_verification_is_accepted acceptance_criterion::mutation_declaration_round_trips_declared_and_not_feasible acceptance_criterion::a_prose_only_mutation_is_refused_at_ingest acceptance_criterion::acceptance_criterion_is_in_the_exported_registry judgement_registry::ac133_every_exported_enum_is_registered judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails judgement_registry::the_registry_names_no_enum_that_is_not_exported"
-T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion verify::verify_completed_carries_its_origin_and_stage selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement selection::integration_tests_selects_at_implement_under_external_dep selection::migration_dry_run_is_selected_on_no_shipped_lane"
+T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion verify::verify_completed_carries_its_origin_and_stage selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement selection::integration_tests_selects_at_implement_under_external_dep selection::migration_dry_run_is_selected_on_no_shipped_lane lattice::the_report_branches_fixture_exercises_every_unsat_branch"
+# (dated 2026-09-29, s8g build, package S8G-P1-RECORDS; stage open; D21-67 ruling 6.) T_KERNEL gains
+# lattice::the_report_branches_fixture_exercises_every_unsat_branch, and rk-kernel's want below moves 12 -> 13.
 T_GIT="gitops::tag_is_on_the_enumerated_write_set gitops::apply_is_on_the_enumerated_write_set gitops::the_write_set_has_no_push gitops::tag_refuses_a_target_off_the_run_owned_branch"
 T_RUST="selection::ac348_selection_is_byte_identical_over_200_change_sets selection::ac355_lockfile_change_is_whole_suite_and_one_file_is_affected"
 T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes_one_keyed_test_report_with_one_artifact_write verify_pass::verify_completed_names_the_adapter_detect_chose verify_pass::node_detected_fixture_records_the_node_adapter verify_pass::red_suite_is_a_failed_verify_never_green verify_pass::ac331_timeout_and_kill_are_unverifiable verify_pass::ac344_missing_binary_is_cannot_run verify_pass::ac347_the_pass_dispatches_nothing verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call verify_pass::ac338_restored_mutation_is_unverifiable verify_pass::ac339_mutation_runs_in_a_disposable_worktree verify_pass::ac341_the_pass_calls_no_tracker_method verify_pass::ac348_selection_is_recomputed_from_verify_completed verify_pass::ac353_killed_verify_resumes_to_the_same_decision verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter verify_pass::the_lane_reaches_the_pass_through_verbs_run_run verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree verify_pass::ac139_shipped_packs_block_a_missing_verification verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry demands::smoke_result_is_produced_through_the_registry_verb demands::a_failing_smoke_result_fails_the_stage demands::confirmation_result_passes_at_the_fix_sha demands::confirmation_not_fixed_opens_its_gate demands::scan_high_finding_opens_scan_accept_findings demands::scan_unrated_advisory_opens_scan_accept_findings demands::scan_clean_emits_without_a_gate demands::build_artifact_carries_release_digests demands::every_restored_demand_writes_one_artifact_write tag_release::release_record_tags_the_landed_commit_locally tag_release::rollback_target_is_the_previous_release_tag tag_release::first_release_names_its_rollback_target_as_none tag_release::release_record_carries_the_build_artifact_digest tag_release::the_tag_is_never_pushed tag_release::trial_runs_one_activity_with_zero_dispatches tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused tag_release::selection_picks_tag_release_over_the_deploy_patterns doctor::ac349_equal_specificity_claim_is_a_doctor_row"
 NEW=0
-for spec in "rk-types@9@$T_TYPES" "rk-kernel@12@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@39@$T_CLI"; do
+for spec in "rk-types@9@$T_TYPES" "rk-kernel@13@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@39@$T_CLI"; do
   crate=${spec%%@*}; rest=${spec#*@}; want=${rest%%@*}; names=${rest#*@}
   got=$(printf '%s\n' $names | grep -c .)
   [ "$got" -eq "$want" ] || { echo "FAIL: $crate's list carries $got names, this file says $want — the list and the prose disagree"; exit 1; }
@@ -1324,7 +1420,9 @@ for spec in "rk-types@9@$T_TYPES" "rk-kernel@12@$T_KERNEL" "rk-git@4@$T_GIT" "rk
   printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: $crate's selection did not run exactly $want tests — a filter that matches nothing is a green"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
   NEW=$((NEW + want))
 done
-[ "$NEW" -eq 66 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says sixty-six"; exit 1; }
+# (dated 2026-09-29, s8g build, package S8G-P1-RECORDS; stage open; D21-67 ruling 6.) 66 -> 67: rk-kernel's
+# lattice::the_report_branches_fixture_exercises_every_unsat_branch joins T_KERNEL (12 -> 13). Was: [ "$NEW" -eq 66 ].
+[ "$NEW" -eq 67 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says sixty-seven"; exit 1; }
 
 # ---- (6) NO STAGE-NAME LITERAL IN rk-cli/src (ADR-0162 decision 5) — a FLOOR over CODE lines beneath the
 # ---- behavioural `selected_by_required_kind_not_stage_name` above, whose fixture names its verify stage `check`.
@@ -1375,7 +1473,12 @@ done
 # `| equivalence-boundary@3 |` (from v2, D21-67 ruling 1, class C: its `policy` severity conjunct and `findings` input
 # removed). So this stage's N23 edit is 3->4: at s8g's open this loop's `equivalence-boundary@3` reads
 # `equivalence-boundary@4`, and (7d)'s exact-version check reads 4, each by dated line after re-measuring on disk.
-for pair in unit-tests@3 unit-tests-ue@3 equivalence-boundary@3 property-based-testing@3 integration-tests@3 smoke-test@2; do
+# (dated 2026-09-29, s8g build, package S8G-P1-RECORDS; stage open; D21-67 ruling 1.) Re-measured on disk at 178868f:
+# .redkiln/catalog/equivalence-boundary.toml `version      = 3`; unit-tests, unit-tests-ue, property-based-testing and
+# integration-tests `= 2`; smoke-test and confirmation-test `= 1`. So this loop's ~~equivalence-boundary@3~~ reads
+# equivalence-boundary@4 (N23's edit takes it 3 -> 4), and (7d)'s exact-version check is per activity (4 for
+# equivalence-boundary, 3 for the other three).
+for pair in unit-tests@3 unit-tests-ue@3 equivalence-boundary@4 property-based-testing@3 integration-tests@3 smoke-test@2; do
   grep -qF "$pair" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming $pair in s8b's <id>@<new version> form (ADR-0072; D21-43 N23; D21-46 R5, R6)"; exit 1; }
 done
 # (7d) N23: the four displaced providers, re-homed to implement over ONE test-authoring kind listed first.
@@ -1389,7 +1492,10 @@ for a in unit-tests unit-tests-ue equivalence-boundary property-based-testing; d
   n=$(printf '%s\n' "$prov" | grep -cF '"TestReport"')
   [ "$n" -eq 0 ] || { echo "FAIL: $a still provides TestReport beside the pass — two routes (s8g §8g.2)"; exit 1; }
   ver=$(sed -n 's/^version[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$f")
-  [ -n "$ver" ] && [ "$ver" -eq 3 ] || { echo "FAIL: $a's version is '$ver', not 3 — N23's edit bumps it 2 -> 3 (ADR-0072: an edited activity is a new version)"; exit 1; }
+  # (dated 2026-09-29, s8g build, package S8G-P1-RECORDS; stage open; D21-67 ruling 1.) Per activity: s8d moved
+  # equivalence-boundary to 3, so N23's edit takes it to 4; the other three go 2 -> 3. Was a single `-eq 3` over all four.
+  case "$a" in equivalence-boundary) wantv=4 ;; *) wantv=3 ;; esac
+  [ -n "$ver" ] && [ "$ver" -eq "$wantv" ] || { echo "FAIL: $a's version is '$ver', not $wantv — N23's edit bumps it by one (ADR-0072: an edited activity is a new version)"; exit 1; }
   k=$(printf '%s\n' "$prov" | sed -n 's/^provides[[:space:]]*=[[:space:]]*\["\([A-Za-z0-9]*\)".*/\1/p')
   test -n "$k" || { echo "FAIL: $a's first provided kind could not be read from: $prov"; exit 1; }
   kinds="$kinds $k"
@@ -1473,12 +1579,18 @@ test -n "$secs" || { echo "FAIL: the verify record carries no cold slowest-child
 [ "$secs" -lt 3600 ] || { echo "FAIL: a cold child takes $secs s, at or over ADR-0140's 3600 s — every cold verify pass would be Unverifiable (golden constraint 6; halt)"; exit 1; }
 
 # ---- (9) THE WHOLE SUITE, --no-fail-fast, rc 0, every result line green, and a FLOOR: Checkpoint 8f's recorded
-# ---- passed count plus this stage's 66. Expected value, re-derived at stage open from Checkpoint 8f's recorded count:
-# ---- PREV = 1123 (1038 + 85), so the floor is 1123 + 66 = 1189 (final consistency pass 2026-09-24; D21-48 2026-09-24:
-# ---- s8f's X11 test, then the floor propagation of s8c 78, s8d 62 and s8d-ii 50; it was 1106 / 1172). Edit PREV by a dated edit of the next line before the first run. A lower bound, never an equality.
+# ---- passed count plus this stage's ~~66~~ 67. Expected value, re-derived at stage open from Checkpoint 8f's recorded count:
+# ---- ~~PREV = 1123 (1038 + 85), so the floor is 1123 + 66 = 1189 (final consistency pass 2026-09-24; D21-48 2026-09-24:
+# ---- s8f's X11 test, then the floor propagation of s8c 78, s8d 62 and s8d-ii 50; it was 1106 / 1172).~~ Edit PREV by a dated edit of the next line before the first run. A lower bound, never an equality.
+# ---- (dated 2026-09-29, s8g build, package S8G-P1-RECORDS; stage open.) PREV = 1243, Checkpoint 8f's RECORDED count
+# ---- (1243 passed / 0 failed / 9 ignored over 44 result lines, the formal reading at ae38553; D21-116), so the floor
+# ---- is 1243 + 67 = 1310, where 67 is 66 plus D21-67 ruling 6's report-branches test (section 8g.9). The drafted
+# ---- 1123 / 1189 chain is stale: s8f's own new-test count grew from 85 to 124 during its build. It is re-derived again,
+# ---- by dated edit, when the Findings-route record names its tests (section 8g.1's S8E-D2194-ENTRY note).
 # ---- At least 44 result lines,
 # ---- as at 992d257. Under (0b)'s wrapper (D21-47).
-PREV=1123
+# ~~PREV=1123~~ (dated 2026-09-29, s8g build, stage open: Checkpoint 8f's recorded count, D21-116)
+PREV=1243
 out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 nd_check "(9)'s whole suite" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: the workspace suite is red (rc=$rc)"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|panicked' | head -20; exit 1; }

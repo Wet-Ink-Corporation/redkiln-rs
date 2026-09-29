@@ -11,8 +11,10 @@ fn all_lists_every_variant_exactly_once() {
     // ADR-0124 (the same day) minted the review and verify gates' five; 36 until ADR-0125 (the same
     // day again) minted `stage_exit_refused`; 37 until ADR-0126 (the same day, Step 7c Slice 1)
     // minted `dispatch_completed`; 38 until `s8e`'s three-kinds record (2026-09-28, package S8E-P5,
-    // proposed) minted `worktree_assigned`, `stage_empty` and `git_op`.
-    assert_eq!(EventKind::ALL.len(), 41);
+    // proposed) minted `worktree_assigned`, `stage_empty` and `git_op`; 41 until `s8g`'s verify record
+    // (ADR-0191 decision 8, proposed; dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES) minted
+    // `verify_completed`. Was: `assert_eq!(EventKind::ALL.len(), 41);`.
+    assert_eq!(EventKind::ALL.len(), 42);
     let mut names: Vec<&str> = EventKind::ALL.iter().map(|k| k.wire_name()).collect();
     let before = names.len();
     names.sort_unstable();
@@ -137,11 +139,12 @@ fn adr0126_dispatch_completed_is_tier_two() {
     // Written first against the wire name and the count, so the red is the ABSENT kind
     // (`from_wire` answering `None`, `ALL` at 37) and not a compile error naming a variant.
     // *(dated 2026-09-28, `s8e` build, package S8E-P5.)* 38 -> 41: `s8e`'s three-kinds record
-    // (proposed) adds three tier-2 kinds after ADR-0126's one.
+    // (proposed) adds three tier-2 kinds after ADR-0126's one. *(dated 2026-09-29, `s8g` build,
+    // package S8G-P2-RKTYPES.)* 41 -> 42: ADR-0191 decision 8 (proposed) adds `verify_completed`.
     assert_eq!(
         EventKind::ALL.len(),
-        41,
-        "ADR-0126 adds exactly one kind to 7b-ii's 37, and s8e's three-kinds record three more"
+        42,
+        "ADR-0126 adds exactly one kind to 7b-ii's 37, s8e's three-kinds record three more, and          s8g's verify record one"
     );
     let kind = EventKind::from_wire("dispatch_completed")
         .expect("`dispatch_completed` is in the closed table (ADR-0126 decision 1)");
@@ -162,6 +165,46 @@ fn adr0126_dispatch_completed_is_tier_two() {
     assert_ne!(kind, EventKind::Dispatch);
     // The row is not one of ADR-0095's failure rows: it is written on success too.
     assert_ne!(kind, EventKind::StepFailed);
+}
+
+/// **`s8g`'s verify record (R1 = ADR-0191 decision 8, proposed) mints `verify_completed`** — AC-321's
+/// replay event and the toolchain identity carrier (D21-42 10b): one row per **completed**
+/// `Toolchain::test` port call, written by the kernel at one site. Tier 2 by ADR-0109 decision 2's
+/// deleted-database test (the report is recomputable by re-running the suite), no trailer, and
+/// item-scoped on ADR-0182's carrier, beside the payload and never in it (D21-46 R3).
+/// *(Added 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; `s8g` §8g.4.)*
+///
+/// Written against the wire name and the count, so the red is the ABSENT kind (`from_wire`
+/// answering `None`, `ALL` at 41) and not a compile error naming a variant.
+#[test]
+fn verify_completed_is_tier_two_and_wired() {
+    let kind = EventKind::from_wire("verify_completed")
+        .expect("`verify_completed` is in the closed table (ADR-0191 decision 8)");
+    assert_eq!(kind.wire_name(), "verify_completed");
+    assert_eq!(
+        kind.tier(),
+        Tier::Two,
+        "tier 2 by the deleted-database test"
+    );
+    assert_eq!(kind.trailer_axis(), None, "tier 2 rides no trailer");
+    assert_eq!(
+        kind.item_key(),
+        rk_types::event_kind::ItemKey::Carried,
+        "item-scoped, its interim key carried beside the payload (ADR-0182; D21-46 R3)"
+    );
+    assert_eq!(
+        EventKind::ALL.len(),
+        42,
+        "ADR-0191 adds exactly one kind to the 41 s8e left"
+    );
+    assert_eq!(
+        EventKind::ALL.iter().filter(|k| **k == kind).count(),
+        1,
+        "listed in ALL exactly once"
+    );
+    // A completed test call is not a failure row and not the stage-exit refusal the ledger writes.
+    assert_ne!(kind, EventKind::StepFailed);
+    assert_ne!(kind, EventKind::StageExitRefused);
 }
 
 /// The two dotted names are dotted. A blanket `rename_all = "snake_case"` would quietly turn them

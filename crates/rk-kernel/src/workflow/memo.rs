@@ -758,7 +758,10 @@ pub fn tally_activations(events: &[Event]) -> Result<ActivationTally, MemoError>
             | EventKind::AdvisoryDismissed
             | EventKind::WorktreeAssigned
             | EventKind::StageEmpty
-            | EventKind::GitOp => {}
+            | EventKind::GitOp
+            // *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; ADR-0191 decision 8, proposed.)*
+            // Tier-2 telemetry: a completed test port call moves no fold.
+            | EventKind::VerifyCompleted => {}
         }
     }
     Ok(t)

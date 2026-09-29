@@ -2511,7 +2511,12 @@ grep -q '"dispatch_completed"' crates/rk-types/src/event_kind.rs || { echo "FAIL
 # moves with it: ADR-0126's 38 plus ADR-0185's three. D21-47: "A time-bound guard in an earlier checkpoint is
 # amended by the stage that moves its premise, in the same commit." The struck line is the one replaced:
 # ~~grep -qE 'pub const ALL: \[Self; 38\]' crates/rk-types/src/event_kind.rs || { echo "FAIL: EventKind::ALL is not 38 — ADR-0126 adds exactly one kind to 7b-ii's 37"; exit 1; }~~
-grep -qE 'pub const ALL: \[Self; 41\]' crates/rk-types/src/event_kind.rs || { echo "FAIL: EventKind::ALL is not 41 — ADR-0126 adds one kind to 7b-ii's 37 (38), and ADR-0185 three more (41)"; exit 1; }
+# (dated 2026-09-29, s8g build, package S8G-P2-RKTYPES; D21-47; s8g §8g.1 move 2; ADR-0191 decision 8, proposed) s8g
+# mints one tier-2 kind (verify_completed; ADR-0191), so EventKind::ALL moves 41 -> 42 and this guard's premise moves
+# with it, in the same commit as the variant (D21-47: "A time-bound guard in an earlier checkpoint is amended by the
+# stage that moves its premise, in the same commit."). The struck line is the one replaced:
+# ~~grep -qE 'pub const ALL: \[Self; 41\]' crates/rk-types/src/event_kind.rs || { echo "FAIL: EventKind::ALL is not 41 — ADR-0126 adds one kind to 7b-ii's 37 (38), and ADR-0185 three more (41)"; exit 1; }~~
+grep -qE 'pub const ALL: \[Self; 42\]' crates/rk-types/src/event_kind.rs || { echo "FAIL: EventKind::ALL is not 42 — ADR-0126 adds one kind to 7b-ii's 37 (38), ADR-0185 three more (41), and ADR-0191 one more (42)"; exit 1; }
 test -f crates/rk-types/src/usage.rs || { echo "FAIL: crates/rk-types/src/usage.rs absent — Usage/CacheCreation live in rk-types by ADR-0126 (s7a §7a.5)"; exit 1; }
 test ! -d tests/fixtures/rk-adapter-sqlite || { echo "FAIL: tests/fixtures/rk-adapter-sqlite still exists — Cargo cannot hold two members named rk-adapter-sqlite; the rename was the stage-open commit's"; exit 1; }
 test -d tests/fixtures/rk-adapter-edge-fixture || { echo "FAIL: the renamed AC-484 fixture crate is absent"; exit 1; }

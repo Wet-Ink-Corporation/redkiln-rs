@@ -15,6 +15,7 @@
 //! implementor may name it, and Checkpoint 5 bans a definition, alias, renaming import or impl of it
 //! outside `rk-ports`, not the name. Nothing of it is built here still.)*
 
+pub mod acceptance;
 pub mod activity;
 pub mod artifact;
 pub mod companion;

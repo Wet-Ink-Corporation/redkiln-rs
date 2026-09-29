@@ -387,7 +387,7 @@ fn ac039_gate_record_and_the_void_answer() {
     // budget-extension gate's carrier — rather than the question never being asked.
     assert_eq!(
         EventKind::ALL.len(),
-        41,
+        42,
         // DECIDED HERE 2026-09-17 (ADR-0123, 29 -> 31; ADR-0124, 31 -> 36 — the review and verify
         // gates' five rows; ADR-0125, 36 -> 37 — `stage_exit_refused`, which opens no gate either:
         // AC-357's gate is what FOLLOWS a refusal): `gate_answer_spent` records a refused
@@ -402,7 +402,11 @@ fn ac039_gate_record_and_the_void_answer() {
         // DECIDED AGAIN 2026-09-28 (`s8e` build, package S8E-P5; the three-kinds record, `s8e` §8e.4, proposed; 38 -> 41): `worktree_assigned`, `stage_empty` and `git_op` are tier-2 rows, and none
         // opens a gate: the FSM folds all three in its no-state-change arm, so the budget-extension
         // gate's carrier is still `gate_opened`.
-        "EventKind is closed at 41 (ADR-0116: `the kind is minted by record or not at all`; \n         ADR-0123 minted the two beyond 29, ADR-0124 the five beyond 31, ADR-0125 the one beyond 36, ADR-0126 the one beyond 37, s8e's three-kinds record the three beyond 38)"
+        // DECIDED AGAIN 2026-09-29 (`s8g` build, package S8G-P2-RKTYPES; the verify record R1 =
+        // ADR-0191 decision 8, proposed; 41 -> 42): `verify_completed` is a completed test port
+        // call's tier-2 row and opens no gate; the FSM folds it in its no-state-change arm, so the
+        // budget-extension gate's carrier is still `gate_opened`.
+        "EventKind is closed at 42 (ADR-0116: `the kind is minted by record or not at all`; \n         ADR-0123 minted the two beyond 29, ADR-0124 the five beyond 31, ADR-0125 the one beyond 36, ADR-0126 the one beyond 37, s8e's three-kinds record the three beyond 38, ADR-0191 the one beyond 41)"
     );
 }
 
@@ -1065,7 +1069,8 @@ fn every_item_scoped_kind_carries_the_interim_item_key() {
     use rk_types::event_kind::ItemKey;
 
     // ADR-0182 decision 3, verbatim.
-    const CARRIED: [&str; 33] = [
+    // *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; `s8g` §8g.1 move 2.)* ~~33~~ 34.
+    const CARRIED: [&str; 34] = [
         "stage_transition",
         "gate_opened",
         "gate_answered",
@@ -1102,6 +1107,10 @@ fn every_item_scoped_kind_carries_the_interim_item_key() {
         "worktree_assigned",
         "stage_empty",
         "git_op",
+        // *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; `s8g` §8g.1 move 2 and §8g.4; the
+        // verify record R1 = ADR-0191 decision 8, proposed.)* Item-scoped and carried: the store
+        // cannot scope the row any other way, and D21-46 R3 puts the key beside the payload.
+        "verify_completed",
     ];
     // ADR-0163's payload member stays where it put it; no second source beside it.
     const IN_PAYLOAD: [&str; 1] = ["rate_limit_reading"];

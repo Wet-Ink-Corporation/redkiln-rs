@@ -1193,7 +1193,7 @@ fn ac019_memo_hit_is_never_silent() {
     // ---- THE ARMED PIN ------------------------------------------------------------------------
     assert_eq!(
         EventKind::ALL.len(),
-        41,
+        42,
         // DECIDED HERE 2026-09-17 (ADR-0123, 29 -> 31; ADR-0124, 31 -> 36; ADR-0125, 36 -> 37, the same answer each
         // time): `gate_answer_spent` and `gate_resumed` are gate rows, ADR-0124's five and `stage_exit_refused` are
         // the review and verify gates' rows, not memo rows; the memo's typed-payload record is STILL OWED, unchanged.
@@ -1206,7 +1206,12 @@ fn ac019_memo_hit_is_never_silent() {
         // DECIDED AGAIN 2026-09-28 (`s8e` build, package S8E-P5; the three-kinds record, `s8e` §8e.4, proposed; 38 -> 41): `worktree_assigned`, `stage_empty` and `git_op` are tier-2 rows, not memo
         // rows — the memo fold routes all three to its no-state-change arm — and the three-kinds
         // record decides no per-kind payload type: the memo's payload record is STILL OWED, unchanged.
-        "`EventKind` is closed at 41 (ADR-0116; ADR-0123; ADR-0124; ADR-0125; ADR-0126; s8e's three-kinds record). If another is minted, whoever mints it must \
+        // DECIDED AGAIN 2026-09-29 (`s8g` build, package S8G-P2-RKTYPES; the verify record R1 =
+        // ADR-0191 decision 8, proposed; 41 -> 42): `verify_completed` is not a memo row (the memo
+        // fold routes it to its no-state-change arm). ADR-0191 types ITS OWN payload
+        // (`rk_types::verify::VerifyCompleted`) and no other kind's, so the memo's payload record is
+        // STILL OWED, unchanged.
+        "`EventKind` is closed at 42 (ADR-0116; ADR-0123; ADR-0124; ADR-0125; ADR-0126; s8e's three-kinds record; ADR-0191). If another is minted, whoever mints it must \
          decide whether the memo's payload record is still OWED — this line goes red rather than \
          the gap quietly widening"
     );

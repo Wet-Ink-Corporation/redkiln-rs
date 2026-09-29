@@ -2815,6 +2815,7 @@ names.
 *Verified by:* **routed to a human gate; not machine-decidable** — no instrument discriminates the two defaults, and F37
 shows the nearest spike is powerless at its n. What IS machine-checked is AC-138: the value is a policy-table row, so the
 human decision is a data change.
+*(Dated note 2026-09-29, s8g build, package S8G-P1-RECORDS; R2 = ADR-0192, proposed.)* **Decided 2026-09-24 by D21-43 N24**: *"**Block (fail-closed)**, recorded as the human decision AC-139 requires."* R2 records the decision and its rationale by quotation, and both shipped packs ship it as the `[policy]` row `verification_required = ["verify"]` (AC-138's data change). A human decision is recorded, never claimed by a test.
 
 **AC-140** — `rk-store` · evidence: F25 — the AC-015 probe inverted the ordering and the suite stayed **36/36 GREEN**,
 so "reviewed and green" is not evidence of pinning [measured] · decisions: ADR-0019, ADR-0074 (supersedes ADR-0004)
@@ -5360,6 +5361,7 @@ THEN the activity fails with `StepError` before any toolchain process is spawned
 AND no gate record is written for that attempt.
 *Verified by:* unit test on the verify activity's input contract; a fixture run with an unset changed-file set that must
 fail; an event-log assertion that zero `process_spawned` events precede the error.
+*(Dated Verified-by note 2026-09-29, s8g build, package S8G-P1-RECORDS; `s8g` §8g.5; R1 = ADR-0191, proposed.)* *"zero `process_spawned` events"* is read as a zero port-call count: no `process_spawned` kind exists (`grep -c process_spawned crates/rk-types/src/event_kind.rs` → 0 at `ca8f387`), and no toolchain process is spawned without a `Toolchain` port call, so `verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call` asserts zero calls on a counting `Toolchain` double and zero gate rows, rather than minting a kind for one assertion.
 
 **AC-321** — `rk-kernel-verify` · evidence: F19 (limit: the FSM was never replayed), brief §C.4 · decisions: ADR-0019
 GIVEN a **completed** verify run over a named git range
@@ -5608,6 +5610,7 @@ AND no verify result writes to the Tracker port's status-check state.
 *Verified by:* a static check that the verify gate's input type contains no tracker or CI field; an integration test in
 which CI is green and verify is `Err`, which must not advance; a port-call assertion that a verify run issues zero
 status-check writes.
+*(Dated note 2026-09-29, s8g build, package S8G-P1-RECORDS; `s8g` §8g.5; R1 = ADR-0191, proposed.)* The integration half (*"an integration test in which CI is green and verify is `Err`"*) is Phase 3's (AC-508), recorded here rather than dropped: the `Tracker` port has `project` and `inbox` and no status surface, and its module reads *"Fake-only in Phase 1; GitHub is Phase 3"*. Phase 1 claims the port-call half (`verify_pass::ac341_the_pass_calls_no_tracker_method`) and cross-lists the static half to 7b-ii.
 
 **AC-342** — `rk-kernel-verify` · evidence: F29 (a reproduced regression was approved on **3 of 10** draws — S-VAR kill
 branch 3 [measured]), F31 (verified false positives **0/23**; adjudication **14/14** confirmed) · decisions: ADR-0074 (supersedes ADR-0004),
@@ -7663,6 +7666,7 @@ commit"* is read as a kernel-made content checkpoint commit on the run ref `rk-r
 terminal `closed` mark (N9) the diff `<base>..rk-run/<item>` is not empty. **Nothing is integrated in Phase 1**
 (`GitOp::Integrate` has no caller; design §7.7): integration is Phase 2's merge queue (AC-196, AC-197), and the
 operator's merge of `rk-run/<item>` is the hand-off, whose command `explain` prints.
+*(Dated register amendment 2026-09-29, s8g build, package S8G-P1-RECORDS; D21-42 10b; `s8g` §8g.4; R1 = ADR-0191, proposed.)* *Verified by*'s *"adapter-identity assertion on the toolchain stage's dispatch record"* reads the item's `verify_completed` rows whose `origin` is `"pass"` (the verify pass's own `Toolchain::test` call), keyed by the interim `item` key beside the event, and asserts `adapter` on each: no dispatch record carries a toolchain. A row whose `origin` names a catalog step (`<activity>@<version>/<step>`, an implement-stage call) never satisfies it (D21-47 review, finding 4). The release check still claims nothing here; it is Step 8's.
 
 
 **AC-521** *(added 2026-09-11 — allocated outside this area's exhausted range; see §0.4)* — self-hosting switch, story
@@ -7859,6 +7863,7 @@ THEN the running run's adapter set does not change, and the adapter set recorded
 subsequent dispatch in that run.
 *Verified by:* an integration test that mutates the config file between two activities and asserts adapter identity on both dispatch
 events; a replay assertion that the adapter set is a run-scoped constant in the event log.
+*(Dated note 2026-09-29, s8g build, package S8G-P1-RECORDS; D21-42 10b; `s8g` §8g.4; R1 = ADR-0191, proposed.)* The PROVISIONAL identity half (`s7d` §7d.18: *"the dispatch-event identity half has no `DispatchRecord` field to read and the carrier is routed, RT-41"*) is discharged **for the toolchain adapter** by `verify_completed`: its `adapter` member, on the item's rows whose `origin` is `"pass"`, is the name `detect()` chose at startup, and `verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter` asserts it. The harness half stays with RT-41's carrier.
 
 **AC-486** — `rk-cli` (`doctor`), `rk-kernel` · evidence: proposal §3 principle 5 ("explicit over discovered"; adoption and isolation verified from the child's own report), §4.6 (`redkiln doctor` rules are "all configuration-time, zero model cost") · decisions: ADR-0003
 GIVEN `.redkiln/config.toml` names an adapter that is not compiled in, or names one whose required configuration is absent
