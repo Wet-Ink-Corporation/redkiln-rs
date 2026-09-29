@@ -288,6 +288,14 @@ fn an_emit_replayed_writes_nothing_and_serves_its_recorded_digest() {
 /// run, the tree it served and the digest of the bytes served; an optional input that resolves
 /// `null` appends none. A served digest that is not the committed binding's halts the input by
 /// name and appends nothing. Red under M25 (the read seam appends no `artifact.read`).
+///
+/// *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-113 step 3 as amended by D21-114, both
+/// TAKEN PROVISIONALLY under D21-105.)* ~~A served digest that is not the committed binding's
+/// halts~~: the reader checks the LATEST recorded `artifact.write` of the sidecar's path, and the
+/// binding only when there is none. So the halt arm no longer writes its other bytes THROUGH the
+/// writer (a recorded write, which is now served); it writes the emitted value through the writer
+/// and then puts other bytes at the sidecar's path OUT OF BAND, which no recorded write accounts
+/// for: still Halt 4, by name, with nothing appended.
 #[test]
 fn every_artifact_input_resolution_appends_one_artifact_read() {
     for matching in [true, false] {
@@ -312,18 +320,21 @@ fn every_artifact_input_resolution_appends_one_artifact_read() {
             schemas(),
             store_journal(&db),
         );
-        let on_ref = if matching {
-            v.clone()
-        } else {
-            json!({ "acs": [], "title": "not what was emitted" })
-        };
-        producer
-            .write("Spec", &on_ref)
-            .expect("the sidecar is written");
+        producer.write("Spec", &v).expect("the sidecar is written");
         let sidecar = ManagedDir::of(dir.path(), ITEM)
             .read("Spec.json")
             .expect("the sidecar");
         let pass = reconcile_entry(&producer, &|_| Ok(None)).expect("the entry's pass");
+        if !matching {
+            // The halt arm: other bytes on the run ref, OUT OF BAND (no recorded write).
+            let other = json!({ "acs": [], "title": "not what was emitted" });
+            std::fs::write(
+                dir.path()
+                    .join(rk_store::render::managed_path(ITEM, "Spec.json")),
+                serde_json::to_vec(&other).expect("serialises"),
+            )
+            .expect("the out-of-band edit is written");
+        }
         let root = dir.path().to_path_buf();
         let reader = ArtifactReader::new(
             &pass,

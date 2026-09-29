@@ -1271,6 +1271,9 @@ impl ArtifactReader {
     /// **Serve one read of `kind`** — the value from its sidecar on the run ref and its digest —
     /// and append its ONE `artifact.read`. `bound` is the committed `emit` binding the resolver
     /// read, whose digest the served bytes must equal (`None` for a root, which has no binding).
+    /// *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-113 step 3, D21-114.)* ~~whose digest
+    /// the served bytes must equal~~: the served bytes must equal the LATEST `artifact.write` of
+    /// the sidecar's path, and the binding's digest only when there is none.
     ///
     /// # Errors
     /// [`RenderError::NotReconciled`] before the entry's reconcile; [`RenderError::DigestMismatch`]
@@ -1350,15 +1353,39 @@ impl ArtifactReader {
             .map_err(sidecar)?
             .ok_or_else(|| sidecar(format!("not on rk-run/{}", self.at.item)))?;
         let digest = sha256(&blob.bytes);
-        if let Some(bound) = bound {
-            let expected = canon::canonical_digest(bound).map_err(|e| canon_err(kind, &e))?;
-            if expected != digest {
-                return Err(RenderError::DigestMismatch {
-                    kind: kind.to_owned(),
-                    served: digest.as_str().to_owned(),
-                    bound: expected.as_str().to_owned(),
-                });
-            }
+        // *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-113 step 3 as amended by D21-114,
+        // both TAKEN PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed.)*
+        // ~~`if let Some(bound) = bound { … canonical_digest(bound) … }`~~: the run ref's sidecar is
+        // checked against the LATEST `artifact.write` of this item whose `path` is the sidecar's
+        // own, `<Kind>.json`, never selected by kind (a restore names `<Kind>.md`). With no such
+        // row the check falls back to the binding's canonical digest, byte-identical to before;
+        // anything else is Halt 4. The entry pass's own writes are on the run ref by now, landed
+        // at entry (D21-114; ADR-0188 decision 2's dated note), so this cannot livelock.
+        let latest = rows
+            .iter()
+            .rev()
+            .filter(|e| e.kind == EventKind::ArtifactWrite)
+            .filter(|e| str_of(e, "item") == Some(self.at.item.as_str()))
+            .find(|e| str_of(e, "path") == Some(path.as_str()))
+            .map(|e| str_of(e, "digest").unwrap_or_default().to_owned());
+        let expected = match (latest, bound) {
+            (Some(written), _) => Some(written),
+            (None, Some(bound)) => Some(
+                canon::canonical_digest(bound)
+                    .map_err(|e| canon_err(kind, &e))?
+                    .as_str()
+                    .to_owned(),
+            ),
+            (None, None) => None,
+        };
+        if let Some(expected) = expected
+            && expected != digest.as_str()
+        {
+            return Err(RenderError::DigestMismatch {
+                kind: kind.to_owned(),
+                served: digest.as_str().to_owned(),
+                bound: expected,
+            });
         }
         let value = value_of_sidecar(&blob.bytes).map_err(sidecar)?;
         self.journal.append(

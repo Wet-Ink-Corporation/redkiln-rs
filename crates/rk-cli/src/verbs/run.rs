@@ -691,6 +691,8 @@ fn run_lane(
     let mut advisory_sink = rk_kernel::runtime::advisory::AdvisorySink::for_run();
     let pending: rk_kernel::runtime::advisory::PendingAdvisories = Arc::default();
     let mut entry_drifts: Vec<serde_json::Value> = Vec::new();
+    // *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* Whether the entry pass wrote.
+    let mut entry_wrote = false;
 
     loop {
         visited.push(resolved.stage.clone());
@@ -735,6 +737,7 @@ fn run_lane(
                 sink: &mut advisory_sink,
                 pending: &pending,
                 to_gate: &mut entry_drifts,
+                wrote: &mut entry_wrote,
             },
         )? {
             Ok(seams) => seams,
@@ -744,6 +747,9 @@ fn run_lane(
         // 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* After the restore, the
         // drift gate of class `render.structured-drift` opens git-first: its `Gate:` commit is
         // the checkpoint that lands the restore. It holds the stage's EXIT, not its steps.
+        // *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* The entry pass's `wrote`
+        // is taken here, once, so a later stage of this invocation never re-reads it.
+        let entry_wrote_now = std::mem::take(&mut entry_wrote);
         if !entry_drifts.is_empty() {
             let drifts = std::mem::take(&mut entry_drifts);
             let boundary = tier_one_boundary(&resolved, &owned, &ownership, &excluded)
@@ -751,6 +757,18 @@ fn run_lane(
             if let Err(exit) =
                 open_drift_gate(&resolved, store, boundary, drifts, &tree_hash, now, &run_id)?
             {
+                return Ok(exit);
+            }
+        } else if entry_wrote_now {
+            // ---- THE ENTRY LANDING (D21-114, TAKEN PROVISIONALLY under D21-105; ADR-0188
+            // decision 2's dated note, proposed). *(dated 2026-09-29, s8f build, package
+            // R5FIX2-8f.)* The entry pass wrote and no drift gate's `Gate:` commit lands the
+            // write, so it lands HERE, after the discard, the moves, C2 and the vouched pass and
+            // before any seam is handed to the kernel: the stage's first read then finds the
+            // latest recorded write on the run ref (D21-113 step 3).
+            let boundary = tier_one_boundary(&resolved, &owned, &ownership, &excluded)
+                .with_advisories(Arc::clone(&pending));
+            if let Err(exit) = land_entry(&resolved, store, boundary, now, &run_id)? {
                 return Ok(exit);
             }
         }
@@ -2617,9 +2635,12 @@ fn stage_seams(
         // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision
         // 5.)* An applied `move-to-prose:<section>` answer is taken HERE, at the next entry and
         // before C2's pass: the drifted bytes come from the causing commit, never the event.
-        if let Err(exit) = move_answered_drifts_to_prose(resolved, store, &writer)? {
-            return Ok(Err(exit));
-        }
+        // *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* Whether a move applied is
+        // handed out: it is one of the entry's own writes the entry landing lands.
+        let moved = match move_answered_drifts_to_prose(resolved, store, &writer)? {
+            Ok(moved) => moved,
+            Err(exit) => return Ok(Err(exit)),
+        };
         match rk_store::render::reconcile_entry(&writer, &causing) {
             Ok(done) => {
                 for d in done.drifts() {
@@ -2640,6 +2661,7 @@ fn stage_seams(
                         "old_digest": d.old_digest.as_str(),
                     }));
                 }
+                *entry.wrote = moved || !done.accepted().is_empty();
                 *reconciled = Some(done);
             }
             Err(e) => {
@@ -2703,6 +2725,9 @@ fn stage_seams(
                 for d in pass.blocking() {
                     entry.to_gate.push(blocking_drift_json(&item, d));
                 }
+                // *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* A root stored at
+                // this entry is one of the entry's own writes.
+                *entry.wrote |= !pass.stored().is_empty();
             }
             Err(e) => {
                 eprintln!("redkiln: the entry's vouched-root pass of `{item}` refused: {e}");
@@ -3084,6 +3109,65 @@ fn open_refused_landing_gate(
          exclude` or `redkiln answer {item} abort`"
     );
     Exit::Success
+}
+
+/// **The entry landing** (D21-114, TAKEN PROVISIONALLY under D21-105; ADR-0188 decision 2's dated
+/// note, proposed). *(Added 2026-09-29, s8f build, package R5FIX2-8f.)* The entry pass's own
+/// writes land through the kernel's `commit_act` as `Content::Entry`: a trailerless, body-less
+/// `rk entry <item> <stage> <run_id>` content commit, or none when the tree is unchanged, whose
+/// only rows are its `git_op` rows. A refused path is routed exactly as a step's is: the
+/// `landing.refused-path` gate opens over an empty commit (ADR-0188 decision 7) and `run` exits
+/// `0` at it; it is never swallowed.
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the acquisition; the inner [`Exit`] ends the lane: `0` at an opened
+/// refused-landing gate, `3` (named) for any other refusal.
+fn land_entry(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    mut boundary: rk_kernel::runtime::tier_one::Boundary,
+    now: i64,
+    run_id: &str,
+) -> Result<Result<(), Exit>, Halt> {
+    use rk_kernel::runtime::tier_one::{Act, EntryCheckpoint, TierOneError};
+    let item = resolved.item.id();
+    let act = Act::entry(EntryCheckpoint::of(item, &resolved.stage, run_id));
+    match boundary.act(store.as_ref(), act) {
+        Ok(_) => Ok(Ok(())),
+        Err(TierOneError::LandingRefused { refusals, tree }) => {
+            let guard = crate::store::acquire(store, "the run")?;
+            let read = guard.query(rk_kernel::runtime::journal_query(item));
+            drop(guard);
+            let events = match read {
+                Ok(events) => events,
+                Err(e) => {
+                    eprintln!("redkiln: the store could not be read: {e:?}");
+                    return Ok(Err(Exit::ConfigError));
+                }
+            };
+            let state = match rk_kernel::workflow::fsm::fold(item, &resolved.stage, &events) {
+                Ok(state) => state,
+                Err(e) => {
+                    eprintln!("redkiln: the recorded journal did not fold: {e}");
+                    return Ok(Err(Exit::ConfigError));
+                }
+            };
+            Ok(Err(open_refused_landing_gate(
+                resolved,
+                store,
+                Some(boundary),
+                &state,
+                &refusals,
+                &tree,
+                now,
+                run_id,
+            )))
+        }
+        Err(e) => {
+            eprintln!("redkiln: the entry's own writes of `{item}` could not be landed: {e}");
+            Ok(Err(Exit::ConfigError))
+        }
+    }
 }
 
 /// Which arm a gate's `opened` row takes in [`gate_rows_through`]. *(Added 2026-09-29, s8f build,
@@ -4730,6 +4814,9 @@ struct EntryPass<'a> {
     sink: &'a mut rk_kernel::runtime::advisory::AdvisorySink,
     pending: &'a rk_kernel::runtime::advisory::PendingAdvisories,
     to_gate: &'a mut Vec<serde_json::Value>,
+    /// *(Added 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* Set when the entry pass
+    /// wrote: an accepted prose edit, an applied `move-to-prose`, or a vouched root stored.
+    wrote: &'a mut bool,
 }
 
 /// A blocking drift the vouched pass classed (a correct pass classes none, AC-127), in the
@@ -4823,7 +4910,9 @@ fn open_drift_gate(
 /// `move-to-prose:<section>` whose move has not been applied yet — no `artifact.write` naming its
 /// kind's sidecar follows the answer — has each of its drifts' bytes read from the causing commit
 /// and appended to `<section>` through `rk-store`'s writer, one `artifact.write` each. *(Added
-/// 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+/// 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* *(dated 2026-09-29, s8f build,
+/// package R5FIX2-8f; D21-114.)* It returns whether any move applied: an applied move is one of
+/// the entry's own writes, which the entry landing lands.
 ///
 /// # Errors
 /// [`Halt::PoisonedLock`] from the acquisition *(dated 2026-09-29, s8f build, package
@@ -4833,7 +4922,7 @@ fn move_answered_drifts_to_prose(
     resolved: &Resolved,
     store: &Arc<Mutex<dyn EventStore>>,
     writer: &rk_store::render::ArtifactWriter,
-) -> Result<Result<(), Exit>, Halt> {
+) -> Result<Result<bool, Exit>, Halt> {
     let item = resolved.item.id();
     let guard = crate::store::acquire(store, "the run")?;
     let read = guard.query(rk_kernel::runtime::journal_query(item));
@@ -4863,6 +4952,7 @@ fn move_answered_drifts_to_prose(
         .map(|out| out.stdout)
         .map_err(|e| git_refusal_text(&e))
     };
+    let mut moved = false;
     for mv in rk_kernel::runtime::tier_one::drift_moves(&state, &events) {
         for drift in &mv.drifts {
             let Some(kind) = drift.get("kind").and_then(serde_json::Value::as_str) else {
@@ -4891,7 +4981,8 @@ fn move_answered_drifts_to_prose(
                  section (ADR-0189 decision 5)",
                 mv.token, mv.section
             );
+            moved = true;
         }
     }
-    Ok(Ok(()))
+    Ok(Ok(moved))
 }

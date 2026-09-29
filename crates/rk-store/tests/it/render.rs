@@ -1474,6 +1474,14 @@ fn drift_text_never_reaches_a_deserializer() {
 /// `artifact.read` naming the kind and the item, with `stage`, `run`, `schema_version`, the tree it
 /// served and the digest of the bytes served; a served digest that is not the committed binding's
 /// is a halt, and appends nothing. Red under M25 (the read seam appends no `artifact.read`).
+///
+/// *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-113 step 3 as amended by D21-114, both
+/// TAKEN PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed.)* ~~a served
+/// digest that is not the committed binding's is a halt~~: a served digest that is not the LATEST
+/// recorded write of the sidecar's path (the binding's only when there is none) is a halt. The halt
+/// arm no longer hands the reader a different binding over the recorded bytes (that read is now
+/// served, as D21-113 rules); it puts other bytes at the sidecar's path out of band, and the read
+/// halts and appends nothing.
 #[test]
 fn read_appends_one_artifact_read_naming_kind_and_id() {
     let dir = tempfile::tempdir().expect("a temp dir");
@@ -1507,7 +1515,13 @@ fn read_appends_one_artifact_read_naming_kind_and_id() {
     assert_eq!(reads[0].item(), Some(ITEM));
 
     let other = json!({ "summary": "not what was emitted", "tests": 3 });
-    let halted = r.serve("ImplReport", Some(&other));
+    std::fs::write(
+        dir.path()
+            .join(render::managed_path(ITEM, "ImplReport.json")),
+        serde_json::to_vec(&other).expect("serialises"),
+    )
+    .expect("the out-of-band edit is written");
+    let halted = r.serve("ImplReport", Some(&v));
     assert!(
         matches!(halted, Err(RenderError::DigestMismatch { .. })),
         "a digest mismatch was served: {halted:?}"

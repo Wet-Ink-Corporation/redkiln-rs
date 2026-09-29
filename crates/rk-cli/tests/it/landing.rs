@@ -2015,8 +2015,11 @@ const HUMAN_CONTEXT: &str = "A human wrote this context after the spec was emitt
 /// is served THAT value: the assertion is the text. Red before D21-113 with `DigestMismatch` (Halt
 /// 4); red under M2 (the resolver serves the binding) and M5 (the check always compares against the
 /// binding).
+/// *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* ~~`#[ignore]`d, R5FIX-8f BLOCKED~~:
+/// un-ignored as written, once the entry's accepted write lands at entry (D21-114) and D21-113 step 3
+/// is built. Red before step 3 (the stale `{"summary":"pack-min"}` served), then red at step 3 alone
+/// (`Unsupported`, the livelock), then green with the entry landing.
 #[test]
-#[ignore = "R5FIX-8f BLOCKED (D21-113's step 3 not built): the entry pass's accepted write is not on rk-run/<item> when the stage's first read is served; a ruling is owed"]
 fn an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read() {
     let repo = spec_read_lane();
     let root = repo.path();
@@ -2080,8 +2083,11 @@ fn an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read() {
 /// `Spec.json` through the writer, and `review`'s read is served THAT value: the drifted bytes in
 /// `notes`. Red before D21-113 with `DigestMismatch` at invocation 3; red under M1 (the latest write
 /// selected by KIND, which after the restore is the `.md` row) at invocation 2's read.
+/// *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* ~~`#[ignore]`d, R5FIX-8f BLOCKED~~:
+/// un-ignored as written, once the entry's accepted write lands at entry (D21-114) and D21-113 step 3
+/// is built. Red before step 3 (the stale `{"summary":"pack-min"}` served), then red at step 3 alone
+/// (`Unsupported`, the livelock), then green with the entry landing.
 #[test]
-#[ignore = "R5FIX-8f BLOCKED (D21-113's step 3 not built): the entry pass's accepted write is not on rk-run/<item> when the stage's first read is served; a ruling is owed"]
 fn a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read() {
     let repo = spec_read_lane();
     let root = repo.path();
@@ -2139,6 +2145,455 @@ fn a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read() {
         served["summary"],
         serde_json::json!("pack-min"),
         "the structured field is the type's, restored: {served}"
+    );
+}
+
+// --------------------------------------- the entry's own writes land AT ENTRY (D21-114, R5FIX2-8f)
+//
+// *(Added 2026-09-29, s8f build, package R5FIX2-8f; D21-114, TAKEN PROVISIONALLY under D21-105,
+// amending D21-113 step 3; ADR-0188 decision 2's and ADR-0189 decision 9's dated notes, proposed.)*
+// D21-113 step 3's reader checks the run ref's sidecar against the LATEST `artifact.write` of its
+// path. The entry pass's own writes (an accepted prose edit, an applied `move-to-prose`, a stored
+// vouched root) used to land only at the stage's first committed step, after that step's read, so
+// the check livelocked (measured by R5FIX-8f: `Unsupported`, 0 dispatches, `Spec.json` writes
+// 2 -> 3 -> 4). They now land AT ENTRY, through `commit_act`'s `Content::Entry` arm: a trailerless,
+// body-less `rk entry <item> <stage> <run_id>` content commit carrying only its `git_op` rows, made
+// only when the entry wrote and no drift gate's `Gate:` commit lands the write.
+
+/// `Spec.json`'s repo-relative path in the run-owned tree.
+fn spec_json(item: &str) -> String {
+    format!(".redkiln/artifacts/{item}/Spec.json")
+}
+
+/// The `rk entry <item> ` commits on the run ref, `(sha, subject)`, oldest first.
+fn entry_landings(root: &Path, item: &str) -> Vec<(String, String)> {
+    let prefix = format!("rk entry {item} ");
+    subjects(root, item)
+        .into_iter()
+        .filter(|(_, s)| s.starts_with(&prefix))
+        .collect()
+}
+
+/// Every `artifact.write` naming `Spec.json`, in journal order.
+fn spec_json_writes(root: &Path, item: &str) -> Vec<Event> {
+    support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::ArtifactWrite)
+        .filter(|e| {
+            e.payload.get("path").and_then(serde_json::Value::as_str)
+                == Some(spec_json(item).as_str())
+        })
+        .collect()
+}
+
+/// The number of `git_op` rows in the store.
+fn git_op_rows(root: &Path) -> usize {
+    count_kind(root, EventKind::GitOp)
+}
+
+/// Invocation 1 emits `Spec` at `implement` and stops in `review`; a human then writes prose into
+/// `Spec.md`'s `context` section, a commit on `rk-run/<item>` (T1's premise, taken again).
+fn a_human_writes_the_context(root: &Path, item: &str) {
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    let tree = crate::run_tree(root, item).path;
+    let md = tree.join(spec_md(item));
+    let text = std::fs::read_to_string(&md).expect("PREMISE: the rendering is in the run tree");
+    assert_eq!(
+        text.matches("## context\n").count(),
+        1,
+        "PREMISE: one `context` prose section"
+    );
+    let edited = text.replace("## context\n", &format!("## context\n{HUMAN_CONTEXT}\n"));
+    std::fs::write(&md, edited).expect("the rendering is edited");
+    assert_eq!(git_rc(&tree, &["add", "--", &spec_md(item)]), Some(0));
+    assert_eq!(
+        git_rc(
+            &tree,
+            &[
+                "commit",
+                "--quiet",
+                "-m",
+                "a human writes the spec's context"
+            ]
+        ),
+        Some(0),
+        "PREMISE: the human's prose edit is a commit on the run ref"
+    );
+}
+
+/// **D21-114: an accepted prose edit lands AT ENTRY, before the stage's first read** — so D21-113
+/// step 3's latest-write check is met at once and the lane cannot livelock. Invocation 2's entry
+/// accepts the human's `context` prose (one new `Spec.json` write) and lands it; the stage's
+/// `artifact:Spec` read is served and `review` DISPATCHES (its script is empty, so it fails after
+/// the read and the stage re-enters). The run ref's `Spec.json` blob IS the latest write. Invocations
+/// 3 and 4 re-enter and write `Spec.json` no more: nothing was discarded, so nothing is accepted
+/// again. Red before the entry landing: invocation 2 dispatches 0 times (`Unsupported`, the read's
+/// Halt 4), and each re-entry discards and re-accepts (writes 2 -> 3 -> 4). Red under M-ENTRY-LAND.
+#[test]
+fn an_accepted_prose_edit_lands_at_entry_before_the_first_read() {
+    let repo = spec_read_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    a_human_writes_the_context(root, item);
+
+    let (second, seen) = capturing(Vec::new());
+    run(root, item, &second);
+    let dispatches = seen.lock().expect("not poisoned").len();
+    let halts = support::store_rows(root)
+        .iter()
+        .map(|e| e.payload.to_string())
+        .filter(|p| p.contains("Halt 4"))
+        .count();
+    assert!(
+        dispatches > 0,
+        "invocation 2 dispatched {dispatches} times: its `artifact:Spec` read was refused before \
+         any dispatch (rows naming Halt 4: {halts}), the entry's accepted write was not on the run \
+         ref"
+    );
+    let writes = spec_json_writes(root, item);
+    let latest = writes
+        .last()
+        .and_then(|e| e.payload.get("digest"))
+        .and_then(serde_json::Value::as_str)
+        .expect("PREMISE: `Spec.json` has a recorded write")
+        .to_owned();
+    let on_ref = blob(root, &lane_e2e::run_ref(item), &spec_json(item))
+        .expect("`Spec.json` is on the run ref");
+    assert_eq!(
+        rk_types::digest::sha256(&on_ref).as_str(),
+        latest,
+        "the run ref's `Spec.json` is not the latest recorded write after invocation 2's entry"
+    );
+
+    let after_two = writes.len();
+    for n in 3..=4 {
+        let (again, _) = capturing(Vec::new());
+        run(root, item, &again);
+        assert_eq!(
+            spec_json_writes(root, item).len(),
+            after_two,
+            "invocation {n} wrote `Spec.json` again: the entry's accepted write was discarded and \
+             re-accepted"
+        );
+    }
+}
+
+/// **D21-114: the entry landing is IGNORED by the heal and the tier-1 folds, by construction.**
+/// Its commit is subject-only (no body, no trailer), its subject begins `rk entry `, never `rk
+/// step `, and with every row deleted (a fresh, empty store) the heal gives it none while it heals
+/// the lane's trailer commits (the control arm: the heal ran and could heal), and
+/// `marked_commits` does not list it. Red before the entry landing (no `rk entry` commit), and
+/// under M-ENTRY-HEAL (the step read widened to `rk `: the heal refuses the entry commit as an
+/// unreadable step checkpoint).
+#[test]
+fn an_entry_landing_is_ignored_by_heal_and_the_tier1_folds() {
+    let repo = spec_read_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    a_human_writes_the_context(root, item);
+    let (second, _) = capturing(Vec::new());
+    run(root, item, &second);
+
+    let landings = entry_landings(root, item);
+    assert_eq!(
+        landings.len(),
+        1,
+        "invocation 2's accepted write made no single `rk entry {item} ` commit: {:?}",
+        subjects(root, item)
+    );
+    let (sha, subject) = landings[0].clone();
+    assert!(
+        !subject.starts_with("rk step "),
+        "an entry landing's subject begins the step checkpoint's prefix: {subject}"
+    );
+    let message =
+        git_read(root, &["log", "-1", "--format=%B", &sha]).expect("the commit's message reads");
+    assert_eq!(
+        message.trim_end(),
+        subject,
+        "the entry landing carries more than its subject (a body or a trailer)"
+    );
+    assert!(
+        !is_empty_commit(root, &sha),
+        "the entry landing is not a content commit"
+    );
+
+    let found = rk_cli::repo::discover(Some(root)).expect("the repository discovers");
+    let empty: Arc<Mutex<dyn EventStore>> =
+        Arc::new(Mutex::new(rk_ports::fakes::VecStore::default()));
+    let healed = rk_kernel::runtime::tier_one::heal(&found.exec, &found.worktree, &empty, item)
+        .expect("the heal runs over a store with every row deleted");
+    assert!(
+        !healed.is_empty(),
+        "CONTROL: the heal healed nothing, so it did not read this lane's trailer commits"
+    );
+    assert!(
+        !healed.contains(&sha),
+        "the heal healed the entry landing {sha}"
+    );
+    let anchored = empty
+        .lock()
+        .expect("not poisoned")
+        .query(rk_ports::event_store::Query::BySha(sha.clone()))
+        .expect("the store reads");
+    assert!(
+        anchored.is_empty(),
+        "the heal anchored rows to the entry landing: {anchored:?}"
+    );
+    let marked = rk_kernel::runtime::tier_one::marked_commits(&found.exec, &found.worktree, item)
+        .expect("the fold reads");
+    assert!(
+        !marked.is_empty(),
+        "CONTROL: `marked_commits` lists none of the lane's trailer commits"
+    );
+    assert!(
+        marked.iter().all(|c| c.sha != sha),
+        "`marked_commits` lists the entry landing {sha}"
+    );
+}
+
+/// **D21-114: an entry that writes nothing makes no entry act** — no `rk entry` commit and no
+/// `git_op` row. The control arm first: invocation 2's entry accepts the human's prose and makes
+/// ONE entry landing (so the call site is live). Invocation 3's entry writes nothing: the landing
+/// is not invoked, so the run ref gains no `rk entry` commit and the store no `git_op` row (an
+/// invocation on an unchanged tree would still journal its reads, unanchored). Red before the entry
+/// landing (the control arm: no `rk entry` commit), and red if the landing ran on every entry.
+#[test]
+fn an_entry_that_writes_nothing_makes_no_entry_act() {
+    let repo = spec_read_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    a_human_writes_the_context(root, item);
+    let (second, _) = capturing(Vec::new());
+    run(root, item, &second);
+    assert_eq!(
+        entry_landings(root, item).len(),
+        1,
+        "CONTROL: an entry that accepted a write made no single entry landing"
+    );
+
+    let ops_before = git_op_rows(root);
+    let ref_before = lane_e2e::ref_sha(root, item);
+    let (third, _) = capturing(Vec::new());
+    run(root, item, &third);
+    assert_eq!(
+        entry_landings(root, item).len(),
+        1,
+        "an entry that wrote nothing made an entry landing"
+    );
+    assert_eq!(
+        lane_e2e::ref_sha(root, item),
+        ref_before,
+        "an entry that wrote nothing moved the run ref"
+    );
+    assert_eq!(
+        git_op_rows(root),
+        ops_before,
+        "an entry that wrote nothing journalled `git_op` rows"
+    );
+}
+
+/// **D21-114: a replayed entry landing makes no git write.** Its act's rows are ONLY `git_op` rows
+/// (no new kind, no completion-shaped row: D21-113 step 5), and replaying the act through
+/// `commit_act` over them is SERVED the recorded commit: `rk-git`'s own counter reads 0, the run
+/// ref does not move, and no row is appended. Red before the entry landing (no `rk entry` commit).
+#[test]
+fn a_replayed_entry_landing_makes_no_git_write() {
+    use rk_git::gitops::{GitOps, Mode};
+    use rk_kernel::runtime::tier_one::{
+        Act, ActJournal, Committed, EntryCheckpoint, Target, commit_act,
+    };
+
+    let repo = spec_read_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    a_human_writes_the_context(root, item);
+    let (second, _) = capturing(Vec::new());
+    run(root, item, &second);
+    let landings = entry_landings(root, item);
+    assert_eq!(
+        landings.len(),
+        1,
+        "PREMISE: invocation 2 made one entry landing: {:?}",
+        subjects(root, item)
+    );
+    let (sha, subject) = landings[0].clone();
+
+    let found = rk_cli::repo::discover(Some(root)).expect("the repository discovers");
+    let sqlite = rk_adapter_sqlite::SqliteStore::open(&found.exec, &found.worktree)
+        .expect("the store opens");
+    let anchored = sqlite
+        .query(rk_ports::event_store::Query::BySha(sha.clone()))
+        .expect("the store reads");
+    assert!(
+        !anchored.is_empty() && anchored.iter().all(|e| e.kind == EventKind::GitOp),
+        "the entry landing anchors rows other than its `git_op` rows, or none: {:?}",
+        anchored.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    let journal = support::journal_rows(root, item);
+    drop(sqlite);
+
+    let store: Arc<Mutex<dyn EventStore>> =
+        Arc::new(Mutex::new(rk_ports::fakes::VecStore::default()));
+    for row in &journal {
+        store
+            .lock()
+            .expect("not poisoned")
+            .append(row.clone())
+            .expect("the journal is seeded");
+    }
+    let tree = crate::run_tree(root, item);
+    let target = Target {
+        worktree: tree.path.clone(),
+        ownership: rk_git::worktree::RunOwnership {
+            worktree: tree.path,
+            branch: tree.branch,
+        },
+        project: Some(PROJECT.to_owned()),
+        item: item.to_owned(),
+    };
+    let ref_before = lane_e2e::ref_sha(root, item);
+    let rows_before = journal.len();
+
+    let mut replaying = ActJournal::replaying(&anchored).expect("the recorded rows read back");
+    let recorder = replaying.recorder();
+    let mut ops = GitOps::new(found.exec, &mut replaying, Mode::Replay);
+    let replayed = commit_act(
+        &mut ops,
+        &recorder,
+        &store,
+        &target,
+        Act::entry(EntryCheckpoint { subject }),
+    )
+    .expect("the replayed entry landing is served");
+    assert!(
+        matches!(&replayed, Committed::Replayed { sha: served, .. } if *served == sha),
+        "the replay was not served the recorded entry landing {sha}: {replayed:?}"
+    );
+    assert_eq!(
+        ops.writes_performed(),
+        0,
+        "the replay reached the git wrapper"
+    );
+    assert_eq!(
+        lane_e2e::ref_sha(root, item),
+        ref_before,
+        "the replay moved the run ref"
+    );
+    assert_eq!(
+        store
+            .lock()
+            .expect("not poisoned")
+            .query(rk_ports::event_store::Query::ByRun(String::new()))
+            .expect("reads")
+            .len(),
+        rows_before,
+        "the replay appended a row"
+    );
+}
+
+/// **D21-114, M-ENTRY-GATE: a drift entry lands its accepted write ONCE, through its drift gate.**
+/// The human's one commit edits the structured `summary` (a drift) AND the prose `context` (an
+/// accepted write). The entry pass records the drift, accepts the prose and restores; the drift
+/// gate's `Gate:` commit (the landed arm) lands all of it (ADR-0189 decision 4), so the entry
+/// landing is NOT invoked: invocation 2 adds no `rk entry` commit, and exactly ONE content commit
+/// (the gate's) carries the entry's writes, and every `git_op` row invocation 2 journals is the
+/// gate's, anchored to it. Red under M-ENTRY-GATE (the entry landing runs with the gate pending:
+/// before the gate, an `rk entry` content commit and the gate's commit then empty; after it, an
+/// unchanged tree's reads journalled as `git_op` rows the gate does not anchor).
+#[test]
+fn a_drift_entry_lands_its_accepted_write_once_through_its_gate() {
+    let repo = spec_read_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    let tree = crate::run_tree(root, item).path;
+    let md = tree.join(spec_md(item));
+    let text = std::fs::read_to_string(&md).expect("PREMISE: the rendering is in the run tree");
+    let edited = text
+        .replace("\"pack-min\"", "\"a human edited this\"")
+        .replace("## context\n", &format!("## context\n{HUMAN_CONTEXT}\n"));
+    assert_ne!(edited, text, "PREMISE: the rendering is edited");
+    std::fs::write(&md, edited).expect("the rendering is edited");
+    assert_eq!(git_rc(&tree, &["add", "--", &spec_md(item)]), Some(0));
+    assert_eq!(
+        git_rc(
+            &tree,
+            &["commit", "--quiet", "-m", "a human edits the spec twice"]
+        ),
+        Some(0)
+    );
+    let human = lane_e2e::ref_sha(root, item).expect("the run ref names the human's commit");
+    let writes_before = spec_json_writes(root, item).len();
+    let ops_before = git_op_rows(root);
+
+    let (second, _) = capturing(Vec::new());
+    run(root, item, &second);
+    assert_eq!(
+        drift_gates(root).len(),
+        1,
+        "PREMISE: the drift gate is open"
+    );
+    let ops_journalled = git_op_rows(root) - ops_before;
+    assert!(
+        spec_json_writes(root, item).len() > writes_before,
+        "PREMISE: the entry accepted the prose edit (a new `Spec.json` write) beside the drift"
+    );
+    assert!(
+        entry_landings(root, item).is_empty(),
+        "a drift entry made an entry landing: the gate's `Gate:` commit lands its writes"
+    );
+    let after: Vec<String> = git_read(
+        root,
+        &[
+            "rev-list",
+            "--reverse",
+            &format!("{human}..{}", lane_e2e::run_ref(item)),
+        ],
+    )
+    .unwrap_or_default()
+    .lines()
+    .map(str::to_owned)
+    .collect();
+    let content: Vec<&String> = after.iter().filter(|c| !is_empty_commit(root, c)).collect();
+    assert_eq!(
+        content.len(),
+        1,
+        "the drift entry landed its writes in {} content commits, not one: {after:?}",
+        content.len()
+    );
+    assert!(
+        gate_commits(root, item)
+            .iter()
+            .any(|(sha, _)| sha == content[0]),
+        "the one content commit {} is not the drift gate's `Gate:` commit",
+        content[0]
+    );
+    let found = rk_cli::repo::discover(Some(root)).expect("the repository discovers");
+    let sqlite = rk_adapter_sqlite::SqliteStore::open(&found.exec, &found.worktree)
+        .expect("the store opens");
+    let anchored_to_gate = sqlite
+        .query(rk_ports::event_store::Query::BySha(content[0].clone()))
+        .expect("the store reads")
+        .into_iter()
+        .filter(|e| e.kind == EventKind::GitOp)
+        .count();
+    assert!(
+        anchored_to_gate > 0,
+        "PREMISE: the gate's act anchors its `git_op` rows"
+    );
+    assert_eq!(
+        ops_journalled, anchored_to_gate,
+        "invocation 2 journalled {ops_journalled} `git_op` rows and the gate's commit anchors \
+         {anchored_to_gate}: another act ran at the drift entry"
     );
 }
 

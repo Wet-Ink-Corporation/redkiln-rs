@@ -132,6 +132,20 @@ operator makes the hand-off (decision 12).
   carrying the trailer"*; AC-163's empty commit). Under N10 a boundary usually finds the tree already landed. What it
   still carries is the work of steps that do not commit and the work done at entry (the render restore and the
   vouched root's store, the render record's).
+- *(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R5FIX2-8f); D21-114, TAKEN PROVISIONALLY
+  under D21-105.)* **At entry: a third landing point.** After the drift pass and the vouched-root pass, when the
+  entry's own writes (an accepted prose edit, an applied `move-to-prose`, a stored vouched root) are unlanded and no
+  drift gate's `Gate:` commit landed them: a trailerless `rk entry <item> <stage> <run_id>` content commit through
+  `commit_act` (`Content::Entry`, `Act::entry`), with no body, anchoring only its `git_op` rows, made before the
+  first seam is handed to the kernel. It stages as a step checkpoint does (decision 4's journalled baseline, the
+  lane's excluded paths, decision 5's refusals) with `allow_empty` false, so an unchanged tree makes no commit; a
+  refusal opens decision 7's gate over an empty commit; on replay it is served and makes zero git writes. It is
+  invoked only when the entry wrote and no drift gate lands the write, so an entry that wrote nothing journals no
+  act. Without it the render record's latest-write check (ADR-0189 decision 9's dated note) livelocked: the
+  entry's write landed only at the stage's first committed step, after that step's read. With it decision 14's
+  *"performed by the next `run` at entry and lands there"* holds as written. Reversal (D21-114): delete the call
+  site and the arm and take option (1) A-tightened; commits already made are content-identical to what the next
+  committed step would have landed.
 
 **The act encloses AC-012's critical section.** The step-grain arm takes the store's guard, re-reads the journal for
 a prior commit under the step's commit key, and, when one exists, returns the late-duplicate discard **before any
@@ -156,6 +170,15 @@ is read from the subject and must equal the key inside the row; a body that is a
 key disagrees with the subject is **refused by name**, naming the commit, and the step is never re-dispatched over its
 own landed edit. A crash between the commit and the row is D21-42 8a's own window, and this is how it closes for a
 step. The heal writes nothing to git (AC-174).
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R5FIX2-8f); D21-114.)* **The commit forms
+are four**: a boundary's trailer commit (content or empty), the step checkpoint above, and the entry landing
+(decision 2's dated note), whose message is the subject `rk entry <item> <stage> <run_id>` only: no body and no
+trailer. `ENTRY_SUBJECT_PREFIX` (`"rk entry "`) never begins with `STEP_SUBJECT_PREFIX` (`"rk step "`), which a
+`const` assertion in `runtime/tier_one.rs` enforces. **The heal ignores it by construction**: it reads trailer
+marks (`marked_commits`) and `rk step <item> ` subjects, and the entry landing is neither. A crash between the
+entry landing and its `git_op` rows needs no heal: the next entry either finds the run ref's sidecar equal to the
+latest write and passes, or discards the dirt and re-accepts from the human's commit, still on `rk-run/<item>`.
+`landing::an_entry_landing_is_ignored_by_heal_and_the_tier1_folds` pins it (M-ENTRY-HEAL).
 
 **4. What is staged, and the baseline.** The staging set is (a) tracked modifications and deletions, and (b) the
 untracked files that are not in the **baseline**. Nothing `.gitignore` (or `info/exclude`, or a global exclude)
@@ -361,7 +384,9 @@ uncommitted edit left in the run-owned worktree is in-flight dirt, named and dis
 
 **14. `answer` does not land.** After a landing, the owned worktree's no-checkpoint-due tree equals `HEAD`'s tree, so
 an answer's derivation matches its gate's. An answer's effect on an artifact is performed by the next `run` at entry
-and lands there.
+and lands there. *(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R5FIX2-8f); D21-114.)*
+This sentence is now true in the tree as written: it lands at decision 2's entry landing, or at the drift gate's
+`Gate:` commit when one opens at that entry.
 *(Corrected 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R4FIX-8f); refuting round 4's
 blocker.)* **Nor does the escalation `answer`'s expiry pass opens.** When a due gate's class declares `escalate`,
 `answer`'s expiry pass writes the `gate_expired` row and an escalation's `gate_opened` row (ADR-0105 clause 10;

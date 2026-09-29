@@ -115,6 +115,8 @@ pub enum Mark {
 /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE; the landing record ADR-0188
 /// decisions 2, 3, 7 and 14, proposed.)* Three arms. Every one commits through `rk-git`'s landing
 /// primitive (`commit-tree` + `update-ref`), never through porcelain `commit`.
+/// *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* ~~Three arms~~ Four: the entry
+/// landing ([`Content::Entry`]) is the fourth.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Content {
     /// No staging: the trailer rides an empty commit over `HEAD`'s tree. An answer's transition
@@ -128,6 +130,61 @@ pub enum Content {
     /// changed the tree, and NO commit when it did not. Its rows are anchored to the commit it
     /// made, or appended unanchored when it made none.
     Step(StepCheckpoint),
+    /// **The entry landing** (ADR-0188 decision 2's dated note, proposed; D21-114, TAKEN
+    /// PROVISIONALLY under D21-105). *(Added 2026-09-29, s8f build, package R5FIX2-8f.)* The
+    /// entry pass's own writes (an accepted prose edit, an applied `move-to-prose`, a stored
+    /// vouched root), landed before the first seam's read when no drift gate's `Gate:` commit
+    /// lands them. Trailer-less and body-less: a content commit when the tree changed, NO commit
+    /// when it did not, staged exactly as [`Content::Step`] is, and its only rows are its `git_op`
+    /// rows. `heal`, [`marked_commits`] and the step-checkpoint read ignore it by construction: it
+    /// has no trailer and its subject does not begin [`STEP_SUBJECT_PREFIX`].
+    Entry(EntryCheckpoint),
+}
+
+/// The message an entry landing carries (D21-114): a subject only, `rk entry <item> <stage>
+/// <run_id>`, with no body and no trailer. *(Added 2026-09-29, s8f build, package R5FIX2-8f.)*
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryCheckpoint {
+    /// `rk entry <item> <stage> <run_id>`.
+    pub subject: String,
+}
+
+/// The entry landing's subject prefix (D21-114).
+///
+/// It never begins [`STEP_SUBJECT_PREFIX`], so the
+/// heal's step-checkpoint read cannot take an entry landing for a step (asserted at compile time
+/// below). *(Added 2026-09-29, s8f build, package R5FIX2-8f.)*
+pub const ENTRY_SUBJECT_PREFIX: &str = "rk entry ";
+
+/// `true` when `s` begins with `prefix`, in a `const` context.
+const fn begins_with(s: &str, prefix: &str) -> bool {
+    let (s, prefix) = (s.as_bytes(), prefix.as_bytes());
+    if prefix.len() > s.len() {
+        return false;
+    }
+    let mut i = 0;
+    while i < prefix.len() {
+        if s[i] != prefix[i] {
+            return false;
+        }
+        i += 1;
+    }
+    true
+}
+
+const _: () = assert!(
+    !begins_with(ENTRY_SUBJECT_PREFIX, STEP_SUBJECT_PREFIX),
+    "an entry landing's subject must never begin the step checkpoint's prefix"
+);
+
+impl EntryCheckpoint {
+    /// The entry landing of `item`'s stage run `(stage, run_id)`.
+    #[must_use]
+    pub fn of(item: &str, stage: &str, run_id: &str) -> Self {
+        Self {
+            subject: format!("{ENTRY_SUBJECT_PREFIX}{item} {stage} {run_id}"),
+        }
+    }
 }
 
 /// The message a step checkpoint carries (ADR-0188 decision 3): the subject names the step-grain
@@ -226,6 +283,19 @@ impl Act {
             mark: None,
             content: Content::Step(checkpoint),
             rows,
+            opening_run: None,
+        }
+    }
+
+    /// **The entry landing** (D21-114; ADR-0188 decision 2's dated note, proposed): no trailer, no
+    /// row of its own, and no opening run. Its only rows are the `git_op` rows the act journals.
+    /// *(Added 2026-09-29, s8f build, package R5FIX2-8f.)*
+    #[must_use]
+    pub const fn entry(checkpoint: EntryCheckpoint) -> Self {
+        Self {
+            mark: None,
+            content: Content::Entry(checkpoint),
+            rows: Vec::new(),
             opening_run: None,
         }
     }
@@ -887,8 +957,9 @@ fn land_act(
     pending: Option<&super::advisory::PendingAdvisories>,
     mut act: Act,
 ) -> Result<Committed, TierOneError> {
-    // One arm may carry no trailer: the step checkpoint (N10).
-    if act.mark.is_none() && !matches!(act.content, Content::Step(_)) {
+    // One arm may carry no trailer: the step checkpoint (N10). *(dated 2026-09-29, s8f build,
+    // package R5FIX2-8f; D21-114.)* ~~One arm~~ Two: the entry landing too.
+    if act.mark.is_none() && !matches!(act.content, Content::Step(_) | Content::Entry(_)) {
         return Err(TierOneError::EmptyAct);
     }
     let trailer = act.mark.as_ref().map(|m| render(m, target)).transpose()?;
@@ -969,7 +1040,7 @@ fn land_act(
     //    by construction, and a refused landing lands nothing.
     let staged = match &act.content {
         Content::Empty => landing::prepare_empty(git, &cwd, &target.item)?,
-        Content::Landed | Content::Step(_) => landing::stage(
+        Content::Landed | Content::Step(_) | Content::Entry(_) => landing::stage(
             git,
             &Request {
                 cwd: &cwd,
@@ -1041,6 +1112,16 @@ fn land_act(
             landing::Message {
                 subject: checkpoint.subject.clone(),
                 body: Some(checkpoint.body.clone()),
+                trailer: None,
+            },
+            false,
+        ),
+        // *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* The entry landing: the
+        // subject only, and no commit when the tree is unchanged.
+        (None, Content::Entry(entry)) => (
+            landing::Message {
+                subject: entry.subject.clone(),
+                body: None,
                 trailer: None,
             },
             false,

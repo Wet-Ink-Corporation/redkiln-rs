@@ -248,11 +248,19 @@ is read back from the store"*). On replay the reader serves the sidecar blob at 
 `render::a_replayed_read_serves_the_recorded_trees_blob_not_the_binding`). **The live arm's latest-write check is NOT
 built: it is returned to the judge panel as a blocker.** The entry pass writes into the run-owned worktree, and the
 reader reads the run ref (this decision: *"It serves the kind's value from its sidecar on the run ref"*); the entry's
-accepted write lands only at the stage's first committed step, after that step's read. Measured in a private
+accepted write ~~lands only at the stage's first committed step, after that step's read~~ *(dated 2026-09-29, at
+`s8f`'s build (package R5FIX2-8f); D21-114, TAKEN PROVISIONALLY under D21-105, amending D21-113 step 3 only)* lands
+at entry (ADR-0188 decision 2's entry landing), before the first seam's read. As first measured, it landed only at
+the stage's first committed step, after that step's read. Measured in a private
 worktree: with the latest-write check, the reading step is refused at every invocation, re-entry discards the
 unlanded `Spec.json` (*"not landed at a committed step"*), the next entry accepts the edit again, and the lane never
-advances. Until the ruling, the live check reads the binding, and a read before the accepted write lands is served the
-value on the run ref.
+advances. ~~Until the ruling, the live check reads the binding, and a read before the accepted write lands is served the
+value on the run ref.~~ *(Dated 2026-09-29, package R5FIX2-8f; D21-114.)* **Step 3 is built as ruled**: the live arm
+checks the run ref's sidecar against the LATEST `artifact.write` whose path is `managed_path(item, <Kind>.json)`,
+never by kind; with no such row, against `canonical_digest(bound)`; anything else is Halt 4. It serves that value and
+appends one `artifact.read` with the run ref's tree. With the entry landing the lane does not livelock, and
+`s8f` §8f.12's T1 and T2 are un-ignored and green; M1 and M5 are killed by T2 and T1. This decision's *"on the run
+ref"* and the `artifact.read` row's `tree` stand, so replay needs no locator.
 
 **10. The vouched root (AC-127's first half; D21-46 R7).** This record's **reading of ADR-0025**: its decision names an
 *upstream* change (*"When an upstream artifact in the same stage subsequently changes, the *next* gate the item

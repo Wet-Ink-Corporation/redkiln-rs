@@ -4723,3 +4723,14 @@ private worktree: invocations 2, 3 and 4 each exit `Unsupported` with 0 dispatch
 digest is among the recorded writes of the exact path at or after the emit's origin write, with the same-entry stale
 read as a named residual. Commits already made are content-identical to what the next committed step would have
 landed.
+
+*(dated 2026-09-29, s8f build, package R5FIX2-8f.)* **Built** (the ruling's list names the package R6FIX-8f). The
+kernel arm (`Content::Entry`, `EntryCheckpoint`, `ENTRY_SUBJECT_PREFIX`, `Act::entry`, the widened trailer-less guard
+and the entry message), the composition root's call site (`run::land_entry`, on the `else` arm of the drift gate's
+opening, only when the entry pass wrote) and D21-113 step 3 (the live arm's latest-write check) are in the tree.
+Red first in the ruled order; T1 and T2 un-ignored; four named tests and a fifth (a drift entry lands once, through
+its gate: the ruling's *"new assertion that exactly one content commit follows a drift entry"*); M-ENTRY-LAND,
+M-ENTRY-HEAL, M-ENTRY-GATE, D21-113's owed M1 and M5 and a control mutant M-ENTRY-ALWAYS all killed in a private
+worktree. Two existing tests asserted the superseded binding-only halt and take dated notes (`s8f` §8f.5). ADR-0188
+decisions 2, 3 and 14 and ADR-0189 decision 9 carry dated in-record notes (both `proposed`). Checkpoint 8f (4)
+selects 64 in `rk-cli`, and (5)'s floor is 1119 + 116 = 1235.
