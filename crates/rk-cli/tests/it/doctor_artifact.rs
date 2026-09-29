@@ -63,9 +63,11 @@ impl Repo {
         self.checkout.path()
     }
 
-    /// The run-owned tree of `item`, where `s8e` puts it.
+    /// The run-owned tree of `item`, where `s8e` puts it: rk-git's ONE derivation of the root
+    /// (`crate::run_tree`; Checkpoint 8d-ii (3), D21-44). *(dated 2026-09-29, s8f build, package
+    /// R1FIX-8f-A-CODE: it joined the literal before.)*
     fn tree(&self, item: &str) -> PathBuf {
-        self.root().join(".redkiln").join("worktrees").join(item)
+        crate::run_tree(self.root(), item).path
     }
 
     /// Append the `worktree_assigned` row a `run` writes, through the kernel's own constructor.
@@ -404,10 +406,13 @@ fn an_unassigned_copy_under_redkiln_worktrees_is_never_read() {
         "PREMISE: no row names the tree"
     );
     assert!(
-        repo.root()
-            .join(".redkiln/worktrees/x/.redkiln/artifacts/x/Spec.md")
+        repo.tree("x")
+            .join(".redkiln")
+            .join("artifacts")
+            .join("x")
+            .join("Spec.md")
             .is_file(),
-        "PREMISE: the mutated copy is under .redkiln/worktrees/"
+        "PREMISE: the mutated copy is in the run tree rk-git derives for `x`"
     );
     assert_clean(&repo.fire(), "an unassigned copy was read");
 

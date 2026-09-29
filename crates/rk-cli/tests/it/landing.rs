@@ -805,12 +805,27 @@ fn reentry_names_every_discarded_path() {
         listed.iter().any(|p| p == "local.cfg"),
         "PREMISE: the baseline file is untracked and not ignored in the run tree: {listed:?}"
     );
-    let mut expected: Vec<String> = listed.into_iter().filter(|p| p != "local.cfg").collect();
-    expected.sort();
+    // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 spec-conformance finding.)*
+    // The expected set is the ONE staging-set function's output over the same status bytes and
+    // the journalled baseline, not a recomputation here (struck: `listed` less `local.cfg`,
+    // sorted). The literal below stays as an independent pin of what that function names.
+    let baseline =
+        rk_kernel::runtime::tier_one::journalled_baseline(&support::store_rows(root), item)
+            .expect("PREMISE: a baseline is journalled for the run tree");
+    assert!(
+        baseline.contains("local.cfg"),
+        "PREMISE: the journalled baseline holds the carried file: {baseline:?}"
+    );
+    let expected = rk_git::landing::classify(
+        rk_git::landing::parse_status(status.as_bytes()),
+        &rk_git::landing::Baseline::Known(baseline),
+        &std::collections::BTreeSet::new(),
+    )
+    .paths();
     assert_eq!(
         expected,
         [".env", "README", "notes.txt", "sub/dir/created.txt"],
-        "PREMISE: the in-flight set the test computed"
+        "PREMISE: the staging set the one function names"
     );
 
     assert_eq!(

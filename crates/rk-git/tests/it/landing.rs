@@ -403,6 +403,41 @@ fn blob_at_the_limit_lands_and_one_byte_over_is_refused() {
     assert_eq!(lx.tip(), before, "a ref moved under a size refusal");
 }
 
+/// **A name refusal and a size refusal in one staging set are named at once** (ADR-0188 decisions
+/// 5 and 6: *"Every path in the staging set is checked"*; the gate *"names every refused path with
+/// its rule"*). *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 minor.)* Red while
+/// a name refusal returns before the size check: the gate names `.env` alone, and the oversize
+/// blob waits for a second gate. The name-refused file is never staged, so its bytes never enter
+/// the object store.
+#[test]
+fn a_name_refusal_and_a_size_refusal_are_named_at_once() {
+    let lx = fixture();
+    let limit = usize::try_from(MAX_LANDED_BLOB_BYTES).expect("fits");
+    let before = lx.tip();
+    lx.write(".env", b"API_TOKEN=not-a-real-secret-r1fix\n");
+    lx.write("over-limit.bin", &vec![b'a'; limit + 1]);
+    let staged = stage(&lx, &empty_baseline());
+    let Staged::Refused { refusals, .. } = &staged else {
+        panic!("a denylisted path and an oversize blob were not refused: {staged:?}");
+    };
+    assert_eq!(
+        refusals.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        vec![
+            ".env (denylist:.env)".to_owned(),
+            format!("over-limit.bin (size:{})", limit + 1)
+        ],
+        "every refused path is named with its rule, in one refusal"
+    );
+    assert_eq!(lx.tip(), before, "a ref moved under a refusal");
+    let hashed = lx.git(&["hash-object", ".env"]);
+    assert!(
+        lx.fx
+            .try_git(&lx.repo, &["cat-file", "-e", hashed.as_str()])
+            .is_err(),
+        "the denylisted file's bytes entered the object store (it was staged)"
+    );
+}
+
 /// **A staged path one over ADR-0180's worst-case bound is refused by name; one under lands**
 /// (D21-47, review m12), with `core.longpaths` unset. Red under M49 (the bound dropped).
 #[test]

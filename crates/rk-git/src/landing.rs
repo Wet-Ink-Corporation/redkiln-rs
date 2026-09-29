@@ -163,10 +163,11 @@ impl StagingSet {
     }
 }
 
-/// **The ONE staging-set function** (ADR-0188 decisions 4 and 13): tracked modifications and
-/// deletions, plus the untracked files that are not in `baseline`, honouring `.gitignore`,
-/// `info/exclude` and the global excludes (the read lists no ignored file), less `excluded`.
-/// With [`Baseline::Unknown`] every untracked path is a candidate, and [`stage`] refuses it.
+/// **The staging set, read through the seam** (ADR-0188 decisions 4 and 13): the `status` read,
+/// then [`classify`], the ONE function that computes the set. *(dated 2026-09-29, s8f build,
+/// package R1FIX-8f-A-CODE: the classification moved into [`classify`], which the re-entry
+/// discard in `worktree.rs` calls over its own `status` read — the read is not shared, since the
+/// landing reads through `GitOps` and the discard through `GitExec`; the set is.)*
 ///
 /// # Errors
 /// [`GitError`] from the seam's `status` read.
@@ -181,12 +182,28 @@ pub fn staging_set(
         cwd,
         &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
     )?;
+    Ok(classify(parse_status(&out.stdout), baseline, excluded))
+}
+
+/// **The ONE staging-set function** (ADR-0188 decisions 4 and 13), pure over parsed `status`
+/// entries: tracked modifications and deletions (a rename names both paths), plus the untracked
+/// files that are not in `baseline`, honouring `.gitignore`, `info/exclude` and the global
+/// excludes (an ignored entry is never a candidate), less `excluded`, which it names. With
+/// [`Baseline::Unknown`] every untracked path is a candidate, and [`stage`] refuses it. The
+/// landing stages from it ([`staging_set`]) and `s8d-ii`'s re-entry discards exactly it
+/// (`worktree.rs`'s `discard`). *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)*
+#[must_use]
+pub fn classify(
+    entries: Vec<StatusEntry>,
+    baseline: &Baseline,
+    excluded: &BTreeSet<String>,
+) -> StagingSet {
     let mut tracked = BTreeSet::new();
     let mut deleted = BTreeSet::new();
     let mut created = BTreeSet::new();
     let mut untracked = BTreeSet::new();
     let mut named = BTreeSet::new();
-    for entry in parse_status(&out.stdout) {
+    for entry in entries {
         if entry.is_ignored() {
             continue;
         }
@@ -221,13 +238,13 @@ pub fn staging_set(
             tracked.insert(path);
         }
     }
-    Ok(StagingSet {
+    StagingSet {
         tracked: tracked.into_iter().collect(),
         deleted,
         created: created.into_iter().collect(),
         untracked: untracked.into_iter().collect(),
         excluded: named.into_iter().collect(),
-    })
+    }
 }
 
 /// Why a path is refused (ADR-0188 decision 6's spellings).
@@ -496,10 +513,12 @@ pub fn stage(git: &mut GitOps<'_>, req: &Request<'_>) -> Result<Staged, GitError
         })
     };
 
+    // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 minor.)* A name refusal no
+    // longer returns before the size check: every path is checked (decision 5) and the gate names
+    // every refused path (decision 6). A path refused by name is never staged, so its bytes never
+    // enter the object store; the size check reads the rest.
     let by_name = name_refusals(git, req, &set)?;
-    if !by_name.is_empty() {
-        return refused(git, by_name, set);
-    }
+    let named: BTreeSet<String> = by_name.iter().map(|r| r.path.clone()).collect();
 
     // Step 1: the temporary index, derived per item and never random (`tree.rs`: "The name is
     // derived, never random"); one worktree per concurrent item (Halt 6) makes it collision-free.
@@ -517,14 +536,22 @@ pub fn stage(git: &mut GitOps<'_>, req: &Request<'_>) -> Result<Staged, GitError
         ("GIT_LITERAL_PATHSPECS".into(), "1".into()),
     ];
     git.run_with_env(GitOp::Add, req.cwd, &["read-tree", "HEAD"], &env)?;
-    if !set.tracked.is_empty() {
+    let unnamed = |paths: &[String]| -> Vec<String> {
+        paths
+            .iter()
+            .filter(|p| !named.contains(*p))
+            .cloned()
+            .collect()
+    };
+    let (tracked, created) = (unnamed(&set.tracked), unnamed(&set.created));
+    if !tracked.is_empty() {
         let mut args = vec!["add", "-u", "--"];
-        args.extend(set.tracked.iter().map(String::as_str));
+        args.extend(tracked.iter().map(String::as_str));
         git.run_with_env(GitOp::Add, req.cwd, &args, &env)?;
     }
-    if !set.created.is_empty() {
+    if !created.is_empty() {
         let mut args = vec!["add", "--"];
-        args.extend(set.created.iter().map(String::as_str));
+        args.extend(created.iter().map(String::as_str));
         git.run_with_env(GitOp::Add, req.cwd, &args, &env)?;
     }
 
@@ -532,7 +559,7 @@ pub fn stage(git: &mut GitOps<'_>, req: &Request<'_>) -> Result<Staged, GitError
     let sized: Vec<String> = set
         .paths()
         .into_iter()
-        .filter(|p| !set.deleted.contains(p))
+        .filter(|p| !set.deleted.contains(p) && !named.contains(p))
         .collect();
     let mut over = Vec::new();
     if !sized.is_empty() {
@@ -562,11 +589,14 @@ pub fn stage(git: &mut GitOps<'_>, req: &Request<'_>) -> Result<Staged, GitError
             }
         }
     }
-    if !over.is_empty() {
+    if !by_name.is_empty() || !over.is_empty() {
         if live {
             let _ = std::fs::remove_file(&index);
         }
-        return refused(git, over, set);
+        let mut all = by_name;
+        all.extend(over);
+        all.sort_by(|a, b| a.path.cmp(&b.path));
+        return refused(git, all, set);
     }
 
     // Step 2: T.

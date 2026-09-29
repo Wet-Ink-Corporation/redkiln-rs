@@ -198,8 +198,10 @@ ADR-0131's tag is wired:**
   PROVISIONALLY and each for `ActivitySpec.activity_id_at_version` alone.)*
 - **ADR-0138's first forbids bullet**, only its *"or any sixth field"*: *"Forbids adding a step list, or any sixth
   field, to `rk_types::activity::ActivitySpec`."* The step list stays forbidden.
-- **ADR-0138 decision 3's `ActivitySpec` half**: *"**`ActivitySpec` is not edited**, and the catalog is not loaded from
-  `runtime/`."* The catalog half stands whole.
+- **ADR-0138 decision 3's `ActivitySpec` half**: *"`ActivitySpec` is not edited, and the catalog is not loaded from
+  `runtime/`."* The catalog half stands whole. *(Corrected 2026-09-29, s8f build (R1FIX-8f-B-RECORDS), refuting round
+  1: this quotation bolded only its first clause, where ADR-0138 bolds the whole sentence; it is now given without
+  emphasis, word for word. No word moved.)*
 - **ADR-0138 decision 2's *"NOT a sixth spec field"***, as applied to this id: *"that it is **"NOT a sixth spec
   field"**"* — `activity_id_at_version` is now ALSO a spec member, beside the binding's own recorded one, which stays.
 - **ADR-0174 decision 1's parenthetical**: *"`ActivitySpec` is not edited (ADR-0099's five fields; ADR-0138's
@@ -263,4 +265,9 @@ flips only on the operator's dated ledger line.
   fixture lane's `ImplReport`, written at `implement` and read at `review`) is counted as unread at the writing stage.
   `doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes` reads the emitted kind back at the
   stage that wrote it, which is the case §8f.5 names as silent. Whether cross-stage consumption should count as a read
-  at the writing stage is not settled by this record.
+  at the writing stage is not settled by this record. *(Closed 2026-09-29, s8f build, package R1FIX-8f-A-CODE, by
+  D21-111, taken provisionally under D21-105: the rule's read side is the set of `kind` over every `artifact.read`
+  row, whatever its stage or run; the write side is unchanged. The lane test's `check-report` workaround is dropped and
+  it asserts that `ImplReport`, read at `review`, is not flagged; `unread/cross-stage-51.jsonl` and
+  `doctor_journal::unread_reads_a_cross_stage_read_as_consuming_the_write` pin it. Item and journal-order matching
+  stay D21-111's named residual.)*

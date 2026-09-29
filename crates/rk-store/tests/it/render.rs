@@ -769,6 +769,174 @@ fn replay_performs_zero_writes() {
         "an unrecorded write on replay was not refused by name: {refused:?}"
     );
     assert!(!dir.path().join(".redkiln").exists());
+
+    // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 tests-mutants major.)* THE
+    // DIVERGENT-RECORD ARM. The journal records an `artifact.write` of `Spec` at the same path
+    // under a DIFFERENT digest from the bytes this write derives: the replay is refused by name
+    // (`ReplayDiverged`, naming the kind and both digests), appends nothing and writes nothing.
+    // Above, the recorded digest equals the derived one, so "serves the recorded digest" could not
+    // be told from "serves the digest it just derived"; here it can.
+    let other = json!({ "id": "SPEC-1", "status": "shipped", "title": "Another spec",
+        "acceptance": [], "boundary": { "crates": [] }, "context": "", "notes": "" });
+    let derived = sha256(&rk_store::canon::canonical(&other).expect("canonical"));
+    assert_ne!(derived, digest, "PREMISE: the two values' digests differ");
+    let before = rows.lock().expect("ok").len();
+    let diverged = w.write("Spec", &other);
+    assert!(
+        matches!(
+            &diverged,
+            Err(RenderError::ReplayDiverged { kind, recorded, derived: d })
+                if kind == "Spec" && recorded == digest.as_str() && d == derived.as_str()
+        ),
+        "a replay whose recorded digest differs from the derived one was not refused by name: \
+         {diverged:?}"
+    );
+    assert_eq!(
+        rows.lock().expect("ok").len(),
+        before,
+        "a diverged replay appended a row"
+    );
+    assert!(
+        !dir.path().join(".redkiln").exists(),
+        "a diverged replay wrote into the tree"
+    );
+}
+
+/// **The read seam on replay** (§8f.5: *"On replay the seam serves the recorded digest and appends
+/// nothing new"*; ADR-0189 decision 9). *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE;
+/// round-1 tests-mutants major: `ArtifactReader::replaying` had no caller and no test.)* The
+/// journal records one `artifact.read` of `ImplReport` whose digest and tree are NOT the bytes now
+/// in the tree, so the served values can only be the record's. A kind with no recorded read is
+/// refused by name, and AC-126's gate still refuses a replaying reader bound to an earlier entry.
+#[test]
+fn a_replaying_reader_serves_the_recorded_read_and_appends_nothing() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    let v = report_value();
+    w.write("ImplReport", &v).expect("the write");
+    let done = render::reconcile_entry(&w, &no_commit).expect("the pass runs");
+    let recorded = sha256(b"the bytes the recorded run read");
+    let live = sha256(
+        &ManagedDir::of(dir.path(), ITEM)
+            .read("ImplReport.json")
+            .expect("the sidecar"),
+    );
+    assert_ne!(
+        recorded, live,
+        "PREMISE: the record is not the tree's bytes"
+    );
+    rows.lock().expect("ok").push(
+        Event::new(
+            EventKind::ArtifactRead,
+            json!({
+                "digest": recorded.as_str(),
+                "item": ITEM,
+                "kind": "ImplReport",
+                "run": RUN,
+                "schema_version": "ImplReport",
+                "stage": STAGE,
+                "tree": "recorded-tree",
+            }),
+        )
+        .with_item(ITEM),
+    );
+    let before = rows.lock().expect("ok").len();
+    let r = ArtifactReader::replaying(&done, at(), schemas(), journal_over(&rows));
+
+    let served = r
+        .serve("ImplReport", Some(&v))
+        .expect("replay serves the recorded read");
+    assert!(served.replayed, "the read was not served from the journal");
+    assert_eq!(served.digest, recorded, "not the recorded digest");
+    assert_eq!(served.tree, "recorded-tree", "not the recorded tree");
+    assert_eq!(
+        rows.lock().expect("ok").len(),
+        before,
+        "a replayed read appended a row"
+    );
+
+    let unrecorded = r.serve("Spec", None);
+    assert!(
+        matches!(&unrecorded, Err(RenderError::ReplayUnrecorded { kind, .. }) if kind == "Spec"),
+        "a read replay has no record of was not refused by name: {unrecorded:?}"
+    );
+
+    rows.lock().expect("ok").push(reconcile_started());
+    let stale = r.serve("ImplReport", Some(&v));
+    assert!(
+        matches!(
+            stale,
+            Err(RenderError::NotReconciled {
+                bound_entry: 1,
+                journal_entries: 2,
+                ..
+            })
+        ),
+        "a replaying read bound to an earlier entry was served (AC-126): {stale:?}"
+    );
+    assert_eq!(
+        rows_of(&rows, EventKind::ArtifactRead).len(),
+        1,
+        "a replaying reader appended an `artifact.read`"
+    );
+}
+
+/// **The entry pass over a REPLAYING writer** (ADR-0189 decisions 4 and 7; ADR-0105 clause 1).
+/// *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 tests-mutants major: the
+/// restore's replay arm was reached by no test.)* A live entry pass records a structured edit's
+/// `structured_drift` and its restore. Replayed over the same drifted file and that journal, the
+/// pass reports the drift, appends NOTHING (the drift row and the restore's `artifact.write` are
+/// both recorded) and writes nothing: the drifted file stays as it is.
+#[test]
+fn a_replayed_entry_pass_restores_nothing_and_appends_nothing() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    w.write("Spec", &spec_value()).expect("the write");
+    let rendered = md_of(dir.path());
+    let edited = rendered.replacen(
+        "\"criterion\":\"the store renders\"",
+        "\"criterion\":\"EDITED BY HAND\"",
+        1,
+    );
+    assert_ne!(edited, rendered, "PREMISE: the edit changed the file");
+    put_md(dir.path(), &edited);
+    render::reconcile_entry(&w, &the_commit).expect("the live pass runs");
+    assert_eq!(
+        rows_of(&rows, EventKind::StructuredDrift).len(),
+        1,
+        "PREMISE: the live pass recorded one drift"
+    );
+    assert_eq!(
+        md_of(dir.path()),
+        rendered,
+        "PREMISE: the live pass restored"
+    );
+
+    put_md(dir.path(), &edited);
+    let before = rows.lock().expect("ok").len();
+    let replaying = ArtifactWriter::replaying(dir.path(), at(), schemas(), journal_over(&rows));
+    let done = render::reconcile_entry(&replaying, &the_commit).expect("the replayed pass runs");
+    assert_eq!(
+        done.drifts().len(),
+        1,
+        "the replayed pass reports the drift"
+    );
+    let after = rows.lock().expect("ok").clone();
+    assert_eq!(
+        after.len(),
+        before,
+        "a replayed entry pass appended a row: {:?}",
+        after.get(before..)
+    );
+    assert_eq!(
+        md_of(dir.path()),
+        edited,
+        "a replayed entry pass restored the file (a write on replay)"
+    );
 }
 
 /// **`move-to-prose`** (ADR-0189 decision 5): the drifted bytes are read from the causing commit the
@@ -1088,6 +1256,24 @@ fn reconciled_at(line: &str) -> Vec<(&str, &str)> {
         .collect()
 }
 
+/// A scanned file set: `(repo-relative path, source)` pairs.
+type Files = Vec<(String, String)>;
+
+/// Does `text` hold `word` at word boundaries? *(Added 2026-09-29, s8f build, package
+/// R1FIX-8f-A-CODE.)*
+fn has_word(text: &str, word: &str) -> bool {
+    text.match_indices(word).any(|(at, _)| {
+        text[..at]
+            .chars()
+            .next_back()
+            .is_none_or(|p| !(p.is_ascii_alphanumeric() || p == '_'))
+            && text[at + word.len()..]
+                .chars()
+                .next()
+                .is_none_or(|n| !(n.is_ascii_alphanumeric() || n == '_'))
+    })
+}
+
 /// **D21-109's construction lint, as one function over `(repo-relative path, source)` pairs** so
 /// each check can be driven red over a planted file first. Returns every violation, each naming
 /// its check. `crates/rk-git/src/` is not scanned: it declares an unrelated generic
@@ -1158,7 +1344,35 @@ fn reconciled_violations(files: &[(String, String)]) -> Vec<String> {
                 ));
             }
         }
-        // (2b) and (4): inside the type's own declaration and impl block.
+        // (2b) and (1b): inside EVERY `impl … Reconciled … {` block, in any scanned file. *(dated
+        // 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 tests-mutants major: the check
+        // read only the FIRST `impl Reconciled {` block of render.rs and only the spelling
+        // `-> Self`, so a second block, `-> Option<Self>` or `-> Result<Self, _>` built one
+        // unseen.)* A return type naming `Self` or `Reconciled` in any form is (2); a `Self {` or
+        // `Self(` construction is (1).
+        for (k, (_, head)) in lines.iter().enumerate() {
+            let t = head.trim();
+            if !(t.starts_with("impl") && t.ends_with('{') && !reconciled_at(head).is_empty()) {
+                continue;
+            }
+            for (n, l) in lines[k + 1..].iter().take_while(|(_, l)| *l != "}") {
+                if let Some((_, ret)) = l.split_once("->")
+                    && (has_word(ret, "Self") || !reconciled_at(ret).is_empty())
+                {
+                    bad.push(format!(
+                        "(2) {path}:{n}: a fn in `{t}` returns a Reconciled: {}",
+                        l.trim()
+                    ));
+                }
+                if l.contains("Self {") || l.contains("Self(") {
+                    bad.push(format!(
+                        "(1) {path}:{n}: a `Self` construction in `{t}`: {}",
+                        l.trim()
+                    ));
+                }
+            }
+        }
+        // (4): inside the type's own declaration.
         if path == "crates/rk-store/src/render.rs" {
             let block = |head: &str| -> Vec<(usize, &str)> {
                 let Some(i) = lines
@@ -1173,14 +1387,6 @@ fn reconciled_violations(files: &[(String, String)]) -> Vec<String> {
                     .copied()
                     .collect()
             };
-            for (n, l) in block("impl Reconciled {") {
-                if l.contains("-> Self") {
-                    bad.push(format!(
-                        "(2) {path}:{n}: a fn in `impl Reconciled` returns Self: {}",
-                        l.trim()
-                    ));
-                }
-            }
             let fields = block("pub struct Reconciled {");
             if fields.is_empty() {
                 bad.push(format!("(4) {path}: `pub struct Reconciled {{` not found"));
@@ -1279,7 +1485,10 @@ fn workspace_sources() -> Vec<(String, String)> {
 /// EXACT counts:
 /// 1. the struct literal `Reconciled {` exactly once, inside `reconcile_entry`;
 /// 2. no fn but `reconcile_entry` returns a `Reconciled`, and no fn in `impl Reconciled` returns
-///    `Self`;
+///    `Self`; *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE)* in EVERY `impl …
+///    Reconciled … {` block of any scanned file, no return type names `Self` or `Reconciled` in
+///    any form (`-> Option<Self>`, `-> Result<Self, _>`), and no `Self {` / `Self(` construction
+///    appears (reported as (1));
 /// 3. no `Default` or `From` impl (and no derived `Default`);
 /// 4. no `pub` field;
 /// 5. `rk-cli`'s `Option<Reconciled>` is ONE function-local `let … = None;` in the invocation
@@ -1360,6 +1569,58 @@ fn a_reconciled_is_built_only_by_the_entry_pass() {
         assert!(
             found.iter().any(|v| v.starts_with(check)),
             "CONTROL: the planted {check} violation was not found: {found:?}"
+        );
+    }
+    // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 tests-mutants major.)* Three
+    // more plants, each of which built a Reconciled outside the entry pass and left the lint green:
+    // (A) a SECOND inherent `impl Reconciled` block with a `-> Self` fn building `Self { … }`; (B)
+    // `-> Option<Self>` in the first block; (C) a `Self { … }` construction in a fn that returns
+    // no Self; and (D) `-> Result<Self, E>` in a block whose head is spelled
+    // `impl rk_store::render::Reconciled {`, in another file of the crate.
+    let second_block =
+        "\nimpl Reconciled {\n    pub fn forged() -> Self {\n        Self { entry: 0 }\n    }\n}\n";
+    let widened: [(&str, &str, Files); 4] = [
+        (
+            "(A)",
+            "(2)",
+            set(&format!("{good_store}{second_block}"), good_cli),
+        ),
+        (
+            "(B)",
+            "(2)",
+            set(
+                &good_store.replace(
+                    "    pub const fn entry(&self) -> usize {\n        self.entry\n    }\n",
+                    "    pub fn forged() -> Option<Self> {\n        Some(Self { entry: 0 })\n    }\n",
+                ),
+                good_cli,
+            ),
+        ),
+        (
+            "(C)",
+            "(1)",
+            set(
+                &good_store.replace(
+                    "    pub const fn entry(&self) -> usize {\n        self.entry\n    }\n",
+                    "    pub fn leak(n: usize) -> usize {\n        let r = Self { entry: n };\n        r.entry\n    }\n",
+                ),
+                good_cli,
+            ),
+        ),
+        ("(D)", "(2)", {
+            let mut s = set(good_store, good_cli);
+            s.push((
+                "crates/rk-store/src/other.rs".to_owned(),
+                "impl crate::render::Reconciled {\n    pub fn forged() -> Result<Self, ()> {\n        Ok(Self { entry: 0 })\n    }\n}\n".to_owned(),
+            ));
+            s
+        }),
+    ];
+    for (plant, check, files) in &widened {
+        let found = reconciled_violations(files);
+        assert!(
+            found.iter().any(|v| v.starts_with(check)),
+            "CONTROL: plant {plant}'s {check} violation was not found: {found:?}"
         );
     }
 

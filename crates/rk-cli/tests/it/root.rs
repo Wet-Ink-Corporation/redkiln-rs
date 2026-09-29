@@ -1546,3 +1546,119 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
          what makes a cancelled dispatch leave nothing behind"
     );
 }
+
+/// **ADR-0118 clauses 1 and 5 inside the seams the KERNEL and `rk-store` call** (`s8f` round-1
+/// finding, crossfile-safety blocker). *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)*
+///
+/// The `store` route (`item_create`, `backlog`) and the render `Journal` (append, and the rows
+/// read) each acquire the port handle's lock INSIDE a closure `rk-kernel` or `rk-store` calls, so
+/// none of them can return a [`Halt`]. Clause 1: *"No `StepError` is constructed"*. So a poison
+/// observed there halts exactly as the kernel's own `.expect(LOCK_HALTS)` does: a panic whose
+/// payload `is_lock_halt` reads, which `main.rs`'s hook turns into `70`. A `StepError::Unsupported`
+/// (the route's refusal) or a `RenderError::Journal` (the journal's) returned instead is the
+/// violation: the kernel would record it as a step outcome.
+///
+/// "No `StepError` row": the store's rows are read after, through the poisoned guard (test code
+/// only; the recovery ban is `src/`'s), and none was appended.
+#[test]
+fn adr0118_a_poisoned_store_lock_inside_a_kernel_called_seam_halts_exit_70() {
+    let poisoned = crate::support::poisoned_store();
+    let tree = tempfile::tempdir().expect("tempdir");
+    let route = rk_cli::verbs::run::run_store_route(
+        &poisoned,
+        tree.path(),
+        std::collections::BTreeMap::new(),
+    );
+    let mut inputs = std::collections::BTreeMap::new();
+    inputs.insert("items".to_owned(), serde_json::json!([]));
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let mut outcomes = Vec::new();
+    for verb in ["item_create", "backlog"] {
+        let call = rk_kernel::runtime::step::StoreCall {
+            verb,
+            inputs: &inputs,
+            item: "bug-1",
+            stage: "implement",
+            activity_id_at_version: "probe@1",
+            run_id: "implement-0000000000000000",
+        };
+        let got = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| route.serve(&call)));
+        outcomes.push((
+            format!("store route `{verb}`"),
+            got.map(|r| format!("{r:?}")),
+        ));
+    }
+    let writer = rk_store::render::ArtifactWriter::new(
+        tree.path(),
+        rk_store::render::StageRun {
+            item: "bug-1".to_owned(),
+            stage: "implement".to_owned(),
+            run: "implement-0000000000000000".to_owned(),
+        },
+        std::collections::BTreeMap::new(),
+        rk_cli::verbs::run::store_journal(&poisoned, "bug-1"),
+    );
+    let got = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        writer.write("Findings", &serde_json::json!({ "findings": [] }))
+    }));
+    outcomes.push((
+        "render journal append (a write)".to_owned(),
+        got.map(|r| format!("{r:?}")),
+    ));
+    let replaying = rk_store::render::ArtifactWriter::replaying(
+        tree.path(),
+        rk_store::render::StageRun {
+            item: "bug-1".to_owned(),
+            stage: "implement".to_owned(),
+            run: "implement-0000000000000000".to_owned(),
+        },
+        std::collections::BTreeMap::new(),
+        rk_cli::verbs::run::store_journal(&poisoned, "bug-1"),
+    );
+    let got = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        replaying.write("Findings", &serde_json::json!({ "findings": [] }))
+    }));
+    outcomes.push((
+        "render journal rows (a replayed write)".to_owned(),
+        got.map(|r| format!("{r:?}")),
+    ));
+    std::panic::set_hook(previous);
+
+    assert_eq!(outcomes.len(), 4, "PREMISE: four seams were driven");
+    for (seam, outcome) in &outcomes {
+        match outcome {
+            Ok(returned) => panic!(
+                "{seam} RETURNED over a poisoned store lock ({returned}). ADR-0118 clause 1: \"No \
+                 `StepError` is constructed\" — a returned refusal is a step outcome the kernel \
+                 records; the halt is exit 70 through the hook"
+            ),
+            Err(payload) => assert!(
+                rk_cli::is_lock_halt(payload.as_ref()),
+                "{seam} panicked, but not with the lock halt's payload, so the hook would leave \
+                 the process at 101"
+            ),
+        }
+    }
+    assert_eq!(
+        rk_cli::code_for(&Err(Halt::PoisonedLock {
+            lock: "store",
+            verb: "the run",
+        })),
+        70,
+        "the hook's code for a poisoned-lock halt is not 70"
+    );
+    let rows = match poisoned.lock() {
+        Ok(_) => panic!("PREMISE: the store lock is still poisoned"),
+        Err(p) => p
+            .into_inner()
+            .snapshot()
+            .expect("the snapshot reads")
+            .rows()
+            .len(),
+    };
+    assert_eq!(
+        rows, 0,
+        "a row (a StepError's, or any other) was appended over the poisoned lock"
+    );
+}

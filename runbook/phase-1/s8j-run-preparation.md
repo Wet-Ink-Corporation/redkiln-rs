@@ -298,6 +298,12 @@ at `proposed`**, each with the next free id at writing, and neither id is assign
 2. **The boundary hold** (§8j.3). D21-42 19b decides *what*: *"The first real fix-lane invocation stops at the
    analysis → specification boundary for the operator to review."* No record decides *how*, and no mechanism for it
    exists today.
+3. *(dated 2026-09-29, forward pointer from `s8f`'s build (R1FIX-8f-B-RECORDS), D21-110, TAKEN PROVISIONALLY under
+   D21-105)* **Conditional: a record superseding ADR-0173 in part**, written `proposed`, only if §8j.2's item 5
+   builds the reader's and the resolver's root arm. D21-110 ruling 2: *"The widening of ADR-0173's `artifact:` row
+   is carried by a record superseding ADR-0173 in part, written `proposed` there."* If it is written, its id is
+   written into Checkpoint 8j (3) by a dated edit beside the two above, and `0173`'s back-link moves in its flip
+   commit.
 
 Each id is written into Checkpoint 8j (3)'s `S8J_Q_ADR=` or `S8J_HOLD_ADR=` line by a dated edit when its record is
 written, and (3) refuses while either is empty *(final consistency pass 2026-09-24; D21-47: records are located by
@@ -580,6 +586,16 @@ loader."*
    8h's premise reads it there (`s8h` §8h.0 item 7: *"Each minted spelling must be a `&str` constant, or a member of a
    constant `&[&str]` table, on a code line under `crates/*/src`"*). Checkpoint 8j (3) asserts one row per class per
    pack.
+5. *(dated 2026-09-29, forward pointer from `s8f`'s build (R1FIX-8f-B-RECORDS), D21-110, TAKEN PROVISIONALLY under
+   D21-105)* **The reader's and the resolver's root arm, owed here.** `s8f` did not build ADR-0189 decision 9's
+   last sentence: `rk-kernel`'s `read_artifact_input` resolves an `artifact:` input only from a committed `emit`
+   binding, and `ArtifactReader::serve` reads only `<Kind>.json` while a root is stored as `<Kind>.root<ext>`.
+   Until this stage, a mandatory `artifact:` input naming a root refuses by name and an optional one is `null`
+   (ADR-0173's `?` arm). D21-110 ruling 2: *"`s8j` builds the resolver's root arm and the reader's root arm
+   together, if a lane reads a root's **bytes** through an `artifact:` input."* The value is typed by the kind's
+   declared source or schema, never by whether the bytes parse as JSON, and the ADR-0173 widening is the
+   conditional record above. *"If `s8j`'s lanes need only a `requires` presence check, `s8j`'s close states that
+   the arm stays owed to the first consumer of a root's bytes."*
 
 **The human-root files the real runs attach are committed now**, so that `s8`'s attach can be reproduced:
 

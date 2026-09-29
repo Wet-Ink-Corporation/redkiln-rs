@@ -1484,6 +1484,12 @@ fn in_flight(exec: &GitExec, at: &WorktreePath) -> Result<(usize, Vec<String>), 
 /// (`clean -f -- <path>…`, literal pathspecs). Afterwards the status may list the baseline's
 /// paths and nothing else. With no baseline (`None`: none is journalled) the discard is the one
 /// `s8d-ii` built, `reset --hard` and `clean -fd`.
+///
+/// *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)* The set is named by
+/// [`crate::landing::classify`], the ONE staging-set function the landing stages from, over this
+/// discard's own `status` read (with no baseline it is [`crate::landing::Baseline::Unknown`], and
+/// the lane's exclusions are not subtracted, §8f.4 reading 3). The paths are returned tracked
+/// first, then the created ones, each sorted.
 fn discard(
     exec: &GitExec,
     at: &WorktreePath,
@@ -1497,26 +1503,16 @@ fn discard(
         at,
         ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
     )?;
-    let mut paths = Vec::new();
-    let mut tracked = false;
-    let mut created = Vec::new();
-    for entry in crate::landing::parse_status(&out.stdout) {
-        if entry.is_ignored() {
-            continue;
-        }
-        if entry.is_untracked() {
-            if keep.contains(&entry.path) {
-                continue;
-            }
-            created.push(entry.path.clone());
-        } else {
-            tracked = true;
-        }
-        paths.push(entry.path);
-        if let Some(orig) = entry.orig {
-            paths.push(orig);
-        }
-    }
+    let set = crate::landing::classify(
+        crate::landing::parse_status(&out.stdout),
+        &baseline.map_or(crate::landing::Baseline::Unknown, |b| {
+            crate::landing::Baseline::Known(b.clone())
+        }),
+        &BTreeSet::new(),
+    );
+    let tracked = !set.tracked.is_empty();
+    let created = set.created;
+    let paths: Vec<String> = set.tracked.into_iter().chain(created.clone()).collect();
     if tracked {
         exec.run(GitOp::ResetHard, at, ["reset", "--hard", "--quiet", "HEAD"])?;
     }

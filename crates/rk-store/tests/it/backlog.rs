@@ -113,6 +113,10 @@ fn reads_only_the_items_the_store_names_each_by_exact_path() {
     );
     write(
         root,
+        // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)* The one planted-copy literal
+        // Checkpoint 8d-ii (3)'s root floor admits by a dated exclusion: `rk-store` depends on
+        // neither `rk-ports` nor `rk-git` (§8f.6 item 4), so it cannot take the path from rk-git's
+        // one derivation, and this is data planted for the reader NOT to find.
         ".redkiln/worktrees/x/.redkiln/items/in-worktree.toml",
         &record("in-worktree", "triage"),
     );
@@ -132,7 +136,7 @@ fn reads_only_the_items_the_store_names_each_by_exact_path() {
     assert_eq!(
         ids,
         vec!["named-a"],
-        "an item no row names (`stray`, `entered`) or a copy under `.redkiln/worktrees/` is in the feed"
+        "an item no row names (`stray`, `entered`) or a copy in a run tree is in the feed"
     );
     assert_eq!(
         snap.absent,
@@ -140,7 +144,7 @@ fn reads_only_the_items_the_store_names_each_by_exact_path() {
             id: "in-worktree".to_owned(),
             named_by: vec![NamedBy::ItemWrite],
         }],
-        "the named id whose only copy is under `.redkiln/worktrees/` has no record HERE"
+        "the named id whose only copy is in a run tree has no record HERE"
     );
     let a = &snap.items[0];
     assert_eq!(

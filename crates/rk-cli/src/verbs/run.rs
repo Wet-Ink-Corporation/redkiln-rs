@@ -715,7 +715,7 @@ fn run_lane(
                 pending: &pending,
                 to_gate: &mut entry_drifts,
             },
-        ) {
+        )? {
             Ok(seams) => seams,
             Err(exit) => return Ok(exit),
         };
@@ -2525,6 +2525,14 @@ fn journalled_baseline(
     })
 }
 
+/// `rk-store`'s reader and writer for one stage run, as [`stage_seams`] hands them out. *(Added
+/// 2026-09-29, s8f build, package R1FIX-8f-A-CODE: a name for the pair, now that the function also
+/// carries a [`Halt`].)*
+type StageSeams = (
+    Arc<rk_store::render::ArtifactReader>,
+    Arc<rk_store::render::ArtifactWriter>,
+);
+
 /// **`rk-store`'s reader and writer for one stage run** (`s8f` §8f.5 and §8f.6; the render record
 /// ADR-0189 decisions 4, 7, 8 and 9, proposed). *(dated 2026-09-28, s8f build, package
 /// S8F-P4-RENDER-WRITE-READ.)*
@@ -2539,7 +2547,9 @@ fn journalled_baseline(
 /// wrapper.
 ///
 /// # Errors
-/// An [`Exit`] for an unreadable artifact registry, or an entry pass that refuses (named).
+/// [`Halt::PoisonedLock`] from an acquisition *(dated 2026-09-29, s8f build, package
+/// R1FIX-8f-A-CODE; ADR-0118)*; an [`Exit`] for an unreadable artifact registry, or an entry pass
+/// that refuses (named).
 fn stage_seams(
     resolved: &Resolved,
     store: &Arc<Mutex<dyn EventStore>>,
@@ -2549,20 +2559,17 @@ fn stage_seams(
     // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* The run's sink and
     // pending carriage, and where the entry's gated drifts are handed out.
     entry: &mut EntryPass<'_>,
-) -> Result<
-    (
-        Arc<rk_store::render::ArtifactReader>,
-        Arc<rk_store::render::ArtifactWriter>,
-    ),
-    Exit,
-> {
+) -> Result<Result<StageSeams, Exit>, Halt> {
     let item = resolved.item.id().to_owned();
     let at = rk_store::render::StageRun {
         item: item.clone(),
         stage: resolved.stage.clone(),
         run: run_id.to_owned(),
     };
-    let schemas = artifact_schemas(resolved)?;
+    let schemas = match artifact_schemas(resolved) {
+        Ok(schemas) => schemas,
+        Err(exit) => return Ok(Err(exit)),
+    };
     let writer = rk_store::render::ArtifactWriter::new(
         owned,
         at.clone(),
@@ -2587,7 +2594,9 @@ fn stage_seams(
         // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision
         // 5.)* An applied `move-to-prose:<section>` answer is taken HERE, at the next entry and
         // before C2's pass: the drifted bytes come from the causing commit, never the event.
-        move_answered_drifts_to_prose(resolved, store, &writer)?;
+        if let Err(exit) = move_answered_drifts_to_prose(resolved, store, &writer)? {
+            return Ok(Err(exit));
+        }
         match rk_store::render::reconcile_entry(&writer, &causing) {
             Ok(done) => {
                 for d in done.drifts() {
@@ -2614,7 +2623,7 @@ fn stage_seams(
                 eprintln!(
                     "redkiln: the entry's reconcile of `{item}`'s managed artifacts refused: {e}"
                 );
-                return Err(Exit::ConfigError);
+                return Ok(Err(Exit::ConfigError));
             }
         }
         // ---- AC-127's VOUCHED-ROOT HALF (`s8f` §8f.5; ADR-0189 decision 10, proposed). *(dated
@@ -2648,10 +2657,11 @@ fn stage_seams(
                 );
                 let first_in_run = sink.admit(&advisory);
                 if first_in_run {
-                    pending
-                        .lock()
-                        .map_err(|_| rk_kernel::runtime::LOCK_HALTS.to_owned())?
-                        .push(advisory.clone());
+                    // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)* The carriage is
+                    // the kernel's (`advisory::pend`, which halts on a poison as the kernel's
+                    // other acquisitions of it do); `rk-cli` locks no `Mutex` but the store,
+                    // through `crate::store` (ADR-0118 clause 5).
+                    rk_kernel::runtime::advisory::pend(pending, advisory.clone());
                     eprintln!(
                         "redkiln: the vouched root `{root}` of `{advised_item}` changed since it was \
                      vouched ({} -> {}); recorded as advisory drift, it does not block, and the \
@@ -2673,12 +2683,12 @@ fn stage_seams(
             }
             Err(e) => {
                 eprintln!("redkiln: the entry's vouched-root pass of `{item}` refused: {e}");
-                return Err(Exit::ConfigError);
+                return Ok(Err(Exit::ConfigError));
             }
         }
     }
     let Some(reconciled) = reconciled.as_ref() else {
-        return Err(Exit::ConfigError);
+        return Ok(Err(Exit::ConfigError));
     };
     let exec = resolved.exec.clone();
     let repo = resolved.worktree.clone();
@@ -2718,7 +2728,7 @@ fn stage_seams(
         store_journal(store, &item),
         source,
     );
-    Ok((Arc::new(reader), Arc::new(writer)))
+    Ok(Ok((Arc::new(reader), Arc::new(writer))))
 }
 
 /// Each registered kind's `schema` string (`.redkiln/artifacts.toml`, read by the one registry
@@ -2756,7 +2766,10 @@ fn artifact_schemas(
 ///   `snapshot`) by exact path in the same tree, through `rk_store::backlog`, parsed here with the
 ///   composition root's TOML reader. Its output is the canonical `BacklogSnapshot`.
 ///
-/// A poisoned lock is a refusal carried by name, never recovered (ADR-0118), as [`store_journal`]'s.
+/// ~~A poisoned lock is a refusal carried by name, never recovered (ADR-0118), as
+/// [`store_journal`]'s.~~ *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)* A poisoned lock
+/// HALTS (ADR-0118 clause 1: no `StepError`), through [`crate::store::acquire_in_seam`], as
+/// [`store_journal`]'s.
 struct RunStoreRoute {
     store: Arc<Mutex<dyn EventStore>>,
     tree: PathBuf,
@@ -2770,11 +2783,9 @@ impl rk_kernel::runtime::step::StoreRoute for RunStoreRoute {
         call: &rk_kernel::runtime::step::StoreCall<'_>,
     ) -> Result<rk_ports::toolchain::VerbOutput, rk_types::error::StepError> {
         let refuse = |capability: String| rk_types::error::StepError::Unsupported { capability };
-        let locked = || {
-            self.store
-                .lock()
-                .map_err(|_| refuse(rk_kernel::runtime::LOCK_HALTS.to_owned()))
-        };
+        // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE; ADR-0118 clauses 1 and 5.)* A
+        // poisoned lock halts through the one acquisition (exit 70), never a `StepError`.
+        let locked = || crate::store::acquire_in_seam(&self.store, "the run");
         match call.verb {
             "item_create" => {
                 let items = call.inputs.get("items").ok_or_else(|| {
@@ -2784,7 +2795,7 @@ impl rk_kernel::runtime::step::StoreRoute for RunStoreRoute {
                         .to_owned(),
                     )
                 })?;
-                let journal = locked()?
+                let journal = locked()
                     .query(rk_kernel::runtime::journal_query(call.item))
                     .map_err(|e| refuse(format!("{e:?}")))?;
                 let source = rk_store::item_write::emitted_digest(&journal, "ImplReport")
@@ -2813,7 +2824,7 @@ impl rk_kernel::runtime::step::StoreRoute for RunStoreRoute {
                 })
             }
             "backlog" => {
-                let snapshot = locked()?.snapshot().map_err(|e| refuse(format!("{e:?}")))?;
+                let snapshot = locked().snapshot().map_err(|e| refuse(format!("{e:?}")))?;
                 let events: Vec<rk_types::event::Event> =
                     snapshot.rows().iter().map(|r| r.event.clone()).collect();
                 let named = rk_store::backlog::names(&events);
@@ -2850,14 +2861,32 @@ fn store_route(
         eprintln!("redkiln: {}: {e}", path.display());
         Exit::ConfigError
     })?;
-    Ok(Arc::new(RunStoreRoute {
-        store: Arc::clone(store),
-        tree: owned.to_path_buf(),
-        facets: registry
+    Ok(run_store_route(
+        store,
+        owned,
+        registry
             .facets()
             .map(|f| (f.name.clone(), f.source.as_str().to_owned()))
             .collect(),
-    }))
+    ))
+}
+
+/// **The `store` route's one seam, as the composition root binds it** (D21-106): `item_create`
+/// and `backlog` over `tree`, `facets` being each registry facet's `source` token. `store_route`
+/// builds its value through this and nothing else; it is `pub` so a test can drive the seam the
+/// kernel calls (ADR-0118's poisoned acquisition inside it). *(dated 2026-09-29, s8f build,
+/// package R1FIX-8f-A-CODE.)*
+#[must_use]
+pub fn run_store_route(
+    store: &Arc<Mutex<dyn EventStore>>,
+    tree: &Path,
+    facets: BTreeMap<String, String>,
+) -> Arc<dyn rk_kernel::runtime::step::StoreRoute> {
+    Arc::new(RunStoreRoute {
+        store: Arc::clone(store),
+        tree: tree.to_path_buf(),
+        facets,
+    })
 }
 
 /// **An item record, as the `backlog` read hands it back** (`s8f` §8f.7): the top-level `id`,
@@ -2909,21 +2938,23 @@ fn toml_json(v: &toml::Value) -> serde_json::Value {
 
 /// The store, as `rk-store` is handed it (`rk_store::render::Journal`): append one row, and read
 /// the item's rows through `ByItem`. *(dated 2026-09-28, s8f build, package
-/// S8F-P4-RENDER-WRITE-READ.)* A poisoned lock is a refusal here, carried by name into the
-/// writer's or reader's error, never recovered (ADR-0118).
-fn store_journal(store: &Arc<Mutex<dyn EventStore>>, item: &str) -> rk_store::render::Journal {
+/// S8F-P4-RENDER-WRITE-READ.)* ~~A poisoned lock is a refusal here, carried by name into the
+/// writer's or reader's error, never recovered (ADR-0118).~~ *(dated 2026-09-29, s8f build,
+/// package R1FIX-8f-A-CODE.)* A poisoned lock HALTS here (ADR-0118 clause 1), through
+/// [`crate::store::acquire_in_seam`]: exit `70` by the hook, never a refusal the writer or reader
+/// would carry as an ordinary error.
+#[must_use]
+pub fn store_journal(store: &Arc<Mutex<dyn EventStore>>, item: &str) -> rk_store::render::Journal {
     let (a, r) = (Arc::clone(store), Arc::clone(store));
     let query = rk_kernel::runtime::journal_query(item);
     rk_store::render::Journal::new(
         move |event| {
-            a.lock()
-                .map_err(|_| rk_kernel::runtime::LOCK_HALTS.to_owned())?
+            crate::store::acquire_in_seam(&a, "the run")
                 .append(event)
                 .map_err(|e| format!("{e:?}"))
         },
         move || {
-            r.lock()
-                .map_err(|_| rk_kernel::runtime::LOCK_HALTS.to_owned())?
+            crate::store::acquire_in_seam(&r, "the run")
                 .query(query.clone())
                 .map_err(|e| format!("{e:?}"))
         },
@@ -4751,28 +4782,32 @@ fn open_drift_gate(
 /// 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
 ///
 /// # Errors
-/// An [`Exit`] (`3`), named, when the journal will not read or fold, or a move refuses.
+/// [`Halt::PoisonedLock`] from the acquisition *(dated 2026-09-29, s8f build, package
+/// R1FIX-8f-A-CODE; ADR-0118: it was exit `3` before)*; an [`Exit`] (`3`), named, when the journal
+/// will not read or fold, or a move refuses.
 fn move_answered_drifts_to_prose(
     resolved: &Resolved,
     store: &Arc<Mutex<dyn EventStore>>,
     writer: &rk_store::render::ArtifactWriter,
-) -> Result<(), Exit> {
+) -> Result<Result<(), Exit>, Halt> {
     let item = resolved.item.id();
-    let events = store
-        .lock()
-        .map_err(|_| {
-            eprintln!("redkiln: {}", rk_kernel::runtime::LOCK_HALTS);
-            Exit::ConfigError
-        })?
-        .query(rk_kernel::runtime::journal_query(item))
-        .map_err(|e| {
+    let guard = crate::store::acquire(store, "the run")?;
+    let read = guard.query(rk_kernel::runtime::journal_query(item));
+    drop(guard);
+    let events = match read {
+        Ok(events) => events,
+        Err(e) => {
             eprintln!("redkiln: the store could not be read: {e:?}");
-            Exit::ConfigError
-        })?;
-    let state = rk_kernel::workflow::fsm::fold(item, &resolved.stage, &events).map_err(|e| {
-        eprintln!("redkiln: the recorded journal did not fold: {e}");
-        Exit::ConfigError
-    })?;
+            return Ok(Err(Exit::ConfigError));
+        }
+    };
+    let state = match rk_kernel::workflow::fsm::fold(item, &resolved.stage, &events) {
+        Ok(state) => state,
+        Err(e) => {
+            eprintln!("redkiln: the recorded journal did not fold: {e}");
+            return Ok(Err(Exit::ConfigError));
+        }
+    };
     let exec = resolved.exec.clone();
     let repo = resolved.worktree.clone();
     let read_at = move |commit: &str, path: &str| -> Result<Vec<u8>, String> {
@@ -4805,7 +4840,7 @@ fn move_answered_drifts_to_prose(
                      applied: {e}",
                     mv.token
                 );
-                return Err(Exit::ConfigError);
+                return Ok(Err(Exit::ConfigError));
             }
             eprintln!(
                 "redkiln: the drifted `{kind}` text of gate {} is moved into its `{}` prose \
@@ -4814,5 +4849,5 @@ fn move_answered_drifts_to_prose(
             );
         }
     }
-    Ok(())
+    Ok(Ok(()))
 }

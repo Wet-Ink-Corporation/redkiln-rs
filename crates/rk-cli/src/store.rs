@@ -54,3 +54,31 @@ pub fn acquire<'a>(
         Ok,
     )
 }
+
+/// Acquire the event store from inside a seam `rk-kernel` or `rk-store` calls, or halt as the
+/// kernel halts. *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE; ADR-0118 clauses 1 and
+/// 5.)*
+///
+/// The `store` route (`item_create`, `backlog`) and the render `Journal` run inside closures whose
+/// return types are the kernel's `StepError` and `rk-store`'s `String` refusal, so neither can carry
+/// a [`Halt`] out. Clause 1 forbids the refusal (*"No `StepError` is constructed"*): a returned
+/// refusal is a step outcome the kernel would record. So a poison observed here halts the way the
+/// kernel's own `.lock().expect(LOCK_HALTS)` does, by a panic whose payload carries
+/// `rk_kernel::runtime::LOCK_HALTS`, which `main.rs`'s hook turns into exit `70`. The acquisition
+/// itself is still [`acquire`], the one function; nothing is recovered.
+///
+/// # Panics
+/// On a poisoned lock, with the lock halt's payload (the halt, never a guard).
+pub fn acquire_in_seam<'a>(
+    store: &'a Arc<Mutex<dyn EventStore>>,
+    verb: &'static str,
+) -> MutexGuard<'a, dyn EventStore + 'static> {
+    match acquire(store, verb) {
+        Ok(guard) => guard,
+        Err(halt) => panic!(
+            "{}: {}",
+            rk_kernel::runtime::LOCK_HALTS,
+            crate::render_halt(&halt)
+        ),
+    }
+}

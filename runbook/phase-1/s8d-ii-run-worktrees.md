@@ -2098,7 +2098,10 @@ and adds the dated notes. AC-518's instrument is a lane run (`s8e`'s `lane_e2e`)
 - **W1's guards hold, each by a named test.** *(W1)*
 - **Reuse, never force-remove.** `recreate_run_worktree` is gone. The only forced removal left in `run.rs` is ADR-0162
   decision 10's reference-tree removal, inside `remove_reference_worktree`, and `rk-git`'s worktree module forces
-  nothing. *(W2; ADR-0162 decision 10)*
+  nothing. *(W2; ADR-0162 decision 10)* *(dated 2026-09-29, s8f build (R1FIX-8f-B-RECORDS), under D21-47's
+  time-bound rule: "forces nothing" means no forced worktree removal. `s8f`'s re-entry discard runs the pathspec
+  `git clean -f -- <path>…` that `s8f` §8f.4 prescribes, and (3)'s `worktree.rs` floor drops a code line whose argument
+  list opens `["clean", "-f",`, with a control that keeps a `worktree remove -f` list and drops the `clean -f` one.)*
 - **The filter check refuses only when pointer files would result, reading attributes from ~~the fork commit~~ the
   commit the tree checks out, and a
   post-checkout scan refuses by name and removes the fresh tree when a selected path holds a pointer anyway** ((0d),
@@ -2496,9 +2499,21 @@ test -f crates/rk-git/src/worktree.rs && test -f crates/rk-cli/src/verbs/run.rs 
 ROOT_RE='"worktrees"|join\("[^"]*worktrees|"[^"]*redkiln[^"]*worktrees[^"]*"'
 GIT_ADMIN='common(_dir)?(\([^)]*\))?\.join\("worktrees"\)|"\.git/worktrees/'
 OWN='^crates/rk-git/(src|tests/it)/worktree\.rs:'
+# (dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE; D21-47's time-bound rule: "A time-bound guard in an earlier
+# checkpoint is amended by the stage that moves its premise, in the same commit.") s8f's rk-store backlog test plants a
+# named item's copy under a run tree for its reader NOT to find, and rk-store depends on neither rk-ports nor rk-git
+# (s8f section 8f.6 item 4), so it cannot take the path from rk-git's one derivation. Exactly that planted-path
+# argument form in exactly that file is admitted; s8f's rk-cli doctor_artifact test now derives its tree through
+# rk-git (crate::run_tree), and every other spelling in either file stays banned. Control below.
+STORE_PLANT='^crates/rk-store/tests/it/backlog\.rs:[0-9]+:[[:space:]]*"\.redkiln/worktrees/x/\.redkiln/items/[^"]*",$'
 raw=$(grep -rnE "$ROOT_RE" crates/*/src crates/*/tests --include=*.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the root search could not run (grep rc=$rc)"; exit 1; }
-code=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep -vE "$OWN" | grep -vE "$GIT_ADMIN" | grep .)
+# (dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE) the filter gains `grep -vE "$STORE_PLANT"`.
+code=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep -vE "$OWN" | grep -vE "$GIT_ADMIN" | grep -vE "$STORE_PLANT" | grep .)
+# CONTROL (dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE): the planted-path argument in backlog.rs is DROPPED;
+# a derivation in the same file and a joined literal in rk-cli's doctor_artifact test are KEPT.
+ctl=$(printf '%s\n' 'crates/rk-store/tests/it/backlog.rs:116:        ".redkiln/worktrees/x/.redkiln/items/in-worktree.toml",' 'crates/rk-store/tests/it/backlog.rs:9:    let t = root.join(".redkiln/worktrees").join("x");' 'crates/rk-cli/tests/it/doctor_artifact.rs:68:        self.root().join(".redkiln").join("worktrees").join(item)' | grep -E "$ROOT_RE" | grep -vE "$CODE_ONLY" | grep -vE "$OWN" | grep -vE "$GIT_ADMIN" | grep -vE "$STORE_PLANT" | grep -c .)
+[ "$ctl" -eq 2 ] || { echo "FAIL: CONTROL — the store-plant exclusion kept $ctl of two derivations and one planted argument"; exit 1; }
 [ -z "$code" ] || { echo "FAIL: a code line outside rk-git's worktree module derives a worktrees directory — the root is derived in one place (D21-44):"; printf '%s\n' "$code"; exit 1; }
 own=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep '^crates/rk-git/src/worktree\.rs:')
 [ -n "$own" ] || { echo "FAIL: rk-git's worktree module names no worktrees directory on a code line — the one derivation does not exist"; exit 1; }
@@ -2513,6 +2528,7 @@ code=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep .)
 [ -z "$code" ] || { echo "FAIL: recreate_run_worktree is still on a code line — D21-45 W2 replaces it:"; printf '%s\n' "$code"; exit 1; }
 # W2 and ADR-0162 decision 10: the only forced removal in run.rs ("--force", "-f" or remove_dir_all) lies inside
 # remove_reference_worktree, the scratch reference tree's; rk-git's worktree module forces nothing.
+# (dated 2026-09-29, s8f build: "forces nothing" reads worktree removals; s8f's pathspec `git clean -f` is admitted below.)
 rr=$(awk '/^fn remove_reference_worktree\(/ { s = NR } s && NR > s && /^}/ { print s, NR; exit }' crates/rk-cli/src/verbs/run.rs)
 read -r rs re <<< "$rr"
 [ -n "$rs" ] && [ -n "$re" ] || { echo "FAIL: fn remove_reference_worktree was not found in run.rs — ADR-0162 decision 10's removal has no home"; exit 1; }
@@ -2526,7 +2542,18 @@ ctl=$(printf '%s\n' '5:    "--force",' '15:    "--force",' | awk -F: -v s=10 -v 
 [ "$ctl" -eq 1 ] || { echo "FAIL: CONTROL — the function-range filter kept $ctl of one outside hit and one inside hit"; exit 1; }
 raw=$(grep -nE '"--force"|"-f"|remove_dir_all' crates/rk-git/src/worktree.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the worktree-module force search could not run (grep rc=$rc)"; exit 1; }
-code=$(printf '%s\n' "$raw" | grep -vE "$LINE_ONLY" | grep .)
+# (dated 2026-09-29, s8f build, package R1FIX-8f-B-RECORDS; D21-47's time-bound rule: "A time-bound guard in an earlier
+# checkpoint is amended by the stage that moves its premise, in the same commit.") s8f's re-entry discard runs the
+# pathspec clean s8f section 8f.4 prescribes ("`clean -f -- <path>...` with literal pathspecs when a baseline exists"),
+# and its "-f" is git clean's, not a worktree removal's. This floor reads worktree-removal forms only: a code line
+# whose argument list opens ["clean", "-f", is dropped; "--force", remove_dir_all and every other "-f" (a
+# `worktree remove -f` included) stay banned. The line read:
+# code=$(printf '%s\n' "$raw" | grep -vE "$LINE_ONLY" | grep .)
+CLEAN_F='\[[[:space:]]*"clean",[[:space:]]*"-f",'
+code=$(printf '%s\n' "$raw" | grep -vE "$LINE_ONLY" | grep -vE "$CLEAN_F" | grep .)
+# CONTROL (dated 2026-09-29, s8f build): a `worktree remove -f` argument list is KEPT, a `clean -f` one is DROPPED.
+ctl=$(printf '%s\n' '1523:            let mut args: Vec<&str> = vec!["clean", "-f", "--quiet", "--"];' '900:    exec.run(GitOp::WorktreeRemove, at, ["worktree", "remove", "-f", p])?;' | grep -E '"--force"|"-f"|remove_dir_all' | grep -vE "$LINE_ONLY" | grep -vE "$CLEAN_F")
+[ "$(printf '%s\n' "$ctl" | grep -c .)" -eq 1 ] && printf '%s\n' "$ctl" | grep -qF '"worktree", "remove", "-f"' || { echo "FAIL: CONTROL — the clean-f exclusion did not keep worktree remove -f and drop clean -f: $ctl"; exit 1; }
 [ -z "$code" ] || { echo "FAIL: rk-git's worktree module forces a removal on a code line — W2 is never force-remove:"; printf '%s\n' "$code"; exit 1; }
 # W1: LC_ALL=C set on the child at the one git exec site — the call form, not a mention.
 raw=$(grep -nE '"LC_ALL"[[:space:]]*,[[:space:]]*"C"' crates/rk-git/src/git_exec.rs); rc=$?

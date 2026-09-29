@@ -519,7 +519,10 @@ impl Scope {
 #[derive(Debug, Clone, Copy)]
 pub struct ArtifactRead<'a> {
     pub item: &'a str,
-    /// The READING stage: `doctor`'s `unread` rule groups `artifact.read` rows by `stage` and `kind`.
+    /// The READING stage, carried on the `artifact.read` row. ~~`doctor`'s `unread` rule groups
+    /// `artifact.read` rows by `stage` and `kind`.~~ *(dated 2026-09-29, s8f build, package
+    /// R1FIX-8f-A-CODE; D21-111.)* `doctor`'s `unread` rule reads a row's `kind` only: a read at any
+    /// stage and any run consumes a write of that kind.
     pub stage: &'a str,
     pub kind: &'a str,
     /// The reading activation, `activity_id@version`.

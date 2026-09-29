@@ -159,8 +159,13 @@ act's `git_op` row (N7; ADR-0185 decision 6) and served on replay. A later proce
 **A reused tree whose baseline row is not in the journal** (a deleted database) is fail-closed: a landing that finds
 any untracked, non-ignored path refuses by name with the rule `baseline-unknown`, because nothing can say whether the
 run created it. Staged text is normalised by `.gitattributes`' first row, `* text=auto eol=lf` (ADR-0164), so a
-landing's tree is the same on every box. **One function computes the set**, `rk_git::landing::staging_set`; the
-landing stages from it, and `s8d-ii`'s re-entry discard names and discards exactly it (decision 13).
+landing's tree is the same on every box. **One function computes the set**, ~~`rk_git::landing::staging_set`~~
+`rk_git::landing::classify`, pure over the parsed `status` entries, the baseline and the exclusions; the landing
+stages from it (through `staging_set`, which reads `status` through the seam and calls it), and `s8d-ii`'s re-entry
+discard names and discards exactly it (decision 13), calling it over its own `status` read. *(Corrected 2026-09-29,
+s8f build, package R1FIX-8f-A-CODE, while `proposed`: the round-1 review measured that the discard classified the
+entries by a second hand-kept copy, sharing only the parser; the classification is now one function, and the git
+read is not shared because the landing reads through `GitOps` and the discard through `GitExec`.)*
 
 **5. The refusals, checked before anything is committed.** Every path in the staging set is checked, run-created or
 tracked (a deletion is exempt from the size check only):
@@ -268,7 +273,8 @@ file-write and index-change halves, claimed through the widened lint.
   (ADR-0018; design §5.5), so a squashed hand-off would orphan every trailer the run wrote.
 
 **13. The discarded set at re-entry is the staging set.** What `s8d-ii`'s reuse discards (W2; `0180`) is exactly what
-a landing would have staged at that moment, computed by `staging_set`, printed path by path and journalled in
+a landing would have staged at that moment, computed by ~~`staging_set`~~ `rk_git::landing::classify` (decision 4;
+corrected 2026-09-29, s8f build, package R1FIX-8f-A-CODE, while `proposed`), printed path by path and journalled in
 `worktree_assigned.discarded` (ADR-0185). Under N10 every committed step's tree effect is on `rk-run/<item>` before
 its row exists, so only a step with no commit can lose work, and `s8d`'s walk re-dispatches it (*"the first step with
 no commit executes"*). AC-013 stands unamended. A human's edit to a run's artifact is a commit on `rk-run/<item>`; an

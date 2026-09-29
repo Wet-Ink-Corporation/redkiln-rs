@@ -353,15 +353,18 @@ kind      = "emit"
 artifacts = { ImplReport = "${check.outputs}" }
 "#;
 
-/// An `implement`-stage reader of `artifact:ImplReport`, after `emit-report` by its `requires`: so
+/// ~~An `implement`-stage reader of `artifact:ImplReport`, after `emit-report` by its `requires`: so
 /// the emitted kind is READ at the stage that WROTE it, which is what `RK-D-UNREAD`'s kind-per-stage
-/// predicate (D-08) counts as read.
-const CHECK_REPORT: &str = r#"[activity]
-id           = "check-report"
+/// predicate (D-08) counts as read.~~ *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE;
+/// D21-111 item 5: the workaround is dropped.)* `review-min` whose agent step reads
+/// `artifact:ImplReport` at `review` — the stage AFTER the one that wrote it (`landing.rs`'s render
+/// lane). Under D21-111 a read at any stage consumes the write.
+const REVIEW_MIN: &str = r#"[activity]
+id           = "review-min"
 version      = 1
-stage        = "implement"
+stage        = "review"
 provides     = ["Findings"]
-requires     = ["ImplReport"]
+requires     = []
 derived_from = []
 deviation_ok = []
 tags         = ["kind:bug", "kind:story"]
@@ -381,8 +384,9 @@ inputs  = { report = "artifact:ImplReport" }
 /// **Every artifact row a `FakeHarness` lane writes carries `stage` and `run`, and `RK-D-UNREAD`
 /// counts them** (D21-47, review M2; §8f.5). The fixture lane's `lane-1` walks through `run`:
 /// invocation 1 opens its abstention gate; `answer … vouch` ATTACHES a `Findings` root; invocation 2
-/// stores the root, emits `ImplReport` at `implement` and reads it back there (`check-report`'s
-/// `artifact:ImplReport` input), and walks to the lane's end. Every `artifact.write` and
+/// stores the root, emits `ImplReport` at `implement` and reads it at `review` (`review-min`'s
+/// `artifact:ImplReport` input; *dated 2026-09-29, R1FIX-8f-A-CODE, D21-111: struck "reads it back
+/// there (`check-report`'s input)"*), and walks to the lane's end. Every `artifact.write` and
 /// `artifact.read` row then carries a string `stage` and a `run`, and `RK-D-UNREAD` over the STORE's
 /// journal at `unread_window_runs = 1` is silent on the emitted-and-read kind and fires on the
 /// attached one, which nothing reads.
@@ -399,34 +403,8 @@ fn unread_counts_every_artifact_row_a_fake_harness_lane_writes() {
         EMIT_REPORT,
     )
     .expect("the catalog is written");
-    std::fs::write(
-        redkiln.join("catalog").join("check-report.toml"),
-        CHECK_REPORT,
-    )
-    .expect("the catalog is written");
-    for name in ["bug-standard.toml", "story.toml"] {
-        let pack = redkiln.join("packs").join(name);
-        let text = std::fs::read_to_string(&pack).expect("the lane pack reads");
-        let widened = text
-            .replace(
-                "[stage.implement]\nbaseline = [\"ImplReport\"]",
-                "[stage.implement]\nbaseline = [\"ImplReport\", \"Findings\"]",
-            )
-            .replace(
-                "[activity.emit-report]\ntimeout_secs = 900\n",
-                "[activity.emit-report]\ntimeout_secs = 900\n\n[activity.check-report]\ntimeout_secs = 900\n",
-            );
-        assert_eq!(
-            widened.matches("Findings").count(),
-            text.matches("Findings").count() + 1,
-            "PREMISE: the implement baseline was widened in {name}"
-        );
-        assert!(
-            widened.contains("[activity.check-report]"),
-            "PREMISE: check-report's timeout is declared in {name}"
-        );
-        std::fs::write(&pack, widened).expect("the pack is written");
-    }
+    std::fs::write(redkiln.join("catalog").join("review-min.toml"), REVIEW_MIN)
+        .expect("the catalog is written");
     let processes = redkiln.join("processes");
     std::fs::create_dir_all(&processes).expect("the processes directory");
     std::fs::write(
@@ -546,8 +524,8 @@ options = ["approve", { id = "vouch", attaches = "Findings" }]
             .collect()
     };
     assert!(
-        read_at("ImplReport").iter().any(|s| s == "implement"),
-        "PREMISE: ImplReport is read at the stage that wrote it: {:?}",
+        !read_at("ImplReport").is_empty() && read_at("ImplReport").iter().all(|s| s == "review"),
+        "PREMISE: ImplReport is read only at `review`, the stage after the one that wrote it: {:?}",
         read_at("ImplReport")
     );
 
@@ -566,10 +544,8 @@ options = ["approve", { id = "vouch", attaches = "Findings" }]
         "the attached kind, which nothing reads, is not flagged: {named:?}"
     );
     assert!(
-        !found
-            .iter()
-            .any(|f| f.detail.contains("`ImplReport`") && f.detail.contains("stage `implement`")),
-        "the emitted-and-read kind is flagged at the stage that read it: {named:?}"
+        !found.iter().any(|f| f.detail.contains("`ImplReport`")),
+        "the kind written at `implement` and read at `review` is flagged (D21-111): {named:?}"
     );
 }
 
@@ -632,5 +608,48 @@ fn unread_reads_a_null_run_as_an_unknown_run_never_a_match() {
         typed.len(),
         1,
         "an integer 0 and a string \"0\" are two runs: {typed:?}"
+    );
+}
+
+/// **D21-111: `RK-D-UNREAD`'s read side is keyed by KIND** — any stage and any run consumes a write
+/// (*"It becomes the set of `kind` over every `artifact.read` row, whatever its stage or run"*).
+/// *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE; D21-111 item 5, taken provisionally
+/// under D21-105.)*
+///
+/// `unread/cross-stage-51.jsonl`: 51 runs, each writing `ImplReport` at `implement` and reading it
+/// at `review` (a `review-…` run, so no `(stage, kind)` or `(kind, run)` key could pair them), beside
+/// a control kind `never-read` written at `implement` and read nowhere. At `unread_window_runs =
+/// 50` exactly ONE finding appears, and it is the control's.
+///
+/// Red by the per-stage read key (both kinds flagged), M-a (that key restored), M-b (keyed on
+/// `(kind, run)`) and M-c (the read filter dropped: the control and `ImplReport` both fire).
+#[test]
+fn unread_reads_a_cross_stage_read_as_consuming_the_write() {
+    let dir = crate::doctor::materialise("clean");
+    let src = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("unread")
+        .join("cross-stage-51.jsonl");
+    let bytes = std::fs::read(&src).expect("the fixture reads");
+    assert_eq!(
+        bytes.iter().filter(|b| **b == b'\n').count(),
+        153,
+        "PREMISE: 51 runs of three rows"
+    );
+    std::fs::write(dir.path().join("events.jsonl"), bytes).expect("events.jsonl is written");
+    let found = fire(
+        "RK-D-UNREAD",
+        &ctx_over(dir.path(), JournalSource::FixtureEventsJsonl, Some(50)),
+    );
+    let named: Vec<&str> = found.iter().map(|f| f.detail.as_str()).collect();
+    assert_eq!(
+        found.len(),
+        1,
+        "exactly one finding, the never-read control: {named:?}"
+    );
+    assert!(
+        found[0].detail.contains("`never-read`") && found[0].detail.contains("in 51 runs"),
+        "the one finding is not the control's: {named:?}"
     );
 }

@@ -1954,8 +1954,15 @@ fn verification_policy(ctx: &Ctx) -> Vec<Finding> {
 /// read over the last N runs.
 ///
 /// **N is the repository's own key** (`[doctor] unread_window_runs`, required with no default —
-/// AC-426), never a constant. The predicate is kind-per-STAGE (D-08): a kind read at one stage and
-/// not another is unread at the second.
+/// AC-426), never a constant. ~~The predicate is kind-per-STAGE (D-08): a kind read at one stage and
+/// not another is unread at the second.~~ *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE;
+/// D21-111, taken provisionally under D21-105.)* The WRITE side is keyed by `(stage, kind)` and
+/// counts distinct runs; the READ side is the set of `kind` over every `artifact.read` row, whatever
+/// its stage or run, so a kind written at `implement` and read at `review` is consumed (ADR-0116
+/// decision 4 and ADR-0075 decision 5, *"zero downstream reads"*). `run` is never matched: a
+/// `run_id` is `<stage>-<digest>` (ADR-0152), so a same-run join could never pair a write with a
+/// later stage's read. Item and journal order are not matched either, and that precision cost is
+/// D21-111's named residual: a kind read for one item silences its writes for every item.
 ///
 /// 🛑 **The window is a COUNT OF RUNS a kind has gone unread, not a slice of recent history**,
 /// and `ac426_ac472_…`'s own fixtures are what fix that reading: 49 runs are **not** flagged and
@@ -1988,10 +1995,12 @@ fn unread(ctx: &Ctx) -> Vec<Finding> {
         ))
     };
 
-    // Which (stage, kind) pairs were READ at all, and in how many distinct runs each was WRITTEN.
-    let read: std::collections::BTreeSet<(String, String)> = of_kind(ctx, "artifact.read")
+    // Which KINDS were read at all (D21-111: any stage, any run), and in how many distinct runs
+    // each (stage, kind) was WRITTEN. *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE;
+    // struck: the read set keyed by `(stage, kind)`.)*
+    let read: std::collections::BTreeSet<String> = of_kind(ctx, "artifact.read")
         .into_iter()
-        .filter_map(key)
+        .filter_map(|r| r.str_field("kind").map(str::to_owned))
         .collect();
     let mut written: std::collections::BTreeMap<
         (String, String),
@@ -2006,7 +2015,7 @@ fn unread(ctx: &Ctx) -> Vec<Finding> {
 
     written
         .into_iter()
-        .filter(|(k, _)| !read.contains(k))
+        .filter(|((_, kind), _)| !read.contains(kind))
         .filter(|(_, runs)| i64::try_from(runs.len()).unwrap_or(i64::MAX) >= window)
         .map(|((stage, kind), runs)| {
             finding(

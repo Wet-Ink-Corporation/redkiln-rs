@@ -516,3 +516,83 @@ fn one_advisory_per_run_for_one_observed_digest() {
         ]
     );
 }
+
+/// **The vouched pass over a REPLAYING writer** (ADR-0189 decisions 7 and 10; ADR-0105 clause 1).
+/// *(Added 2026-09-29, s8f build, package R1FIX-8f-A-CODE; round-1 tests-mutants major: the
+/// `!writer.is_replaying()` guard and `write_root`'s replay arm were reached by no test.)*
+///
+/// (a) A root the journal records as stored, then edited: the replayed pass reports the change,
+/// calls no advise function, appends no advisory and restores nothing. (b) An attached root the
+/// journal does NOT record as stored: the replayed store is refused by name (`ReplayUnrecorded`,
+/// the kind), writes no file and appends nothing.
+#[test]
+fn a_replayed_pass_stores_nothing_and_appends_no_advisory() {
+    let replaying = |f: &Fixture| {
+        ArtifactWriter::replaying(
+            f.tree.path(),
+            StageRun {
+                item: ITEM.to_owned(),
+                stage: STAGE.to_owned(),
+                run: RUN.to_owned(),
+            },
+            [(KIND, KIND), ("Spec", "Spec")]
+                .into_iter()
+                .map(|(k, v)| (k.to_owned(), v.to_owned()))
+                .collect::<BTreeMap<_, _>>(),
+            journal_over(&f.rows),
+        )
+    };
+
+    // (a) recorded as stored, then edited.
+    let f = fixture();
+    stored(&f);
+    edit_root(&f, EDITED);
+    let before = f.rows.lock().expect("not poisoned").len();
+    let mut called = 0_usize;
+    let pass = vouched::vouched_pass(&replaying(&f), f.checkout.path(), &mut |d: &Drift| {
+        called += 1;
+        Run::default().advise(d)
+    })
+    .expect("the replayed pass runs");
+    assert_eq!(
+        pass.changed().len(),
+        1,
+        "the replayed pass reports the change"
+    );
+    assert_eq!(
+        called, 0,
+        "a replayed pass called the run's advise function"
+    );
+    assert_eq!(pass.advised(), 0, "a replayed pass advised");
+    assert_eq!(
+        f.rows.lock().expect("not poisoned").len(),
+        before,
+        "a replayed pass appended a row"
+    );
+    assert_eq!(
+        root_bytes(&f).as_deref(),
+        Some(EDITED),
+        "a replayed pass rewrote the root"
+    );
+
+    // (b) attached, never recorded as stored.
+    let g = fixture();
+    let before = g.rows.lock().expect("not poisoned").len();
+    let refused = vouched::vouched_pass(&replaying(&g), g.checkout.path(), &mut |d: &Drift| {
+        Run::default().advise(d)
+    });
+    assert!(
+        matches!(&refused, Err(RenderError::ReplayUnrecorded { kind, .. }) if kind == KIND),
+        "a store replay has no record of was not refused by name: {refused:?}"
+    );
+    assert_eq!(
+        g.rows.lock().expect("not poisoned").len(),
+        before,
+        "a refused replayed store appended a row"
+    );
+    assert_eq!(
+        root_bytes(&g),
+        None,
+        "a refused replayed store wrote the root"
+    );
+}

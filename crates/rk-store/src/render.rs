@@ -1033,7 +1033,23 @@ pub fn reconcile_entry(
                     new_digest,
                     causing_commit: commit.clone(),
                 };
-                writer.journal.append(drift_row(&item, &d))?;
+                // *(dated 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)* On replay the drift
+                // row is RECORDED: it is served, never appended again (decision 7; ADR-0105
+                // clause 1), and a drift the journal does not record is refused by name.
+                let row = drift_row(&item, &d);
+                if writer.replay {
+                    if !rows
+                        .iter()
+                        .any(|e| e.kind == row.kind && e.payload == row.payload)
+                    {
+                        return Err(RenderError::ReplayUnrecorded {
+                            kind: kind.clone(),
+                            path: md_path.clone(),
+                        });
+                    }
+                } else {
+                    writer.journal.append(row)?;
+                }
                 done.drifts.push(d);
             }
         }

@@ -273,6 +273,17 @@ pub fn carried_by_gate(gate: &Event, advisories: &[Advisory]) -> Event {
 /// S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision 10, proposed.)*
 pub type PendingAdvisories = std::sync::Arc<std::sync::Mutex<Vec<Advisory>>>;
 
+/// Put one admitted advisory on the run's carriage, for the next gate to carry. *(Added
+/// 2026-09-29, s8f build, package R1FIX-8f-A-CODE.)* The composition root pushes through this, so
+/// the carriage's lock is taken where every other acquisition of it is, in this crate, and a
+/// poison halts as they do (`.expect(LOCK_HALTS)`; ADR-0118), never a refusal.
+///
+/// # Panics
+/// On a poisoned carriage, with the lock halt's payload.
+pub fn pend(pending: &PendingAdvisories, advisory: Advisory) {
+    pending.lock().expect(super::LOCK_HALTS).push(advisory);
+}
+
 /// Every `drift_advisory` the journal holds, in append order.
 #[must_use]
 pub fn recorded_advisories(events: &[Event]) -> Vec<&Event> {

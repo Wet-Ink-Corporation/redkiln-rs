@@ -380,7 +380,13 @@ forbids** bullet, so each is a supersession in part, never an erratum.
     anyway. Guard (6) asserts that `GitOp`'s declaration is byte-identical to `S8A_BASE`'s. *(amended 2026-09-25,
     s8a fix round 2: it no longer asserts byte identity, which `s8c`, `s8d-ii` and `s8g`'s added variants would break
     at every later whole re-run of this checkpoint. It asserts that every `S8A_BASE` variant is still declared and that
-    no variant added since is named for a diff, a range or an object read.)* *(amended 2026-09-25,
+    no variant added since is named for a diff, a range or an object read.)* *(amended 2026-09-29, `s8f`'s build
+    (R1FIX-8f-B-RECORDS), under D21-47's time-bound rule, *"A time-bound guard in an earlier checkpoint is amended by the
+    stage that moves its premise, in the same commit"*: `s8f` adds `GitOp::CatFile`, which ADR-0188 names (*"`cat-file
+    -s` takes a read variant, `GitOp::CatFile`"*) and which `s8f` §8f.6 item 4 also uses to read the run ref's blob
+    bytes. The pin admits exactly that name, and a second line pins every `"cat-file"` argument list on a code line of
+    `crates/*/src` to `-s` or `blob`. Planted `RangeDiff` and `CatFileBatch` variants and a planted `-p` read still
+    fire.)* *(amended 2026-09-25,
     s8a fix round 1: rk-git's free `git_exec::run` and `run_with_env` take no `GitOp`, so guard (6) also asserts that
     `diff.rs` and `path.rs` name no `git_exec` item and no `crate::` or `super::` item but `crate::error`, and it reads
     `diff_tree_to_tree` on code lines only, strings blanked.)*
@@ -1320,13 +1326,20 @@ ge_base=$(git show "$S8A_BASE:crates/rk-git/src/git_exec.rs"); rc=$?
 # CheckIgnore), s8d-ii (§8d-ii.6) and s8g (Tag, Apply) add variants, and s8e, s8i and s8j re-run this checkpoint whole,
 # so from s8c on the pin could never pass again, and no stage amended it (D21-47's time-bound rule). It now pins what it
 # means: every S8A_BASE variant is still declared, and no variant added since is named for a diff, a range or an
-# object read (Diff, Range, Show, RevList, CatFile). Planted controls fire.
+# object read (Diff, Range, Show, RevList, CatFile). Planted controls fire. [amended 2026-09-29, s8f build: CatFile by
+# exact name is admitted as s8f's read variant, `cat-file -s` and `cat-file blob` only; see op_check.]
 op_names() { sed -n '/^pub enum GitOp {/,/^}/p' | grep -vE '^[[:space:]]*(//|#)' | grep -oE '^[[:space:]]+[A-Z][A-Za-z0-9]*' | tr -d ' \t' | LC_ALL=C sort -u; }
 op_check() {  # $1 = S8A_BASE's variant names, $2 = the names read now; prints what moved, or nothing
   op_gone=$(LC_ALL=C comm -23 <(printf '%s\n' "$1") <(printf '%s\n' "$2"))
   op_added=$(LC_ALL=C comm -13 <(printf '%s\n' "$1") <(printf '%s\n' "$2"))
   [ -z "$op_gone" ] || printf 'removed or renamed since S8A_BASE: %s\n' $op_gone
-  printf '%s\n' "$op_added" | grep -iE 'diff|range|show|revlist|catfile' | sed 's/^/added, named for a range read: /'
+  # [amended 2026-09-29, s8f build (R1FIX-8f-B-RECORDS), D21-47's time-bound rule: "A time-bound guard in an earlier
+  # checkpoint is amended by the stage that moves its premise, in the same commit."] s8f adds GitOp::CatFile, which
+  # §8f.4 and ADR-0188 prescribe ("`cat-file -s` takes a read variant, `GitOp::CatFile`") and §8f.6 item 4 also uses for
+  # the run ref's blob bytes (`cat-file blob`). Neither is a diff or range read, and a read is not a supersession
+  # (D21-47), so exactly the name CatFile is admitted; any other catfile-named variant (CatFileBatch, ...) still fires.
+  # The line read: printf '%s\n' "$op_added" | grep -iE 'diff|range|show|revlist|catfile' | sed 's/^/added, named for a range read: /'
+  printf '%s\n' "$op_added" | grep -iE 'diff|range|show|revlist|catfile' | grep -vxF 'CatFile' | sed 's/^/added, named for a range read: /'
   return 0
 }
 op_base=$(printf '%s\n' "$ge_base" | tr -d '\r' | op_names)
@@ -1337,6 +1350,18 @@ op_bad=$(op_check "$op_base" "$op_now")
 [ -z "$(op_check "$op_base" "$(printf '%s\n' $op_base LsFiles CheckIgnore Tag Apply | LC_ALL=C sort -u)")" ] || { echo "FAIL: CONTROL — the GitOp pin refused the later stages' planned variants"; exit 1; }
 [ -n "$(op_check "$op_base" "$(printf '%s\n' $op_base RangeDiff | LC_ALL=C sort -u)")" ] || { echo "FAIL: CONTROL — the GitOp pin passed an added RangeDiff variant"; exit 1; }
 [ -n "$(op_check "$op_base" "$(printf '%s\n' "$op_base" | grep -vx Log)")" ] || { echo "FAIL: CONTROL — the GitOp pin passed a removed S8A_BASE variant"; exit 1; }
+# [added 2026-09-29, s8f build (R1FIX-8f-B-RECORDS), D21-47's time-bound rule] CatFile is admitted by exact name only,
+# and only in its two prescribed forms: every "cat-file" argument list on a code line of crates/*/src is `-s` (ADR-0188
+# decision 5's size read) or `blob` (§8f.6 item 4's run-ref bytes). No `-p`, `--batch` or range form. Planted controls fire.
+[ -n "$(op_check "$op_base" "$(printf '%s\n' $op_base CatFileBatch | LC_ALL=C sort -u)")" ] || { echo "FAIL: CONTROL — the GitOp pin admitted CatFileBatch, not CatFile alone"; exit 1; }
+[ -z "$(op_check "$op_base" "$(printf '%s\n' $op_base CatFile | LC_ALL=C sort -u)")" ] || { echo "FAIL: CONTROL — the GitOp pin refused CatFile, which s8f admits"; exit 1; }
+cf_forms() { grep -vE '^[^:]*:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep -oE '\["cat-file", "[^"]*"' | sed -E 's/^\["cat-file", "//; s/"$//' | grep -vxE -- '-s|blob'; return 0; }
+cf_bad=$(grep -rnE '\["cat-file",' crates/*/src --include=*.rs | cf_forms)
+[ -z "$cf_bad" ] || { echo "FAIL: a GitOp::CatFile call on a code line reads a form other than -s or blob:"; printf '%s\n' "$cf_bad"; exit 1; }
+cf_n=$(grep -rnE '\["cat-file", "(-s|blob)"' crates/*/src --include=*.rs | wc -l)
+[ "$cf_n" -ge 1 ] || { echo "FAIL: no cat-file call found in crates/*/src — the form pin reads nothing"; exit 1; }
+[ -n "$(printf '%s\n' 'crates/x/src/y.rs:9:        ["cat-file", "-p", spec],' | cf_forms)" ] || { echo "FAIL: CONTROL — the cat-file form pin passed a -p read"; exit 1; }
+[ -z "$(printf '%s\n' 'crates/x/src/y.rs:9:        ["cat-file", "blob", oid],' 'crates/x/src/y.rs:10:   &["cat-file", "-s", oid]' | cf_forms)" ] || { echo "FAIL: CONTROL — the cat-file form pin refused its two admitted forms"; exit 1; }
 # [amended 2026-09-25, s8a fix round 1] The ban named only GitOp, GitExec and Command::new, so a diff.rs calling
 # rk-git's free git_exec::run / run_with_env (neither takes a GitOp) passed all three checks, and the
 # diff_tree_to_tree presence grep passed on diff.rs's own //! doc lines (and on a format! string). Now: diff.rs and path.rs (the adapter's

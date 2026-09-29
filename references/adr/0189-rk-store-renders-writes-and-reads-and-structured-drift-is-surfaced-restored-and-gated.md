@@ -186,7 +186,17 @@ committed `emit` binding's (a mismatch is a halt, Halt 4), and appends **one `ar
 `item`, `stage`, `run`, `schema_version`, `tree` (the run ref's tree the bytes were read from) and `digest`. It
 **refuses** a read when the current entry has no reconcile record (AC-126), and no flag or cache skips that. It is the
 **only** emitter of `artifact.read`; the resolver appends nothing itself. On replay it serves the recorded digest and
-appends nothing. A vouched root has no `emit` binding, so the reader serves its bytes and digest without that check.
+appends nothing. ~~A vouched root has no `emit` binding, so the reader serves its bytes and digest without that check.~~
+*(Corrected 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R1FIX-8f-B-RECORDS), by D21-110 ruling 3,
+*"ADR-0189, while still `proposed`, takes a dated in-record correction to decision 9's last sentence naming this
+deferral and the interim behaviour"*.)* **A vouched root's read is deferred to `s8j` (D21-110).** A vouched root
+has no `emit` binding, and the resolver resolves an `artifact:` input only from one, so at `s8f` the reader has no
+root arm. The interim behaviour stands: a mandatory `artifact:` input naming a root refuses by name, and an optional
+one resolves to `null` by ADR-0173's `?` arm; this is a stated residual. `s8j` §8j.2 owns the root arm, built with
+the resolver's, if a lane reads a root's bytes through an `artifact:` input; the value is typed by the kind's declared
+source or schema, never by whether the bytes parse as JSON, and the widening of ADR-0173's `artifact:` row is carried
+by a record superseding ADR-0173 in part, written `proposed` there. If `s8j`'s lanes need only a `requires` presence
+check, `s8j`'s close states that the arm stays owed to the first consumer of a root's bytes.
 
 **10. The vouched root (AC-127's first half; D21-46 R7).** This record's **reading of ADR-0025**: its decision names an
 *upstream* change (*"When an upstream artifact in the same stage subsequently changes, the *next* gate the item
@@ -286,7 +296,9 @@ carries the drift's kind (and, for a structured drift, its anchor). Tests: `doct
 **Decision 9's last sentence is NOT built** (the reader's root arm): `rk-kernel`'s `read_artifact_input` resolves an
 `artifact:` input only from a committed `emit` binding and refuses before any seam call when none exists, so a root
 arm in `ArtifactReader` alone would have no caller; no shipped question carries an `attaches` option. It is returned
-to the judge panel as a blocker by S8F-P8.
+to the judge panel as a blocker by S8F-P8 *(deferred by D21-110 to `s8j`; dated 2026-09-29, R1FIX-8f-B-RECORDS: decision
+9's last sentence is corrected in-record above, and the interim behaviour, a mandatory root input refused by name and
+an optional one `null`, is the stated residual)*.
 
 ## Consequences
 
