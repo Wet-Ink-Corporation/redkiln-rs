@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-111), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-112), and what they license
+
+*(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-111)"**; `D21-112` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-110)"**; `D21-111` is appended with this move.)*
 
@@ -4573,3 +4575,31 @@ read side as kind-level**, which is AC-426's own THEN wording, *"WHEN a stage's 
 downstream reads over that window"*: a downstream read is a read at any stage. That is a reading of D-08, not a
 departure from it; it is stated for the operator with the rest of this provisional entry. No note is added to AC-472
 or AC-426 here.
+
+---
+
+## D21-112 · `s8f`: after an `exclude` of a tracked path, `answer` derives the working state less the lane's excluded paths
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-81d7e4** (two-way door, judgment; defaulted to A).
+
+**The finding** (refuting round 3, major, confirmed by both refuters). `rk_git::landing::classify` never stages an excluded
+tracked path. A gate opened by a later landed act binds the landed tree T (defect (b)'s re-mint). `answer`, however,
+derives `TreeBasis::WorkingState`, which is `read-tree HEAD` plus `add -u` over every tracked modification, the excluded
+one included. So the two trees differ and the first answer is void (AC-176). On a drift gate, a `move-to-prose`
+answer is then dropped silently. The finder measured this in a private worktree at `bab968e`:
+`T=1aa4829e… WorkingState=caec5880…`. §8f.4 says both *"`exclude` means every later landing of this lane leaves
+exactly those paths unstaged"* and *"the answer's derivation matches the gate's"*, and neither restricts `exclude` to
+untracked paths.
+
+**Ruled (option A).**
+1. `answer`'s tree derivation subtracts the lane's excluded paths, read exactly as `run` reads them
+   (`tier_one::landing_answers`), so it equals the landed gate's tree.
+2. It is covered by red-first lane tests: a tracked path is refused and answered `exclude`, and the next gate's answer
+   is APPLIED, not void. The same holds for a drift gate answered `move-to-prose` under a tracked exclusion. A mutant
+   drops the subtraction.
+3. ADR-0188 (proposed) states the reading in decisions 6 and 7 by dated in-record note. No accepted Decision moves.
+
+**Rejected:** option B, which makes `exclude` untracked-only and refuses it over a tracked path. It would leave a
+tracked denylist false hit such as `id_map.rs` with no remedy, and the denylist's own doc names `exclude` as that
+remedy. **Reversal:** take B, and revert the one derivation.
