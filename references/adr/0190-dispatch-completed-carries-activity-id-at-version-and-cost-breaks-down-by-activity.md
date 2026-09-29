@@ -113,7 +113,9 @@ sixth field"* and only for this one member, and reads ADR-0099 decision 1's *"`A
 fields (card digest, tools, schema id, timeout, inputs)"* as naming what the spec carries from `StepSpec`, not as a
 closed list; ADR-0138's bullet is the closure. ADR-0138's ground was *"`rk-types` is Checkpoint 5's and is not edited in
 this range"*; `s8e` edited `rk-types` and re-ran Checkpoint 5 whole (D21-97, (10i)). The step list stays off the spec,
-and every other clause of ADR-0138 stands. ~~**This decision waits on the operator's ruling** on the blocker this record
+and ~~every other clause of ADR-0138 stands~~ every clause of ADR-0138 that decision 9 does not name stands *(dated
+2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R2FIX-8f-B-RECORDS); refuting round 2: D21-107
+item 2 widened decision 9 to three ADR-0138 passages, so "every other clause" of this paragraph contradicted it)*. ~~**This decision waits on the operator's ruling** on the blocker this record
 reports; if another option is ruled, this decision is rewritten before the record flips and `0138` leaves
 `supersedes`.~~
 
@@ -126,7 +128,8 @@ fakes. `spec_json` stays its five-member object; `spec_from_json` repopulates th
 recorded `activity_id_at_version`, and only when that carries its `@version` (an unversioned activation's spec reads
 back `None`, exactly as `bind_nodes` sets it). The member is kept out of the prompt, the card digest, the memo key and
 `run_id`; the adapter alone writes it, on its own `dispatch_completed` row (ADR-0126 cited, untouched). The
-supersessions this takes are decision 9's last two bullets. **ADR-0099 decision 1 is carried as a DECLARED READING,
+supersessions this takes are ~~decision 9's last two bullets~~ decision 9's five bullets after its struck one, three of
+ADR-0138 and two of ADR-0174 *(dated 2026-09-29 in-record, while `proposed`, R2FIX-8f-B-RECORDS; refuting round 2)*. **ADR-0099 decision 1 is carried as a DECLARED READING,
 flagged for the operator's ruling:** it names what the spec carries FROM `StepSpec` and is not a closed list; if the
 operator declines that reading, it converts to a supersession in part of ADR-0099 decision 1 for this one member.
 **If the operator declines D21-107**, the fallback is its option B — a kernel-side `EventStore` decorator that stamps

@@ -4,7 +4,7 @@ title: "**`rk-store` owns the render, write and read path: a human-facing kind i
 status: proposed
 date: 2026-09-28
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-42 (5a — *"**Surface, then restore.** `reconcile` emits a `structured_drift` *event* (artifact, anchor, both digests), and the render then restores the section. No drift field on the artifact. … One record owns rk-store's render/write path (layout C, digest-stamped sections, the AC-122 single write path, one `artifact.write` per write)."*; 5b; 6a — *"DebtRegisterEntry is an rk-store item write with provenance; human-sourced facets are null and go to `unknown_facet`."*), D21-43 (N11 — *"**`structured_drift` opens a drift gate that blocks the stage's exit until it is answered.** AC-125's "resolving" means answering that gate."*; N12), D21-46 (R7), D21-47 (*"**`artifact.read` has exactly one emitter: rk-store's read seam (s8f).**"*) and D21-48 (X11 — *"Accepted as a stated residual. RK-D-UNREAD reads null as an unknown run, never as a match. The `Gate:` grammar does not widen."*); runbook/phase-1/s8f-landing-and-rendering.md §8f.2 (items 10–14, measured 2026-09-28 at `37bba5c`), §8f.3's second row and §8f.5–§8f.7 and §8f.9; references/adr/0005, 0006, 0025, 0032, 0075, 0109, 0116, 0129, 0170, 0173, 0182, 0184 and 0185; crates/rk-store/src/locator.rs, crates/rk-kernel/src/runtime/reference.rs (`ArtifactReadSeam`, `UnwiredReadSeam`, `read_artifact_input`), crates/rk-kernel/src/runtime/step.rs (`call_feed`), crates/rk-kernel/src/runtime/advisory.rs, crates/rk-cli/src/verbs/answer.rs (`store_attachments`), crates/rk-cli/src/doctor/rules.rs (`fn unread`) and .redkiln/registry.toml, as read 2026-09-28 at `37bba5c`
+source: spikes/DECISIONS-2026-09-21.md D21-42 (5a — *"**Surface, then restore.** `reconcile` emits a `structured_drift` *event* (artifact, anchor, both digests), and the render then restores the section. No drift field on the artifact. … One record owns rk-store's render/write path (layout C, digest-stamped sections, the AC-122 single write path, one `artifact.write` per write)."*; 5b; 6a — *"DebtRegisterEntry is an rk-store item write with provenance; human-sourced facets are null and go to `unknown_facet`."*), D21-43 (N11 — *"**`structured_drift` opens a drift gate that blocks the stage's exit until it is answered.** AC-125's "resolving" means answering that gate."*; N12), D21-46 (R7), D21-47 (*"**`artifact.read` has exactly one emitter: rk-store's read seam (s8f).**"*) and D21-48 (X11 — *"**Accepted as a stated residual.** RK-D-UNREAD reads null as an unknown run, never as a match. The `Gate:` grammar does not widen."*); runbook/phase-1/s8f-landing-and-rendering.md §8f.2 (items 10–14, measured 2026-09-28 at `37bba5c`), §8f.3's second row and §8f.5–§8f.7 and §8f.9; references/adr/0005, 0006, 0025, 0032, 0075, 0109, 0116, 0129, 0170, 0173, 0182, 0184 and 0185; crates/rk-store/src/locator.rs, crates/rk-kernel/src/runtime/reference.rs (`ArtifactReadSeam`, `UnwiredReadSeam`, `read_artifact_input`), crates/rk-kernel/src/runtime/step.rs (`call_feed`), crates/rk-kernel/src/runtime/advisory.rs, crates/rk-cli/src/verbs/answer.rs (`store_attachments`), crates/rk-cli/src/doctor/rules.rs (`fn unread`) and .redkiln/registry.toml, as read 2026-09-28 at `37bba5c`
 supersedes: []
 superseded_by: []
 related: ["0005", "0006", "0025", "0032", "0063", "0075", "0105", "0109", "0116", "0129", "0170", "0173", "0180", "0182", "0184", "0185", "0188"]
@@ -22,9 +22,14 @@ has **no** producer: measured 2026-09-28 at `37bba5c`, outside `rk-types` the on
 kernel fold arms and `doctor`'s `RK-D-UNREAD` (`rules.rs`, `of_kind(ctx, "artifact.read")`).
 
 **The AC register's last open contradiction is C2**: *"Is a hand-edit inside a rendered section drift, or is it
-silently overwritten?"* D21-42 5a answers it (*"Surface, then restore"*), and D21-43 N11 adds the gate (*"`structured_drift`
-opens a drift gate that blocks the stage's exit until it is answered"*). AC-478's *"AND no comparison of
+silently overwritten?"* D21-42 5a answers it (*"**Surface, then restore**"*), and D21-43 N11 adds the gate (*"**`structured_drift`
+opens a drift gate that blocks the stage's exit until it is answered**"*). AC-478's *"AND no comparison of
 stored-vs-regenerated rendering is performed, so no drift state exists to report"* is the one clause that falls.
+
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R2FIX-8f-B-RECORDS); refuting round 2.)*
+Three ledger quotations dropped their source's bold and now carry it, word for word, no word moved: the `source:`
+line's D21-48 X11 (*"**Accepted as a stated residual.**"*), and this paragraph's D21-42 5a (*"**Surface, then
+restore**"*) and D21-43 N11, whose quoted words are bold whole in the ledger.
 
 **The read seam is named and stubbed.** `runtime::reference::read_artifact_input` makes one call to an
 `ArtifactReadSeam` per resolved `artifact:` input, and the composition root's value at Checkpoint 8d is
@@ -134,9 +139,22 @@ A **prose** section edited on disk is accepted whole as the field's new value, w
 **5. The drift gate's two answers**, each a typed write through a gate answer (AC-125's *"a typed write through the
 CLI, web or a gate answer"*; N11 reads AC-125's "resolving" as answering this gate):
 - `confirm-restore`: the restore stands, and the gate closes;
-- `move-to-prose <section>`: at the next entry `rk-store` reads the drifted bytes from `causing_commit` (never from
+- ~~`move-to-prose <section>`~~ `move-to-prose:<section>` *(dated 2026-09-29 in-record, while `proposed`, at `s8f`'s
+  build (package R2FIX-8f-B-RECORDS); refuting round 2: the option is spelled as built, one word with a colon before the
+  section, `tier_one.rs`: `pub const DRIFT_MOVE_TO_PROSE: &str = "move-to-prose:";`, one option per prose section
+  `rk_store::render::TEMPLATES` declares, e.g. `move-to-prose:notes`)*: at the next entry `rk-store` reads the drifted bytes from `causing_commit` (never from
   the event, which carries digests only) and appends them to the named prose section through the writer, as one
   `artifact.write`. No drift text reaches a deserializer: it lands in opaque prose.
+
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R2FIX-8f-A-CODE); refuting round 2.)* Two
+readings of the second answer, each reversible and stated for the review packet. **A `document` drift** (a missing
+rendering) has no drifted bytes: its `new_digest` is the empty digest and its causing commit is the one that removed
+the file. Its `move-to-prose` reads no commit, appends nothing, and is the answer's one typed write through the writer;
+a `document` row naming any other digest is refused by name. Before this, the move refused, `run` refused at every
+later entry and the lane could not proceed. **The moved bytes are fenced** in the prose section, by a backtick fence
+longer than any backtick run in them, so no moved line is a heading the locator reads. The frontmatter's `# rk-stamp`
+line was such a line, and the same entry's pass then accepted the store's own rendering as a human's prose edit. The
+bytes inside the fence are the causing commit's, unchanged.
 
 **AC-127 holds unamended**, since *"the same change on a store-rendered structured section does block until resolved"*
 is now true. No artifact type carries a drift field or a signature-comparison field (AC-478's *Verified by*); the

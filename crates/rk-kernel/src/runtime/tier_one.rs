@@ -1707,6 +1707,59 @@ impl Boundary {
         self.writes += ops.writes_performed();
         out
     }
+
+    /// **The baseline, read at worktree creation** (ADR-0188 decision 4; `s8f` §8f.4: *"The
+    /// baseline is the untracked set read at worktree creation, as `status --porcelain=v1 -z
+    /// --untracked-files=all` through the seam, and journalled"*). When the item's journal holds a
+    /// creation (`worktree_assigned { reused: false }`) that no `status` read has followed, this
+    /// reads the tree's untracked set through the seam, authorised as any act is, and journals the
+    /// read unanchored, so it is the baseline every later act reads. `run` calls it right after the
+    /// creation's row and BEFORE the entry pass writes into the managed directory: on a tree
+    /// re-created on an existing run branch the entry pass's writes (a stored vouched root, a
+    /// restored rendering) are then files the run created, and the entry's boundary lands them.
+    /// Anything else — a reused tree, a journalled baseline, replay — reads nothing and returns
+    /// `false`. *(Added 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2's
+    /// spec-conformance major: the first ACT took the baseline, after the entry pass had written.)*
+    ///
+    /// # Errors
+    /// [`TierOneError::Store`] from the query or an append; the authorisation's and the read's own.
+    pub fn take_baseline(&mut self, store: &Mutex<dyn EventStore>) -> Result<bool, TierOneError> {
+        if self.mode == Mode::Replay {
+            return Ok(false);
+        }
+        let mut guard = store.lock().expect(LOCK_HALTS);
+        let events = guard
+            .query(Query::ByItem(self.target.item.clone()))
+            .map_err(|e| TierOneError::Store {
+                detail: format!("{e:?}"),
+            })?;
+        if baseline_of(&events, &self.target.item) != BaselineRead::ThisAct {
+            return Ok(false);
+        }
+        let recorder = self.journal.recorder();
+        drop(recorder.take());
+        let mut ops = GitOps::new(self.exec.clone(), &mut self.journal, self.mode);
+        let cwd = authorise_tier1_write(ops.exec(), &self.target.worktree, &self.target.ownership)?
+            .path()
+            .clone();
+        let read = landing::staging_set(
+            &mut ops,
+            &cwd,
+            &Baseline::Known(BTreeSet::new()),
+            &BTreeSet::new(),
+        );
+        self.writes += ops.writes_performed();
+        read?;
+        for inv in recorder.take() {
+            guard
+                .append(git_op_event(&inv, &self.target.item))
+                .map_err(|e| TierOneError::Store {
+                    detail: format!("{e:?}"),
+                })?;
+        }
+        drop(guard);
+        Ok(true)
+    }
 }
 
 // ---------------------------------------------------------------------------- run ownership

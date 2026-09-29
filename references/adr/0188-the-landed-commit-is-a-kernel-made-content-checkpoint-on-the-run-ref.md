@@ -4,7 +4,7 @@ title: "**The landed commit is a kernel-made content checkpoint on `rk-run/<item
 status: proposed
 date: 2026-09-28
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-41 (row b — *"A kernel-made content checkpoint commit on `rk-run/<item>` that carries the tier-1 trailer. No integration in Phase 1."*), D21-42 (row 8a — *"The kernel owns it, through the journalled `GitOps` seam. It commits (zero writes on replay), then appends the t1 and t2 rows with `anchor_sha`. `reconcile` heals a commit without a row."*; row 9 — *"The worktree diff plus named refusals."*), D21-43 (N10 — *"Land at every committed step that changed the worktree. The commit and the content checkpoint are one boundary act."*; N9), D21-45 (W2), D21-47 (*"ADR-0105 clause 5 has one reading. A git WRITE not on its closed list is a supersession in part. That covers s8f's `commit-tree`/`update-ref`"*), D21-48 (awareness line on the refused landing's loose object) and D21-97 (the owed-forward list: defect (b), finding 11, AC-518's two halves); runbook/phase-1/s8f-landing-and-rendering.md §8f.1, §8f.2 (items 1, 3, 6, 7 and 15, measured 2026-09-28 at `37bba5c`), §8f.3's first row and §8f.4; references/adr/0105 (clauses 1–5 and its forbids list), 0109 (decision 2), 0180 (decisions 15 and 16), 0181, 0183, 0184 and 0185; crates/rk-kernel/src/runtime/tier_one.rs (`Act`, `Content`, `commit_act`, `heal`), crates/rk-kernel/src/runtime/activity.rs (`commit_at`, `commit_walk_row_emitting`), crates/rk-git/src/git_exec.rs (`GitOp`), crates/rk-git/src/tree.rs and crates/rk-cli/src/verbs/run.rs (`prepare_inputs`), as read 2026-09-28 at `37bba5c`
+source: spikes/DECISIONS-2026-09-21.md D21-41 (row b — *"**A kernel-made content checkpoint commit on `rk-run/<item>` that carries the tier-1 trailer. No integration in Phase 1.**"*), D21-42 (row 8a — *"**The kernel owns it, through the journalled `GitOps` seam.** It commits (zero writes on replay), then appends the t1 and t2 rows with `anchor_sha`. `reconcile` heals a commit without a row."*; row 9 — *"**The worktree diff plus named refusals.**"*), D21-43 (N10 — *"**Land at every committed step that changed the worktree.** The commit and the content checkpoint are one boundary act."*; N9), D21-45 (W2), D21-47 (*"**ADR-0105 clause 5 has one reading.** A git WRITE not on its closed list is a supersession in part. That covers s8f's `commit-tree`/`update-ref`"*), D21-48 (awareness line on the refused landing's loose object) and D21-97 (the owed-forward list: defect (b), finding 11, AC-518's two halves); runbook/phase-1/s8f-landing-and-rendering.md §8f.1, §8f.2 (items 1, 3, 6, 7 and 15, measured 2026-09-28 at `37bba5c`), §8f.3's first row and §8f.4; references/adr/0105 (clauses 1–5 and its forbids list), 0109 (decision 2), 0180 (decisions 15 and 16), 0181, 0183, 0184 and 0185; crates/rk-kernel/src/runtime/tier_one.rs (`Act`, `Content`, `commit_act`, `heal`), crates/rk-kernel/src/runtime/activity.rs (`commit_at`, `commit_walk_row_emitting`), crates/rk-git/src/git_exec.rs (`GitOp`), crates/rk-git/src/tree.rs and crates/rk-cli/src/verbs/run.rs (`prepare_inputs`), as read 2026-09-28 at `37bba5c`
 supersedes: ["0105"]
 superseded_by: []
 related: ["0009", "0017", "0018", "0109", "0129", "0152", "0164", "0174", "0180", "0181", "0183", "0184", "0185"]
@@ -21,12 +21,19 @@ arm, `Content::Empty`, whose doc reads *"`s8f`'s landed arm changes what the com
 therefore makes **zero content commits**. The harness's edits in the run-owned worktree are either discarded at the
 next entry (`s8d-ii`'s W2 discard) or left for a human to find.
 
-**The operator took the decision in three steps.** D21-41 (b): *"A kernel-made content checkpoint commit on
-`rk-run/<item>` that carries the tier-1 trailer. No integration in Phase 1."* D21-42 9: *"The worktree diff plus named
-refusals. Stage tracked changes and files the run created; the untracked baseline is snapshotted at worktree
+**The operator took the decision in three steps.** D21-41 (b): *"**A kernel-made content checkpoint commit on
+`rk-run/<item>` that carries the tier-1 trailer. No integration in Phase 1.**"* D21-42 9: *"**The worktree diff plus named
+refusals.** Stage tracked changes and files the run created; the untracked baseline is snapshotted at worktree
 creation, and `.gitignore` is honoured. A secret-pattern or oversize path is refused by name with a gate-worthy exit.
-Committed through the `GitOps` seam"*. D21-43 N10 moved the grain: *"Land at every committed step that changed the
-worktree. The commit and the content checkpoint are one boundary act."*
+Committed through the `GitOps` seam"*. D21-43 N10 moved the grain: *"**Land at every committed step that changed the
+worktree.** The commit and the content checkpoint are one boundary act."*
+
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R2FIX-8f-B-RECORDS); refuting round 2.)*
+Nine quotations in this record (six passages) dropped their source's bold; each now carries it, word for word, and no word moved.
+In the `source:` line and this Context: D21-41 row b (the whole sentence pair is bold in the ledger), D21-42 row 8a
+(*"**The kernel owns it, through the journalled `GitOps` seam.**"*), D21-42 row 9 (*"**The worktree diff plus named
+refusals.**"*), D21-43 N10 (*"**Land at every committed step that changed the worktree.**"*) and D21-47 (*"**ADR-0105
+clause 5 has one reading.**"*); in decision 10, ADR-0105 clause 6's *"**re-created**, never reused"*.
 
 **What `s8e` left to this record, by name** (D21-97, the owed-forward list):
 - **Defect (b).** *"`run`'s gate binds the user checkout's tree (`prepare_inputs` hashes `resolved.worktree`) while
@@ -153,9 +160,16 @@ step. The heal writes nothing to git (AC-174).
 **4. What is staged, and the baseline.** The staging set is (a) tracked modifications and deletions, and (b) the
 untracked files that are not in the **baseline**. Nothing `.gitignore` (or `info/exclude`, or a global exclude)
 excludes is ever a candidate: the set is read with `status --porcelain=v1 -z --untracked-files=all`, which honours the
-standard excludes. **The baseline** is that same read, taken through the seam in the first act after the tree is
+standard excludes. **The baseline** is that same read, taken through the seam ~~in the first act after the tree is
 **created** (the act that follows a `worktree_assigned` row whose `reused` is `false`), so it is journalled as that
-act's `git_op` row (N7; ADR-0185 decision 6) and served on replay. A later process reads it from the item's journal.
+act's `git_op` row~~ **at the tree's creation**: right after a `worktree_assigned` row whose `reused` is `false`, and
+before the entry pass writes into the managed directory, so it is journalled as an unanchored `git_op` row (N7;
+ADR-0185 decision 6) and served on replay. A later process reads it from the item's journal. *(Corrected 2026-09-29,
+s8f build, package R2FIX-8f-A-CODE, while `proposed`: the round-2 review measured that the first act took it after
+the entry pass had written, so on a tree re-created on an existing run branch the entry's stored vouched root and a
+restored rendering were read as baseline and never landed, against decision 3's *"the work done at entry"* and
+`s8f` §8f.4's *"read at worktree creation"*. `run` now calls `tier_one::Boundary::take_baseline` before the entry
+pass; an act still takes the read itself when a caller made none.)*
 **A reused tree whose baseline row is not in the journal** (a deleted database) is fail-closed: a landing that finds
 any untracked, non-ignored path refuses by name with the rule `baseline-unknown`, because nothing can say whether the
 run created it. Staged text is normalised by `.gitattributes`' first row, `* text=auto eol=lf` (ADR-0164), so a
@@ -245,7 +259,17 @@ worktree's own index (`GitOp::ResyncIndex`). Clause 3's *"plumbing is `commit-tr
 needs an exact parent"* is the design warrant, and it does not substitute for this supersession (D21-47). **The
 consolidated clause-5 list**, each part in its own record and no operation in two: `0180` decision 15 (`worktree
 lock`/`unlock`, the `RK_BASE` marker, `reset --hard HEAD`, `clean -fd`); `s8g`'s R3 (`tag`, `apply`); this record (the
-three above). Clause 6's *"re-created, never reused"* is `0180`'s supersession, cited here. Every other clause of
+three above). *(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R2FIX-8f-B-RECORDS); refuting
+round 2.)* **The re-entry discard's pathspec `clean` is not a new write.** When a baseline is journalled, decision 13's
+discard runs `clean -f --quiet -- <path>…` under `GIT_LITERAL_PATHSPECS=1` (`crates/rk-git/src/worktree.rs`, `fn
+discard`: `vec!["clean", "-f", "--quiet", "--"]`) in place of `clean -fd --quiet`. It is the same `GitOp::Clean`
+invocation on the same owned tree that `0180` decision 15 took (*"the discard's `reset --hard HEAD` and `clean -fd`"*),
+narrowed to named paths: the paths are the untracked FILES of a `status --porcelain=v1 -z --untracked-files=all` read
+less the baseline, so it removes a subset of what `clean -fd` removes on that tree, and ignored files are untouched by
+both. It is read as `0180`'s list member, not added to this record's three and not a fourth supersession of clause 5
+(D21-47: *"**ADR-0105 clause 5 has one reading.** A git WRITE not on its closed list is a supersession in part"*; the
+write is on the list). If the operator reads a narrowed form as a distinct write, it becomes a fourth member of this
+decision, named here. Clause 6's *"**re-created**, never reused"* is `0180`'s supersession, cited here. Every other clause of
 `0105`, and every other member of its bullet (*"a `\\?\` path handed to git"*; `0180` holds *"a reused worktree"*),
 stands. The three variants are named in `rk-git` because *"adding a variant is that decision made visible"*
 (`git_exec.rs`).
@@ -271,6 +295,18 @@ file-write and index-change halves, claimed through the widened lint.
   content when its tree differs from its first parent's. With no run ref it prints one line,
   `landing: nothing landed (no rk-run/<item>)`. **No squash and no rebase**: tier-1 state is keyed by commit SHA
   (ADR-0018; design §5.5), so a squashed hand-off would orphan every trailer the run wrote.
+  *(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R2FIX-8f-B-RECORDS); refuting round 2:
+  the block as built, which "exactly" above did not state whole. Measured by reading `crates/rk-cli/src/verbs/explain.rs`
+  `fn landing_block`.)* **`<base>` has two derivations**, as §8f.4's item 5 already fixes: the tree's `RK_BASE` fork
+  while the recorded tree (`worktree_assigned`'s path) exists and its marker names this item; once the lane's end has
+  removed the tree, *"the first parent of the OLDEST commit on the ref that anchors one of the item's tier-1 rows"*
+  (`explain.rs`'s doc), which is the lane's entry act, whose parent is the fork. **A third three-line form** is printed
+  when the run ref exists, no recorded tree carries `RK_BASE`, and no commit on the ref anchors a tier-1 row of the item
+  (for example after a deleted database): `landing: rk-run/<item> at <sha>`, `landing: no base is recorded (no RK_BASE
+  and no anchored commit)` and `landing: git merge --no-ff rk-run/<item>`. It names the missing base instead of
+  guessing one; the hand-off line stands. A git or store read that fails is exit `3`, named on stderr, and prints no
+  landing line. The lines above remain the block's only forms: three lines with a base, three lines naming no base, or
+  the one `nothing landed` line.
 
 **13. The discarded set at re-entry is the staging set.** What `s8d-ii`'s reuse discards (W2; `0180`) is exactly what
 a landing would have staged at that moment, computed by ~~`staging_set`~~ `rk_git::landing::classify` (decision 4;

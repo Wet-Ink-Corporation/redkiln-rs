@@ -315,8 +315,16 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 # reference_resolver, step_error_row, step_grain and test_selection. All fourteen are now this filter.
 # The failure message's ~~"these five modules"~~ now reads "these fourteen rk-kernel modules". The
 # per-test loop names one test per module, so a module that drops out of the filter is visible.
-out=$(cargo test -p rk-kernel --test it -- second_agent:: post_commit_failure:: gate_step:: check_cannot_dispatch:: walk_semantics:: emit_binding:: check_eval:: cross_process:: lane_walk:: on_false_exec:: reference_resolver:: step_error_row:: step_grain:: test_selection:: 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these fourteen rk-kernel modules are every test module that calls run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
+# (dated 2026-09-29, s8f build, package R2FIX-8f-B-RECORDS; refuting round 2; D21-47's time-bound rule, *"A
+# time-bound guard in an earlier checkpoint is amended by the stage that moves its premise, in the same commit."*)
+# RE-LISTED, recounted OFF DISK with `grep -rln run_activity_steps crates/*/tests`, never incremented. It names
+# SIXTEEN files: rk-cli's transcription.rs and FIFTEEN rk-kernel modules, the fourteen above and s8f's emit
+# (crates/rk-kernel/tests/it/emit.rs, two `rt.run_activity_steps(` calls, added at 00c2a7a). `emit::` joins this
+# filter; as a substring it selects only emit.rs's tests (`emit_binding::` does not contain `emit::`). The failure
+# message's ~~"these fourteen rk-kernel modules"~~ now reads "these fifteen rk-kernel modules", and the per-test
+# loop gains emit's every_activity_output_appends_one_artifact_write. No count or end marker in this block moves.
+out=$(cargo test -p rk-kernel --test it -- second_agent:: post_commit_failure:: gate_step:: check_cannot_dispatch:: walk_semantics:: emit_binding:: check_eval:: cross_process:: lane_walk:: on_false_exec:: reference_resolver:: step_error_row:: step_grain:: test_selection:: emit:: 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these fifteen rk-kernel modules are every test module that calls run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
 for t in a_second_runnable_agent_step_refuses_and_the_commit_survives \
          a_step_failing_after_a_committed_dispatch_refuses_by_name_and_keeps_the_commit \
          a_gate_step_after_a_dispatch_writes_the_runtime_mark_and_keeps_the_commit \
@@ -331,7 +339,8 @@ for t in a_second_runnable_agent_step_refuses_and_the_commit_survives \
          a_prior_step_output_binds_by_step_name_and_field_path \
          the_kernel_appends_exactly_one_error_row_per_failed_dispatch \
          each_agent_step_dispatches_under_its_own_spec_and_commits_under_its_own_key \
-         a_step_output_selection_resolves_and_reaches_the_port_as_named_tests; do
+         a_step_output_selection_resolves_and_reaches_the_port_as_named_tests \
+         every_activity_output_appends_one_artifact_write; do
   printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: $t did not run and pass -- a filter that matches nothing exits 0, and one module dropping out would otherwise be absorbed by the other two"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 done
 out=$(cargo test -p rk-cli --test it -- exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three 2>&1); rc=$?

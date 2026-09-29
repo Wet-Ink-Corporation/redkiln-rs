@@ -582,6 +582,27 @@ fn run_lane(
         return Ok(Exit::ConfigError);
     };
 
+    // ---- THE BASELINE, READ AT WORKTREE CREATION (`s8f` §8f.4; ADR-0188 decision 4, proposed).
+    // *(dated 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2.)* On a created tree
+    // (`reused: false`, a new branch or an existing one) the untracked set is read through the seam
+    // and journalled HERE, before the entry pass writes into the managed directory, so a vouched
+    // root it stores or a rendering it restores is a file the run created, and lands. It was read
+    // by the first act, after the entry pass, which took those writes as baseline.
+    {
+        let mut boundary = tier_one_boundary(
+            &resolved,
+            &owned,
+            &ownership,
+            &std::collections::BTreeSet::new(),
+        );
+        if let Err(e) = boundary.take_baseline(store.as_ref()) {
+            eprintln!(
+                "redkiln: the baseline of `{item_id}`'s created run tree could not be read: {e}"
+            );
+            return Ok(Exit::ConfigError);
+        }
+    }
+
     // ---- THE HEAL (`s8e` §8e.3): a trailer commit on `rk-run/<item>` whose sha anchors no row —
     // a crash between the boundary's commit and its rows — gets its rows now. Git → store only.
     if let Err(e) =

@@ -1068,7 +1068,7 @@ pub fn reconcile_entry(
     Ok(done)
 }
 
-/// **`move-to-prose <section>`** (decision 5): the drifted bytes of `drift` (a `structured_drift`
+/// **`move-to-prose:<section>`** (decision 5): the drifted bytes of `drift` (a `structured_drift`
 /// row's payload) are read from its `causing_commit` through `read_at(commit, path)` — never from
 /// the event, which carries digests only — located there by the drift's anchor, and appended to
 /// the prose section `section` through the writer, as one `artifact.write`. No drift text reaches a
@@ -1089,12 +1089,6 @@ pub fn move_to_prose(
     let kind = field("kind").ok_or_else(|| refuse("the drift row names no `kind`".to_owned()))?;
     let anchor =
         field("anchor").ok_or_else(|| refuse("the drift row names no `anchor`".to_owned()))?;
-    let commit = field("causing_commit").ok_or_else(|| {
-        refuse(format!(
-            "the `{kind}` drift at `{anchor}` names no causing commit, so there are no drifted \
-             bytes to move"
-        ))
-    })?;
     let template = template_of(kind)
         .ok_or_else(|| refuse(format!("`{kind}` is machine-only and has no prose section")))?;
     if !is_prose(template, section) {
@@ -1103,6 +1097,28 @@ pub fn move_to_prose(
             template.prose
         )));
     }
+    // *(dated 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2.)* A `document`
+    // drift is a MISSING rendering (`drifts_of`): the drifted state is the absent file, whose
+    // bytes are none (its `new_digest` is the empty digest), and its causing commit is the one
+    // that removed the file, where it cannot be read. So the move reads no commit and appends
+    // nothing; it is the answer's one typed write through the writer (its `artifact.write` is the
+    // answer's applied mark). A `document` row naming any other digest is refused by name.
+    if anchor == DOCUMENT_ANCHOR {
+        if field("new_digest") != Some(sha256(b"").as_str()) {
+            return Err(refuse(format!(
+                "the `{kind}` drift at `{DOCUMENT_ANCHOR}` names bytes ({}) where a missing \
+                 rendering has none, so there is nothing this move can find",
+                field("new_digest").unwrap_or("no digest")
+            )));
+        }
+        return writer.write(kind, &writer.value(kind)?);
+    }
+    let commit = field("causing_commit").ok_or_else(|| {
+        refuse(format!(
+            "the `{kind}` drift at `{anchor}` names no causing commit, so there are no drifted \
+             bytes to move"
+        ))
+    })?;
     let path = writer.dir.rel(&rendering_name(kind));
     let bytes = read_at(commit, &path).map_err(|detail| RenderError::CausingCommit { detail })?;
     let text = String::from_utf8_lossy(&bytes);
@@ -1121,13 +1137,18 @@ pub fn move_to_prose(
     .ok_or_else(|| RenderError::CausingCommit {
         detail: format!("the anchor `{anchor}` is not in `{path}` at {commit}"),
     })?;
-    let drifted = &text[range];
+    // *(dated 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2's minor.)* The
+    // drifted bytes are appended FENCED, so no line of them is a heading the locator reads in the
+    // prose section (a fenced block is one of its decoys): the frontmatter's `# rk-stamp …` line
+    // would otherwise end the section, and the same entry's pass would accept the store's own
+    // rendering as a human's prose edit. The bytes inside the fence are the commit's, unchanged.
+    let drifted = fenced(&text[range]);
     let mut value = writer.value(kind)?;
     let prior = prose_of(template, section, object(template, &value)?.get(section))?;
     let body = prior.replace("\r\n", "\n");
     let body = body.trim_end_matches('\n');
     let joined = if body.is_empty() {
-        drifted.to_owned()
+        drifted
     } else {
         format!("{body}\n\n{drifted}")
     };
@@ -1135,6 +1156,17 @@ pub fn move_to_prose(
         map.insert(section.to_owned(), Json::String(joined));
     }
     writer.write(kind, &value)
+}
+
+/// **Opaque bytes, fenced** for a prose section: a backtick fence one longer than the longest
+/// backtick run in `text` (and at least three), so no line inside is a heading the locator reads
+/// and no line inside closes the fence. The bytes between the fences are `text`'s, with one
+/// trailing newline. *(Added 2026-09-29, s8f build, package R2FIX-8f-A-CODE.)*
+fn fenced(text: &str) -> String {
+    let longest = text.split(|c| c != '`').map(str::len).max().unwrap_or(0);
+    let fence = "`".repeat(longest.max(2) + 1);
+    let body = text.strip_suffix('\n').unwrap_or(text);
+    format!("{fence}\n{body}\n{fence}\n")
 }
 
 // =================================================================================================

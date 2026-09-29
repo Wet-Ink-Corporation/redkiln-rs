@@ -1746,6 +1746,168 @@ options = ["approve", { id = "vouch", attaches = "Findings" }]
     assert!(drift_gates(root).is_empty(), "and never a drift gate");
 }
 
+/// **A tree re-created on an existing run branch lands its entry's writes** (`s8f` §8f.4: *"The
+/// baseline is the untracked set read at worktree creation"*; §8f.5: *"The entry's boundary lands
+/// the file"*; ADR-0188 decision 4). Invocation 1 opens `lane-1`'s abstention gate, and `answer …
+/// vouch` attaches a `Findings` root. The run tree is then removed and its branch kept, so
+/// invocation 2 creates the tree anew ON THE EXISTING BRANCH (`Creation::OnExistingBranch`,
+/// `reused: false`). Its entry pass stores the root in the managed directory before any act; the
+/// baseline must be the tree as created, not as the entry pass left it, so the stored root is a
+/// file the run created and lands on `rk-run/<item>`. *(Added 2026-09-29, s8f build, package
+/// R2FIX-8f-A-CODE; refuting round 2's spec-conformance major.)* Red under M-BASE (the baseline
+/// read at creation dropped).
+#[test]
+fn a_tree_recreated_on_an_existing_branch_lands_the_entrys_stored_root() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = GATE_ITEM;
+    let processes = root.join(".redkiln").join("processes");
+    std::fs::create_dir_all(&processes).expect("the processes directory");
+    std::fs::write(
+        processes.join("vouch.toml"),
+        r#"[question."unknown_facet:has_repro"]
+text = "Does the item reproduce? `vouch` attaches the human's findings."
+options = ["approve", { id = "vouch", attaches = "Findings" }]
+"#,
+    )
+    .expect("the question is written");
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success,
+        "PREMISE: the abstention gate opens"
+    );
+    write(root, "notes/brief.json", VOUCHED_ROOT);
+    assert_eq!(
+        answer(
+            root,
+            item,
+            "vouch",
+            Some(("Findings", root.join("notes/brief.json")))
+        ),
+        Exit::Success,
+        "PREMISE: the root is attached"
+    );
+
+    // The run tree is removed; `rk-run/<item>` is kept.
+    let run_tree = crate::run_tree(root, item).path;
+    let tree_arg = run_tree.to_string_lossy().into_owned();
+    assert_eq!(
+        git_rc(root, &["worktree", "remove", "--force", &tree_arg]),
+        Some(0),
+        "PREMISE: the run tree is removed"
+    );
+    assert!(!run_tree.exists(), "PREMISE: the run tree is gone");
+    let run_ref = lane_e2e::run_ref(item);
+    assert!(rev(root, &run_ref).is_some(), "PREMISE: its branch is kept");
+
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    assert_eq!(
+        latest_assigned(root, item).payload["reused"],
+        serde_json::json!(false),
+        "PREMISE: invocation 2 created the tree anew on the existing branch"
+    );
+    let root_rel = format!(".redkiln/artifacts/{item}/Findings.root.json");
+    assert_eq!(
+        std::fs::read(run_tree.join(&root_rel)).ok().as_deref(),
+        Some(VOUCHED_ROOT),
+        "PREMISE: the entry pass stored the root in the re-created tree"
+    );
+    assert_eq!(
+        blob(root, &run_ref, &root_rel).as_deref(),
+        Some(VOUCHED_ROOT),
+        "the root the entry pass stored in a re-created tree never landed on {run_ref}: it was \
+         read as baseline"
+    );
+}
+
+/// **A `document` drift answered `move-to-prose` applies, and the lane walks on** (ADR-0189
+/// decision 5; `s8f` §8f.6 reading 6). Invocation 1 emits `Spec`; a human DELETES its rendering, a
+/// commit on `rk-run/<item>`; invocation 2's entry records one `structured_drift` at anchor
+/// `document`, restores the file and opens the drift gate. `answer … move-to-prose:notes` is one of
+/// the gate's offered options, so it must be answerable: invocation 3 applies it (nothing moves,
+/// since the missing rendering had no bytes) and walks the lane to its `closed` mark, where before
+/// it refused at every entry. *(Added 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting
+/// round 2's spec-conformance major.)* Red under M-DOC.
+#[test]
+fn a_document_drift_answered_move_to_prose_applies_and_the_lane_walks_on() {
+    let repo = drift_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    let run_ref = lane_e2e::run_ref(item);
+    let rendered = blob(root, &run_ref, &spec_md(item))
+        .expect("PREMISE: invocation 1 landed the spec's rendering on the run ref");
+    let tree = crate::run_tree(root, item).path;
+    assert_eq!(
+        git_rc(&tree, &["rm", "--quiet", "--", &spec_md(item)]),
+        Some(0),
+        "PREMISE: the human deletes the rendering"
+    );
+    assert_eq!(
+        git_rc(
+            &tree,
+            &[
+                "commit",
+                "--quiet",
+                "-m",
+                "a human deletes the spec's rendering"
+            ]
+        ),
+        Some(0),
+        "PREMISE: the deletion is a commit on the run ref"
+    );
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(vec![lane_e2e::review()])),
+        Exit::Success,
+        "`run` exits 0 at the drift gate"
+    );
+    let drifts: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::StructuredDrift)
+        .collect();
+    assert_eq!(drifts.len(), 1, "PREMISE: one drift: {drifts:?}");
+    assert_eq!(
+        drifts[0].payload["anchor"],
+        serde_json::json!("document"),
+        "PREMISE: a missing rendering is a `document` drift"
+    );
+    assert_eq!(
+        drift_gates(root).len(),
+        1,
+        "PREMISE: the drift gate is open"
+    );
+
+    assert_eq!(
+        answer(root, item, "move-to-prose:notes", None),
+        Exit::Success,
+        "PREMISE: the offered answer is accepted"
+    );
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success,
+        "a `move-to-prose` answer to a `document` drift could not be applied at the next entry"
+    );
+    let stages = lane_e2e::story_stages(root, item);
+    assert_eq!(
+        stages.last().map(String::as_str),
+        Some("closed"),
+        "the answered gate releases the exit: {stages:?}"
+    );
+    assert_eq!(
+        blob(root, &run_ref, &spec_md(item)).as_deref(),
+        Some(rendered.as_slice()),
+        "the rendering is restored from the type and landed"
+    );
+}
+
 // ------------------------------------------ the item write and the backlog feed (§8f.7)
 //
 // *(Added 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-47 cross #6;

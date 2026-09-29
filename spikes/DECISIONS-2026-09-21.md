@@ -4379,6 +4379,15 @@ fixes feeds as toolchain-only (ADR-0170 decision 8 admits *"a registry verb"*).
 **Reversal:** delete the arm and the seam's feed use; `[feed.*.backlog]` returns to `unprovided` and `closure-record`
 refuses at `audit` again (option C).
 
+*(dated 2026-09-29, `s8f` build, package R2FIX-8f-B-RECORDS; refuting round 2; a correction NOTE, the ruling is not
+rewritten.)* Ruling 2's *"`rk-kernel` still does not depend on `rk-store`"* is **inaccurate as a fact about the tree**:
+`crates/rk-kernel/Cargo.toml` carries `rk-store = { path = "../rk-store" }` in `[dependencies]` (Slice 3's option A,
+for `rk_store::canon`), and `crates/rk-kernel/src/runtime/reference.rs` holds `impl ArtifactReadSeam for
+rk_store::render::ArtifactReader`. What the ruling fixes stands: ONE composition-root-bound struct seam serves both
+store-route arms, and its kernel default refuses by name (ruling 3). The seam's ground is that **the kernel opens no
+managed tree** (ADR-0189 decision 12's dated correction, `proposed`), not a missing crate edge. The same clause in
+`s8f` §8f.2 item 10 takes a dated note, and the inaccuracy is stated for the review packet in §8f.5's list (reading 9).
+
 ---
 
 ## D21-107 · `s8f`: ADR-0190's carrier widens `ActivitySpec`, superseding ADR-0138 and ADR-0174 in part for one member
@@ -4550,3 +4559,17 @@ read only at a later stage counts as unread at the writing stage. The fixture la
 
 **Reversal:** revert the one-function change and the fixture, restore the lane test's workaround labelled as a proxy,
 and strike this entry.
+
+*(dated 2026-09-29, `s8f` build, package R2FIX-8f-B-RECORDS; refuting round 2; a correction NOTE, the ruling is not
+rewritten.)* Item 6's *"The per-stage read key came from the RT-48 routing and a code doc comment, not from a Decision
+sentence"* **omits the Decision text the key was read from.** C-01 **D-08** states the predicate as *"kind-per-stage"*:
+DECISIONS-2026-09-18 D18-5 reads *"(the predicate C-01 D-08 fixes: kind-per-stage, the owner AC-426's wording, quoted
+by ADR-0116)"*; AC-472's 2026-09-18 amendment reads *"The predicate is the owner's — kind-per-stage over the last N
+runs — which ADR-0116 already quotes with N = 50."*; and `s7d` §7d.2 item 10 records D-08 as TAKEN with *"**kind-per-stage
+over the last N runs, N = the repository's `unread_window_runs`**"*. RT-48 routed the `stage` member as *"the
+per-stage discriminator D-08's kind-per-stage predicate needs"*. **This entry reads D-08's "kind-per-stage" as the
+WRITE side** (a stage's produced kind, keyed `(stage, kind)` and counted over distinct runs, unchanged) **and D-08's
+read side as kind-level**, which is AC-426's own THEN wording, *"WHEN a stage's produced artifact accumulates zero
+downstream reads over that window"*: a downstream read is a read at any stage. That is a reading of D-08, not a
+departure from it; it is stated for the operator with the rest of this provisional entry. No note is added to AC-472
+or AC-426 here.

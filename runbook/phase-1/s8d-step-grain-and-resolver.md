@@ -900,7 +900,7 @@ is `s8f`'s. D21-43 N12: *"`artifact.read` is emitted by s8d's resolver through s
 8f comes after this stage, so this stage builds the call site as one kernel function,
 `runtime::reference::read_artifact_input`. It serves the journalled binding and calls a trait object,
 `ArtifactReadSeam`. At this stage the object's one production value is a named, **non-emitting** stub,
-`UnwiredReadSeam`, which appends nothing. `rk-kernel` cannot depend on `rk-store`, so `s8f` re-points the composition
+`UnwiredReadSeam`, which appends nothing. ~~`rk-kernel` cannot depend on `rk-store`~~ *(corrected 2026-09-29, `s8f` refuting round 2: `rk-kernel` does depend on `rk-store` for `canon`; the reason is that the kernel opens no managed tree, ADR-0189 decision 12's dated correction)*, so `s8f` re-points the composition
 root's value to its rk-store seam, and that seam emits the row. The kernel function itself never appends a row, at
 this stage or later. That is the shape `s8f`'s stage-open STOP expects (`s8f` §8f.2 item 10).
 `reference_resolver::every_resolved_artifact_input_calls_the_read_seam_once_and_the_stub_emits_no_row` counts the calls

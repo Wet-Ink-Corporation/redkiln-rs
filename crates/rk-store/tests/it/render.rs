@@ -1023,6 +1023,217 @@ fn move_to_prose_appends_the_drifted_bytes_from_the_causing_commit() {
     ));
 }
 
+/// **The entry pass's replay refusal** (ADR-0189 decision 7; ADR-0105 clause 1): on replay the
+/// `structured_drift` row is SERVED, so a drift the journal does not record is refused by name
+/// (`ReplayUnrecorded`, naming the kind and the rendering's path), nothing is appended and the file
+/// is left as it is. The journal here holds the live pass's restore row but NOT its drift row, so
+/// the restore that follows would be served: only the entry pass's own refusal can fail the
+/// replay. *(Added 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2's
+/// tests-mutants major.)* Red under M-EPU (the refusal dropped).
+#[test]
+fn a_replayed_entry_pass_refuses_a_drift_the_journal_does_not_record() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    w.write("Spec", &spec_value()).expect("the write");
+    let rendered = md_of(dir.path());
+    let edited = rendered.replacen(
+        "\"criterion\":\"the store renders\"",
+        "\"criterion\":\"EDITED BY HAND\"",
+        1,
+    );
+    assert_ne!(edited, rendered, "PREMISE: the edit changed the file");
+    put_md(dir.path(), &edited);
+    render::reconcile_entry(&w, &the_commit).expect("the live pass runs");
+    assert_eq!(
+        rows_of(&rows, EventKind::StructuredDrift).len(),
+        1,
+        "PREMISE: the live pass recorded one drift"
+    );
+    // The journal loses the drift row and keeps the restore's `artifact.write`.
+    rows.lock()
+        .expect("ok")
+        .retain(|e| e.kind != EventKind::StructuredDrift);
+    assert!(
+        rows_of(&rows, EventKind::ArtifactWrite)
+            .iter()
+            .any(|e| e.payload["path"] == json!(format!(".redkiln/artifacts/{ITEM}/Spec.md"))),
+        "PREMISE: the restore's row is recorded, so a replayed restore is served"
+    );
+
+    put_md(dir.path(), &edited);
+    let before = rows.lock().expect("ok").clone();
+    let replaying = ArtifactWriter::replaying(dir.path(), at(), schemas(), journal_over(&rows));
+    let out = render::reconcile_entry(&replaying, &the_commit);
+    assert!(
+        matches!(
+            &out,
+            Err(RenderError::ReplayUnrecorded { kind, path })
+                if kind == "Spec" && *path == format!(".redkiln/artifacts/{ITEM}/Spec.md")
+        ),
+        "a replayed entry pass served a drift the journal does not record: {out:?}"
+    );
+    assert_eq!(
+        *rows.lock().expect("ok"),
+        before,
+        "a refused replay appended a row"
+    );
+    assert_eq!(md_of(dir.path()), edited, "a refused replay wrote the file");
+}
+
+/// **`move-to-prose` of a `document` drift** (ADR-0189 decision 5; `s8f` §8f.6 reading 6: *"A
+/// missing rendering of a human-facing kind is one `structured_drift` at anchor `document`, then a
+/// restore"*). The drifted state is the ABSENT file, whose bytes are none (the row's `new_digest` is
+/// the empty digest), so the move reads no commit (the causing commit is the one that deleted the
+/// file, where it cannot be read), appends nothing to the prose section, and applies as the
+/// answer's one typed write: one `artifact.write` naming the sidecar. The next entry is clean. A
+/// `document` row whose `new_digest` is NOT the empty digest names bytes the move cannot find and
+/// is refused by name. *(Added 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2's
+/// spec-conformance major.)* Red under M-DOC (the `document` arm dropped).
+#[test]
+fn move_to_prose_of_a_document_drift_moves_nothing_and_applies() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    let v = spec_value();
+    w.write("Spec", &v).expect("the write");
+    std::fs::remove_file(ManagedDir::of(dir.path(), ITEM).abs("Spec.md"))
+        .expect("the rendering is deleted");
+    render::reconcile_entry(&w, &the_commit).expect("the pass surfaces and restores");
+    let drift = rows_of(&rows, EventKind::StructuredDrift)
+        .pop()
+        .expect("PREMISE: a drift row");
+    assert_eq!(
+        drift.payload["anchor"],
+        json!(render::DOCUMENT_ANCHOR),
+        "PREMISE: a missing rendering is a `document` drift"
+    );
+    assert_eq!(
+        drift.payload["new_digest"],
+        json!(sha256(b"").as_str()),
+        "PREMISE: the drifted bytes are none"
+    );
+
+    let asked: Arc<Mutex<Vec<(String, String)>>> = Arc::default();
+    let log = Arc::clone(&asked);
+    let read_at = move |commit: &str, path: &str| -> Result<Vec<u8>, String> {
+        log.lock()
+            .expect("ok")
+            .push((commit.to_owned(), path.to_owned()));
+        Err(format!(
+            "`{path}` is not in {commit}: the commit deleted it"
+        ))
+    };
+    let writes_before = rows_of(&rows, EventKind::ArtifactWrite).len();
+    let moved = render::move_to_prose(&w, &drift.payload, "notes", &read_at);
+    assert!(
+        moved.is_ok(),
+        "a `move-to-prose` answer to a `document` drift cannot be applied: {moved:?}"
+    );
+    assert!(
+        asked.lock().expect("ok").is_empty(),
+        "a move of no bytes read a commit"
+    );
+    assert_eq!(w.value("Spec").expect("reads"), v, "the typed value moved");
+    let writes = rows_of(&rows, EventKind::ArtifactWrite);
+    assert_eq!(
+        writes.len(),
+        writes_before + 1,
+        "the move is one write, one row"
+    );
+    assert_eq!(
+        writes.last().map(|e| e.payload["path"].clone()),
+        Some(json!(format!(".redkiln/artifacts/{ITEM}/Spec.json"))),
+        "the move's row names the sidecar (the answer's applied mark)"
+    );
+    let again = render::reconcile_entry(&w, &the_commit).expect("the next pass runs");
+    assert!(
+        again.drifts().is_empty() && again.accepted().is_empty(),
+        "the next entry is not clean: {again:?}"
+    );
+
+    let mut named_bytes = drift.payload;
+    named_bytes["new_digest"] = json!(sha256(b"some bytes").as_str());
+    assert!(
+        matches!(
+            render::move_to_prose(&w, &named_bytes, "notes", &read_at),
+            Err(RenderError::MoveToProse { .. })
+        ),
+        "a `document` drift naming bytes was moved as none"
+    );
+}
+
+/// **`move-to-prose` of a `frontmatter` drift is stable** (ADR-0189 decisions 2 and 5; AC-152).
+/// The frontmatter's drifted bytes end with its stamp, `# rk-stamp …`, a line the locator reads as
+/// a level-1 heading once it sits in a prose section — so moved bare it would end the section, and
+/// the SAME entry's pass would accept the store's own rendering as a human's prose edit and drop
+/// the line. The moved bytes are therefore fenced: the next entry records no drift and accepts no
+/// prose, and the moved text is whole in the section. *(Added 2026-09-29, s8f build, package
+/// R2FIX-8f-A-CODE; refuting round 2's spec-conformance minor.)* Red under M-FMF (the fence
+/// dropped).
+#[test]
+fn move_to_prose_of_a_frontmatter_drift_is_stable_at_the_next_entry() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    w.write("Spec", &spec_value()).expect("the write");
+    let at_commit =
+        md_of(dir.path()).replacen("title: \"The spec\"", "title: \"EDITED OUT OF BAND\"", 1);
+    assert_ne!(
+        at_commit,
+        md_of(dir.path()),
+        "PREMISE: the frontmatter is edited"
+    );
+    put_md(dir.path(), &at_commit);
+    render::reconcile_entry(&w, &the_commit).expect("the pass surfaces and restores");
+    let drift = rows_of(&rows, EventKind::StructuredDrift)
+        .pop()
+        .expect("PREMISE: a drift row");
+    assert_eq!(
+        drift.payload["anchor"],
+        json!(render::FRONTMATTER_ANCHOR),
+        "PREMISE: the drift is the frontmatter's"
+    );
+    let bytes = at_commit.into_bytes();
+    let read_at = move |commit: &str, _: &str| -> Result<Vec<u8>, String> {
+        if commit == COMMIT {
+            Ok(bytes.clone())
+        } else {
+            Err(format!("no such commit {commit}"))
+        }
+    };
+    render::move_to_prose(&w, &drift.payload, "notes", &read_at).expect("the move applies");
+    let moved = w.value("Spec").expect("reads")["notes"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    assert!(
+        moved.contains("title: \"EDITED OUT OF BAND\"") && moved.contains("# rk-stamp "),
+        "the frontmatter's drifted bytes are not whole in the prose section: {moved:?}"
+    );
+
+    let before = rows.lock().expect("ok").len();
+    let again = render::reconcile_entry(&w, &the_commit).expect("the next pass runs");
+    assert_eq!(
+        (again.drifts().len(), again.accepted().to_vec()),
+        (0, Vec::new()),
+        "the next entry read the moved text as a drift or a human's prose edit: {again:?}"
+    );
+    assert_eq!(
+        rows.lock().expect("ok").len(),
+        before,
+        "the next entry appended a row"
+    );
+    assert_eq!(
+        w.value("Spec").expect("reads")["notes"].as_str(),
+        Some(moved.as_str()),
+        "the next entry rewrote the moved text"
+    );
+}
+
 /// **AC-125's architecture test**: behavioural, over a drifted section whose text PARSES as the
 /// field's type — the typed value is unchanged and the re-render is the unchanged value's —
 /// paired with a code-lines-only scan: `render.rs` has exactly one deserializer call, and it is
@@ -1288,8 +1499,28 @@ fn reconciled_violations(files: &[(String, String)]) -> Vec<String> {
             continue;
         }
         let lines = code_lines(src);
-        for (n, line) in &lines {
+        for (k, (n, line)) in lines.iter().enumerate() {
+            // *(dated 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2.)* The
+            // previous code line, for an alias rustfmt wrapped after its `=`.
+            let prev = if k > 0 { lines[k - 1].1.trim() } else { "" };
             for (before, after) in reconciled_at(line) {
+                // (7) an alias of it: `type X = …Reconciled…;` (on one line, or wrapped after its
+                // `=`) or `use …Reconciled as X`. Every check here keys on the word, so a second
+                // name would build, return or default one unseen. *(dated 2026-09-29, s8f build,
+                // package R2FIX-8f-A-CODE.)*
+                let head = if prev.ends_with('=') {
+                    format!("{prev} {before}")
+                } else {
+                    before.to_owned()
+                };
+                if (has_word(&head, "type") && head.contains('='))
+                    || after.trim_start().starts_with("as ")
+                {
+                    bad.push(format!(
+                        "(7) {path}:{n}: an alias names a Reconciled: {}",
+                        line.trim()
+                    ));
+                }
                 let decl = before.trim_end();
                 let is_decl =
                     decl.ends_with("struct") || decl.ends_with("impl") || decl.ends_with("for");
@@ -1399,17 +1630,29 @@ fn reconciled_violations(files: &[(String, String)]) -> Vec<String> {
                     ));
                 }
             }
+            // (3)'s derived half reads EVERY attribute line above the struct, back to the previous
+            // item's last code line (one ending `}`, `;` or `{`), joined, so another attribute
+            // between the derive and the struct, or a derive list rustfmt wrapped one name per
+            // line, hides nothing. *(dated 2026-09-29, s8f build, package R2FIX-8f-A-CODE; it
+            // read only the line directly above the struct.)*
             if let Some(i) = lines
                 .iter()
                 .position(|(_, l)| l.trim_start().starts_with("pub struct Reconciled {"))
-                && i > 0
-                && lines[i - 1].1.contains("derive(")
-                && lines[i - 1].1.contains("Default")
             {
-                bad.push(format!(
-                    "(3) {path}:{}: Reconciled derives Default",
-                    lines[i - 1].0
-                ));
+                let mut attrs: Vec<&str> = lines[..i]
+                    .iter()
+                    .rev()
+                    .map(|(_, l)| l.trim())
+                    .take_while(|t| !(t.ends_with('}') || t.ends_with(';') || t.ends_with('{')))
+                    .collect();
+                attrs.reverse();
+                let joined = attrs.join(" ");
+                if joined.contains("derive(") && has_word(&joined, "Default") {
+                    bad.push(format!(
+                        "(3) {path}:{}: Reconciled derives Default: {joined}",
+                        lines[i].0
+                    ));
+                }
             }
         }
     }
@@ -1489,11 +1732,16 @@ fn workspace_sources() -> Vec<(String, String)> {
 ///    Reconciled … {` block of any scanned file, no return type names `Self` or `Reconciled` in
 ///    any form (`-> Option<Self>`, `-> Result<Self, _>`), and no `Self {` / `Self(` construction
 ///    appears (reported as (1));
-/// 3. no `Default` or `From` impl (and no derived `Default`);
+/// 3. no `Default` or `From` impl (and no derived `Default`); *(dated 2026-09-29, s8f build,
+///    package R2FIX-8f-A-CODE)* the derive is read from every attribute line above the struct,
+///    joined, so an attribute between or a rustfmt-wrapped derive list hides nothing;
 /// 4. no `pub` field;
 /// 5. `rk-cli`'s `Option<Reconciled>` is ONE function-local `let … = None;` in the invocation
 ///    (`run_lane`);
-/// 6. no `static` / `OnceLock` / `LazyLock` / `OnceCell` / `thread_local!` holder of one.
+/// 6. no `static` / `OnceLock` / `LazyLock` / `OnceCell` / `thread_local!` holder of one;
+/// 7. *(dated 2026-09-29, s8f build, package R2FIX-8f-A-CODE)* no second name for it: no `type …
+///    = …Reconciled…;` (one line, or wrapped after its `=`) and no `use …Reconciled as …`, since
+///    every check above keys on the word `Reconciled`.
 ///
 /// Every check is driven red first over a planted file set, and the unplanted synthetic set is
 /// clean, so the silence over the real tree is the lint's and not a scan that matches nothing.
@@ -1623,6 +1871,78 @@ fn a_reconciled_is_built_only_by_the_entry_pass() {
             "CONTROL: plant {plant}'s {check} violation was not found: {found:?}"
         );
     }
+    // *(dated 2026-09-29, s8f build, package R2FIX-8f-A-CODE; refuting round 2's tests-mutants
+    // major.)* Four more plants, each of which built a Reconciled outside the entry pass, or
+    // derived its Default, and left the lint green: (E) a `pub type` alias and a `pub fn`
+    // returning and building the alias; (E2) `use … Reconciled as …` in another file, the same
+    // way; (E3) a rustfmt-wrapped alias, `type … =` on one line and `Reconciled;` on the next; (F)
+    // `Default` in the derive with another attribute between it and the struct; (G) a
+    // rustfmt-wrapped derive list, one name per line.
+    let aliased: [(&str, &str, Files); 5] = [
+        (
+            "(E)",
+            "(7)",
+            set(
+                &format!(
+                    "{good_store}\npub type ForgedAlias = Reconciled;\n\n#[must_use]\npub fn forged_alias() -> ForgedAlias {{\n    ForgedAlias {{ entry: 0 }}\n}}\n"
+                ),
+                good_cli,
+            ),
+        ),
+        ("(E2)", "(7)", {
+            let mut s = set(good_store, good_cli);
+            s.push((
+                "crates/rk-store/src/other.rs".to_owned(),
+                "use crate::render::Reconciled as Forged;\n\npub fn forged() -> Forged {\n    Forged { entry: 0 }\n}\n".to_owned(),
+            ));
+            s
+        }),
+        (
+            "(E3)",
+            "(7)",
+            set(
+                &format!(
+                    "{good_store}\npub type ForgedAliasWithAVeryLongNameThatRustfmtWraps =\n    Reconciled;\n"
+                ),
+                good_cli,
+            ),
+        ),
+        (
+            "(F)",
+            "(3)",
+            set(
+                &good_store.replace(
+                    "#[derive(Debug, Clone, PartialEq, Eq)]",
+                    "#[derive(Debug, Clone, PartialEq, Eq, Default)]\n#[non_exhaustive]",
+                ),
+                good_cli,
+            ),
+        ),
+        (
+            "(G)",
+            "(3)",
+            set(
+                &good_store.replace(
+                    "#[derive(Debug, Clone, PartialEq, Eq)]",
+                    "#[derive(\n    Debug,\n    Clone,\n    Default,\n    PartialEq,\n    Eq,\n)]",
+                ),
+                good_cli,
+            ),
+        ),
+    ];
+    let missed: Vec<String> = aliased
+        .iter()
+        .filter_map(|(plant, check, files)| {
+            let found = reconciled_violations(files);
+            (!found.iter().any(|v| v.starts_with(check)))
+                .then(|| format!("plant {plant}'s {check}: {found:?}"))
+        })
+        .collect();
+    assert_eq!(
+        missed,
+        Vec::<String>::new(),
+        "CONTROL: a planted violation was not found"
+    );
 
     let sources = workspace_sources();
     assert!(
