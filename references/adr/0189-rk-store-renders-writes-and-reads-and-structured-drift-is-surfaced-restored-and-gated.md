@@ -5,12 +5,24 @@ status: proposed
 date: 2026-09-28
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 (5a — *"**Surface, then restore.** `reconcile` emits a `structured_drift` *event* (artifact, anchor, both digests), and the render then restores the section. No drift field on the artifact. … One record owns rk-store's render/write path (layout C, digest-stamped sections, the AC-122 single write path, one `artifact.write` per write)."*; 5b; 6a — *"DebtRegisterEntry is an rk-store item write with provenance; human-sourced facets are null and go to `unknown_facet`."*), D21-43 (N11 — *"**`structured_drift` opens a drift gate that blocks the stage's exit until it is answered.** AC-125's "resolving" means answering that gate."*; N12), D21-46 (R7), D21-47 (*"**`artifact.read` has exactly one emitter: rk-store's read seam (s8f).**"*) and D21-48 (X11 — *"**Accepted as a stated residual.** RK-D-UNREAD reads null as an unknown run, never as a match. The `Gate:` grammar does not widen."*); runbook/phase-1/s8f-landing-and-rendering.md §8f.2 (items 10–14, measured 2026-09-28 at `37bba5c`), §8f.3's second row and §8f.5–§8f.7 and §8f.9; references/adr/0005, 0006, 0025, 0032, 0075, 0109, 0116, 0129, 0170, 0173, 0182, 0184 and 0185; crates/rk-store/src/locator.rs, crates/rk-kernel/src/runtime/reference.rs (`ArtifactReadSeam`, `UnwiredReadSeam`, `read_artifact_input`), crates/rk-kernel/src/runtime/step.rs (`call_feed`), crates/rk-kernel/src/runtime/advisory.rs, crates/rk-cli/src/verbs/answer.rs (`store_attachments`), crates/rk-cli/src/doctor/rules.rs (`fn unread`) and .redkiln/registry.toml, as read 2026-09-28 at `37bba5c`
-supersedes: []
+supersedes: ["0173"]
 superseded_by: []
 related: ["0005", "0006", "0025", "0032", "0063", "0075", "0105", "0109", "0116", "0129", "0170", "0173", "0180", "0182", "0184", "0185", "0188"]
 evidence: []
 consumers: []
 ---
+
+*(Corrected 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R5FIX-8f); refuting round 5's
+spec-conformance major; D21-113, TAKEN PROVISIONALLY under D21-105.)* **The title's "Supersedes nothing" is corrected:
+this record supersedes ADR-0173 in part**, and the front matter's `supersedes` names `0173`. What moves is where the
+value an `artifact:` input is served comes from, and the digest the reader checks it against: ADR-0173 decision 1's
+`artifact:` row, whose "Resolves to" cell reads *"the committed `emit` binding of the activation that produced `Kind`
+for this item, read from the journal"*, and decision 8's clause *"serves the journalled binding"*. Both are superseded
+in part by decision 9's dated note below. What does not move, and stands: when an input is present (the committed
+`emit` binding gates it), the mandatory refusal and the `?` arm's `null`, *"exactly one call"* per resolved input,
+the single emitter of `artifact.read`, and decision 7 (*"that binding is what commits the activation"*). ADR-0173
+stays `accepted` and is not edited; its `superseded_by` gains `0189` at this record's flip, with the README and
+preamble back-links. The title, written at writing, is not re-worded.
 
 ## Context and problem
 
@@ -215,6 +227,32 @@ the resolver's, if a lane reads a root's bytes through an `artifact:` input; the
 source or schema, never by whether the bytes parse as JSON, and the widening of ADR-0173's `artifact:` row is carried
 by a record superseding ADR-0173 in part, written `proposed` there. If `s8j`'s lanes need only a `requires` presence
 check, `s8j`'s close states that the arm stays owed to the first consumer of a root's bytes.
+
+*(Dated 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R5FIX-8f); refuting round 5's
+spec-conformance major; D21-113, TAKEN PROVISIONALLY under D21-105.)* **Where the served value and its digest come
+from.** An accepted prose edit (decision 4's last paragraph; AC-152, *"THEN the edit is accepted as the field's new
+value"*) and an applied `move-to-prose:<section>` (decision 5) each rewrite the sidecar through the writer, with its
+own `artifact.write`, and append no new `emit` binding. As first built, every later `artifact:` read of that kind
+was refused as Halt 4, and with the check gone the resolver would still have served the stale binding. D21-113 rules:
+the committed `emit` binding stays the only presence and origin gate; the reader *"checks that digest equals the
+latest `artifact.write` of its sidecar path, the emit's own write at origin (a mismatch is a halt, Halt 4), and
+serves that value"*, which is decision 13's as-built LATEST-write rule (*"it first checks the sidecar against the
+LATEST write of its path"*), so the reader and `doctor` share one notion of the authoritative sidecar; with no such
+row it checks against the binding's canonical digest, as before. The seam returns the value it served, and the
+resolver serves THAT value (a field reference takes its field of it), never the binding (AC-477, *"the typed value
+is read back from the store"*). On replay the reader serves the sidecar blob at the recorded `artifact.read` row's
+`tree`, checked against that row's recorded `digest`, and appends nothing. No new row kind and no row shape change.
+**As built at R5FIX-8f:** the seam's return, the resolver's served value and the replay arm are built
+(`reference_resolver::the_resolver_serves_the_value_the_read_seam_served_not_the_binding`,
+`render::an_out_of_band_sidecar_edit_with_no_writer_row_still_halts`,
+`render::a_replayed_read_serves_the_recorded_trees_blob_not_the_binding`). **The live arm's latest-write check is NOT
+built: it is returned to the judge panel as a blocker.** The entry pass writes into the run-owned worktree, and the
+reader reads the run ref (this decision: *"It serves the kind's value from its sidecar on the run ref"*); the entry's
+accepted write lands only at the stage's first committed step, after that step's read. Measured in a private
+worktree: with the latest-write check, the reading step is refused at every invocation, re-entry discards the
+unlanded `Spec.json` (*"not landed at a committed step"*), the next entry accepts the edit again, and the lane never
+advances. Until the ruling, the live check reads the binding, and a read before the accepted write lands is served the
+value on the run ref.
 
 **10. The vouched root (AC-127's first half; D21-46 R7).** This record's **reading of ADR-0025**: its decision names an
 *upstream* change (*"When an upstream artifact in the same stage subsequently changes, the *next* gate the item

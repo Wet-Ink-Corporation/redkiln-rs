@@ -1182,6 +1182,11 @@ pub struct RunRefBlob {
 
 type SourceFn = dyn Fn(&str) -> Result<Option<RunRefBlob>, String> + Send + Sync;
 
+/// `(tree, path)` to the blob at `path` in `tree`, `None` when the path is not in it: the
+/// composition root's `cat-file blob <tree>:<path>`. *(Added 2026-09-29, s8f build, package
+/// R5FIX-8f; D21-113 step 4: a replayed read serves the blob at the RECORDED tree.)*
+type AtTreeFn = dyn Fn(&str, &str) -> Result<Option<Vec<u8>>, String> + Send + Sync;
+
 /// What one read served.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Served {
@@ -1198,6 +1203,9 @@ pub struct ArtifactReader {
     schemas: BTreeMap<String, String>,
     journal: Journal,
     source: Box<SourceFn>,
+    /// The replaying reader's read of a recorded tree (D21-113 step 4); the live reader's never
+    /// answers.
+    at_tree: Box<AtTreeFn>,
     entry: usize,
     replay: bool,
 }
@@ -1229,21 +1237,27 @@ impl ArtifactReader {
             schemas,
             journal,
             source: Box::new(source),
+            at_tree: Box::new(|_, _| Ok(None)),
             entry: reconciled.entry,
             replay: false,
         }
     }
 
     /// A REPLAYING reader: a read is served from the journal's recorded row and appends nothing.
+    /// *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113 step 4.)* `at_tree(tree, path)`
+    /// reads `path` in a recorded `tree` (the composition root's `cat-file`), so the value served
+    /// is the blob the recorded read served, checked against its recorded digest.
     #[must_use]
     pub fn replaying(
         reconciled: &Reconciled,
         at: StageRun,
         schemas: BTreeMap<String, String>,
         journal: Journal,
+        at_tree: impl Fn(&str, &str) -> Result<Option<Vec<u8>>, String> + Send + Sync + 'static,
     ) -> Self {
         Self {
             replay: true,
+            at_tree: Box::new(at_tree),
             ..Self::new(reconciled, at, schemas, journal, |_| Ok(None))
         }
     }
@@ -1290,10 +1304,40 @@ impl ArtifactReader {
                     kind: kind.to_owned(),
                     path: path.clone(),
                 })?;
+            // *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113 step 4, TAKEN
+            // PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed.)*
+            // ~~`value: bound.cloned().unwrap_or(Json::Null)`~~: replay serves the sidecar blob
+            // at the recorded read's `tree`, checked against its recorded `digest`, and appends
+            // nothing. A tree without the blob is unrecorded; a blob that is not the recorded
+            // digest is a halt (Halt 4), never a silent choice.
+            let tree = str_of(recorded, "tree").unwrap_or_default().to_owned();
+            let bytes = (self.at_tree)(&tree, &path)
+                .map_err(|detail| RenderError::Sidecar {
+                    kind: kind.to_owned(),
+                    path: path.clone(),
+                    detail,
+                })?
+                .ok_or_else(|| RenderError::ReplayUnrecorded {
+                    kind: kind.to_owned(),
+                    path: path.clone(),
+                })?;
+            let served = sha256(&bytes);
+            if served != digest {
+                return Err(RenderError::DigestMismatch {
+                    kind: kind.to_owned(),
+                    served: served.as_str().to_owned(),
+                    bound: digest.as_str().to_owned(),
+                });
+            }
+            let value = value_of_sidecar(&bytes).map_err(|detail| RenderError::Sidecar {
+                kind: kind.to_owned(),
+                path: path.clone(),
+                detail,
+            })?;
             return Ok(Served {
-                value: bound.cloned().unwrap_or(Json::Null),
+                value,
                 digest,
-                tree: str_of(recorded, "tree").unwrap_or_default().to_owned(),
+                tree,
                 replayed: true,
             });
         }

@@ -409,6 +409,16 @@ Each is read-only. A 🛑 line is a STOP. The stage does not choose around it: t
    `landing::a_refused_landings_gate_escalating_during_answer_is_not_refused` (`rk-cli`); each is selected in
    Checkpoint 8f (4). D21-106's two stay outside the floor, so the suite is expected to read 1119 + 108 = 1227.
    Checkpoint 8f (5) reads `FLOOR=1225` by the same dated edit.
+   *(dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's major, D21-113.)* **Re-derived: 1119 + 109
+   = 1228.** The recorded base is unchanged. Three tests join the count:
+   `reference_resolver::the_resolver_serves_the_value_the_read_seam_served_not_the_binding` (`rk-kernel`),
+   `render::an_out_of_band_sidecar_edit_with_no_writer_row_still_halts` and
+   `render::a_replayed_read_serves_the_recorded_trees_blob_not_the_binding` (`rk-store`); each is selected in
+   Checkpoint 8f (4). T1 and T2 (`landing::an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read`,
+   `landing::a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read`) are `#[ignore]`d until D21-113's
+   step-3 blocker is ruled on, so they are outside the floor and outside (4) (an ignored test reports no `... ok`).
+   D21-106's two stay outside the floor, so the suite is expected to read 1119 + 111 = 1230 passed and 11 ignored.
+   Checkpoint 8f (5) reads `FLOOR=1228` by the same dated edit.
 10. 🛑 **The `artifact:` arm's stub, and that nothing outside the seam emits (D21-47).** N12 reads *"`artifact.read`
     is emitted by s8d's resolver through s8f's rk-store read seam"*. D21-47 settles who owns it: *"`artifact.read`
     has exactly one emitter: rk-store's read seam (s8f). s8d's kernel function calls a named, non-emitting stub
@@ -572,8 +582,8 @@ to the superseded record's `superseded_by` (ADR-0092).
 
 | record | working title | decides | relation to the accepted set |
 | --- | --- | --- | --- |
-| **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit, the path-length bound and the form of the refusal; how each commit is made; what "due" means, and the gate's tree at a refused landing; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–4 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*, and its reading of clause 4's *"when a checkpoint commit is due"* (§8f.4: a landing that refuses lands nothing, so none is due). **Supersedes in part: ADR-0105 clause 5** (*"Anything not listed is a successor"*) and its bullet *"Forbids a wrapper write not on clause 5's list"*, for three writes: `commit-tree`, `update-ref refs/heads/rk-run/<item>`, and `read-tree HEAD` on the run-owned worktree's own index. D21-47 reads clause 5 one way: *"A git WRITE not on its closed list is a supersession in part"*. Clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* is the design warrant, and it does not substitute for the supersession. **One consolidated clause-5 list**, each part in its own record with no operation in two: `s8d-ii`'s worktree record (`worktree lock`/`unlock`, the `RK_BASE` marker, `reset --hard`, `clean -fd`); `s8g`'s R3 (`tag`, `apply`); this record (the three above). Reads are not supersessions (D21-47), so `status` and `rev-parse` here are none. Clause 6's *"re-created, never reused"* is `s8d-ii`'s D21-44/W2 record's to supersede (D21-46 R1), and this record cites it |
-| **the render record** | `render and write path` | §8f.5–§8f.7 and §8f.9's AC-159 rule: layout-C rendering, section stamps, prose, the drift pass (C2) and its drift gate (N11), where the canonical typed value is kept, the managed directory, the write seam, the read seam (N12), one `artifact.write` per write and one `artifact.read` per read, `.redkiln/items/` as a managed tree, and the unrecorded-mutation rule. Under D21-46 R7 it also decides the `backlog` read and its output shape (§8f.7), the vouched root's store and its advisory drift (§8f.5), the carrier of an attach's path (§8f.2 item 12) and `RK-D-DRIFT-KIND` (§8f.9) | It owns AC-411, AC-477 and AC-478, which are RAISED with no owner record. ADR-0005/0006 (as refined by ADR-0075) and ADR-0116 stand. It drives dated register amendments (§8f.10). It states N11's reading of AC-125 and records that AC-127 holds unamended (§8f.5). It states its reading of ADR-0025 for a vouched root's own change, and ADR-0025 stands unamended (§8f.5) |
+| **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit, the path-length bound and the form of the refusal; how each commit is made; what "due" means, and the gate's tree at a refused landing; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–4 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*, and its reading of clause 4's *"when a checkpoint commit is due"* (§8f.4: a landing that refuses lands nothing, so none is due). **Supersedes in part: ADR-0105 clause 5** (*"Anything not listed is a successor"*) and its bullet *"Forbids a wrapper write not on clause 5's list"*, for three writes: `commit-tree`, `update-ref refs/heads/rk-run/<item>`, and `read-tree HEAD` on the run-owned worktree's own index. D21-47 reads clause 5 one way: *"A git WRITE not on its closed list is a supersession in part"*. Clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* is the design warrant, and it does not substitute for the supersession. **One consolidated clause-5 list**, each part in its own record with no operation in two: `s8d-ii`'s worktree record (`worktree lock`/`unlock`, the `RK_BASE` marker, `reset --hard`, `clean -fd`); `s8g`'s R3 (`tag`, `apply`); this record (the three above). Reads are not supersessions (D21-47), so `status` and `rev-parse` here are none. Clause 6's *"re-created, never reused"* is `s8d-ii`'s D21-44/W2 record's to supersede (D21-46 R1), and this record cites it. *(dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's records minor.)* **It also supersedes in part ADR-0105 clause 4** (package R4FIX-8f; D21-112), for one case only: once the lane's journal records an `exclude`, the no-checkpoint-due derivation is *"the current index plus tracked modifications"* **less the lane's excluded paths**. ADR-0188 decisions 6 and 7 quote the clause and state it; its `supersedes:` already names `0105`, and `0105`'s back-link moves at the flip, as clause 5's does |
+| **the render record** | `render and write path` | §8f.5–§8f.7 and §8f.9's AC-159 rule: layout-C rendering, section stamps, prose, the drift pass (C2) and its drift gate (N11), where the canonical typed value is kept, the managed directory, the write seam, the read seam (N12), one `artifact.write` per write and one `artifact.read` per read, `.redkiln/items/` as a managed tree, and the unrecorded-mutation rule. Under D21-46 R7 it also decides the `backlog` read and its output shape (§8f.7), the vouched root's store and its advisory drift (§8f.5), the carrier of an attach's path (§8f.2 item 12) and `RK-D-DRIFT-KIND` (§8f.9) | It owns AC-411, AC-477 and AC-478, which are RAISED with no owner record. ADR-0005/0006 (as refined by ADR-0075) and ADR-0116 stand. It drives dated register amendments (§8f.10). It states N11's reading of AC-125 and records that AC-127 holds unamended (§8f.5). It states its reading of ADR-0025 for a vouched root's own change, and ADR-0025 stands unamended (§8f.5). *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113, TAKEN PROVISIONALLY under D21-105.)* **Supersedes in part: ADR-0173** decision 1's `artifact:` row, whose "Resolves to" cell reads *"the committed `emit` binding of the activation that produced `Kind` for this item, read from the journal"*, and decision 8's *"serves the journalled binding"*: only where the served value and the checked digest come from (§8f.5's D21-113 note). The binding's presence gate, the refusal and `?` arms, *"exactly one call"* and the single emitter stand. `0173` gains `0189` in its `superseded_by` at the flip |
 | **the telemetry-key record** | `dispatch_completed carries` | §8f.8–§8f.9: the `activity_id_at_version` member and its carrier, the breakdown grammar, the `status` renderer, AC-372's doctor clause read as a renderer test (N12), and `doctor`'s journal source and five-hour reading | **Supersedes in part:** ADR-0131's first forbids bullet, for `dispatch_completed.activity_id_at_version` alone, until 0131's tag is wired: that member is a **payload** member on D21-42 12b's ADR-0163 route. The `item` key is N5's, carried beside the payload by `s8e`'s record under D21-46 R3, which supersedes nothing; this record cites it. It also supersedes in part ADR-0163 decision 4's closed-grammar sentence, decision 5's not-delivered list and its sentence on `doctor`'s journal, and ADR-0163's bullet on *"any other payload correlation key"* for this one member (§8f.8). *Added 2026-09-24 (D21-47, review M5):* it also supersedes in part ADR-0163's bullet *"Forbids reading item ownership off `dispatch_completed` rows, which carry none, or off journal position"*. That covers the first half only: `cost`'s breakdown reads ownership off the `item` key `s8e` carries beside the row. The journal-position half stands. The record quotes the bullet, and Checkpoint 8f (2) reads the quotation |
 
 *(dated 2026-09-28, s8f build, package S8F-P1-RECORDS)* **The ids taken at writing.** `references/adr/README.md` read **`0188`** as the next free
@@ -587,7 +597,8 @@ number reads `0191`. **The `superseded_by` back-links move in each record's flip
 `s8e`'s stated precedent (D21-97: *"Back-links and the README Supersessions-table rows move in each flip commit, as
 `0181`'s do."*): `0105` gains `0188`, and `0131`, `0138`~~ and `0163`~~, `0163` and `0174` gain `0190`, with the README
 Supersessions rows, when those records flip. Until then Checkpoint 8f (2) fails on *"not accepted"*, *"no dated
-DECISIONS heading flips"* and the ~~three~~ five `superseded_by` lines, and on nothing else. *(dated 2026-09-29, s8f
+DECISIONS heading flips"* and the ~~three~~ ~~five~~ six `superseded_by` lines, and on nothing else *(dated 2026-09-29,
+s8f build, package R5FIX-8f: `0173` gains `0189` too, D21-113)*. *(dated 2026-09-29, s8f
 build (R1FIX-8f-B-RECORDS): `0174` joined ADR-0190's `supersedes` at S8F-P7 under D21-107 item 2, *"`0174` joins
 ADR-0190's `supersedes`"*, and this paragraph and (2)'s `need` list had not moved; round 1 found both. (2) now names
 `0131`, `0138`, `0163` and `0174` and derives each record's back-link set from its own `supersedes:` line as well.)* **Two findings the records carry, each TAKEN
@@ -941,7 +952,10 @@ each structured section and for the typed frontmatter:
   proves the refusal. M47, which removes the check but still opens the gate, flips it, and M23, which opens no gate,
   flips it too.
 - A prose section edited on disk is accepted whole as the field's new value, with no drift record and no gate
-  (AC-152).
+  (AC-152). *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113.)* The accepted value, and an applied
+  `move-to-prose:<section>`'s, must reach every later `artifact:` reader: T1 (the accepted prose served to a later
+  stage's mandatory `artifact:Spec`) and T2 (`move-to-prose:<section>`) pin it at lane level. Both are written and red,
+  and `#[ignore]`d until the blocker above is ruled on (§8f.12's R5FIX-8f note).
 
 **The drift gate's two answers.**
 - `confirm-restore`: the restore stands, and the gate closes.
@@ -1091,6 +1105,33 @@ equals the committed `emit` binding's digest, which is what `s8d`'s arm reads. A
 silent choice of one. On replay the seam serves the recorded digest and appends nothing new. Once rows exist,
 `RK-D-UNREAD` (AC-472's second clause, built at `s7d`) reads real ones. Today it reads none, because nothing
 produces them.
+
+*(dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's spec-conformance major; D21-113, TAKEN
+PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed.)* **The reading of *"The seam checks that the
+digest it serves equals the committed `emit` binding's digest"* is replaced, and the replacement is built in part.**
+An accepted prose edit (*"accepted whole as the field's new value"*) and an applied `move-to-prose:<section>` each
+rewrite `<Kind>.json` through the writer, with its own `artifact.write`, and move no `emit` binding; as first built
+every later `artifact:<Kind>` read was then a Halt 4, and, with the check gone, the resolver still returned the
+binding. D21-113 rules: the `emit` binding gates presence (no binding: a mandatory input refuses by name, a `?` input
+is `null`, neither calls the seam); the digest is checked against the LATEST `artifact.write` whose item is the item
+and whose `path` is its `<Kind>.json` sidecar (the emit's own write at origin; a reconcile-accepted prose edit or an
+applied `move-to-prose` afterwards), never selected by kind, and against `canonical_digest(bound)` only when there is
+no such row; a mismatch is still Halt 4. The seam returns the value it served and the resolver serves THAT value, not
+the binding. Replay serves the blob at the recorded read's `tree`, checked against its recorded digest. AC-152: *"THEN
+the edit is accepted as the field's new value"*; AC-477: *"the typed value is read back from the store"*; ADR-0189
+decision 13 as built: *"it first checks the sidecar against the LATEST write of its path"*.
+**Built at R5FIX-8f:** `ArtifactReadSeam::read` returns the served `Json` (both impls; `UnwiredReadSeam` serves the
+binding it is handed, holding no store); `read_artifact_input` serves the served value at the input's path (the
+binding's `Ok(value.clone())` is deleted); `ArtifactReader::serve`'s replay arm serves the recorded tree's blob,
+checked against the recorded digest (`ArtifactReader::replaying` takes the composition root's `(tree, path)` read).
+**Not built, returned to the judge panel as a blocker:** the live arm's latest-write check (the ruling's step 3). The
+entry pass writes into the run-owned worktree, the reader reads `rk-run/<item>`, and the entry's accepted write lands
+only at the stage's first committed step, which is after that step's read. Measured in a private worktree with step 3
+applied: invocation 2 of the accepted-prose lane exits `Unsupported` with no dispatch; re-entry then prints *"re-entry
+discarded `.redkiln/artifacts/lane-2/Spec.json` … (not landed at a committed step)"*, the next entry accepts the edit
+again (one more `Spec.json` write per invocation: 2, 3, 4), the run ref's sidecar never moves, and the lane never
+advances. Until the ruling the live check still reads the binding, so a read before the accepted write lands is served
+the run ref's (pre-edit) value: T1 and T2 (§8f.12) are in the tree, `#[ignore]`d with the blocker named.
 
 *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* **C2's gate and AC-127's vouched-root half are
 built** (ADR-0189 decisions 4, 5, 8 and 10, `proposed`).
@@ -2340,6 +2381,44 @@ control ran first. **All 3 killed (6 kills; each on both tests)**:
 `run`'s escalation, which stays on the landed arm, is not pinned by a test of its own (no `rk-cli` test declares an
 `escalate` expiry row for a gate `run` expires); it is unchanged code, named here rather than claimed.
 
+*(dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's spec-conformance major; D21-113, TAKEN
+PROVISIONALLY under D21-105.)* **D21-113's tests. Three are added and selected in Checkpoint 8f (4), and the floor
+moves to 1119 + 109 = 1228 (§8f.2 item 9). Two more, T1 and T2, are written, shown red, and `#[ignore]`d with the
+blocker named (§8f.5's R5FIX-8f note).**
+- **T1** `rk-cli` `landing::an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read` (the drift lane's
+  `review-min` given a mandatory `spec = "artifact:Spec"` input; the harness records each dispatch's assembled
+  inputs). Red first at `153e9d6`, and still red after steps 1, 2 and 4: *"the later stage's `artifact:Spec` was not
+  served the accepted prose: {"summary":"pack-min"}"*: a silent stale read, not the `DigestMismatch` the ruling
+  expected, because the entry's accepted write is not yet on the run ref when `review` reads. With step 3 applied (a
+  private worktree): exit `Unsupported`, no dispatch, and the livelock §8f.5 records. **Ignored.**
+- **T2** `rk-cli` `landing::a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read` (invocation 2's read
+  after the entry's RESTORE, which appends a write naming `Spec.md`, is served; invocation 3's after the applied
+  `move-to-prose:notes`). Red first: *"the later stage's `artifact:Spec` was not served the moved prose:
+  {"summary":"pack-min"}"*. **Ignored**, as T1.
+- **T3** `rk-store` `render::an_out_of_band_sidecar_edit_with_no_writer_row_still_halts` (the control: the sidecar
+  rewritten outside the writer, with no row, is a `DigestMismatch` naming both digests, and appends nothing). Green
+  at the tree it was written on (the live check still reads the binding, which the emit's own write equals); its
+  red is M3's.
+- **T4** `rk-store` `render::a_replayed_read_serves_the_recorded_trees_blob_not_the_binding`. Red first: *"replay did
+  not serve the recorded tree's blob: it served {…"context":"Why this exists.\n"…}"* (the binding). Green after
+  step 4; a recorded tree whose blob is not the recorded digest is a `DigestMismatch`, and one without the blob is
+  `ReplayUnrecorded`.
+- `rk-kernel` `reference_resolver::the_resolver_serves_the_value_the_read_seam_served_not_the_binding` (a seam that
+  serves another value than the binding; the ruling's M2 is killed here too, since T1 is ignored). Red first: *"a
+  whole-kind input was not served the seam's value"* (left `"the emitted spec"`, right `"the accepted spec"`). Green
+  after step 2.
+- Amended: `render::a_replaying_reader_serves_the_recorded_read_and_appends_nothing` (its recorded bytes are now a
+  sidecar the recorded tree holds, since replay serves that blob; every assertion it made stands).
+
+Mutant log (`target/wt-r5m`, a private worktree on a detached `HEAD` `153e9d6` with this package's changed files
+applied by `git diff | git apply`, removed after; driver `R5FIX-8f-mutants.py`, a module-level literal table; each
+anchor asserted once, each restore verified by sha256; a 3/3 green control, each filter matching exactly one test,
+ran first). **M2, M3 and M4 killed**: M2 (`read_artifact_input` serves the binding) by the `rk-kernel` test above,
+*"a whole-kind input was not served the seam's value"*; M3 (the live digest check dropped) by T3; M4 (replay serves
+`bound.cloned()`) by T4. **M1 and M5 are not run**: both mutate step 3's latest-write lookup, which is not built
+(M1 selects the latest write by kind; M5 always compares against the binding, which IS the current behaviour). They
+are owed with step 3, killed by T2 and T1 respectively once those are un-ignored.
+
 **Mutants.** Each is authored, run and **must flip the named test**. A survivor blocks (golden constraint 12). The
 mutant cycles run **from Python**, never the shell: a backtick once swallowed a restore, and the next backup
 captured the mutant. The driver lives in the scratchpad. After every cycle it verifies the file's restored bytes by
@@ -2420,8 +2499,18 @@ table-driven, each arm has its own row (*a fixture per function is not a fixture
 | M-EXCL-G, M-EXCL-L | *(dated 2026-09-29, R3FIX-8f)* `WorkingStateLess` applies no pathspec; its pathspec drops `literal` | `tree::working_state_less_drops_exactly_the_excluded_paths` (both); the two lane tests above (M-EXCL-G) |
 | M-EXCL-R | *(dated 2026-09-29, R3FIX-8f)* a refused landing's gate tree is the plain `WorkingState` while `answer` subtracts | `landing::a_refused_landing_under_a_tracked_exclusion_is_answerable` |
 | M-ESC-K, M-ESC-C, M-ESC-A | *(dated 2026-09-29, R4FIX-8f)* the escalation `answer`'s expiry pass opens rides the landed arm: `gate_opened_empty` keeps `Content::Landed`; `Opens::Empty` takes `Act::gate_opened`; `answer` passes `Opens::Landed` | `landing::a_gate_escalating_during_answer_lands_nothing`; `landing::a_refused_landings_gate_escalating_during_answer_is_not_refused` (each, all three) |
+| M-D113-2 (the ruling's M2) | *(dated 2026-09-29, R5FIX-8f; D21-113)* `read_artifact_input` serves the binding, not the served value | `reference_resolver::the_resolver_serves_the_value_the_read_seam_served_not_the_binding` (killed); T1 once un-ignored |
+| M-D113-3 (M3) | *(dated 2026-09-29, R5FIX-8f)* the live read's digest check dropped | `render::an_out_of_band_sidecar_edit_with_no_writer_row_still_halts` (killed) |
+| M-D113-4 (M4) | *(dated 2026-09-29, R5FIX-8f)* replay serves `bound.cloned()` | `render::a_replayed_read_serves_the_recorded_trees_blob_not_the_binding` (killed) |
+| M-D113-1, M-D113-5 (M1, M5) | *(dated 2026-09-29, R5FIX-8f)* the latest write selected by kind; always compared against the binding | T2; T1 — **owed with step 3, not run** (step 3 is returned blocked) |
 
 ### 8f.13 Checkpoint 8f
+
+*(dated 2026-09-29, s8f build, package R5FIX-8f.)* **Refuting round 5's major is fixed in part as R5FIX-8f under
+D21-113 (TAKEN PROVISIONALLY, D21-105); its ruling's step 3 is returned to the judge panel as a blocker** (§8f.5's
+R5FIX-8f note), so the formal Checkpoint 8f waits on that ruling, on T1 and T2 un-ignored and selected in (4), and
+on refuting round 6. No owed item is new: D21-110's root-arm residual (owner `s8j` §8j.2) is unchanged, and the
+root arm, when built, uses the same latest-write-of-path rule on `<Kind>.root<ext>`.
 
 - **The three records exist and are accepted.** Each is located by the id written into its `REC_` line at writing,
   never by a title phrase (D21-47). Each has two or more `### Option — ` headings and a **What this forbids** block.
@@ -2434,7 +2523,10 @@ table-driven, each arm has its own row (*a fixture per function is not a fixture
   2026-09-29, s8f build, package R4FIX-8f; refuting round 4's records minor.)* The landing record also supersedes
   ADR-0105 clause 4 in part (D21-112's excluded form, ADR-0188 decision 6's dated note) and quotes it; (2)'s `need`
   list gains the needle `current index plus tracked modifications` for it. The `0105` id was already on its
-  `supersedes:` line, so the back-link check is unchanged.
+  `supersedes:` line, so the back-link check is unchanged. *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113.)*
+  The render record supersedes ADR-0173 in part (decision 1's `artifact:` row and decision 8's *"serves the journalled
+  binding"*) and quotes it; (2)'s `need` list for `render` names `0173` and that needle, and a control asserts the
+  needle is a quotation of ADR-0173 (measured at `153e9d6`: 0 hits in ADR-0189, so the needle was red before).
 - **The register carries every note §8f.10 names.** These notes are the BEFORE assertions (PIA-035). Each was
   measured **false** on the untouched tree. The AC-125 and AC-372 needles were re-measured at `a6349b6`: 0 hits for
   `drift gate` and 0 for ``test of `cost` `` in the whole register. D21-47's needles were measured at `fc80687`:
@@ -2449,8 +2541,10 @@ table-driven, each arm has its own row (*a fixture per function is not a fixture
   test and `s8e`'s AC-518 lint as §8f.4 widens it (final consistency pass 2026-09-24).~~ *(dated 2026-09-29, s8f build, package R3FIX-8f; refuting
   round 3.)* **All 106 named tests pass, plus three amended tests and seven existing guards, 116 selections in all**
   (106 = 102 + R3FIX-8f's 4; 116 = (4)'s counts 12 + 33 + 14 + 2 + 55). *(dated 2026-09-29, s8f build, package
-  R4FIX-8f; refuting round 4's blocker.)* **All 108 named tests, 118 selections in all** (108 = 106 + R4FIX-8f's 2;
-  118 = (4)'s counts 12 + 33 + 14 + 2 + 57). The amended tests are the grammar test,
+  R4FIX-8f; refuting round 4's blocker.)* ~~**All 108 named tests, 118 selections in all** (108 = 106 + R4FIX-8f's 2;
+  118 = (4)'s counts 12 + 33 + 14 + 2 + 57).~~ *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113.)* **All 111
+  named tests, 121 selections in all** (111 = 108 + R5FIX-8f's 3; 121 = (4)'s counts 12 + 35 + 15 + 2 + 57; T1 and T2
+  are ignored and not selected). The amended tests are the grammar test,
   `s8e`'s AC-518 lint as §8f.4 widens it (final consistency pass 2026-09-24), and
   `answer::ac410_admitted_attachment_stored_as_human_root`, whose *"exactly four members"* S8F-P5 amended to the
   closed seven-member set (§8f.12); it was the one amended test (4) did not select, and (4)'s `rk-cli` line now does. The guards are the four
@@ -2563,7 +2657,9 @@ ids=dict(zip(names,sys.argv[1:4]))
 # to its back-link set below, so the list cannot go stale again.
 # (dated 2026-09-29, s8f build, package R4FIX-8f; refuting round 4, records minor) the landing entry read
 # (["0105"],["Anything not listed is a successor"]); ADR-0188 also supersedes ADR-0105 clause 4 in part and quotes it.
-need={"landing":(["0105"],["Anything not listed is a successor","current index plus tracked modifications"]),"render":([],[]),"telemetry":(["0131","0138","0163","0174"],["reading item ownership off","or any sixth field"])}
+# (dated 2026-09-29, s8f build, package R5FIX-8f; D21-113) the render entry read ([],[]); ADR-0189 supersedes
+# ADR-0173 in part and quotes the decision 8 clause (no apostrophe: this comment is inside a quoted string).
+need={"landing":(["0105"],["Anything not listed is a successor","current index plus tracked modifications"]),"render":(["0173"],["serves the journalled binding"]),"telemetry":(["0131","0138","0163","0174"],["reading item ownership off","or any sixth field"])}
 readme=open("references/adr/README.md",encoding="utf-8").read()
 dec="".join(open(f,encoding="utf-8").read() for f in sorted(glob.glob("spikes/DECISIONS-2026-*.md")))
 bad=[]
@@ -2592,6 +2688,9 @@ for n in names:
 print("\n".join(bad)); sys.exit(1 if bad else 0)'
 out=$(python -c "$recs" "$REC_LANDING" "$REC_RENDER" "$REC_TELEMETRY" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the records this stage owes are missing or malformed:"; printf '%s\n' "$out"; exit 1; }
+# (dated 2026-09-29, s8f build, package R5FIX-8f) the render needle's control: it is a QUOTATION of ADR-0173 decision
+# 8, so a paraphrase in ADR-0189 cannot satisfy it (measured at 153e9d6: 0 hits in ADR-0189, so (2) read it red).
+grep -qF 'serves the journalled binding' references/adr/0173-the-complete-reference-resolver.md || { echo "FAIL: (2)'s render needle is not a quotation of ADR-0173"; exit 1; }
 
 # ---- (3) THE REGISTER NOTES §8f.10 NAMES. BEFORE (measured at ca8f387; the AC-125 and AC-372 needles re-measured at
 # ---- a6349b6; D21-47's needles at fc80687): every probe below reads FALSE. The AC-478 read is scoped to the THEN ..
@@ -2663,11 +2762,42 @@ run_sel() {     # $1 crate  $2 exact count  $3.. module-qualified names
 # ---- (dated 2026-09-29, s8f build, package R4FIX-8f; refuting round 4's blocker) two more tests are selected and one
 # ---- count moves (struck: `run_sel rk-cli 55`): rk-cli +2 (a gate escalating during `answer` lands nothing, and a
 # ---- refused landing's gate escalating during `answer` is not refused).
+# ---- (dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's major, D21-113) three more tests are selected
+# ---- and two counts move (struck: `run_sel rk-store 33`, `run_sel rk-kernel 14`): rk-store +2 (T3, the out-of-band
+# ---- sidecar edit still halts; T4, replay serves the recorded tree's blob), rk-kernel +1 (the resolver serves what the
+# ---- seam served). T1 and T2 are #[ignore]d until D21-113's step 3 is ruled on, and are not selected.
 run_sel rk-git 12 tree::working_state_less_drops_exactly_the_excluded_paths landing::a_name_refusal_and_a_size_refusal_are_named_at_once landing::a_staged_path_over_the_worst_case_length_is_refused_by_name landing::run_created_file_is_staged_and_an_ignored_file_is_not landing::baseline_untracked_file_is_never_staged landing::tracked_modification_and_deletion_are_staged landing::not_due_makes_an_empty_commit_and_due_makes_one_content_commit landing::denylisted_path_is_refused_by_name_and_no_ref_moves landing::blob_at_the_limit_lands_and_one_byte_over_is_refused landing::the_trailer_tree_is_the_commits_own_tree landing::replay_serves_the_journal_and_performs_zero_writes landing::a_repository_hook_does_not_run_on_a_landing_commit
-run_sel rk-store 33 render::a_replayed_entry_pass_refuses_a_drift_the_journal_does_not_record render::move_to_prose_of_a_document_drift_moves_nothing_and_applies render::move_to_prose_of_a_frontmatter_drift_is_stable_at_the_next_entry render::a_replaying_reader_serves_the_recorded_read_and_appends_nothing render::a_replayed_entry_pass_restores_nothing_and_appends_nothing vouched::a_replayed_pass_stores_nothing_and_appends_no_advisory render::layout_c_renders_frontmatter_stamped_sections_and_prose render::render_is_a_function_of_value_and_template_only render::render_is_byte_identical_twice_and_lf_only render::structured_edit_emits_structured_drift_then_restores render::prose_edit_is_accepted_with_no_drift_record render::one_artifact_write_per_write_carrying_the_rk_types_digest render::no_artifact_type_carries_a_drift_or_signature_field render::typed_value_reads_back_from_the_store_never_from_the_markdown render::machine_only_kind_reads_its_sidecar_and_survives_md_deletion render::ac122_a_sibling_crate_cannot_write_a_managed_path render::replay_performs_zero_writes render::move_to_prose_appends_the_drifted_bytes_from_the_causing_commit render::drift_text_never_reaches_a_deserializer render::read_appends_one_artifact_read_naming_kind_and_id render::a_read_before_the_entrys_reconcile_is_refused item_write::debt_item_is_written_under_items_with_its_provenance item_write::human_sourced_facets_are_never_written_and_are_named item_write::an_existing_item_id_is_refused_never_overwritten item_write::a_byte_identical_re_execution_is_served_and_writes_nothing backlog::reads_only_the_items_the_store_names_each_by_exact_path backlog::a_named_item_with_no_record_is_listed_absent_never_dropped backlog::the_snapshot_is_canonical_ordered_by_id_and_byte_identical_twice vouched::ac127_four_outcomes_over_root_and_section_by_changed_and_unchanged vouched::the_attached_root_is_stored_at_the_next_entry_under_its_vouched_digest vouched::a_changed_root_is_never_restored_rewritten_or_gated vouched::one_advisory_per_run_for_one_observed_digest render::a_reconciled_is_built_only_by_the_entry_pass
-run_sel rk-kernel 14 tier_one::every_run_commit_resolves_through_the_worktree_resolver advisory::an_own_change_advisory_writes_upstream_null_with_all_four_fields advisory::ac525_drift_advisory_once emit::every_activity_output_appends_one_artifact_write emit::an_emit_replayed_writes_nothing_and_serves_its_recorded_digest emit::every_artifact_input_resolution_appends_one_artifact_read step_landing::a_committed_step_that_changed_the_tree_lands_before_its_commit_row step_landing::a_committed_step_that_changed_nothing_makes_no_commit feed::closure_record_audit_resolves_toolchain_backlog_through_the_store_route feed::every_shipped_unprovided_feed_is_reached_only_as_optional recorded_log::the_activity_member_moves_no_specs_json_byte_no_run_id_and_no_memo_key recorded_log::the_activity_member_is_repopulated_from_the_recorded_binding_on_read feed::an_unbound_store_route_refuses_by_name_and_never_serves_empty feed::a_git_route_feed_and_a_store_route_feed_with_an_input_still_refuse
+run_sel rk-store 35 render::an_out_of_band_sidecar_edit_with_no_writer_row_still_halts render::a_replayed_read_serves_the_recorded_trees_blob_not_the_binding render::a_replayed_entry_pass_refuses_a_drift_the_journal_does_not_record render::move_to_prose_of_a_document_drift_moves_nothing_and_applies render::move_to_prose_of_a_frontmatter_drift_is_stable_at_the_next_entry render::a_replaying_reader_serves_the_recorded_read_and_appends_nothing render::a_replayed_entry_pass_restores_nothing_and_appends_nothing vouched::a_replayed_pass_stores_nothing_and_appends_no_advisory render::layout_c_renders_frontmatter_stamped_sections_and_prose render::render_is_a_function_of_value_and_template_only render::render_is_byte_identical_twice_and_lf_only render::structured_edit_emits_structured_drift_then_restores render::prose_edit_is_accepted_with_no_drift_record render::one_artifact_write_per_write_carrying_the_rk_types_digest render::no_artifact_type_carries_a_drift_or_signature_field render::typed_value_reads_back_from_the_store_never_from_the_markdown render::machine_only_kind_reads_its_sidecar_and_survives_md_deletion render::ac122_a_sibling_crate_cannot_write_a_managed_path render::replay_performs_zero_writes render::move_to_prose_appends_the_drifted_bytes_from_the_causing_commit render::drift_text_never_reaches_a_deserializer render::read_appends_one_artifact_read_naming_kind_and_id render::a_read_before_the_entrys_reconcile_is_refused item_write::debt_item_is_written_under_items_with_its_provenance item_write::human_sourced_facets_are_never_written_and_are_named item_write::an_existing_item_id_is_refused_never_overwritten item_write::a_byte_identical_re_execution_is_served_and_writes_nothing backlog::reads_only_the_items_the_store_names_each_by_exact_path backlog::a_named_item_with_no_record_is_listed_absent_never_dropped backlog::the_snapshot_is_canonical_ordered_by_id_and_byte_identical_twice vouched::ac127_four_outcomes_over_root_and_section_by_changed_and_unchanged vouched::the_attached_root_is_stored_at_the_next_entry_under_its_vouched_digest vouched::a_changed_root_is_never_restored_rewritten_or_gated vouched::one_advisory_per_run_for_one_observed_digest render::a_reconciled_is_built_only_by_the_entry_pass
+run_sel rk-kernel 15 reference_resolver::the_resolver_serves_the_value_the_read_seam_served_not_the_binding tier_one::every_run_commit_resolves_through_the_worktree_resolver advisory::an_own_change_advisory_writes_upstream_null_with_all_four_fields advisory::ac525_drift_advisory_once emit::every_activity_output_appends_one_artifact_write emit::an_emit_replayed_writes_nothing_and_serves_its_recorded_digest emit::every_artifact_input_resolution_appends_one_artifact_read step_landing::a_committed_step_that_changed_the_tree_lands_before_its_commit_row step_landing::a_committed_step_that_changed_nothing_makes_no_commit feed::closure_record_audit_resolves_toolchain_backlog_through_the_store_route feed::every_shipped_unprovided_feed_is_reached_only_as_optional recorded_log::the_activity_member_moves_no_specs_json_byte_no_run_id_and_no_memo_key recorded_log::the_activity_member_is_repopulated_from_the_recorded_binding_on_read feed::an_unbound_store_route_refuses_by_name_and_never_serves_empty feed::a_git_route_feed_and_a_store_route_feed_with_an_input_still_refuse
 run_sel rk-adapter-claude 2 dispatch::dispatch_completed_carries_activity_id_at_version_or_null dispatch::ac360_one_event_per_termination_path
 run_sel rk-cli 57 landing::a_gate_escalating_during_answer_lands_nothing landing::a_refused_landings_gate_escalating_during_answer_is_not_refused landing::a_tracked_exclusion_leaves_the_next_gates_answer_applied landing::a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied landing::a_refused_landing_under_a_tracked_exclusion_is_answerable answer::ac410_admitted_attachment_stored_as_human_root landing::a_tree_recreated_on_an_existing_branch_lands_the_entrys_stored_root landing::a_document_drift_answered_move_to_prose_applies_and_the_lane_walks_on root::adr0118_a_poisoned_store_lock_inside_a_kernel_called_seam_halts_exit_70 doctor_journal::unread_reads_a_cross_stage_read_as_consuming_the_write landing::a_refused_landing_is_not_due_and_answer_derives_the_gates_tree landing::debt_logging_walks_past_file_through_item_create doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes doctor_journal::unread_reads_a_null_run_as_an_unknown_run_never_a_match doctor::ac426_ac472_unread_window_49_not_flagged_51_flagged doctor::ac426_rule_fire_leaves_write_set_unchanged landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it landing::the_user_checkout_is_unchanged_across_a_landing_lane landing::only_the_run_ref_moves_across_a_lane landing::a_refused_path_stops_the_lane_at_a_landing_gate_with_nothing_landed landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit landing::reentry_names_every_discarded_path landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref landing::the_lane_end_lands_the_final_stages_work landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered landing::answering_the_drift_gate_either_way_releases_the_stage_exit landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile explain::explain_prints_the_landed_commit_and_the_merge_command item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run cost::per_activity_breakdown_from_owned_dispatch_completed_rows cost::per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero cost::no_breakdown_for_an_item_that_owns_no_dispatch_completed_row cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected status::status_prints_every_flag_beside_its_reading status::status_prints_no_headroom_line_for_an_item_with_no_reading run::no_cli_flag_skips_the_entry_reconcile doctor_journal::a_present_store_is_the_journal doctor_journal::events_jsonl_is_read_only_in_fixture_mode doctor_journal::headroom_margin_fires_on_a_flat_last_reading doctor_journal::headroom_margin_reads_the_latest_five_hour_bearing_reading doctor_journal::the_doctor_verb_never_selects_the_fixture_source doctor_artifact::an_out_of_band_structured_edit_is_reported_as_an_unrecorded_mutation doctor_artifact::a_rewrite_through_the_store_is_not_reported doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read cost::cost_output_grammar_is_closed cost::render_empty_is_nothing_to_attribute_never_low_sample run::ac438_table_driven_exit_codes_over_fixtures_binary_arm doctor::ac415_every_rule_id_has_a_rejecting_fixture landing::closure_record_walks_past_audit_on_the_backlog_feed landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported doctor_drift::a_structured_drift_with_no_drift_gate_is_reported doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean cost::a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed
+
+# ---- (4b) (dated 2026-09-29, s8f build, package R5FIX-8f; D21-113) A FLOOR, CODE LINES ONLY, beneath the rk-kernel
+# ---- resolver test: `read_artifact_input` no longer returns the binding's `Ok(value.clone())`, and the rk-store seam
+# ---- impl no longer discards what it served with `.map(|_| ())`. Comment lines are dropped, so the dated notes that
+# ---- quote both spellings cannot trip it. It is driven red on a planted text first, and must keep a planted comment.
+d113='import sys
+def code(b): return [l for l in b.splitlines() if not l.lstrip().startswith("//")]
+def block(t,start):
+    i=t.find(start)
+    return None if i<0 else t[i:t.find("\n}\n",i)]
+def bad(t):
+    out=[]
+    b=block(t,"pub fn read_artifact_input(")
+    if b is None: out.append("read_artifact_input is not found")
+    elif any("Ok(value.clone())" in l for l in code(b)): out.append("read_artifact_input returns the binding: Ok(value.clone())")
+    b=block(t,"impl ArtifactReadSeam for rk_store::render::ArtifactReader {")
+    if b is None: out.append("the rk-store seam impl is not found")
+    elif any(".map(|_| ())" in l for l in code(b)): out.append("the rk-store seam discards what it served: .map(|_| ())")
+    return out
+hit="impl ArtifactReadSeam for rk_store::render::ArtifactReader {\n    fn read() {\n        s.map(|_| ())\n    }\n}\npub fn read_artifact_input() {\n    Ok(value.clone())\n}\n"
+com=hit.replace("        s.map","        // s.map").replace("    Ok(value","    // Ok(value")
+if len(bad(hit))!=2: print("CONTROL: the planted code lines were not both flagged:",bad(hit)); sys.exit(2)
+if bad(com): print("CONTROL: a planted comment was flagged:",bad(com)); sys.exit(2)
+out=bad(open("crates/rk-kernel/src/runtime/reference.rs",encoding="utf-8").read())
+print("\n".join(out)); sys.exit(1 if out else 0)'
+out=$(python -c "$d113" 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: (4b) D21-113's served-value floor (rc=$rc):"; printf '%s\n' "$out"; exit 1; }
 
 # ---- (5) THE WHOLE SUITE, and the two lint gates. FLOOR is §8f.2 item 9's expected value, re-derived at stage open from
 # ---- Checkpoint 8e's recorded count: 1038 + 85 = 1123 (85 = 64, plus D21-46 R7's 15, plus D21-47's 5, plus D21-48
@@ -2687,7 +2817,9 @@ run_sel rk-cli 57 landing::a_gate_escalating_during_answer_lands_nothing landing
 # ---- round-3 tests (4) now selects) = 1223 (struck: FLOOR=1219). §8f.2 item 9 carries the arithmetic.
 # ---- (dated 2026-09-29, s8f build, package R4FIX-8f) FLOOR re-derived: the recorded 1119 + 106 (104 + the two
 # ---- round-4 tests (4) now selects) = 1225 (struck: FLOOR=1223). §8f.2 item 9 carries the arithmetic.
-FLOOR=1225
+# ---- (dated 2026-09-29, s8f build, package R5FIX-8f) FLOOR re-derived: the recorded 1119 + 109 (106 + the three
+# ---- round-5 tests (4) now selects) = 1228 (struck: FLOOR=1225). §8f.2 item 9 carries the arithmetic.
+FLOOR=1228
 out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 nd_check "(5)'s whole suite" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|^test result:' | head -30; exit 1; }
@@ -2789,7 +2921,9 @@ wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
 # ---- The extractor writes BYTES (Python's text-mode stdout would turn every LF into CRLF on this box, and `bash -c`
 # ---- would then read a CR at the end of every command). A block that exits 0 without its end marker did not finish.
 # ---- No real `claude` is reachable at this stage: s8h has not landed and no shipped card carries permission_mode.
-# ---- D21-46: SKIPPED under RK_CP_NESTED=1 (this block is s8g's entry gate); otherwise all three replays run under the
+# ---- D21-46: SKIPPED under RK_CP_NESTED=1 (this block is s8g's entry gate); otherwise ~~all three replays~~ all four
+# ---- replays (8e, 8d, 7i and, in (9c) when crates/rk-types moved, Checkpoint 5; dated 2026-09-29, s8f build, package
+# ---- R5FIX-8f, refuting round 5's records minor) run under the
 # ---- (0b) wrapper (`nodispatch`: the compiled fake claude, REDKILN_LAUNCH_RECORD unset, the trap) with RK_CP_NESTED=1,
 # ---- and nd_check follows each one. A replayed block that sources the helper reuses this wrapper (ND_ACTIVE=1). 8d is re-run because
 # ---- §8f.10 moves its walk-table rows and lane_walk expectations, so it is provisional (D21-47, cross #6).

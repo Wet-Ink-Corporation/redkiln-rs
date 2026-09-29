@@ -1908,6 +1908,240 @@ fn a_document_drift_answered_move_to_prose_applies_and_the_lane_walks_on() {
     );
 }
 
+// ------------------------------- a later stage reads the ACCEPTED value (D21-113, R5FIX-8f)
+//
+// *(Added 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's spec-conformance major;
+// D21-113, TAKEN PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed.)* An
+// accepted prose edit (AC-152) and an applied `move-to-prose:<section>` each rewrite `Spec.json`
+// through the writer, with its own `artifact.write`, and append NO new `emit` binding. A later
+// `artifact:Spec` reader must be served that value: the reader checks the served bytes against the
+// LATEST `artifact.write` of the sidecar's path (the binding only when there is none), and the
+// resolver serves what the reader served. Before D21-113 every such read was a Halt 4
+// (`DigestMismatch`), and, with the check gone, the resolver would still have served the stale
+// binding. The drift lane's `review-min` is given a mandatory `artifact:Spec` input here, and the
+// harness records each dispatch's assembled inputs, so the assertion is the served TEXT.
+
+/// `review-min` whose agent step reads the whole `Spec`, mandatory.
+const REVIEW_SPEC: &str = r#"[activity]
+id           = "review-min"
+version      = 1
+stage        = "review"
+provides     = ["Findings"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "implementer"
+outputs = "value:Findings"
+inputs  = { spec = "artifact:Spec" }
+"#;
+
+/// The drift lane, `review-min` reading `artifact:Spec`.
+fn spec_read_lane() -> tempfile::TempDir {
+    let repo = drift_lane();
+    let catalog = repo.path().join(".redkiln").join("catalog");
+    std::fs::write(catalog.join("review-min.toml"), REVIEW_SPEC).expect("the catalog is written");
+    repo
+}
+
+/// Each dispatch's assembled inputs, recorded BEFORE the scripted answer (so a dispatch whose
+/// script is exhausted is still recorded: its inputs were served).
+type Seen = Arc<Mutex<Vec<Vec<(String, serde_json::Value)>>>>;
+
+struct InputsSeen {
+    inner: FakeHarness,
+    seen: Seen,
+}
+
+impl Harness for InputsSeen {
+    fn dispatch(&self, spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
+        self.seen
+            .lock()
+            .expect("not poisoned")
+            .push(spec.inputs.clone());
+        self.inner.dispatch(spec, store)
+    }
+}
+
+fn capturing(script: Vec<Result<Typed, StepError>>) -> (ScriptedFactory, Seen) {
+    let seen: Seen = Arc::new(Mutex::new(Vec::new()));
+    (
+        ScriptedFactory::over(Box::new(InputsSeen {
+            inner: FakeHarness::scripted(script),
+            seen: Arc::clone(&seen),
+        })),
+        seen,
+    )
+}
+
+/// The `spec` input the LAST recorded dispatch was served, or a failure naming why there is none
+/// (with every stored row that names Halt 4, so a refused read is named by its refusal).
+fn served_spec(root: &Path, seen: &Seen) -> serde_json::Value {
+    let halts: Vec<String> = support::store_rows(root)
+        .iter()
+        .map(|e| e.payload.to_string())
+        .filter(|p| p.contains("Halt 4"))
+        .collect();
+    let last = seen.lock().expect("not poisoned").last().cloned();
+    let last = last.unwrap_or_else(|| {
+        panic!(
+            "the later stage never dispatched: its `artifact:Spec` read was refused; rows naming \
+             Halt 4: {halts:?}"
+        )
+    });
+    last.iter()
+        .find(|(name, _)| name == "spec")
+        .map(|(_, v)| v.clone())
+        .unwrap_or_else(|| panic!("the dispatch carried no `spec` input: {last:?}"))
+}
+
+/// What the human writes into `Spec.md`'s `context` prose section.
+const HUMAN_CONTEXT: &str = "A human wrote this context after the spec was emitted.";
+
+/// **T1 (D21-113): an accepted prose edit is SERVED to a later stage's mandatory `artifact:Spec`**
+/// (AC-152: *"the edit is accepted as the field's new value"*; AC-477: *"the typed value is read back
+/// from the store"*). Invocation 1 emits `Spec` at `implement` and enters `review`, whose read is
+/// served and whose dispatch finds no scripted answer. A human writes prose into the `context`
+/// section of `Spec.md`, a commit on `rk-run/<item>`. Invocation 2's entry accepts it through the
+/// writer (a new `Spec.json`, its own `artifact.write`, no new `emit` binding), and `review`'s read
+/// is served THAT value: the assertion is the text. Red before D21-113 with `DigestMismatch` (Halt
+/// 4); red under M2 (the resolver serves the binding) and M5 (the check always compares against the
+/// binding).
+#[test]
+#[ignore = "R5FIX-8f BLOCKED (D21-113's step 3 not built): the entry pass's accepted write is not on rk-run/<item> when the stage's first read is served; a ruling is owed"]
+fn an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read() {
+    let repo = spec_read_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    let (first, seen_first) = capturing(vec![lane_e2e::implement()]);
+    run(root, item, &first);
+    assert!(
+        !served_spec(root, &seen_first)["context"]
+            .as_str()
+            .is_some_and(|c| c.contains(HUMAN_CONTEXT)),
+        "PREMISE: invocation 1's `review` was served the emitted value, without the human's text"
+    );
+
+    let tree = crate::run_tree(root, item).path;
+    let md = tree.join(spec_md(item));
+    let text = std::fs::read_to_string(&md).expect("PREMISE: the rendering is in the run tree");
+    assert_eq!(
+        text.matches("## context\n").count(),
+        1,
+        "PREMISE: one `context` prose section"
+    );
+    let edited = text.replace("## context\n", &format!("## context\n{HUMAN_CONTEXT}\n"));
+    std::fs::write(&md, edited).expect("the rendering is edited");
+    assert_eq!(git_rc(&tree, &["add", "--", &spec_md(item)]), Some(0));
+    assert_eq!(
+        git_rc(
+            &tree,
+            &[
+                "commit",
+                "--quiet",
+                "-m",
+                "a human writes the spec's context"
+            ]
+        ),
+        Some(0),
+        "PREMISE: the human's prose edit is a commit on the run ref"
+    );
+
+    let (second, seen) = capturing(vec![lane_e2e::review()]);
+    assert_eq!(run(root, item, &second), Exit::Success);
+    let served = served_spec(root, &seen);
+    assert!(
+        served["context"]
+            .as_str()
+            .is_some_and(|c| c.contains(HUMAN_CONTEXT)),
+        "the later stage's `artifact:Spec` was not served the accepted prose: {served}"
+    );
+    assert_eq!(
+        served["summary"],
+        serde_json::json!("pack-min"),
+        "the served value lost the emitted structured field: {served}"
+    );
+}
+
+/// **T2 (D21-113): an applied `move-to-prose:<section>` is SERVED to a later stage's mandatory
+/// `artifact:Spec`, and a read after the entry's RESTORE is served too** (ADR-0189 decision 5).
+/// Invocation 1 emits `Spec`; a human edits its structured `summary` section, a commit on the run
+/// ref. Invocation 2's entry records the drift, RESTORES `Spec.md` (an `artifact.write` naming the
+/// `.md`, not the sidecar) and opens the drift gate; `review`'s read is served (its dispatch finds
+/// no scripted answer). `answer … move-to-prose:notes` applies at invocation 3's entry, a new
+/// `Spec.json` through the writer, and `review`'s read is served THAT value: the drifted bytes in
+/// `notes`. Red before D21-113 with `DigestMismatch` at invocation 3; red under M1 (the latest write
+/// selected by KIND, which after the restore is the `.md` row) at invocation 2's read.
+#[test]
+#[ignore = "R5FIX-8f BLOCKED (D21-113's step 3 not built): the entry pass's accepted write is not on rk-run/<item> when the stage's first read is served; a ruling is owed"]
+fn a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read() {
+    let repo = spec_read_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    human_edits_the_spec(root, item);
+
+    // Its dispatch finds no scripted answer, so the exit is the dispatch's, not the gate's: only
+    // the served read and the open gate are asserted.
+    let (second, seen_second) = capturing(Vec::new());
+    run(root, item, &second);
+    assert_eq!(
+        drift_gates(root).len(),
+        1,
+        "PREMISE: the drift gate is open"
+    );
+    let restored_writes = support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::ArtifactWrite)
+        .filter(|e| {
+            e.payload.get("path").and_then(serde_json::Value::as_str)
+                == Some(spec_md(item).as_str())
+        })
+        .count();
+    assert_eq!(
+        restored_writes, 1,
+        "PREMISE: the entry's restore appended one `artifact.write` naming the `.md`"
+    );
+    let after_restore = served_spec(root, &seen_second);
+    assert_eq!(
+        after_restore["summary"],
+        serde_json::json!("pack-min"),
+        "the read after the restore was not served the typed value: {after_restore}"
+    );
+
+    assert_eq!(
+        answer(root, item, "move-to-prose:notes", None),
+        Exit::Success,
+        "PREMISE: the offered answer is accepted"
+    );
+    let (third, seen) = capturing(vec![lane_e2e::review()]);
+    assert_eq!(run(root, item, &third), Exit::Success);
+    let served = served_spec(root, &seen);
+    assert!(
+        served["notes"]
+            .as_str()
+            .is_some_and(|n| n.contains("a human edited this")),
+        "the later stage's `artifact:Spec` was not served the moved prose: {served}"
+    );
+    assert_eq!(
+        served["summary"],
+        serde_json::json!("pack-min"),
+        "the structured field is the type's, restored: {served}"
+    );
+}
+
 // ------------------------------------------ an `exclude` over a TRACKED path (D21-112)
 //
 // *(Added 2026-09-29, s8f build, package R3FIX-8f; refuting round 3's spec-conformance major;

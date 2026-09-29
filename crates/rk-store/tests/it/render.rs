@@ -130,6 +130,16 @@ fn reader(tree: &Path, rows: &Rows, reconciled: &Reconciled) -> ArtifactReader {
     )
 }
 
+/// A recorded tree, as the composition root's `cat-file blob <tree>:<path>` reads it: `bytes` at
+/// every path of `tree`, and no other tree. *(Added 2026-09-29, s8f build, package R5FIX-8f;
+/// D21-113 step 4.)*
+fn recorded_tree(
+    tree: &'static str,
+    bytes: Vec<u8>,
+) -> impl Fn(&str, &str) -> Result<Option<Vec<u8>>, String> + Send + Sync + 'static {
+    move |t, _path| Ok((t == tree).then(|| bytes.clone()))
+}
+
 fn no_commit(_: &str) -> Result<Option<String>, String> {
     Ok(None)
 }
@@ -817,7 +827,15 @@ fn a_replaying_reader_serves_the_recorded_read_and_appends_nothing() {
     let v = report_value();
     w.write("ImplReport", &v).expect("the write");
     let done = render::reconcile_entry(&w, &no_commit).expect("the pass runs");
-    let recorded = sha256(b"the bytes the recorded run read");
+    // *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113 step 4.)* ~~`sha256(b"the bytes
+    // the recorded run read")`~~: a replayed read now serves the blob at the RECORDED tree,
+    // checked against the recorded digest, so the recorded bytes are a sidecar the recorded tree
+    // holds (`recorded_tree`), and they are still not the bytes now in the tree.
+    let recorded_bytes = rk_store::canon::canonical(
+        &json!({ "summary": "as the recorded run read it", "tests": 1 }),
+    )
+    .expect("canonical");
+    let recorded = sha256(&recorded_bytes);
     let live = sha256(
         &ManagedDir::of(dir.path(), ITEM)
             .read("ImplReport.json")
@@ -843,7 +861,13 @@ fn a_replaying_reader_serves_the_recorded_read_and_appends_nothing() {
         .with_item(ITEM),
     );
     let before = rows.lock().expect("ok").len();
-    let r = ArtifactReader::replaying(&done, at(), schemas(), journal_over(&rows));
+    let r = ArtifactReader::replaying(
+        &done,
+        at(),
+        schemas(),
+        journal_over(&rows),
+        recorded_tree("recorded-tree", recorded_bytes),
+    );
 
     let served = r
         .serve("ImplReport", Some(&v))
@@ -880,6 +904,131 @@ fn a_replaying_reader_serves_the_recorded_read_and_appends_nothing() {
         rows_of(&rows, EventKind::ArtifactRead).len(),
         1,
         "a replaying reader appended an `artifact.read`"
+    );
+}
+
+/// **T3 (D21-113): the read still FAILS CLOSED on bytes no recorded write accounts for** (ADR-0189
+/// decision 9's dated note, proposed; Halt 4). *(Added 2026-09-29, s8f build, package R5FIX-8f;
+/// the control the ruling names.)* `Spec` is written through the writer (the emit's own
+/// `artifact.write`), the entry's pass runs, and then the sidecar on the run ref is rewritten
+/// OUTSIDE the writer, with no row. The read is a `DigestMismatch` naming both digests, and appends
+/// nothing. Red under M3 (the digest check dropped).
+#[test]
+fn an_out_of_band_sidecar_edit_with_no_writer_row_still_halts() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    let v = spec_value();
+    let written = w.write("Spec", &v).expect("the write");
+    let done = render::reconcile_entry(&w, &no_commit).expect("the pass runs");
+    let other = rk_store::canon::canonical(&json!({ "id": "SPEC-1", "status": "shipped",
+        "title": "edited outside the writer", "acceptance": [], "boundary": { "crates": [] },
+        "context": "", "notes": "" }))
+    .expect("canonical");
+    std::fs::write(ManagedDir::of(dir.path(), ITEM).abs("Spec.json"), &other)
+        .expect("the out-of-band edit");
+    let writes = rows_of(&rows, EventKind::ArtifactWrite).len();
+    let halted = reader(dir.path(), &rows, &done).serve("Spec", Some(&v));
+    assert!(
+        matches!(
+            &halted,
+            Err(RenderError::DigestMismatch { kind, served, bound })
+                if kind == "Spec"
+                    && served == sha256(&other).as_str()
+                    && bound == written.digest.as_str()
+        ),
+        "an out-of-band sidecar edit with no writer row was served: {halted:?}"
+    );
+    assert_eq!(
+        rows_of(&rows, EventKind::ArtifactRead).len(),
+        0,
+        "a halted read appended a row"
+    );
+    assert_eq!(
+        rows_of(&rows, EventKind::ArtifactWrite).len(),
+        writes,
+        "PREMISE: the edit appended no `artifact.write`"
+    );
+}
+
+/// **T4 (D21-113 step 4): a replayed read serves the blob at the RECORDED tree, checked against the
+/// recorded digest, never the journalled binding, and appends nothing** (ADR-0189 decision 9's
+/// dated note, proposed). *(Added 2026-09-29, s8f build, package R5FIX-8f.)* The journal records
+/// one `artifact.read` of `Spec` whose tree holds the ACCEPTED value (a prose edit accepted after
+/// the emit), while the binding the resolver hands the reader is the EMITTED value. Replay serves
+/// the accepted value. A recorded tree whose blob is not the recorded digest is refused by name
+/// (`DigestMismatch`), and a recorded tree without the blob is `ReplayUnrecorded`. Red under M4
+/// (replay serves `bound.cloned()`).
+#[test]
+fn a_replayed_read_serves_the_recorded_trees_blob_not_the_binding() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    rows.lock().expect("ok").push(reconcile_started());
+    let w = writer(dir.path(), &rows);
+    let emitted = spec_value();
+    w.write("Spec", &emitted).expect("the write");
+    let done = render::reconcile_entry(&w, &no_commit).expect("the pass runs");
+    let mut accepted = emitted.clone();
+    accepted["context"] = json!("A human's accepted context.\n");
+    let accepted_bytes = rk_store::canon::canonical(&accepted).expect("canonical");
+    let digest = sha256(&accepted_bytes);
+    rows.lock().expect("ok").push(
+        Event::new(
+            EventKind::ArtifactRead,
+            json!({
+                "digest": digest.as_str(),
+                "item": ITEM,
+                "kind": "Spec",
+                "run": RUN,
+                "schema_version": "Spec",
+                "stage": STAGE,
+                "tree": "accepted-tree",
+            }),
+        )
+        .with_item(ITEM),
+    );
+    let before = rows.lock().expect("ok").len();
+    let replay = |bytes: Vec<u8>| {
+        ArtifactReader::replaying(
+            &done,
+            at(),
+            schemas(),
+            journal_over(&rows),
+            recorded_tree("accepted-tree", bytes),
+        )
+    };
+
+    let served = replay(accepted_bytes)
+        .serve("Spec", Some(&emitted))
+        .expect("replay serves the recorded read");
+    assert!(served.replayed, "the read was not served from the journal");
+    assert_eq!(
+        served.value, accepted,
+        "replay did not serve the recorded tree's blob: it served {}",
+        served.value
+    );
+    assert_eq!(served.digest, digest, "not the recorded digest");
+    assert_eq!(served.tree, "accepted-tree", "not the recorded tree");
+
+    let diverged = replay(rk_store::canon::canonical(&emitted).expect("canonical"))
+        .serve("Spec", Some(&emitted));
+    assert!(
+        matches!(&diverged, Err(RenderError::DigestMismatch { kind, bound, .. })
+            if kind == "Spec" && bound == digest.as_str()),
+        "a recorded tree whose blob is not the recorded digest was served: {diverged:?}"
+    );
+    let absent =
+        ArtifactReader::replaying(&done, at(), schemas(), journal_over(&rows), |_, _| Ok(None))
+            .serve("Spec", Some(&emitted));
+    assert!(
+        matches!(&absent, Err(RenderError::ReplayUnrecorded { kind, .. }) if kind == "Spec"),
+        "a recorded tree without the blob was served: {absent:?}"
+    );
+    assert_eq!(
+        rows.lock().expect("ok").len(),
+        before,
+        "a replayed read appended a row"
     );
 }
 

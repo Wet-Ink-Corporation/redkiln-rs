@@ -545,11 +545,15 @@ pub struct ArtifactRead<'a> {
 /// (D21-47); [`read_artifact_input`] only calls it, once per resolved input, and never appends a
 /// row itself.
 pub trait ArtifactReadSeam: Send + Sync {
-    /// One resolved `artifact:` input.
+    /// One resolved `artifact:` input: the WHOLE value the seam served.
+    /// *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113, TAKEN PROVISIONALLY under
+    /// D21-105; ADR-0189 decision 9's dated note, proposed.)* ~~`Result<(), String>`~~: the seam
+    /// returns what it served, and [`read_artifact_input`] serves THAT value (a field reference
+    /// takes its field of it), never the journalled binding.
     ///
     /// # Errors
     /// The seam's refusal, which refuses the input by name.
-    fn read(&self, read: &ArtifactRead<'_>) -> Result<(), String>;
+    fn read(&self, read: &ArtifactRead<'_>) -> Result<Json, String>;
 }
 
 /// **The one production value at `s8d`: a named, NON-EMITTING stub.**
@@ -561,8 +565,10 @@ pub trait ArtifactReadSeam: Send + Sync {
 pub struct UnwiredReadSeam;
 
 impl ArtifactReadSeam for UnwiredReadSeam {
-    fn read(&self, _read: &ArtifactRead<'_>) -> Result<(), String> {
-        Ok(())
+    /// It holds no store, so it serves the binding it was handed. *(dated 2026-09-29, s8f build,
+    /// package R5FIX-8f; D21-113.)*
+    fn read(&self, read: &ArtifactRead<'_>) -> Result<Json, String> {
+        Ok(read.bound.clone())
     }
 }
 
@@ -574,9 +580,11 @@ impl ArtifactReadSeam for UnwiredReadSeam {
 /// appends none. It refuses before the entry's reconcile (AC-126) and halts on a served digest that
 /// is not the committed binding's.
 impl ArtifactReadSeam for rk_store::render::ArtifactReader {
-    fn read(&self, read: &ArtifactRead<'_>) -> Result<(), String> {
+    /// *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113.)* ~~`.map(|_| ())`~~: the value
+    /// the reader served, parsed from the sidecar it checked, is returned.
+    fn read(&self, read: &ArtifactRead<'_>) -> Result<Json, String> {
         self.serve(read.kind, Some(read.bound))
-            .map(|_| ())
+            .map(|served| served.value)
             .map_err(|e| e.to_string())
     }
 }
@@ -1104,8 +1112,14 @@ pub fn emit_binding_of<'a>(
 
 /// **The one call site of the read seam** (N12; R2 decision 8).
 ///
-/// It serves the committed `emit` binding of the activation that produced `kind` for this item,
-/// read from the journal, and calls [`ArtifactReadSeam::read`] exactly ONCE for an input it
+/// ~~It serves the committed `emit` binding of the activation that produced `kind` for this item,
+/// read from the journal,~~ *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113, TAKEN
+/// PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed.)* The committed `emit`
+/// binding of `kind` for this item, read from the journal, GATES the input's presence (no binding:
+/// a mandatory input refuses by name and a `?` input is `null`, neither calling the seam); the
+/// value served is the one the seam SERVED (a field reference takes its field of it), never the
+/// binding, so an accepted prose edit or an applied `move-to-prose` reaches every later reader
+/// (AC-152, AC-477). It calls [`ArtifactReadSeam::read`] exactly ONCE for an input it
 /// resolves. An optional input that resolves `null` makes no call, and neither does a refused
 /// one. **It appends no row, at this stage or later**: the seam is the emitter.
 ///
@@ -1137,7 +1151,8 @@ pub fn read_artifact_input(env: &Env<'_>, input: &ArtifactInput<'_>) -> Result<J
             render_path(input.path)
         ));
     };
-    env.seam
+    let served = env
+        .seam
         .read(&ArtifactRead {
             item: env.item,
             stage: env.stage,
@@ -1150,7 +1165,18 @@ pub fn read_artifact_input(env: &Env<'_>, input: &ArtifactInput<'_>) -> Result<J
             bound,
         })
         .map_err(|e| site.refuse(format!("the read seam refused it: {e}")))?;
-    Ok(value.clone())
+    // *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113 step 2.)* The binding's value is
+    // no longer returned: the served value is, at the input's path.
+    at_path(&served, input.path).cloned().map_or_else(
+        || {
+            absent(format!(
+                "the served `{}` value has no field `{}`",
+                input.kind,
+                render_path(input.path)
+            ))
+        },
+        Ok,
+    )
 }
 
 // =================================================================================================

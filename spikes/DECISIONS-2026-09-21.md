@@ -4666,3 +4666,13 @@ ledger. It is on the review packet's confirm list.
    - ADR-0173 stays `accepted`, and its `superseded_by` gains `0189` at 0189's flip.
 
 **Reversal.** Revert the read path, retract the supersession, and take option (c).
+
+*(dated 2026-09-29, s8f build, package R5FIX-8f.)* **Built in part; step 3 is returned to the judge panel as a
+blocker.** Steps 1, 2, 4 and 5 are built, with the `rk-kernel` resolver test, T3 and T4 red then green and M2, M3 and
+M4 killed; the records of ruling 7 are written in ADR-0189 (`proposed`). Step 3, the live arm's latest-write check,
+is not built. The entry pass writes the accepted value into the run-owned worktree, and the reader reads
+`rk-run/<item>`; the write lands only at the stage's first committed step, which comes after that step's read.
+Measured in a private worktree with step 3 applied: every invocation of T1's lane exits `Unsupported` with no
+dispatch, re-entry discards the unlanded `Spec.json` (*"not landed at a committed step"*), the next entry accepts
+the edit again, and the run ref's sidecar never moves. T1 and T2 are written, red, and `#[ignore]`d; M1 and M5 are
+owed with step 3. `s8f` §8f.5's R5FIX-8f note carries the measurement.

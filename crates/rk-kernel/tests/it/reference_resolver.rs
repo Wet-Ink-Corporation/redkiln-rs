@@ -119,14 +119,27 @@ impl CountingSeam {
 }
 
 impl ArtifactReadSeam for CountingSeam {
-    fn read(&self, read: &ArtifactRead<'_>) -> Result<(), String> {
+    /// Serves the binding it was handed. *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113:
+    /// the seam returns what it served.)*
+    fn read(&self, read: &ArtifactRead<'_>) -> Result<Json, String> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         self.reads.lock().expect("not poisoned").push((
             read.kind.to_owned(),
             read.reader_step.to_owned(),
             read.binding.to_owned(),
         ));
-        Ok(())
+        Ok(read.bound.clone())
+    }
+}
+
+/// A read seam that SERVES a value other than the binding it is handed: what the store's reader
+/// does once a later recorded write has replaced the emitted value (D21-113). *(Added 2026-09-29,
+/// s8f build, package R5FIX-8f.)*
+pub struct ServingSeam(pub Json);
+
+impl ArtifactReadSeam for ServingSeam {
+    fn read(&self, _read: &ArtifactRead<'_>) -> Result<Json, String> {
+        Ok(self.0.clone())
     }
 }
 
@@ -934,6 +947,58 @@ fn every_resolved_artifact_input_calls_the_read_seam_once_and_the_stub_emits_no_
         "this stage's stub, `UnwiredReadSeam`, appends NO `artifact.read` row: `s8f`'s rk-store seam \
          is the only emitter (D21-47)"
     );
+}
+
+/// **D21-113: the resolver serves the value the read seam SERVED, never the journalled binding**
+/// (ADR-0189 decision 9's dated note, proposed; AC-152, AC-477). *(Added 2026-09-29, s8f build,
+/// package R5FIX-8f; refuting round 5's spec-conformance major.)* The journal's `emit` binding of
+/// `Spec` is the emitted value; the seam serves another (the store's latest recorded write, after an
+/// accepted prose edit or an applied `move-to-prose`). A whole-kind input is served the seam's
+/// value, and a field input takes its field OF THAT value. The binding still gates presence: an
+/// input of a kind with no binding refuses (or is `null` with `?`) whatever the seam would serve.
+/// Red under M2 (the resolver returns the binding's value).
+#[test]
+fn the_resolver_serves_the_value_the_read_seam_served_not_the_binding() {
+    let events = vec![emitted_row(
+        "spec-author@1",
+        "Spec",
+        serde_json::json!({"title": "the emitted spec", "acs": ["AC-1"]}),
+    )];
+    let steps = vec![step("draft", StepKind::Agent)];
+    let mut scope = Scope::new(&steps);
+    scope.enter("draft");
+    let values = ToolchainValues::default();
+    let feed = no_feed;
+    let seam = ServingSeam(serde_json::json!({"title": "the accepted spec", "acs": ["AC-9"]}));
+    let env = Env {
+        item: ITEM,
+        stage: STAGE,
+        activity: AID,
+        events: &events,
+        values: &values,
+        registry: None,
+        feed_table: None,
+        sources: None,
+        seam: &seam,
+        feed: &feed,
+        run_branch: None,
+    };
+    let r = |text: &str| resolve_text(&env, &scope, "draft", "spec", text);
+    assert_eq!(
+        r("artifact:Spec").expect("served")["title"],
+        serde_json::json!("the accepted spec"),
+        "a whole-kind input was not served the seam's value"
+    );
+    assert_eq!(
+        r("artifact:Spec.acs").expect("served"),
+        serde_json::json!(["AC-9"]),
+        "a field input was not served its field of the seam's value"
+    );
+    assert!(
+        r("artifact:Plan").is_err(),
+        "a kind with no binding must still refuse"
+    );
+    assert_eq!(r("artifact:Plan?").expect("null"), Json::Null);
 }
 
 /// **N14: `kb:`, `checklist:` and `toolchain:<feed>` resolve through `s8c`'s declared tables, and an
