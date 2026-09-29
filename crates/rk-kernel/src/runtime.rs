@@ -296,6 +296,11 @@ pub enum StepOutcome {
     Awaiting { token: Digest },
     /// `NextAction::AdvanceStage` — one tier-1 `stage_transition` appended.
     StageAdvanced { from: String, to: String },
+    /// `NextAction::AdvanceStage` REFUSED by the drift check: an unanswered
+    /// `render.structured-drift` gate holds the stage's exit. **Nothing appended**, no commit
+    /// (`s8f` §8f.5; ADR-0189 decision 4). *(Added 2026-09-28, s8f build, package
+    /// S8F-P5-DRIFT-GATE-VOUCHED.)*
+    AdvanceRefused { refusal: tier_one::OpenDriftGate },
     /// `NextAction::Halt` — **nothing appended**.
     Halted { reason: &'static str },
     /// `NextAction::Done` — **nothing appended**.
@@ -311,6 +316,7 @@ impl StepOutcome {
             Self::GateOpened { .. } => "gate_opened",
             Self::Awaiting { .. } => "awaiting",
             Self::StageAdvanced { .. } => "stage_advanced",
+            Self::AdvanceRefused { .. } => "advance_refused",
             Self::Halted { .. } => "halted",
             Self::Done => "done",
         }
@@ -323,7 +329,10 @@ impl StepOutcome {
         match self {
             Self::Activity(report) => report.appended(),
             Self::GateOpened { .. } | Self::StageAdvanced { .. } => 1,
-            Self::Awaiting { .. } | Self::Halted { .. } | Self::Done => 0,
+            Self::Awaiting { .. }
+            | Self::AdvanceRefused { .. }
+            | Self::Halted { .. }
+            | Self::Done => 0,
         }
     }
 }
@@ -708,6 +717,18 @@ impl Runtime {
                 Ok(StepOutcome::Activity(Box::new(report)))
             }
             NextAction::AdvanceStage { from, to } => {
+                // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5;
+                // D21-47, cross #16; ADR-0189 decision 4, proposed.)* **THE DRIFT CHECK, before
+                // the advance's boundary act**: an unanswered `render.structured-drift` gate for
+                // the item at this stage holds its exit. Refused by name (the class, the token and
+                // the drifted artifact), with no commit and no row.
+                if let Some(item) = self.item.as_deref() {
+                    let events = self.journal(item)?;
+                    let state = crate::workflow::fsm::fold(item, &self.stage, &events)?;
+                    if let Some(refusal) = tier_one::open_drift_gate(&state, &events, from) {
+                        return Ok(StepOutcome::AdvanceRefused { refusal });
+                    }
+                }
                 // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3 and §8e.5.)*
                 // ~~`self.append(stage_transition_event(from, to))?;`~~ — the advance is a tier-1
                 // act: the stage-bearing `Story:` mark for `to` first (ADR-0183), then the row.

@@ -1150,6 +1150,12 @@ and the story lane's selected activities. `rolling-deploy` is included until `s8
 | feed | `logs?` | `root-cause/hypothesise` (optional) | `unprovided`, so `null` |
 | feed | `sbom?` | `sca-scan/scan` (optional) | `unprovided`, so `null`. No SBOM tool is installed, and no record names one |
 
+*(dated 2026-09-28, `s8f` build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106.)* **The `backlog` row above is
+built.** `s8f` §8f.7's producer is a `store`-route read of the item records the store names, by exact path
+(`rk_store::backlog`). The `backlog` verb row landed in the same change as both feed rows, and `[feed.rust.backlog]`
+and `[feed.node.backlog]` now read `verb = "backlog"`. `closure-record/audit` resolves it and no longer refuses.
+`logs?` and `sbom?` are unchanged.
+
 The other **36** keys are **not declared**, and each refuses by name wherever an activity reaches it. Content for
 an activity that no lane selects would be a guess with no reader. Every authored file's `source` names its
 provenance: the process-catalog proposal's passage for that activity, or the ADR it executes. Nothing is authored
@@ -3189,6 +3195,8 @@ ruling 9.)* A pass is evidence about a specific text.
 and X4. They now sit in the table above.
 
 The draft's third item, `toolchain:backlog`'s producer, is settled by D21-46 R7 and now sits in the table above.
+*(dated 2026-09-28, `s8f` build, package S8F-P6-ITEMS-BACKLOG-FEEDS.)* It is built at `s8f` (§8f.7), and
+`[feed.*.backlog]` reads `verb = "backlog"` on both toolchains (D21-46 R7; D21-106).
 
 **Sibling files that disagree with this one:**
 

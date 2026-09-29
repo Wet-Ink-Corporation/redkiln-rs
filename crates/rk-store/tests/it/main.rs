@@ -1,9 +1,12 @@
 mod artifacts;
+mod backlog;
 mod canon_and_memo;
 mod contention;
+mod item_write;
 mod locator;
 mod render;
 mod store;
 mod support;
 mod tier_ui;
 mod verify;
+mod vouched;

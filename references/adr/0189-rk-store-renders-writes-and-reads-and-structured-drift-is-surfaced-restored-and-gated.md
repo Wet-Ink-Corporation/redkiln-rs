@@ -229,6 +229,14 @@ true, timeout = "build_timeout", inputs = [], route = "store", side_effecting = 
   widens `s8d`'s code, not a record (ADR-0170 decision 8 admits any registry verb; ADR-0173 does not fix the route),
   and it is recorded in `s8d`'s file by dated note. §8f.2 item 11 makes this a STOP; the operator's ruling may replace
   this paragraph before the record flips.
+  *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106, taken provisionally under D21-105.)*
+  The blocker panel's ruling is D21-106, and it is built: `call_feed` admits exactly one new shape, a `store` row with no
+  declared inputs, and every other route keeps its by-name refusal byte-unchanged. ADR-0170 decision 1 describes the
+  arm as *"`store`: an rk-store write;"*, and a no-input `store`-route read is within that route, so no route is added
+  (§8f.7: *"No route is added"*). The arm is served by ONE composition-root-bound seam in `rk-kernel`,
+  `runtime::step::StoreRoute`, which also serves the step-grain `Route::Store` arm (`item_create`, decision 11). Its
+  kernel default, `UnboundStoreRoute`, is **fail-closed**: it refuses by name and never answers with an empty value.
+  The seam's result still passes the closed decode table against the row's `outputs`.
 - **What it reads.** The item ids the store names: a tier-1 `stage_transition` row's `item`, or a journalled `ItemRefs`
   output of an `item_create` step. Each is read at `.redkiln/items/<id>.toml` in the run-owned worktree **by its exact
   path** (`doctor --rebuild`'s precedent); `.redkiln/` and `.redkiln/items/` are **never walked**.

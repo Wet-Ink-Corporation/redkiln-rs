@@ -64,7 +64,9 @@ use rk_kernel::catalog::{Activity, StepKind};
 use rk_kernel::registry::Registry;
 use rk_kernel::runtime::Runtime;
 use rk_kernel::runtime::reference::RunBranch;
-use rk_kernel::runtime::step::{Activation, GateSite, ReviewRoutes, ToolRouting};
+use rk_kernel::runtime::step::{
+    Activation, GateSite, ReviewRoutes, StoreCall, StoreRoute, ToolRouting,
+};
 use rk_kernel::select::{ArtifactRegistry, Catalog, Item, Pack, select};
 use rk_kernel::workflow::envelope::AttemptCap;
 use rk_kernel::workflow::memo::VerbRegistry;
@@ -432,6 +434,91 @@ impl ReviewRoutes for LaneReview {
     }
 }
 
+/// **The `store` route, as `rk-cli`'s composition root binds it** (D21-106; the render record
+/// ADR-0189 decisions 11 and 12, proposed): `rk-store`'s item writer for `item_create` and its
+/// backlog reader for `backlog`, over a temp tree standing for the run-owned worktree and the rig's
+/// own journal. *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; `s8f` §8f.7,
+/// §8f.10.)*
+struct LaneStore {
+    db: Arc<Mutex<dyn EventStore>>,
+    tree: tempfile::TempDir,
+    /// Each shipped facet's registry `source` token.
+    facets: BTreeMap<String, String>,
+}
+
+/// A TOML-subset value as JSON, for the backlog's record parser (integers and floats as numbers).
+fn toml_json(v: &rk_kernel::toml_subset::Value) -> Json {
+    use rk_kernel::toml_subset::Value as T;
+    match v {
+        T::Str(s) => Json::from(s.clone()),
+        T::Int(i) => Json::from(*i),
+        T::Float(f) => Json::from(*f),
+        T::Bool(b) => Json::from(*b),
+        T::Array(items) => Json::Array(items.iter().map(toml_json).collect()),
+        T::Table(t) => Json::Object(t.iter().map(|(k, v)| (k.clone(), toml_json(v))).collect()),
+    }
+}
+
+/// The rig's item-record parser: the kernel's own TOML subset.
+fn parse_record(bytes: &[u8]) -> Result<rk_store::backlog::ParsedRecord, String> {
+    let text = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
+    let doc = rk_kernel::toml_subset::parse(text).map_err(|e| format!("{e:?}"))?;
+    let s = |k: &str| doc.get(k).and_then(|v| v.as_str()).map(str::to_owned);
+    let facets = match doc.get("facets").map(toml_json) {
+        Some(Json::Object(map)) => map,
+        _ => serde_json::Map::new(),
+    };
+    Ok(rk_store::backlog::ParsedRecord {
+        id: s("id"),
+        kind: s("kind"),
+        stage: s("stage"),
+        facets,
+        provenance: doc.get("provenance").map(toml_json),
+    })
+}
+
+impl StoreRoute for LaneStore {
+    fn serve(&self, call: &StoreCall<'_>) -> Result<VerbOutput, StepError> {
+        let refuse = |capability: String| StepError::Unsupported { capability };
+        let events = journal(&self.db);
+        match call.verb {
+            "item_create" => {
+                let items = call.inputs.get("items").ok_or_else(|| {
+                    refuse("LANE-WALK RIG: `item_create` got no `items`".to_owned())
+                })?;
+                let source = rk_store::item_write::emitted_digest(&events, "ImplReport")
+                    .ok_or_else(|| refuse("LANE-WALK RIG: no `ImplReport` binding".to_owned()))?;
+                let out = rk_store::item_write::write_items(
+                    self.tree.path(),
+                    items,
+                    &self.facets,
+                    &rk_store::item_write::Provenance {
+                        activity: call.activity_id_at_version.to_owned(),
+                        run: call.run_id.to_owned(),
+                        source_impl_report: source,
+                        source_item: call.item.to_owned(),
+                    },
+                )
+                .map_err(|e| refuse(e.to_string()))?;
+                Ok(VerbOutput {
+                    kind: "ItemRefs".to_owned(),
+                    value: serde_json::json!({ "ids": out.ids }),
+                })
+            }
+            "backlog" => {
+                let named = rk_store::backlog::names(&events);
+                let snap = rk_store::backlog::snapshot(self.tree.path(), &named, &parse_record)
+                    .map_err(|e| refuse(e.to_string()))?;
+                Ok(VerbOutput {
+                    kind: "BacklogSnapshot".to_owned(),
+                    value: rk_store::backlog::to_value(&snap).map_err(|e| refuse(e.to_string()))?,
+                })
+            }
+            other => Err(refuse(format!("LANE-WALK RIG: no store verb `{other}`"))),
+        }
+    }
+}
+
 // ---- the walk --------------------------------------------------------------------------------------
 
 fn journal(db: &Arc<Mutex<dyn EventStore>>) -> Vec<Event> {
@@ -714,6 +801,10 @@ struct Rig<'a> {
     seeded: Vec<String>,
     /// *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2.)* The item's run branch.
     branch: Arc<LaneRunBranch>,
+    /// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106.)* The `store`
+    /// route's handler, one per lane, so the items `debt-logging` mints are what `closure-record`'s
+    /// `backlog` reads.
+    store: Arc<LaneStore>,
 }
 
 impl Rig<'_> {
@@ -747,6 +838,10 @@ impl Rig<'_> {
             // decision 9 as amended, proposed.)* The run-branch reader, as `rk-cli`'s composition
             // root binds one, over the rig's git fixture.
             .with_run_branch(Arc::clone(&self.branch) as Arc<dyn RunBranch>)
+            // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106; the
+            // render record ADR-0189 decisions 11 and 12, proposed.)* The `store` route, as
+            // `rk-cli`'s composition root binds `rk-store`'s writer and reader.
+            .with_store_route(Arc::clone(&self.store) as Arc<dyn StoreRoute>)
     }
 
     /// Walk one activity to its end, answering each gate it opens with its first option.
@@ -870,12 +965,23 @@ fn gate_question(events: &[Event], token: &Digest) -> String {
 fn walk_lane(lane: &Lane) {
     let shipped = shipped(lane.pack);
     let (q, a) = counters();
+    let db = store(&q, &a);
+    let lane_store = Arc::new(LaneStore {
+        db: Arc::clone(&db),
+        tree: tempfile::tempdir().expect("a temp tree for the store route"),
+        facets: shipped
+            .facets
+            .facets()
+            .map(|f| (f.name.clone(), f.source.as_str().to_owned()))
+            .collect(),
+    });
     let mut rig = Rig {
         shipped: &shipped,
         lane,
-        db: store(&q, &a),
+        db,
         seeded: Vec::new(),
         branch: Arc::new(LaneRunBranch::with_changeset(lane.path)),
+        store: Arc::clone(&lane_store),
     };
 
     // ---- triage: N3's `unknown_facet:change` gate, opened by the kernel's own mint and answered
@@ -1145,6 +1251,9 @@ fn walk_lane(lane: &Lane) {
 //   `layers`' path walk starts at the lowest surviving id.
 // - `confirmation-test`, `bdd-scenarios`, `smoke-test`, `rolling-deploy`, `debt-logging` and
 //   `closure-record`: as the P8 note (owed to `s8g`/`s8h`, `s8g`, `s8g`, `s8f`, `s8f`).
+//   *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS.)* `debt-logging` and
+//   `closure-record` now walk: `s8f`'s `item_create` handler and `backlog` producer landed, and the
+//   rig binds the `store` route as `rk-cli`'s composition root does ([`LaneStore`]).
 
 // *(dated 2026-09-27, `s8d` build, package F3-D2174; D21-74 rulings 1 and 2; R8 = ADR-0179 decision 2
 // and R2 = ADR-0173 decision 9, each as amended, proposed.)* **RE-MEASURED after both amendments, and
@@ -1224,16 +1333,15 @@ const FIX: Lane = Lane {
         },
         Row {
             stage: "closeout",
+            // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; `s8f` §8f.7,
+            // §8f.10; D21-46 R7; D21-47 cross #6; D21-106.)* Both rows flip to walks with `s8f`'s
+            // `item_create` handler and `backlog` producer. Were: `debt-logging` refusing naming
+            // "`item_create` takes the `store` route", and `closure-record` naming
+            // "`feed.rust.backlog` is mandatory".
             selected: &[
-                (
-                    "debt-logging",
-                    Verdict::Refuses("`item_create` takes the `store` route"),
-                ),
+                ("debt-logging", Verdict::Walks),
                 ("lightweight-retro", Verdict::Walks),
-                (
-                    "closure-record",
-                    Verdict::Refuses("`feed.rust.backlog` is mandatory"),
-                ),
+                ("closure-record", Verdict::Walks),
             ],
         },
     ],
@@ -1303,16 +1411,15 @@ const STORY: Lane = Lane {
         },
         Row {
             stage: "closeout",
+            // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; `s8f` §8f.7,
+            // §8f.10; D21-46 R7; D21-47 cross #6; D21-106.)* Both rows flip to walks with `s8f`'s
+            // `item_create` handler and `backlog` producer. Were: `debt-logging` refusing naming
+            // "`item_create` takes the `store` route", and `closure-record` naming
+            // "`feed.rust.backlog` is mandatory".
             selected: &[
-                (
-                    "debt-logging",
-                    Verdict::Refuses("`item_create` takes the `store` route"),
-                ),
+                ("debt-logging", Verdict::Walks),
                 ("lightweight-retro", Verdict::Walks),
-                (
-                    "closure-record",
-                    Verdict::Refuses("`feed.rust.backlog` is mandatory"),
-                ),
+                ("closure-record", Verdict::Walks),
             ],
         },
     ],

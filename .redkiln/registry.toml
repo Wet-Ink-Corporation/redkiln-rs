@@ -30,6 +30,14 @@ package        = { outputs = "BuildArtifact", live = false, timeout = "build_tim
 setup          = { outputs = "SetupResult", live = true, timeout = "setup_timeout", inputs = ["projects"], route = "toolchain", side_effecting = false }
 item_create    = { outputs = "ItemRefs", live = false, timeout = "build_timeout", inputs = [], route = "store", side_effecting = true }
 release_tag    = { outputs = "ReleaseTag", live = false, timeout = "build_timeout", inputs = [], route = "git", side_effecting = true }
+# (dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106; ADR-0189 decision 12, proposed)
+# `backlog` is the `store` route's first READ: the item records the store names, read by exact path into a
+# `BacklogSnapshot` (s8f §8f.7). No route is added: ADR-0170 decision 1's `store` arm is "an rk-store write;", and a
+# no-input store-route read is within that route. `live = true` because what it reads moves; its other columns
+# follow item_create's row. It lands in the same commit as the two [feed.*.backlog] rows below, because the loader
+# refuses a feed `verb` that is not a row. item_create's `store` row is served from this stage too (ADR-0189
+# decision 11), through the same composition-root-bound seam.
+backlog        = { outputs = "BacklogSnapshot", live = true, timeout = "build_timeout", inputs = [], route = "store", side_effecting = false }
 # (dated 2026-09-26, s8d build, P7) R5 = ADR-0177 (proposed) adds these two rows and their two routes to the closed set
 # by record, as ADR-0170 decision 1 provides ("A later record may add a route (`s8d`'s, for `verdict_record`). It does
 # so by record, not by editing the match."). `review_clone` is ADR-0098 decision 2's retained gix write, performed by
@@ -77,8 +85,12 @@ path = "kb/estimation-history.md"
 [kb.retro-format]
 path = "kb/retro-format.md"
 
+# (dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106) Was:
+# unprovided = "its only honest producer is a store-route read of the item tree, which s8f builds under D21-46 R7 and
+# which flips this entry to verb = 'backlog' (s8c §8c.12)". The producer is built (s8f §8f.7), and the value does
+# not depend on the toolchain: no Toolchain adapter is called, because the `store` route is the kernel's.
 [feed.rust.backlog]
-unprovided = "its only honest producer is a store-route read of the item tree, which s8f builds under D21-46 R7 and which flips this entry to verb = 'backlog' (s8c §8c.12)"
+verb = "backlog"
 
 [feed.rust.logs]
 unprovided = "no log source is declared for this toolchain, and no record names one; an optional input reads null (ADR-0032)"
@@ -86,8 +98,10 @@ unprovided = "no log source is declared for this toolchain, and no record names 
 [feed.rust.sbom]
 unprovided = "no SBOM tool is installed, and no record names one; an optional input reads null (ADR-0032)"
 
+# (dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106) Was `unprovided`, with
+# [feed.rust.backlog]'s reason; flipped in the same commit, to the same verb.
 [feed.node.backlog]
-unprovided = "its only honest producer is a store-route read of the item tree, which s8f builds under D21-46 R7 and which flips this entry to verb = 'backlog' (s8c §8c.12)"
+verb = "backlog"
 
 [feed.node.logs]
 unprovided = "no log source is declared for this toolchain, and no record names one; an optional input reads null (ADR-0032)"

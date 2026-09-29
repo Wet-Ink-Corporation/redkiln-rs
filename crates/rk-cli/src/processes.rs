@@ -166,19 +166,35 @@ pub fn with_kernel_questions(
     root: &Path,
     registry: QuestionRegistry,
 ) -> Result<QuestionRegistry, ProcessesError> {
-    let kind = rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND;
-    if registry.binds_kind(kind) || registry.question(kind).is_some() {
-        return Err(ProcessesError::Duplicate {
-            path: processes_dir(root).display().to_string(),
-            detail: format!(
-                "the gate kind `{kind}` is the kernel's own (the refused landing's gate, ADR-0188), \
-                 and a pack file may not declare or bind it"
-            ),
-        });
+    // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision 5,
+    // proposed.)* The drift gate's question is the kernel's own too: `confirm-restore` or
+    // `move-to-prose:<section>`.
+    let own = [
+        (
+            rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND,
+            "the refused landing's gate, ADR-0188",
+            rk_kernel::runtime::tier_one::landing_question(),
+        ),
+        (
+            rk_kernel::runtime::tier_one::DRIFT_KIND,
+            "the structured drift's gate, ADR-0189",
+            rk_kernel::runtime::tier_one::drift_question(),
+        ),
+    ];
+    let mut registry = registry;
+    for (kind, whose, question) in own {
+        if registry.binds_kind(kind) || registry.question(kind).is_some() {
+            return Err(ProcessesError::Duplicate {
+                path: processes_dir(root).display().to_string(),
+                detail: format!(
+                    "the gate kind `{kind}` is the kernel's own ({whose}), and a pack file may not \
+                     declare or bind it"
+                ),
+            });
+        }
+        registry = registry.with_question(kind, question).bind(kind, kind);
     }
-    Ok(registry
-        .with_question(kind, rk_kernel::runtime::tier_one::landing_question())
-        .bind(kind, kind))
+    Ok(registry)
 }
 
 /// One `[question."<id>"]` table: the question, and the further gate kinds it binds.

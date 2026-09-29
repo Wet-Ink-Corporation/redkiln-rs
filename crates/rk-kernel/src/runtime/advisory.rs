@@ -71,7 +71,12 @@ use crate::select::{Digest, DriftSignal};
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Advisory {
     root: String,
-    upstream: String,
+    /// *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5; the render
+    /// record ADR-0189 decision 10, proposed; D21-47, review m11.)* ~~`String`~~: `None` marks the
+    /// vouched root's OWN change ([`Advisory::own_change`]), serialised as JSON `null`, so the
+    /// own-change key `(root, None, new_digest)` is never equal to an upstream key. `Some(s)`
+    /// serialises as the same string it did before, byte for byte.
+    upstream: Option<String>,
     old_digest: Option<Digest>,
     new_digest: Digest,
 }
@@ -81,15 +86,33 @@ impl Advisory {
     /// asserted against a named list rather than against four string literals in a test.
     pub const FIELDS: [&'static str; 4] = ["new_digest", "old_digest", "root", "upstream"];
 
-    /// Build one from the signal step 3 returned. **The only constructor**: an advisory this crate
-    /// minted from anything but a `DriftSignal` would be an advisory `select()` did not classify.
+    /// Build one from the signal step 3 returned: the UPSTREAM half (AC-525). ~~**The only
+    /// constructor**~~ *(corrected 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; the
+    /// render record ADR-0189 decision 10, proposed)*: **one of two constructors**. This one mints
+    /// an advisory `select()` classified; [`Self::own_change`] mints the vouched root's own change,
+    /// which `rk-store`'s entry pass observes (AC-127's first half). No third route mints one.
     #[must_use]
     pub fn from_signal(signal: &DriftSignal) -> Self {
         Self {
             root: signal.root.clone(),
-            upstream: signal.upstream.clone(),
+            upstream: Some(signal.upstream.clone()),
             old_digest: signal.old_digest.clone(),
             new_digest: signal.new_digest.clone(),
+        }
+    }
+
+    /// **A vouched root's OWN change** (AC-127's first half; ADR-0025 as the render record reads
+    /// it; `s8f` §8f.5). `upstream` is `None` — written `null`, the own-change mark — `old_digest`
+    /// is the vouched digest and `new_digest` the file's (`Drift::Advisory`'s `vouched` and
+    /// `observed`). The four fields and no fifth: the causing commit is not carried (ADR-0189
+    /// decision 10). *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+    #[must_use]
+    pub fn own_change(root: &str, vouched: Digest, observed: Digest) -> Self {
+        Self {
+            root: root.to_owned(),
+            upstream: None,
+            old_digest: Some(vouched),
+            new_digest: observed,
         }
     }
 
@@ -99,7 +122,7 @@ impl Advisory {
     /// the old digest would make two advisories for one new digest distinct whenever the recorded
     /// baseline moved — which is *"one per re-entry"* by another route.
     #[must_use]
-    pub fn triple(&self) -> (String, String, String) {
+    pub fn triple(&self) -> (String, Option<String>, String) {
         (
             self.root.clone(),
             self.upstream.clone(),
@@ -113,8 +136,8 @@ impl Advisory {
     }
 
     #[must_use]
-    pub fn upstream(&self) -> &str {
-        &self.upstream
+    pub fn upstream(&self) -> Option<&str> {
+        self.upstream.as_deref()
     }
 
     #[must_use]
@@ -152,7 +175,7 @@ impl Advisory {
 /// ports, no journal — so instrument (4) is satisfied by the type rather than by a discipline.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdvisorySink {
-    seen: BTreeSet<(String, String, String)>,
+    seen: BTreeSet<(String, Option<String>, String)>,
     admitted: usize,
     suppressed: usize,
 }
@@ -194,7 +217,7 @@ impl AdvisorySink {
 
     /// The triples emitted so far this run, in key order.
     #[must_use]
-    pub fn emitted(&self) -> Vec<&(String, String, String)> {
+    pub fn emitted(&self) -> Vec<&(String, Option<String>, String)> {
         self.seen.iter().collect()
     }
 }
@@ -241,6 +264,14 @@ pub fn carried_by_gate(gate: &Event, advisories: &[Advisory]) -> Event {
     );
     Event::new(gate.kind, serde_json::Value::Object(object))
 }
+
+/// **The run's advisories not yet carried by a gate** (AC-525's second AND). The composition root
+/// creates one per run beside its [`AdvisorySink`], pushes each advisory the sink ADMITS, and binds
+/// it to the run's tier-1 boundaries (`tier_one::Boundary::with_advisories`); the next gate opened
+/// through one of them carries every advisory pending and takes them. Like the sink, it lives and
+/// dies with the run and holds no store. *(Added 2026-09-28, s8f build, package
+/// S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision 10, proposed.)*
+pub type PendingAdvisories = std::sync::Arc<std::sync::Mutex<Vec<Advisory>>>;
 
 /// Every `drift_advisory` the journal holds, in append order.
 #[must_use]

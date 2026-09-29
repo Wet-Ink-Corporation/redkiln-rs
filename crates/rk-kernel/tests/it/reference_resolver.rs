@@ -325,7 +325,10 @@ fn every_input_source_form_resolves_or_refuses_by_name() {
     assert_eq!(r("toolchain:logs?").unwrap(), Json::Null);
     refused(r("toolchain:backlog"), "me", "toolchain:backlog");
     // The RESOLVING outcome of `toolchain:<feed>` (R3FIX-8d, refuting round 3's minor): every shipped
-    // `[feed.rust.*]` row is `unprovided`, so the shipped registry cannot reach it. A registry that
+    // `[feed.rust.*]` row is `unprovided`, so the shipped registry cannot reach it.
+    // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106.)* No longer so:
+    // `[feed.rust.backlog]` is `verb = "backlog"`. The refusal above still holds, because this env's
+    // `feed` binds no producer, so the verb is reached and refuses by name. A registry that
     // declares a feed WITH a producing verb resolves the key to what `env.feed` returns for that verb,
     // which is the `logfeed` arm of `feed` above, and to nothing else.
     let feed_registry = VerbRegistry::from_toml(
@@ -997,12 +1000,21 @@ fn kb_checklist_and_feed_keys_resolve_through_the_declared_tables_and_an_undecla
         "an `unauthored` optional is null"
     );
     assert!(refused(r("checklist:smoke"), "draft", "checklist:smoke").contains("unauthored"));
+    // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106 ruling
+    // 5.)* ~~`toolchain:backlog`~~ is no longer `unprovided`: it is produced by the `backlog` verb.
+    // The `unprovided` pair moves to `toolchain:sbom`, which stays `unprovided` (§8f.7's list), and
+    // `backlog` is asserted to reach its producing verb, which this env's `feed` refuses by name.
     assert_eq!(
-        r("toolchain:backlog?").unwrap(),
+        r("toolchain:sbom?").unwrap(),
         Json::Null,
         "an `unprovided` optional is null"
     );
-    assert!(refused(r("toolchain:backlog"), "draft", "toolchain:backlog").contains("unprovided"));
+    assert!(refused(r("toolchain:sbom"), "draft", "toolchain:sbom").contains("unprovided"));
+    assert!(
+        refused(r("toolchain:backlog?"), "draft", "toolchain:backlog?")
+            .contains("its producing verb `backlog` refused"),
+        "`backlog` resolves through its producing verb"
+    );
 
     // A feed WITH a producing verb resolves by calling it through the port, via the runtime.
     let registry = VerbRegistry::from_toml(

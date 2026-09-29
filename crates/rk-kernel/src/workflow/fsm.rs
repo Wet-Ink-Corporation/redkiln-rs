@@ -299,6 +299,12 @@ use rk_types::time::Timestamp;
 
 use crate::select::Selection;
 
+/// **The drift gate's class** (`s8f` §8f.5; the render record ADR-0189 decision 4, proposed;
+/// D21-43 N11): the gate the entry pass opens over a `structured_drift`. It blocks the stage's
+/// EXIT until answered, and not its steps ([`RunState::awaiting_dispatch_gate`]). *(Added
+/// 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+pub const DRIFT_GATE_KIND: &str = "render.structured-drift";
+
 /// One gate as the trailers carry it — **AC-161's *"the gate records the trailers carry"*** and
 /// AC-039's *"a gate answer bound to `(token, tree_hash, deadline)`"*.
 ///
@@ -1194,8 +1200,37 @@ impl RunState {
     /// rejected, which is the failure AC-039's clause exists to prevent, one step removed. Asserted
     /// in both directions by `ac039_gate_record_and_the_void_answer`. A record settling it would
     /// make the assertion authoritative rather than merely stated.
+    ///
+    /// *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5; the render
+    /// record ADR-0189 decision 4, proposed.)* ~~in token order~~: a gate that blocks DISPATCH is
+    /// presented before a [`DRIFT_GATE_KIND`] gate, which blocks only the stage's exit; within each
+    /// class, token order. So with a drift gate and another gate both awaited, `answer` presents
+    /// the other one first (the one holding the run), then the drift gate.
     #[must_use]
     pub fn awaiting_gate(&self) -> Option<&Digest> {
+        self.awaiting_dispatch_gate().or_else(|| {
+            self.awaited()
+                .find(|t| self.gate_kind(t) == Some(DRIFT_GATE_KIND))
+        })
+    }
+
+    /// **The first awaited gate that holds DISPATCH** — every class but [`DRIFT_GATE_KIND`], in
+    /// token order. `next_action`'s first rule reads this: a `render.structured-drift` gate does
+    /// not stop the stage's steps, because the typed value is already whole (N11); it blocks the
+    /// stage's EXIT, which the advance's drift check refuses (`crate::runtime::tier_one::
+    /// open_drift_gate`). *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+    #[must_use]
+    pub fn awaiting_dispatch_gate(&self) -> Option<&Digest> {
+        self.awaited()
+            .find(|t| self.gate_kind(t) != Some(DRIFT_GATE_KIND))
+    }
+
+    fn gate_kind(&self, token: &Digest) -> Option<&str> {
+        self.gates_open.get(token).map(GateRecord::kind)
+    }
+
+    /// Every open gate neither answered, void nor expired, in token order.
+    fn awaited(&self) -> impl Iterator<Item = &Digest> {
         // A void token is TERMINAL (ADR-0017: void, not reconciled; AC-252: the kernel's next act
         // after a void is a fresh gate). It stays in `gates_open` as the record the trailers
         // carry, but it is not what the run awaits — otherwise a voided gate would hold the run
@@ -1203,7 +1238,7 @@ impl RunState {
         // nothing"*.
         // An EXPIRED token is not awaited either: the record stays (it is what the trailers carry
         // and what an escalation names), the expiry policy's terminal path decides what follows.
-        self.gates_open.keys().find(|t| {
+        self.gates_open.keys().filter(|t| {
             !self.gates_answered.contains_key(*t)
                 && !self.gates_void.contains(*t)
                 && !self.gates_expired.contains(*t)
@@ -1732,7 +1767,10 @@ pub fn next_action(
 ) -> Result<NextAction, FsmError> {
     // 1. ADR-0022: escalation is a kernel-owned durable `Gate:` mark and the kernel takes no
     //    action until it is answered — not a dispatch, and not a stage advance.
-    if let Some(token) = state.awaiting_gate() {
+    //    *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5; N11.)*
+    //    ~~`state.awaiting_gate()`~~: a `render.structured-drift` gate does not hold the stage's
+    //    steps (the typed value is whole); the advance's drift check holds its EXIT.
+    if let Some(token) = state.awaiting_dispatch_gate() {
         return Ok(NextAction::AwaitGate {
             token: token.clone(),
         });

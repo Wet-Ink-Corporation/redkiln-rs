@@ -220,6 +220,74 @@ pub struct ItemRefs {
     pub ids: Vec<String>,
 }
 
+/// What named an id in the backlog: a tier-1 `stage_transition` row carrying it as `item`, or an
+/// `item_create` step's journalled `ItemRefs` output (`s8f` §8f.7). The declaration order is the
+/// sort order. *(Added 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; the render record
+/// ADR-0189 decision 12, proposed.)*
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum NamedBy {
+    StageTransition,
+    ItemWrite,
+}
+
+/// One item record the store names and this worktree holds (`s8f` §8f.7).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BacklogItem {
+    /// The item id.
+    pub id: String,
+    /// The record's `kind`, or `null`.
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub kind: Option<String>,
+    /// The record's `stage`, or `null`.
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub stage: Option<String>,
+    /// The record's `[facets]` table verbatim: an absent facet stays absent, never defaulted.
+    pub facets: serde_json::Map<String, serde_json::Value>,
+    /// The record's `[provenance]` table (the item write's), or `null`.
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub provenance: Option<serde_json::Value>,
+    /// The `rk-types` digest of the record's bytes.
+    pub record_digest: String,
+    /// What named it, sorted.
+    pub named_by: Vec<NamedBy>,
+}
+
+/// A named id with no record in this worktree: listed, never dropped (`s8f` §8f.7).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BacklogAbsent {
+    /// The item id.
+    pub id: String,
+    /// What named it, sorted.
+    pub named_by: Vec<NamedBy>,
+}
+
+/// `backlog`'s output: the item records the store names, read by exact path (`s8f` §8f.7; D21-46
+/// R7). Serialised through `rk_store::canon::canonical`. *(Added 2026-09-28, s8f build, package
+/// S8F-P6-ITEMS-BACKLOG-FEEDS.)*
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BacklogSnapshot {
+    /// The named ids with a record, ordered by `id`.
+    pub items: Vec<BacklogItem>,
+    /// The named ids with no record, ordered by `id`.
+    pub absent: Vec<BacklogAbsent>,
+}
+
 /// `release_tag`'s output: the local tag written, its target, and the rollback target (`s8g`'s;
 /// the module doc). A first release names its rollback target explicitly as `none`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

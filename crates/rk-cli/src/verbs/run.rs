@@ -662,6 +662,14 @@ fn run_lane(
     // at the lane's first stage (`stage_seams`), before any reader exists; every stage's reader is
     // bound to it (AC-126).
     let mut reconciled: Option<rk_store::render::Reconciled> = None;
+    // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5; ADR-0189
+    // decisions 4 and 10, proposed.)* The run's `AdvisorySink` (AC-525's amendment (3): one
+    // memory per run, dropped with it), the advisories it admitted that no gate has carried yet
+    // (the next gate opened through this run's boundaries carries them), and the drifts the entry
+    // pass surfaced that the drift gate is opened over.
+    let mut advisory_sink = rk_kernel::runtime::advisory::AdvisorySink::for_run();
+    let pending: rk_kernel::runtime::advisory::PendingAdvisories = Arc::default();
+    let mut entry_drifts: Vec<serde_json::Value> = Vec::new();
 
     loop {
         visited.push(resolved.stage.clone());
@@ -696,16 +704,41 @@ fn run_lane(
                 return Ok(Exit::ConfigError);
             }
         };
-        let (reader, writer) = match stage_seams(&resolved, store, &owned, &run_id, &mut reconciled)
-        {
+        let (reader, writer) = match stage_seams(
+            &resolved,
+            store,
+            &owned,
+            &run_id,
+            &mut reconciled,
+            &mut EntryPass {
+                sink: &mut advisory_sink,
+                pending: &pending,
+                to_gate: &mut entry_drifts,
+            },
+        ) {
             Ok(seams) => seams,
             Err(exit) => return Ok(exit),
         };
+        // ---- C2's GATE (`s8f` §8f.5; D21-43 N11; ADR-0189 decision 4, proposed). *(dated
+        // 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* After the restore, the
+        // drift gate of class `render.structured-drift` opens git-first: its `Gate:` commit is
+        // the checkpoint that lands the restore. It holds the stage's EXIT, not its steps.
+        if !entry_drifts.is_empty() {
+            let drifts = std::mem::take(&mut entry_drifts);
+            let boundary = tier_one_boundary(&resolved, &owned, &ownership, &excluded)
+                .with_advisories(Arc::clone(&pending));
+            if let Err(exit) =
+                open_drift_gate(&resolved, store, boundary, drifts, &tree_hash, now, &run_id)?
+            {
+                return Ok(exit);
+            }
+        }
         // ---- R6 decision 4: still `null` at the lane's first stage, the gate opens (once), and
         // the FSM's first rule then awaits it (ADR-0022) before any selection reads the facet.
         // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* Each opening is a tier-1
         // act, through the boundary.
-        let mut facet_boundary = tier_one_boundary(&resolved, &owned, &ownership, &excluded);
+        let mut facet_boundary = tier_one_boundary(&resolved, &owned, &ownership, &excluded)
+            .with_advisories(Arc::clone(&pending));
         if let Err(exit) = open_derived_facet_gates(
             &resolved,
             store,
@@ -780,6 +813,14 @@ fn run_lane(
         // re-pointed from `UnwiredReadSeam` to `rk-store`'s reader, and the `emit` arm's write seam
         // is `rk-store`'s writer (§8f.2 item 10; ADR-0189 decision 9).
         let routing = routing.with_artifact_seams(reader, writer);
+        // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106; the render
+        // record ADR-0189 decisions 11 and 12, proposed.)* The `store` route's ONE seam, over
+        // `rk-store`'s item writer (`item_create`) and backlog reader (`backlog`) in the run-owned
+        // worktree. Unbound, the kernel's default refuses both by name.
+        let routing = match store_route(&resolved, store, &owned) {
+            Ok(route) => routing.with_store_route(route),
+            Err(exit) => return Ok(exit),
+        };
 
         let inputs = match bind_nodes(
             &resolved,
@@ -849,7 +890,12 @@ fn run_lane(
             &mut lane_end,
             // *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* The stage's tier-1
             // boundary: the lane entry, the advance and every gate transition commit through it.
-            Some(tier_one_boundary(&resolved, &owned, &ownership, &excluded)),
+            // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* Its gate
+            // openings (and its siblings') carry the run's pending advisories.
+            Some(
+                tier_one_boundary(&resolved, &owned, &ownership, &excluded)
+                    .with_advisories(Arc::clone(&pending)),
+            ),
         )?;
 
         // 🛑 **A NON-ZERO EXIT ENDS THE LANE, EVEN WHEN THE STAGE ADVANCED.** Found by this stage's
@@ -928,6 +974,36 @@ fn close_lane(
     excluded: &std::collections::BTreeSet<String>,
     closed: &mut bool,
 ) -> Result<Exit, Halt> {
+    // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5; ADR-0189
+    // decision 4, proposed.)* The lane's end is the last stage's EXIT, so the advance's drift
+    // check holds it too: an unanswered `render.structured-drift` gate at this stage refuses the
+    // `closed` mark by name, with no commit and no row, and `run` exits 0 at the gate.
+    let events = {
+        let guard = crate::store::acquire(store, "the run")?;
+        let read = guard.query(rk_kernel::runtime::journal_query(resolved.item.id()));
+        drop(guard);
+        match read {
+            Ok(events) => events,
+            Err(e) => {
+                eprintln!("redkiln: the store could not be read: {e:?}");
+                return Ok(Exit::ConfigError);
+            }
+        }
+    };
+    match rk_kernel::workflow::fsm::fold(resolved.item.id(), &resolved.stage, &events) {
+        Ok(state) => {
+            if let Some(refusal) =
+                rk_kernel::runtime::tier_one::open_drift_gate(&state, &events, &resolved.stage)
+            {
+                eprintln!("redkiln: {refusal}");
+                return Ok(Exit::Success);
+            }
+        }
+        Err(e) => {
+            eprintln!("redkiln: the recorded journal did not fold: {e}");
+            return Ok(Exit::ConfigError);
+        }
+    }
     let mut boundary = tier_one_boundary(resolved, owned, ownership, excluded);
     match boundary.act(
         store,
@@ -2320,6 +2396,33 @@ fn resume_and_read(
 
     // ADR-0152: the boundary the kernel took, reported to the lane loop before the terminal read.
     *advanced = recorded.advanced_to().map(ToOwned::to_owned);
+    // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision 4.)*
+    // The stage advance's drift check refused: named here, and the terminal read reports the gate.
+    // The stage has NOT exited, so it has no exit outcome yet: the review pass (whose seal sits on
+    // the review stage's exit outcome, `s8e` §8e.8) waits for the exit, and a held lane end is
+    // not an end. Without this, every invocation that re-entered the held stage sealed it again.
+    let held = match recorded.advance_refused() {
+        Some(refusal) => Some(refusal.to_owned()),
+        None if recorded.lane_ended() => {
+            match rk_kernel::workflow::fsm::fold(&item_id, &resolved.stage, &recorded.events) {
+                Ok(state) => rk_kernel::runtime::tier_one::open_drift_gate(
+                    &state,
+                    &recorded.events,
+                    &resolved.stage,
+                )
+                .map(|gate| gate.to_string()),
+                Err(e) => {
+                    eprintln!("redkiln: the recorded journal did not fold: {e}");
+                    return Ok(Exit::ConfigError);
+                }
+            }
+        }
+        None => None,
+    };
+    if let Some(refusal) = held {
+        eprintln!("redkiln: {refusal}");
+        return Ok(terminal_read(resolved, &recorded));
+    }
 
     // ~~§7h.2: the `Story:` axis. As close to the boundary as the seams allow, and BEFORE the
     // terminal read (ADR-0155 clause 4).~~ *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e`
@@ -2443,6 +2546,9 @@ fn stage_seams(
     owned: &Path,
     run_id: &str,
     reconciled: &mut Option<rk_store::render::Reconciled>,
+    // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* The run's sink and
+    // pending carriage, and where the entry's gated drifts are handed out.
+    entry: &mut EntryPass<'_>,
 ) -> Result<
     (
         Arc<rk_store::render::ArtifactReader>,
@@ -2478,6 +2584,10 @@ fn stage_seams(
             let sha = out.stdout_trimmed();
             Ok((!sha.is_empty()).then_some(sha))
         };
+        // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision
+        // 5.)* An applied `move-to-prose:<section>` answer is taken HERE, at the next entry and
+        // before C2's pass: the drifted bytes come from the causing commit, never the event.
+        move_answered_drifts_to_prose(resolved, store, &writer)?;
         match rk_store::render::reconcile_entry(&writer, &causing) {
             Ok(done) => {
                 for d in done.drifts() {
@@ -2489,6 +2599,14 @@ fn stage_seams(
                         d.old_digest.as_str(),
                         d.new_digest.as_str()
                     );
+                    entry.to_gate.push(serde_json::json!({
+                        "anchor": d.anchor,
+                        "causing_commit": d.causing_commit,
+                        "item": item,
+                        "kind": d.kind,
+                        "new_digest": d.new_digest.as_str(),
+                        "old_digest": d.old_digest.as_str(),
+                    }));
                 }
                 *reconciled = Some(done);
             }
@@ -2499,8 +2617,67 @@ fn stage_seams(
                 return Err(Exit::ConfigError);
             }
         }
+        // ---- AC-127's VOUCHED-ROOT HALF (`s8f` §8f.5; ADR-0189 decision 10, proposed). *(dated
+        // 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* In the same entry pass,
+        // after C2: an attached root not yet stored is stored under its vouched digest (a
+        // mismatch refuses by name and stores nothing), and a stored root whose file changed
+        // appends ONE own-change `drift_advisory` per `(root, null, new_digest)` per run, through
+        // the run's `AdvisorySink`. It never blocks, restores, rewrites or re-runs; the next gate
+        // the run opens carries it.
+        let checkout = Path::new(resolved.worktree.as_str()).to_path_buf();
+        let sink = &mut *entry.sink;
+        let pending = entry.pending;
+        let advised_item = item.clone();
+        let mut advise =
+            |d: &rk_types::drift::Drift| -> Result<rk_store::vouched::Admitted, String> {
+                let rk_types::drift::Drift::Advisory {
+                    root,
+                    vouched,
+                    observed,
+                } = d
+                else {
+                    return Err(format!(
+                        "a `{}` drift is not a vouched root's own change",
+                        d.kind()
+                    ));
+                };
+                let advisory = rk_kernel::runtime::advisory::Advisory::own_change(
+                    root,
+                    vouched.clone(),
+                    observed.clone(),
+                );
+                let first_in_run = sink.admit(&advisory);
+                if first_in_run {
+                    pending
+                        .lock()
+                        .map_err(|_| rk_kernel::runtime::LOCK_HALTS.to_owned())?
+                        .push(advisory.clone());
+                    eprintln!(
+                        "redkiln: the vouched root `{root}` of `{advised_item}` changed since it was \
+                     vouched ({} -> {}); recorded as advisory drift, it does not block, and the \
+                     next gate carries it (AC-127)",
+                        vouched.as_str(),
+                        observed.as_str()
+                    );
+                }
+                Ok(rk_store::vouched::Admitted {
+                    row: advisory.to_event().with_item(advised_item.clone()),
+                    first_in_run,
+                })
+            };
+        match rk_store::vouched::vouched_pass(&writer, &checkout, &mut advise) {
+            Ok(pass) => {
+                for d in pass.blocking() {
+                    entry.to_gate.push(blocking_drift_json(&item, d));
+                }
+            }
+            Err(e) => {
+                eprintln!("redkiln: the entry's vouched-root pass of `{item}` refused: {e}");
+                return Err(Exit::ConfigError);
+            }
+        }
     }
-    let Some(entry) = reconciled.as_ref() else {
+    let Some(reconciled) = reconciled.as_ref() else {
         return Err(Exit::ConfigError);
     };
     let exec = resolved.exec.clone();
@@ -2535,7 +2712,7 @@ fn stage_seams(
         Ok(Some(rk_store::render::RunRefBlob { bytes, tree }))
     };
     let reader = rk_store::render::ArtifactReader::new(
-        entry,
+        reconciled,
         at,
         schemas,
         store_journal(store, &item),
@@ -2566,6 +2743,168 @@ fn artifact_schemas(
         .kinds()
         .filter_map(|k| Some((k.name.clone(), k.schema.clone()?)))
         .collect())
+}
+
+/// **The `store` route's handler** (D21-106; the render record ADR-0189 decisions 11 and 12,
+/// proposed; `s8f` §8f.7). *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS.)*
+///
+/// ONE seam for both `store`-route verbs, bound on the kernel's routing:
+/// - `item_create` writes each extracted entry through `rk_store::item_write` into the run-owned
+///   worktree's `.redkiln/items/`, stamped with the activity, the run and the source `ImplReport`
+///   digest (the item's latest `emit` binding of it). Its output is the `ItemRefs` value.
+/// - `backlog` reads the item records the store names (every row of the store, through the port's
+///   `snapshot`) by exact path in the same tree, through `rk_store::backlog`, parsed here with the
+///   composition root's TOML reader. Its output is the canonical `BacklogSnapshot`.
+///
+/// A poisoned lock is a refusal carried by name, never recovered (ADR-0118), as [`store_journal`]'s.
+struct RunStoreRoute {
+    store: Arc<Mutex<dyn EventStore>>,
+    tree: PathBuf,
+    /// Each registry facet's `source` token, which decides what an item write may carry.
+    facets: BTreeMap<String, String>,
+}
+
+impl rk_kernel::runtime::step::StoreRoute for RunStoreRoute {
+    fn serve(
+        &self,
+        call: &rk_kernel::runtime::step::StoreCall<'_>,
+    ) -> Result<rk_ports::toolchain::VerbOutput, rk_types::error::StepError> {
+        let refuse = |capability: String| rk_types::error::StepError::Unsupported { capability };
+        let locked = || {
+            self.store
+                .lock()
+                .map_err(|_| refuse(rk_kernel::runtime::LOCK_HALTS.to_owned()))
+        };
+        match call.verb {
+            "item_create" => {
+                let items = call.inputs.get("items").ok_or_else(|| {
+                    refuse(
+                        "`item_create` was handed no `inputs.items` to write (ADR-0189 decision \
+                         11)"
+                        .to_owned(),
+                    )
+                })?;
+                let journal = locked()?
+                    .query(rk_kernel::runtime::journal_query(call.item))
+                    .map_err(|e| refuse(format!("{e:?}")))?;
+                let source = rk_store::item_write::emitted_digest(&journal, "ImplReport")
+                    .ok_or_else(|| {
+                        refuse(format!(
+                            "`item_create` found no `ImplReport` binding for `{}`, and an item \
+                             write names its source report's digest (ADR-0189 decision 11)",
+                            call.item
+                        ))
+                    })?;
+                let out = rk_store::item_write::write_items(
+                    &self.tree,
+                    items,
+                    &self.facets,
+                    &rk_store::item_write::Provenance {
+                        activity: call.activity_id_at_version.to_owned(),
+                        run: call.run_id.to_owned(),
+                        source_impl_report: source,
+                        source_item: call.item.to_owned(),
+                    },
+                )
+                .map_err(|e| refuse(format!("`item_create`: {e}")))?;
+                Ok(rk_ports::toolchain::VerbOutput {
+                    kind: "ItemRefs".to_owned(),
+                    value: serde_json::json!({ "ids": out.ids }),
+                })
+            }
+            "backlog" => {
+                let snapshot = locked()?.snapshot().map_err(|e| refuse(format!("{e:?}")))?;
+                let events: Vec<rk_types::event::Event> =
+                    snapshot.rows().iter().map(|r| r.event.clone()).collect();
+                let named = rk_store::backlog::names(&events);
+                let snap = rk_store::backlog::snapshot(&self.tree, &named, &parse_item_record)
+                    .map_err(|e| refuse(format!("`backlog`: {e}")))?;
+                Ok(rk_ports::toolchain::VerbOutput {
+                    kind: "BacklogSnapshot".to_owned(),
+                    value: rk_store::backlog::to_value(&snap)
+                        .map_err(|e| refuse(format!("`backlog`: {e}")))?,
+                })
+            }
+            other => Err(refuse(format!(
+                "`{other}` takes the `store` route, which serves `item_create` and `backlog` only \
+                 (ADR-0189 decisions 11 and 12)"
+            ))),
+        }
+    }
+}
+
+/// The run's [`RunStoreRoute`], over the run-owned worktree and the checkout's facet registry.
+fn store_route(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    owned: &Path,
+) -> Result<Arc<dyn rk_kernel::runtime::step::StoreRoute>, Exit> {
+    let path = Path::new(resolved.worktree.as_str())
+        .join(".redkiln")
+        .join("facets.toml");
+    let src = std::fs::read_to_string(&path).map_err(|e| {
+        eprintln!("redkiln: {}: {e}", path.display());
+        Exit::ConfigError
+    })?;
+    let registry = rk_kernel::registry::Registry::from_toml(&src).map_err(|e| {
+        eprintln!("redkiln: {}: {e}", path.display());
+        Exit::ConfigError
+    })?;
+    Ok(Arc::new(RunStoreRoute {
+        store: Arc::clone(store),
+        tree: owned.to_path_buf(),
+        facets: registry
+            .facets()
+            .map(|f| (f.name.clone(), f.source.as_str().to_owned()))
+            .collect(),
+    }))
+}
+
+/// **An item record, as the `backlog` read hands it back** (`s8f` §8f.7): the top-level `id`,
+/// `kind` and `stage`, the `[facets]` table verbatim and the `[provenance]` table, through the
+/// composition root's TOML reader (`rk-store` takes no TOML dependency).
+///
+/// # Errors
+/// A record that is not UTF-8 or not TOML, or whose `[facets]` is not a table.
+pub fn parse_item_record(bytes: &[u8]) -> Result<rk_store::backlog::ParsedRecord, String> {
+    let text = std::str::from_utf8(bytes).map_err(|e| format!("not UTF-8: {e}"))?;
+    let table: toml::Table = toml::from_str(text).map_err(|e| e.to_string())?;
+    let s = |k: &str| {
+        table
+            .get(k)
+            .and_then(toml::Value::as_str)
+            .map(str::to_owned)
+    };
+    let facets = match table.get("facets").map(toml_json) {
+        None => serde_json::Map::new(),
+        Some(serde_json::Value::Object(map)) => map,
+        Some(other) => return Err(format!("`facets` is {other}, not a table")),
+    };
+    Ok(rk_store::backlog::ParsedRecord {
+        id: s("id"),
+        kind: s("kind"),
+        stage: s("stage"),
+        facets,
+        provenance: table.get("provenance").map(toml_json),
+    })
+}
+
+/// A TOML value as JSON: a date-time as its TOML text, a float as a JSON number (which the
+/// canonical serialiser then refuses by name, as it refuses every float).
+fn toml_json(v: &toml::Value) -> serde_json::Value {
+    match v {
+        toml::Value::String(s) => serde_json::Value::from(s.clone()),
+        toml::Value::Integer(i) => serde_json::Value::from(*i),
+        toml::Value::Float(f) => serde_json::Value::from(*f),
+        toml::Value::Boolean(b) => serde_json::Value::from(*b),
+        toml::Value::Datetime(dt) => serde_json::Value::from(dt.to_string()),
+        toml::Value::Array(items) => {
+            serde_json::Value::Array(items.iter().map(toml_json).collect())
+        }
+        toml::Value::Table(t) => {
+            serde_json::Value::Object(t.iter().map(|(k, v)| (k.clone(), toml_json(v))).collect())
+        }
+    }
 }
 
 /// The store, as `rk-store` is handed it (`rk_store::render::Journal`): append one row, and read
@@ -4299,4 +4638,174 @@ fn bind_one(
             eprintln!("redkiln: the binder refused `{node_id}`: {e}");
             Exit::ConfigError
         })
+}
+
+/// **What the entry pass is handed and hands back** beside the seams (`s8f` §8f.5; ADR-0189
+/// decisions 4 and 10, proposed): the run's `AdvisorySink`, its pending carriage, and where the
+/// drifts the drift gate is opened over are handed out. *(Added 2026-09-28, s8f build, package
+/// S8F-P5-DRIFT-GATE-VOUCHED.)*
+struct EntryPass<'a> {
+    sink: &'a mut rk_kernel::runtime::advisory::AdvisorySink,
+    pending: &'a rk_kernel::runtime::advisory::PendingAdvisories,
+    to_gate: &'a mut Vec<serde_json::Value>,
+}
+
+/// A blocking drift the vouched pass classed (a correct pass classes none, AC-127), in the
+/// `structured_drift` payload's shape the drift gate names.
+fn blocking_drift_json(item: &str, drift: &rk_types::drift::Drift) -> serde_json::Value {
+    match drift {
+        rk_types::drift::Drift::StructuredSection {
+            artifact,
+            anchor,
+            stored,
+            observed,
+        } => serde_json::json!({
+            "anchor": anchor,
+            "causing_commit": null,
+            "item": item,
+            "kind": artifact,
+            "new_digest": observed.as_str(),
+            "old_digest": stored.as_str(),
+        }),
+        other => serde_json::json!({
+            "anchor": other.kind(),
+            "causing_commit": null,
+            "item": item,
+            "kind": other.kind(),
+            "new_digest": null,
+            "old_digest": null,
+        }),
+    }
+}
+
+/// **The drift gate** (`s8f` §8f.5; D21-43 N11; ADR-0189 decision 4, proposed), opened git-first
+/// through the stage's boundary over the drifts the entry pass surfaced: class
+/// `render.structured-drift`, its `Gate:` commit the checkpoint that lands the restore (the LANDED
+/// arm), its row naming the stage it holds and every drift. Its reach is one past the fold's; its
+/// deadline the pack's `gate_deadline_secs` from now; its opening run this stage run.
+/// *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the store; a refusal is the inner `Exit` (`3`), named.
+fn open_drift_gate(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    mut boundary: rk_kernel::runtime::tier_one::Boundary,
+    drifts: Vec<serde_json::Value>,
+    tree_hash: &str,
+    now: i64,
+    run_id: &str,
+) -> Result<Result<(), Exit>, Halt> {
+    use rk_kernel::runtime::tier_one::{DRIFT_KIND, drift_gate_act, drift_gate_record};
+    let item = resolved.item.id();
+    let state = match folded_state(resolved, store)? {
+        Ok(state) => state,
+        Err(exit) => return Ok(Err(exit)),
+    };
+    let deadline = rk_types::time::Timestamp::from_unix_seconds(
+        now.saturating_add(resolved.extras.gate_deadline_secs),
+    );
+    let reach = state.reaches(DRIFT_KIND).saturating_add(1);
+    let named: Vec<String> = drifts
+        .iter()
+        .map(|d| {
+            format!(
+                "`{}` at `{}`",
+                d.get("kind")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("?"),
+                d.get("anchor")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("?")
+            )
+        })
+        .collect();
+    let act = drift_gate_record(tree_hash, deadline, reach)
+        .and_then(|record| drift_gate_act(&record, &resolved.stage, drifts))
+        .map(|act| act.opened_by(&resolved.stage, run_id));
+    let committed = act.and_then(|act| boundary.act(store, act));
+    if let Err(e) = committed {
+        eprintln!("redkiln: the drift gate of `{item}` could not be opened: {e}");
+        return Ok(Err(Exit::ConfigError));
+    }
+    eprintln!(
+        "redkiln: a `{DRIFT_KIND}` gate is open for `{item}` over {}: the stage's steps continue, \
+         and its exit waits for `redkiln answer {item} confirm-restore` or `redkiln answer {item} \
+         move-to-prose:<section>` (N11; AC-125)",
+        named.join(", ")
+    );
+    Ok(Ok(()))
+}
+
+/// **`move-to-prose`, at the next entry** (ADR-0189 decision 5): every drift gate answered
+/// `move-to-prose:<section>` whose move has not been applied yet — no `artifact.write` naming its
+/// kind's sidecar follows the answer — has each of its drifts' bytes read from the causing commit
+/// and appended to `<section>` through `rk-store`'s writer, one `artifact.write` each. *(Added
+/// 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+///
+/// # Errors
+/// An [`Exit`] (`3`), named, when the journal will not read or fold, or a move refuses.
+fn move_answered_drifts_to_prose(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    writer: &rk_store::render::ArtifactWriter,
+) -> Result<(), Exit> {
+    let item = resolved.item.id();
+    let events = store
+        .lock()
+        .map_err(|_| {
+            eprintln!("redkiln: {}", rk_kernel::runtime::LOCK_HALTS);
+            Exit::ConfigError
+        })?
+        .query(rk_kernel::runtime::journal_query(item))
+        .map_err(|e| {
+            eprintln!("redkiln: the store could not be read: {e:?}");
+            Exit::ConfigError
+        })?;
+    let state = rk_kernel::workflow::fsm::fold(item, &resolved.stage, &events).map_err(|e| {
+        eprintln!("redkiln: the recorded journal did not fold: {e}");
+        Exit::ConfigError
+    })?;
+    let exec = resolved.exec.clone();
+    let repo = resolved.worktree.clone();
+    let read_at = move |commit: &str, path: &str| -> Result<Vec<u8>, String> {
+        exec.run(
+            rk_git::git_exec::GitOp::CatFile,
+            &repo,
+            ["cat-file", "blob", &format!("{commit}:{path}")],
+        )
+        .map(|out| out.stdout)
+        .map_err(|e| git_refusal_text(&e))
+    };
+    for mv in rk_kernel::runtime::tier_one::drift_moves(&state, &events) {
+        for drift in &mv.drifts {
+            let Some(kind) = drift.get("kind").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let sidecar =
+                rk_store::render::managed_path(item, &rk_store::render::sidecar_name(kind));
+            let applied = events.iter().skip(mv.answered_at + 1).any(|e| {
+                e.kind == rk_types::event_kind::EventKind::ArtifactWrite
+                    && e.payload.get("path").and_then(serde_json::Value::as_str)
+                        == Some(sidecar.as_str())
+            });
+            if applied {
+                continue;
+            }
+            if let Err(e) = rk_store::render::move_to_prose(writer, drift, &mv.section, &read_at) {
+                eprintln!(
+                    "redkiln: the `move-to-prose` answer to gate {} of `{item}` could not be \
+                     applied: {e}",
+                    mv.token
+                );
+                return Err(Exit::ConfigError);
+            }
+            eprintln!(
+                "redkiln: the drifted `{kind}` text of gate {} is moved into its `{}` prose \
+                 section (ADR-0189 decision 5)",
+                mv.token, mv.section
+            );
+        }
+    }
+    Ok(())
 }

@@ -111,8 +111,8 @@ use std::collections::BTreeMap;
 use rk_ports::toolchain::{Selection, StepBound, VerbCall, VerbOutput};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verb_output::{
-    BuildArtifact, BuildReport, BuildStatus, ItemRefs, ReleaseTag, ScanReport, SetupResult,
-    SmokeResult, SmokeStatus,
+    BacklogSnapshot, BuildArtifact, BuildReport, BuildStatus, ItemRefs, ReleaseTag, ScanReport,
+    SetupResult, SmokeResult, SmokeStatus,
 };
 
 use super::activity::{ActivityReport, Decision, DecisionKind, StepAt};
@@ -231,6 +231,11 @@ pub struct ToolRouting {
     /// the composition root and applied by `replay::resume_routed` to the runtime it builds.
     /// Unbound: the runtime keeps its non-emitting stubs.
     artifact_seams: ArtifactSeamSlot,
+    /// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106; the render
+    /// record ADR-0189 decisions 11 and 12, proposed.)* **The `store` route's ONE seam**, shared by
+    /// the step-grain `Route::Store` arm (`item_create`) and `call_feed`'s `store` arm (`backlog`).
+    /// Unbound: every `store`-route call refuses by name ([`UnboundStoreRoute`]), never `Ok`-empty.
+    store_route: StoreRouteSlot,
 }
 
 impl ToolRouting {
@@ -247,6 +252,25 @@ impl ToolRouting {
             row_inputs: BTreeMap::new(),
             run_branch: RunBranchSlot(None),
             artifact_seams: ArtifactSeamSlot(None),
+            store_route: StoreRouteSlot(None),
+        }
+    }
+
+    /// Bind the `store` route's handler (D21-106; ADR-0189 decisions 11 and 12, proposed): the
+    /// composition root's seam over `rk-store`'s item writer and backlog reader. *(dated
+    /// 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS.)*
+    #[must_use]
+    pub fn with_store_route(mut self, route: std::sync::Arc<dyn StoreRoute>) -> Self {
+        self.store_route = StoreRouteSlot(Some(route));
+        self
+    }
+
+    /// The `store` route's handler: the bound one, or [`UnboundStoreRoute`], which refuses by name.
+    #[must_use]
+    pub fn store_route(&self) -> &dyn StoreRoute {
+        match self.store_route.0.as_deref() {
+            Some(route) => route,
+            None => &UnboundStoreRoute,
         }
     }
 
@@ -401,6 +425,84 @@ pub trait ReviewRoutes: Send + Sync {
     ) -> Result<Box<dyn crate::review::reexec::ReExecutor + '_>, StepError>;
 }
 
+/// **One `store`-route call** (D21-106): the verb, the step's resolved `inputs` (empty for a feed),
+/// and where it runs. *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS.)*
+#[derive(Debug, Clone, Copy)]
+pub struct StoreCall<'a> {
+    /// The registry verb (`item_create`, `backlog`).
+    pub verb: &'a str,
+    /// The step's resolved `inputs` table; a feed call's is empty.
+    pub inputs: &'a BTreeMap<String, serde_json::Value>,
+    /// The item the walk runs for.
+    pub item: &'a str,
+    /// The stage the runtime runs.
+    pub stage: &'a str,
+    /// `activity_id@version` of the activation that reached the route.
+    pub activity_id_at_version: &'a str,
+    /// The stage run's id.
+    pub run_id: &'a str,
+}
+
+/// **The `store` route's handler** (D21-106; the render record ADR-0189 decisions 11 and 12,
+/// proposed). `rk-kernel` opens no managed tree, so the composition root binds this over
+/// `rk-store`'s item writer (`item_create`) and its backlog reader (`backlog`), as it binds the
+/// review routes. ONE seam serves both the step-grain `Route::Store` arm and `call_feed`'s `store`
+/// arm. Its output is still typed at the boundary through the closed decode table against the
+/// row's `outputs` (D21-106 ruling 4). *(dated 2026-09-28, s8f build, package
+/// S8F-P6-ITEMS-BACKLOG-FEEDS.)*
+pub trait StoreRoute: Send + Sync {
+    /// Serve one call.
+    ///
+    /// # Errors
+    /// A [`StepError`] naming what the route could not do.
+    fn serve(&self, call: &StoreCall<'_>) -> Result<VerbOutput, StepError>;
+}
+
+/// **The kernel's default: REFUSES BY NAME** (D21-106 ruling 3). Unlike `UnwiredReadSeam`, whose
+/// `read` returns `Ok(())`, it never answers with an empty value: an unbound kernel that served an
+/// empty `BacklogSnapshot` would be N14's silent `null`.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UnboundStoreRoute;
+
+impl StoreRoute for UnboundStoreRoute {
+    fn serve(&self, call: &StoreCall<'_>) -> Result<VerbOutput, StepError> {
+        Err(StepError::Unsupported {
+            capability: format!(
+                "`{}` takes the `store` route, and no store-route handler is bound for this run: \
+                 the composition root binds `rk-store`'s (D21-106; ADR-0189 decisions 11 and 12), \
+                 and an unbound route is refused by name, never served empty",
+                call.verb
+            ),
+        })
+    }
+}
+
+/// The bound [`StoreRoute`], compared by identity as [`ReviewSlot`] is.
+#[derive(Clone, Default)]
+struct StoreRouteSlot(Option<std::sync::Arc<dyn StoreRoute>>);
+
+impl std::fmt::Debug for StoreRouteSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(if self.0.is_some() {
+            "StoreRouteSlot(bound)"
+        } else {
+            "StoreRouteSlot(unbound)"
+        })
+    }
+}
+
+impl PartialEq for StoreRouteSlot {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (None, None) => true,
+            (Some(a), Some(b)) => {
+                std::ptr::addr_eq(std::sync::Arc::as_ptr(a), std::sync::Arc::as_ptr(b))
+            }
+            _ => false,
+        }
+    }
+}
+
 /// The bound [`ReviewRoutes`], compared by identity: two routings are equal when both bind none or
 /// both bind the same object.
 #[derive(Clone, Default)]
@@ -499,6 +601,9 @@ enum ToolCall {
     ReviewClone,
     /// R5: `verdict_record`, through `review::confirm` over [`ReviewRoutes::reexecutor`].
     ReviewConfirm,
+    /// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106.)* The `store`
+    /// route, through [`StoreRoute::serve`].
+    Store,
 }
 
 /// *(2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decisions 9 and 11, proposed.)* ADR-0148's
@@ -766,6 +871,11 @@ fn decode_verb_value(expected: &str, output: &VerbOutput, verdict: bool) -> Resu
             .map(|_| ())
             .map_err(undecodable),
         "ItemRefs" => serde_json::from_value::<ItemRefs>(value)
+            .map(|_| ())
+            .map_err(undecodable),
+        // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; ADR-0189 decision 12,
+        // proposed.)* `backlog`'s output.
+        "BacklogSnapshot" => serde_json::from_value::<BacklogSnapshot>(value)
             .map(|_| ())
             .map_err(undecodable),
         "ReleaseTag" => serde_json::from_value::<ReleaseTag>(value)
@@ -1058,14 +1168,10 @@ impl super::Runtime {
                 }
                 ToolCall::Verb
             }
-            Route::Store => {
-                return Err(StepError::Unsupported {
-                    capability: format!(
-                        "`{verb}` takes the `store` route, which is not executed until `s8f` \
-                         builds it (ADR-0170 decision 1)"
-                    ),
-                });
-            }
+            // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106; ADR-0189
+            // decision 11, proposed.)* ~~Refused naming the route until `s8f`~~: the route is served
+            // through the composition root's store-route seam, whose unbound default refuses by name.
+            Route::Store => ToolCall::Store,
             Route::Git => {
                 return Err(StepError::Unsupported {
                     capability: format!(
@@ -1226,6 +1332,23 @@ impl super::Runtime {
                     .ok_or_else(|| unreachable_unbound(verb))?;
                 review_confirm(step, verb, inputs, review, routing, routes, reached)
                     .map(|value| Some((entry.outputs.clone(), value)))
+            }
+            // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106.)* The
+            // `store` route: the step's resolved inputs to the ONE store-route seam, and its output
+            // typed at the boundary through the closed decode table, as a `run_verb` output is.
+            ToolCall::Store => {
+                let _ = bound;
+                *reached = true;
+                let output = routing.store_route().serve(&StoreCall {
+                    verb,
+                    inputs,
+                    item: env.item,
+                    stage: env.stage,
+                    activity_id_at_version: env.activity,
+                    run_id: self.run_id(),
+                })?;
+                decode_verb_value(&entry.outputs, &output, verdict)?;
+                Ok(Some((entry.outputs.clone(), output.value)))
             }
         }
     }
@@ -2425,7 +2548,7 @@ impl super::Runtime {
         site: &StepSite<'_>,
         f: impl FnOnce(&super::reference::Env<'_>) -> R,
     ) -> R {
-        let feed = |verb: &str| self.call_feed(verb);
+        let feed = |verb: &str| self.call_feed(verb, site);
         let routing = self.tool_routing();
         let env = super::reference::Env {
             item: site.item,
@@ -2446,12 +2569,33 @@ impl super::Runtime {
     /// **A feed's producing verb** (D21-43 N14; `s8c`'s `resolve_source` names it): a `toolchain`
     /// row with no inputs, called through `run_verb` under the row's own `${toolchain.*}` bound and
     /// typed through the closed decode table. Any other route refuses by name.
-    fn call_feed(&self, verb: &str) -> Result<serde_json::Value, String> {
+    ///
+    /// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106 ruling 1; the
+    /// render record ADR-0189 decision 12, proposed.)* **Widened by exactly one shape**: a `store`
+    /// row with no inputs (`backlog`) is served by the ONE store-route seam the step-grain arm uses,
+    /// and its output still passes the closed decode table against the row's `outputs`. Every other
+    /// combination keeps the refusal below, byte-unchanged.
+    fn call_feed(&self, verb: &str, site: &StepSite<'_>) -> Result<serde_json::Value, String> {
         let routing = self.tool_routing();
         let entry = routing
             .registry()
             .and_then(|r| r.entry(verb))
             .ok_or_else(|| format!("the feed verb `{verb}` has no registry row"))?;
+        if entry.route == Route::Store && entry.inputs.is_empty() {
+            let output = routing
+                .store_route()
+                .serve(&StoreCall {
+                    verb,
+                    inputs: &BTreeMap::new(),
+                    item: site.item,
+                    stage: self.stage(),
+                    activity_id_at_version: site.activity,
+                    run_id: self.run_id(),
+                })
+                .map_err(|e| format!("{e:?}"))?;
+            decode_verb_output(&entry.outputs, &output).map_err(|e| format!("{e:?}"))?;
+            return Ok(output.value);
+        }
         if entry.route != Route::Toolchain || !entry.inputs.is_empty() {
             return Err(format!(
                 "the feed verb `{verb}` takes the `{}` route with {} declared input(s); a feed is \

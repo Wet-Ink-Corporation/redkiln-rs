@@ -22,11 +22,18 @@
 /// `rk-store-artifacts` (design §9.1) — the review and verify gates' stored records: the finding
 /// identity (AC-305) and the advisory sink's accounting (AC-310, AC-530). Step 7b-ii.
 pub mod artifacts;
+/// The `toolchain:backlog` producer: a `store`-route read of the item records the store names, by
+/// exact path -- ADR-0189 decision 12, proposed (`s8f` §8f.7). *(dated 2026-09-28, s8f build,
+/// package S8F-P6-ITEMS-BACKLOG-FEEDS.)*
+pub mod backlog;
 pub mod canon;
 pub mod conn;
 /// `t2_event`'s insert and its selector's `SELECT` — ADR-0181 decision 4, ADR-0182 decision 4.
 pub mod events;
 pub mod identity;
+/// `item_create`'s `store`-route handler: the in-repo item write -- ADR-0189 decision 11, proposed
+/// (`s8f` §8f.7). *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS.)*
+pub mod item_write;
 pub mod locator;
 pub mod memo;
 /// The migration runner and the one opening transaction — ADR-0181 decision 6.
@@ -40,3 +47,4 @@ pub mod tier;
 /// The tier-1 statement functions — ADR-0181 decisions 3 and 4. Called only by the SQLite
 /// adapter's `append_tier1` and `rebuild`.
 pub mod tier_one;
+pub mod vouched;

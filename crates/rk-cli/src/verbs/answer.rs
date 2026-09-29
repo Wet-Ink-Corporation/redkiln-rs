@@ -610,7 +610,7 @@ fn answer_the_gate(
             // RT-59: that `answer` is this row's producer is ROUTED, not decided -- nothing in
             // `rk-kernel/src` writes `artifact.write` [measured], so this verb is its first
             // producer. §7d.18 holds the record OWED.
-            if let Err(exit) = store_attachments(resolved, args, store)? {
+            if let Err(exit) = store_attachments(resolved, args, store, token)? {
                 return Ok(exit);
             }
             Ok(Exit::Success)
@@ -667,6 +667,18 @@ fn fold(
 
 /// Store every attachment as a human-supplied root -- one `artifact.write` row each.
 ///
+/// *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5 and §8f.2 items
+/// 12 and 14; the render record ADR-0189 decisions 8 and 10, proposed; D21-47, review M2; D21-48
+/// X11.)* ~~Four members~~: the row gains `stage` and `run` — the answered gate's stage and the
+/// `run_id` of the run that OPENED it, both read from the token's `opened` row in
+/// `t1_gate_transition` (its `opening_run` columns), each `null` when that row was re-derived by a
+/// rebuild (X11: `RK-D-UNREAD` reads a `null` run as an unknown run, never a match) — and the
+/// carrier `attached_path`, the attachment's path relative to the invoking checkout's root in `/`
+/// form when it lies under it, and otherwise its absolute path in `/` form. The next `run`'s entry
+/// stores the root from it under the vouched digest (`rk_store::vouched`). The row is keyed to the
+/// item (ADR-0182's interim key). The heading below is the ADR-0116 reading as it stood at `s7d`,
+/// kept as the record of it.
+///
 /// # 🛑 FOUR MEMBERS, AND A FIFTH IS SCHEMA DRIFT
 ///
 /// ADR-0116 decision 1's shape is `{ kind, item, schema_version, digest }`. Decision 5 calls an
@@ -686,10 +698,28 @@ fn store_attachments(
     resolved: &run::Resolved,
     args: &AnswerArgs,
     store: &Arc<Mutex<dyn EventStore>>,
+    token: &rk_types::digest::Digest,
 ) -> Result<Result<(), Exit>, Halt> {
     if args.attach.is_empty() {
         return Ok(Ok(()));
     }
+    // The answered gate's opening run, off its `opened` row's columns (`s8e` §8e.7).
+    let opening = {
+        let guard = crate::store::acquire(store, "the answer")?;
+        let snapshot = guard.snapshot();
+        drop(guard);
+        match snapshot {
+            Ok(snapshot) => opening_run_of(&snapshot, token),
+            Err(e) => {
+                eprintln!("redkiln: the store could not be read: {e:?}");
+                return Ok(Err(Exit::ConfigError));
+            }
+        }
+    };
+    let (stage, run_id) = opening.map_or(
+        (serde_json::Value::Null, serde_json::Value::Null),
+        |(s, r)| (serde_json::Value::from(s), serde_json::Value::from(r)),
+    );
 
     let root = std::path::Path::new(resolved.worktree.as_str());
     let path = root.join(".redkiln").join("artifacts.toml");
@@ -725,15 +755,21 @@ fn store_attachments(
                 return Ok(Err(Exit::ConfigError));
             }
         };
-        rows.push(rk_types::event::Event::new(
-            rk_types::event_kind::EventKind::ArtifactWrite,
-            serde_json::json!({
-                "kind": attachment.kind,
-                "item": args.item,
-                "schema_version": kind.schema,
-                "digest": rk_types::digest::sha256(&bytes).as_str(),
-            }),
-        ));
+        rows.push(
+            rk_types::event::Event::new(
+                rk_types::event_kind::EventKind::ArtifactWrite,
+                serde_json::json!({
+                    "kind": attachment.kind,
+                    "item": args.item,
+                    "schema_version": kind.schema,
+                    "digest": rk_types::digest::sha256(&bytes).as_str(),
+                    "stage": stage,
+                    "run": run_id,
+                    rk_store::vouched::ATTACHED_PATH: attached_path(root, &attachment.path),
+                }),
+            )
+            .with_item(args.item.clone()),
+        );
     }
 
     let mut guard = crate::store::acquire(store, "the answer")?;
@@ -746,4 +782,45 @@ fn store_attachments(
     }
     drop(guard);
     Ok(Ok(()))
+}
+
+/// **The opening run of the gate `token`** — the `(stage, run_id)` columns of its `opened` row in
+/// `t1_gate_transition`, or `None` when the store holds none (a rebuilt opening, D21-48 X11).
+/// *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+fn opening_run_of(
+    snapshot: &rk_ports::event_store::Snapshot,
+    token: &rk_types::digest::Digest,
+) -> Option<(String, String)> {
+    snapshot
+        .rows()
+        .iter()
+        .rev()
+        .filter(|row| row.event.kind == rk_types::event_kind::EventKind::GateOpened)
+        .filter(|row| {
+            row.event
+                .payload
+                .get("token")
+                .and_then(serde_json::Value::as_str)
+                == Some(token.as_str())
+        })
+        .find_map(|row| row.opening_run.clone())
+}
+
+/// **The carrier `attached_path`** (ADR-0189 decision 8): `path` relative to the invoking
+/// checkout's root, in `/` form, when it lies under it; otherwise its absolute path in `/` form.
+/// Both sides are canonicalised first, so a short name, a `\\?\` prefix or a relative argument
+/// cannot move a path outside the root. *(Added 2026-09-28, s8f build, package
+/// S8F-P5-DRIFT-GATE-VOUCHED.)*
+#[must_use]
+pub fn attached_path(checkout: &Path, path: &Path) -> String {
+    let canon = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let slash = |p: &Path| {
+        let text = p.display().to_string().replace('\\', "/");
+        text.strip_prefix("//?/")
+            .map_or(text.clone(), str::to_owned)
+    };
+    let full = canon(path);
+    let root = canon(checkout);
+    full.strip_prefix(&root)
+        .map_or_else(|_| slash(&full), slash)
 }

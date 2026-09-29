@@ -1262,9 +1262,20 @@ pub struct RecordedRun {
     /// `closed` mark (`tier_one::close_act`). `false` for every other terminal, `record` and
     /// `read_run` included — the same explicit-carrier rule as [`Self::advanced_to`].
     lane_end: bool,
+    /// *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5; ADR-0189
+    /// decision 4, proposed.)* **The advance was refused by the drift check**: the named refusal
+    /// (the class, the token and the drifted artifact). `None` for every other terminal, `record`
+    /// and `read_run` included — the explicit-carrier rule again.
+    advance_refused: Option<String>,
 }
 
 impl RecordedRun {
+    /// The drift check's named refusal, when [`resume`]'s advance was refused (`s8f` §8f.5).
+    #[must_use]
+    pub fn advance_refused(&self) -> Option<&str> {
+        self.advance_refused.as_deref()
+    }
+
     #[must_use]
     pub fn run_id(&self) -> &str {
         &self.run_id
@@ -1795,6 +1806,7 @@ pub fn record(inputs: &RunInputs, ports: Ports) -> Result<RecordedRun, ReplayErr
         // never advances (ADR-0152).
         advanced: None,
         lane_end: false,
+        advance_refused: None,
     })
 }
 
@@ -2038,6 +2050,7 @@ pub fn resume_routed(
     // ADR-0152: set by the `AdvanceStage` arm alone, and reported out as `advanced_to()`.
     let mut advanced: Option<String> = None;
     let mut lane_end = false;
+    let mut advance_refused: Option<String> = None;
     loop {
         let state = fsm::fold(item.id(), &inputs.stage, &journal)?;
         let ctx = fsm_context(runtime, &item, &activations);
@@ -2095,8 +2108,15 @@ pub fn resume_routed(
             // off the journal rather than rebuilt here to agree with it.
             NextAction::AdvanceStage { to, .. } => {
                 let before = rt.journal(item.id())?.len();
-                rt.step(&action, None, cap, now)?;
+                let outcome = rt.step(&action, None, cap, now)?;
                 journal.extend(rt.journal(item.id())?.into_iter().skip(before));
+                // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189
+                // decision 4, proposed.)* A refused advance is not an advance: the stage stays,
+                // and the refusal is reported out by name.
+                if let crate::runtime::StepOutcome::AdvanceRefused { refusal } = outcome {
+                    advance_refused = Some(refusal.to_string());
+                    break;
+                }
                 advanced = Some(to.clone());
                 break;
             }
@@ -2130,6 +2150,7 @@ pub fn resume_routed(
         next_action,
         advanced,
         lane_end,
+        advance_refused,
     })
 }
 
@@ -2599,6 +2620,7 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         // accepted ADR-0151 pins, for a value no replay reads. `lane_end` likewise (s8e S8E-P6).
         advanced: None,
         lane_end: false,
+        advance_refused: None,
     })
 }
 

@@ -1202,3 +1202,901 @@ fn every_artifact_read_in_a_lane_follows_its_entrys_reconcile() {
         "each entry's reads follow its own reconcile record: the re-entry read again after its own"
     );
 }
+
+// --------------------------------------------- the drift gate and the vouched root (§8f.5)
+//
+// *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; the render record ADR-0189
+// decisions 4, 5 and 10, proposed.)* The drift lane: `implement`'s `emit-report` emits its agent
+// step's output as `ImplReport` AND as `Spec`, the one human-facing kind (layout C), and the lane
+// gains a last stage, `wrapup` (optional, no activity), so `review` — where the drift is found —
+// has a successor and its exit is an ADVANCE, the act the stage advance's drift check refuses. A
+// human's edit of `Spec.md`'s structured section is a COMMIT on `rk-run/<item>` (§8f.4 re-entry
+// item 3), made here with git itself in the run-owned tree.
+
+/// The gate class the entry pass opens over a structured drift. Spelled here, not imported.
+const DRIFT_KIND: &str = "render.structured-drift";
+
+/// `emit-report`, emitting its agent step's output as `ImplReport` and as `Spec`.
+const EMIT_SPEC: &str = r#"[activity]
+id           = "emit-report"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
+
+[[step]]
+id      = "check"
+kind    = "agent"
+role    = "implementer"
+outputs = "value:ImplReport"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ImplReport = "${check.outputs}", Spec = "${check.outputs}" }
+"#;
+
+/// Replace `from` with `to` in `path`, asserting it was there exactly once.
+fn patch(path: &Path, from: &str, to: &str) {
+    let text =
+        std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{} reads: {e}", path.display()));
+    assert_eq!(
+        text.matches(from).count(),
+        1,
+        "PREMISE: `{from}` occurs once in {}",
+        path.display()
+    );
+    std::fs::write(path, text.replace(from, to))
+        .unwrap_or_else(|e| panic!("{} writes: {e}", path.display()));
+}
+
+/// The fixture lane, with `Spec` emitted at `implement` and a last stage `wrapup` after `review`.
+fn drift_lane() -> tempfile::TempDir {
+    let repo = lane_e2e::lane_repo();
+    let rk = repo.path().join(".redkiln");
+    std::fs::write(rk.join("catalog").join("emit-report.toml"), EMIT_SPEC)
+        .expect("the catalog is written");
+    for pack in ["bug-standard.toml", "story.toml"] {
+        let path = rk.join("packs").join(pack);
+        patch(
+            &path,
+            r#"stage_order = ["triage", "discovery", "implement", "review"]"#,
+            r#"stage_order = ["triage", "discovery", "implement", "review", "wrapup"]"#,
+        );
+        patch(
+            &path,
+            r#"review = "mandatory" }"#,
+            r#"review = "mandatory", wrapup = "optional" }"#,
+        );
+    }
+    patch(
+        &rk.join("facets.toml"),
+        r#"values = ["triage", "implement", "review"]"#,
+        r#"values = ["triage", "implement", "review", "wrapup"]"#,
+    );
+    repo
+}
+
+/// `Spec.md`'s repo-relative path in the run-owned tree.
+fn spec_md(item: &str) -> String {
+    format!(".redkiln/artifacts/{item}/Spec.md")
+}
+
+/// **A human's edit of a structured section, committed on `rk-run/<item>`**: the canonical JSON
+/// of `summary` in `Spec.md` is rewritten, and the run-owned tree commits it.
+fn human_edits_the_spec(root: &Path, item: &str) -> String {
+    let tree = crate::run_tree(root, item).path;
+    let md = tree.join(spec_md(item));
+    let text = std::fs::read_to_string(&md).expect("PREMISE: the rendering is in the run tree");
+    let edited = text.replace("\"pack-min\"", "\"a human edited this\"");
+    assert_ne!(
+        edited, text,
+        "PREMISE: the structured `summary` section is edited"
+    );
+    std::fs::write(&md, edited).expect("the rendering is edited");
+    assert_eq!(git_rc(&tree, &["add", "--", &spec_md(item)]), Some(0));
+    assert_eq!(
+        git_rc(
+            &tree,
+            &["commit", "--quiet", "-m", "a human edits the spec"]
+        ),
+        Some(0),
+        "PREMISE: the human's edit is a commit on the run ref"
+    );
+    lane_e2e::ref_sha(root, item).expect("the run ref names the human's commit")
+}
+
+/// Every `gate_opened` row of the drift gate's class.
+fn drift_gates(root: &Path) -> Vec<Event> {
+    support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::GateOpened)
+        .filter(|e| e.payload.get("kind").and_then(serde_json::Value::as_str) == Some(DRIFT_KIND))
+        .collect()
+}
+
+/// Every `stage_transition` row INTO `stage`.
+fn transitions_into(root: &Path, stage: &str) -> usize {
+    support::store_rows(root)
+        .iter()
+        .filter(|e| e.kind == EventKind::StageTransition)
+        .filter(|e| e.payload.get("to").and_then(serde_json::Value::as_str) == Some(stage))
+        .count()
+}
+
+/// `answer <item> <option> [--attach <kind>=<path>]`, in process, as the operator types it.
+fn answer(root: &Path, item: &str, option: &str, attach: Option<(&str, PathBuf)>) -> Exit {
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let args = rk_cli::cli::AnswerArgs {
+        item: item.to_owned(),
+        option: option.to_owned(),
+        attach: attach
+            .into_iter()
+            .map(|(kind, path)| rk_cli::cli::Attachment {
+                kind: kind.to_owned(),
+                path,
+            })
+            .collect(),
+        explain_sufficed: rk_cli::cli::YesNo::Yes,
+        toml_opened: rk_cli::cli::YesNo::No,
+    };
+    rk_cli::verbs::answer::run(
+        &cli,
+        &args,
+        &support::clean_env(),
+        rk_cli::verbs::Startup::real(),
+    )
+    .unwrap_or_else(|halt| panic!("`answer {item}` halted: {halt:?}"))
+}
+
+/// Invocation 1 emits the spec and stops in `review`; the human's edit is committed; invocation 2
+/// finds the drift at its entry. Returns the rendering's bytes as the store wrote them, and the
+/// human's commit.
+fn walk_into_a_drift_gate(root: &Path, item: &str) -> (Vec<u8>, String) {
+    run(
+        root,
+        item,
+        &ScriptedFactory::new(vec![lane_e2e::implement()]),
+    );
+    let run_ref = lane_e2e::run_ref(item);
+    let rendered = blob(root, &run_ref, &spec_md(item))
+        .expect("PREMISE: invocation 1 landed the spec's rendering on the run ref");
+    assert!(
+        !lane_e2e::story_stages(root, item)
+            .iter()
+            .any(|s| s == "wrapup" || s == "closed"),
+        "PREMISE: invocation 1 stops before the lane's end"
+    );
+    let human = human_edits_the_spec(root, item);
+    let second = ScriptedFactory::new(vec![lane_e2e::review()]);
+    assert_eq!(
+        run(root, item, &second),
+        Exit::Success,
+        "`run` exits 0 at the drift gate, like any gate"
+    );
+    assert_eq!(
+        second.dispatches(),
+        1,
+        "the stage's steps continue to dispatch behind the drift gate: `review` ran"
+    );
+    (rendered, human)
+}
+
+/// **N11: a `structured_drift` opens a drift gate that blocks the stage's exit until it is
+/// answered** (`s8f` §8f.5; ADR-0189 decision 4). Invocation 2's entry pass appends one
+/// `structured_drift` (the causing commit is the human's), restores the section from the type,
+/// and opens ONE gate of class `render.structured-drift`, git first, whose `Gate:` commit lands
+/// the restore. `review`'s step still runs; the advance into `wrapup` is refused — no boundary
+/// commit, no row. Invocation 3, with the gate unanswered, is refused again and moves nothing on
+/// the run ref. Once `answer … confirm-restore` applies, invocation 4 advances and closes the
+/// lane. Red under M23 (no gate opens) and M47 (the advance's check removed).
+#[test]
+fn a_drift_gate_blocks_the_stage_exit_until_it_is_answered() {
+    let repo = drift_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    let (rendered, human) = walk_into_a_drift_gate(root, item);
+    let run_ref = lane_e2e::run_ref(item);
+
+    let drifts: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::StructuredDrift)
+        .collect();
+    assert_eq!(drifts.len(), 1, "one `structured_drift`: {drifts:?}");
+    assert_eq!(
+        drifts[0].payload["causing_commit"],
+        serde_json::json!(human),
+        "the causing commit is the human's"
+    );
+    assert_eq!(
+        drifts[0].payload["anchor"],
+        serde_json::json!("summary"),
+        "the drifted section is named"
+    );
+    assert_eq!(
+        blob(root, &run_ref, &spec_md(item)).as_deref(),
+        Some(rendered.as_slice()),
+        "the section is RESTORED from the type, and the restore is on the run ref"
+    );
+
+    let gates = drift_gates(root);
+    assert_eq!(gates.len(), 1, "exactly one drift gate: {gates:?}");
+    let token = gates[0].payload["token"]
+        .as_str()
+        .expect("the gate carries its token")
+        .to_owned();
+    assert_eq!(
+        gates[0].payload["stage"],
+        serde_json::json!("review"),
+        "the gate is the stage's"
+    );
+    assert!(
+        gate_commits(root, item)
+            .iter()
+            .any(|(_, v)| v.first() == Some(&token)
+                && v.get(3).map(String::as_str) == Some(DRIFT_KIND)
+                && v.get(5).map(String::as_str) == Some("opened")),
+        "the gate is opened git-first: a `Gate: {token} … {DRIFT_KIND} … opened` commit"
+    );
+    assert!(
+        !lane_e2e::story_stages(root, item)
+            .iter()
+            .any(|s| s == "wrapup"),
+        "the stage's exit is BLOCKED: no `Story: … wrapup` mark"
+    );
+    assert_eq!(
+        transitions_into(root, "wrapup"),
+        0,
+        "and no row into `wrapup`"
+    );
+
+    // ---- unanswered, a third invocation is refused again and moves nothing ---------------------
+    let tip = lane_e2e::ref_sha(root, item);
+    let transitions = count_kind(root, EventKind::StageTransition);
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success,
+        "`run` exits 0 at the gate"
+    );
+    assert_eq!(
+        lane_e2e::ref_sha(root, item),
+        tip,
+        "no boundary commit while the gate is unanswered: {:?}",
+        subjects(root, item)
+    );
+    assert_eq!(
+        count_kind(root, EventKind::StageTransition),
+        transitions,
+        "and no row"
+    );
+    assert_eq!(drift_gates(root).len(), 1, "and no second gate");
+
+    // ---- answered, the exit is released ---------------------------------------------------------
+    assert_eq!(answer(root, item, "confirm-restore", None), Exit::Success);
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success
+    );
+    let stages = lane_e2e::story_stages(root, item);
+    assert!(
+        stages.iter().any(|s| s == "wrapup"),
+        "the answered gate releases the exit: {stages:?}"
+    );
+    assert_eq!(stages.last().map(String::as_str), Some("closed"));
+}
+
+/// **The drift gate's two answers** (ADR-0189 decision 5), each releasing the stage's exit: a
+/// table over `confirm-restore` (the restore stands; the value is unchanged) and
+/// `move-to-prose:notes` (at the next entry the drifted bytes, read from the CAUSING COMMIT, are
+/// appended to the `notes` prose section through the writer as one `artifact.write`, and the
+/// structured section stays restored). In both arms the next `run` walks the lane to its `closed`
+/// mark.
+#[test]
+fn answering_the_drift_gate_either_way_releases_the_stage_exit() {
+    for option in ["confirm-restore", "move-to-prose:notes"] {
+        let repo = drift_lane();
+        let root = repo.path();
+        let item = THROUGH_ITEM;
+        walk_into_a_drift_gate(root, item);
+        let run_ref = lane_e2e::run_ref(item);
+        assert_eq!(
+            drift_gates(root).len(),
+            1,
+            "{option}: PREMISE: the gate is open"
+        );
+        let sidecar = format!(".redkiln/artifacts/{item}/Spec.json");
+        let before = blob(root, &run_ref, &sidecar).expect("PREMISE: the sidecar is landed");
+
+        assert_eq!(
+            answer(root, item, option, None),
+            Exit::Success,
+            "{option}: the answer applies"
+        );
+        let writes_before = count_kind(root, EventKind::ArtifactWrite);
+        assert_eq!(
+            run(root, item, &ScriptedFactory::new(Vec::new())),
+            Exit::Success
+        );
+        let stages = lane_e2e::story_stages(root, item);
+        assert_eq!(
+            stages.last().map(String::as_str),
+            Some("closed"),
+            "{option}: the answer releases the stage's exit: {stages:?}"
+        );
+        let after = blob(root, &run_ref, &sidecar).expect("the sidecar is on the run ref");
+        let notes = serde_json::from_slice::<serde_json::Value>(&after).expect("json")["notes"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        if option == "confirm-restore" {
+            assert_eq!(after, before, "{option}: the typed value is unchanged");
+            assert!(notes.is_empty(), "{option}: nothing moved into prose");
+        } else {
+            assert!(
+                notes.contains("a human edited this"),
+                "{option}: the drifted bytes are in the `notes` prose section: {notes:?}"
+            );
+            assert_eq!(
+                count_kind(root, EventKind::ArtifactWrite) - writes_before,
+                1,
+                "{option}: one `artifact.write` for the move"
+            );
+            let md = String::from_utf8(
+                blob(root, &run_ref, &spec_md(item)).expect("the rendering is landed"),
+            )
+            .expect("utf-8");
+            assert!(
+                md.contains("\"pack-min\""),
+                "{option}: the structured section stays restored from the type"
+            );
+        }
+    }
+}
+
+/// The attached root's bytes, as vouched.
+const VOUCHED_ROOT: &[u8] = b"{\"items\":[]}\n";
+/// The root after a step edited it on the run ref.
+const EDITED_ROOT: &[u8] = b"{\"items\":[\"a finding added after vouching\"]}\n";
+
+/// **AC-127's first half, through the lane** (ADR-0189 decision 10). A `Findings` root is attached
+/// at `lane-1`'s abstention gate (a pack question whose `vouch` option attaches it), stored at the
+/// next entry under its vouched digest, and then edited by that invocation's `implement` step (so
+/// the edit lands on the run ref). The NEXT invocation's entry appends ONE `drift_advisory`
+/// `{ root, upstream: null, old_digest: vouched, new_digest }`; no `render.structured-drift` gate
+/// opens; the root is not restored; and the next gate the item reaches — a refused landing's,
+/// opened later in that invocation — carries the advisory. Answered `exclude`, the lane walks to
+/// its `closed` mark: the changed root never blocked the stage's exit, and the new run records its
+/// own advisory (AC-525's amendment (3)). Red under M36 (the change classed blocking).
+#[test]
+fn a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = GATE_ITEM;
+    let processes = root.join(".redkiln").join("processes");
+    std::fs::create_dir_all(&processes).expect("the processes directory");
+    std::fs::write(
+        processes.join("vouch.toml"),
+        r#"[question."unknown_facet:has_repro"]
+text = "Does the item reproduce? `vouch` attaches the human's findings."
+options = ["approve", { id = "vouch", attaches = "Findings" }]
+"#,
+    )
+    .expect("the question is written");
+
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success,
+        "PREMISE: the abstention gate opens"
+    );
+    write(root, "notes/brief.json", VOUCHED_ROOT);
+    assert_eq!(
+        answer(
+            root,
+            item,
+            "vouch",
+            Some(("Findings", root.join("notes/brief.json")))
+        ),
+        Exit::Success,
+        "PREMISE: the root is attached"
+    );
+    let attach: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::ArtifactWrite)
+        .filter(|e| e.payload.get("attached_path").is_some())
+        .collect();
+    assert_eq!(attach.len(), 1, "one attach row: {attach:?}");
+    assert_eq!(
+        attach[0].payload["attached_path"],
+        serde_json::json!("notes/brief.json")
+    );
+    assert_eq!(attach[0].payload["stage"], serde_json::json!("implement"));
+    assert!(
+        attach[0].payload["run"]
+            .as_str()
+            .is_some_and(|r| r.starts_with("implement-")),
+        "the attach row names the run that opened the gate: {attach:?}"
+    );
+
+    // ---- invocation 2: the root is stored at the entry, then `implement`'s step edits it --------
+    let run_tree = crate::run_tree(root, item).path;
+    let root_rel = format!(".redkiln/artifacts/{item}/Findings.root.json");
+    let edit_rel = root_rel.clone();
+    let second = writing(&run_tree, vec![lane_e2e::implement()], move |n, tree| {
+        if n == 0 {
+            write(tree, &edit_rel, EDITED_ROOT);
+        }
+    });
+    run(root, item, &second);
+    let run_ref = lane_e2e::run_ref(item);
+    assert_eq!(
+        blob(root, &run_ref, &root_rel).as_deref(),
+        Some(EDITED_ROOT),
+        "PREMISE: the root was stored and the step's edit of it landed"
+    );
+    assert_eq!(
+        count_kind(root, EventKind::DriftAdvisory),
+        0,
+        "PREMISE: invocation 2's entry saw the root as vouched"
+    );
+
+    // ---- invocation 3: the change is advisory, and the next gate carries it --------------------
+    let third = writing(&run_tree, vec![lane_e2e::review()], |n, tree| {
+        if n == 0 {
+            write(tree, ".env", b"SECRET=1\n");
+        }
+    });
+    assert_eq!(
+        run(root, item, &third),
+        Exit::Success,
+        "exit 0 at the landing's gate"
+    );
+    let advisories: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::DriftAdvisory)
+        .collect();
+    assert_eq!(advisories.len(), 1, "one advisory: {advisories:?}");
+    let advisory = &advisories[0].payload;
+    assert_eq!(
+        advisory["upstream"],
+        serde_json::Value::Null,
+        "the own-change mark"
+    );
+    assert_eq!(advisory["root"], serde_json::json!("Findings"));
+    assert_eq!(
+        advisory["old_digest"],
+        serde_json::json!(rk_types::digest::sha256(VOUCHED_ROOT).as_str())
+    );
+    assert_eq!(
+        advisory["new_digest"],
+        serde_json::json!(rk_types::digest::sha256(EDITED_ROOT).as_str())
+    );
+    assert!(
+        drift_gates(root).is_empty(),
+        "a vouched root's change opens NO drift gate"
+    );
+    assert_eq!(
+        count_kind(root, EventKind::StructuredDrift),
+        0,
+        "and is not a structured drift"
+    );
+    assert_eq!(
+        blob(root, &run_ref, &root_rel).as_deref(),
+        Some(EDITED_ROOT),
+        "the changed root is never restored"
+    );
+    let gates = landing_gates(root);
+    assert_eq!(
+        gates.len(),
+        1,
+        "PREMISE: the refused landing's gate opened: {gates:?}"
+    );
+    assert_eq!(
+        gates[0].payload.get("advisories"),
+        Some(&serde_json::Value::Array(vec![advisory.clone()])),
+        "the NEXT gate the item reaches carries the advisory (ADR-0025; `carried_by_gate`)"
+    );
+
+    // ---- answered, the lane walks to its end past the changed root -----------------------------
+    assert_eq!(answer(root, item, "exclude", None), Exit::Success);
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(vec![lane_e2e::review()])),
+        Exit::Success
+    );
+    let stages = lane_e2e::story_stages(root, item);
+    assert_eq!(
+        stages.last().map(String::as_str),
+        Some("closed"),
+        "the changed root does not block the stage's exit: {stages:?}"
+    );
+    assert_eq!(
+        count_kind(root, EventKind::DriftAdvisory),
+        2,
+        "the new run records its own advisory (AC-525's amendment (3): one per run)"
+    );
+    assert!(drift_gates(root).is_empty(), "and never a drift gate");
+}
+
+// ------------------------------------------ the item write and the backlog feed (§8f.7)
+//
+// *(Added 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-47 cross #6;
+// D21-106; the render record ADR-0189 decisions 11 and 12, proposed.)* The render lane gains a last
+// stage, `closeout`, holding a trimmed `debt-logging` or `closure-record` (the shipped activities'
+// steps, with `pack-min`'s one role). The temp registry's `[verb]` rows and `[feed.*.backlog]`
+// tables are copied VERBATIM from the shipped `.redkiln/registry.toml`, so the shipped rows are what
+// the lane runs on: M34 (the shipped `[feed.rust.backlog]` left `unprovided`) and M46 (the shipped
+// `item_create` row left refusing) reach these tests.
+
+/// The workspace root, where the shipped `.redkiln/` lives.
+fn workspace_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
+}
+
+/// A harness that records every spec it is handed, then answers from its script.
+struct Capturing {
+    inner: FakeHarness,
+    specs: Arc<Mutex<Vec<ActivitySpec>>>,
+}
+
+impl Harness for Capturing {
+    fn dispatch(&self, spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
+        self.specs.lock().expect("not poisoned").push(spec.clone());
+        self.inner.dispatch(spec, store)
+    }
+}
+
+/// The shipped registry's line for `[verb]` row `verb`, verbatim.
+fn shipped_verb_row(verb: &str) -> String {
+    let src = std::fs::read_to_string(workspace_root().join(".redkiln").join("registry.toml"))
+        .expect("the shipped registry reads");
+    let rows: Vec<&str> = src
+        .lines()
+        .filter(|l| l.split('=').next().map(str::trim) == Some(verb))
+        .collect();
+    assert_eq!(
+        rows.len(),
+        1,
+        "PREMISE: the shipped registry has one `{verb}` row: {rows:?}"
+    );
+    rows[0].to_owned()
+}
+
+/// The shipped registry's `[feed.<toolchain>.backlog]` table, header and body, verbatim.
+fn shipped_feed_table(toolchain: &str) -> String {
+    let src = std::fs::read_to_string(workspace_root().join(".redkiln").join("registry.toml"))
+        .expect("the shipped registry reads");
+    let header = format!("[feed.{toolchain}.backlog]");
+    let mut lines = src.lines().skip_while(|l| l.trim() != header);
+    let head = lines
+        .next()
+        .expect("PREMISE: the shipped registry declares the backlog feed");
+    let body: Vec<&str> = lines
+        .take_while(|l| !l.trim().is_empty() && !l.starts_with('['))
+        .filter(|l| !l.starts_with('#'))
+        .collect();
+    assert_eq!(body.len(), 1, "PREMISE: one key under {header}: {body:?}");
+    format!("{head}\n{}\n", body[0])
+}
+
+/// `debt-logging`, the shipped activity's three steps with `pack-min`'s one role.
+const DEBT_LOGGING: &str = r#"[activity]
+id           = "debt-logging"
+version      = 1
+stage        = "closeout"
+provides     = ["DebtRegisterEntry"]
+requires     = ["ImplReport"]
+derived_from = ["ImplReport"]
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 2, tokens = 50000, wall_clock_secs = 600 }
+
+[[step]]
+id      = "extract"
+kind    = "agent"
+role    = "implementer"
+inputs  = { report = "artifact:ImplReport" }
+outputs = "value:DebtRegisterEntry"
+
+[[step]]
+id      = "file"
+kind    = "tool"
+run     = "toolchain:item_create"
+inputs  = { items = "${extract.outputs.items}" }
+outputs = "value:ItemRefs"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { DebtRegisterEntry = "${extract.outputs}" }
+evidence  = ["${file}"]
+"#;
+
+/// `closure-record`, the shipped activity's `audit` (reading the backlog feed as a MANDATORY input),
+/// `clean` and `emit`, with `pack-min`'s one role.
+const CLOSURE_RECORD: &str = r#"[activity]
+id           = "closure-record"
+version      = 1
+stage        = "closeout"
+provides     = ["ClosureRecord"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 3, tokens = 100000, wall_clock_secs = 1200 }
+
+[[step]]
+id      = "audit"
+kind    = "agent"
+role    = "implementer"
+inputs  = { backlog = "toolchain:backlog" }
+outputs = "value:SelfCheck"
+
+[[step]]
+id      = "clean"
+kind    = "check"
+inputs  = { audit = "${audit.outputs}" }
+expr    = "audit.failed == 0"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ClosureRecord = "${audit.outputs}" }
+"#;
+
+/// The render lane with a last stage `closeout` whose baseline is `kind`, holding `activity`
+/// (`id`, TOML), and a registry of the shipped `item_create` and `backlog` rows and backlog feeds.
+fn closeout_lane(kind: &str, id: &str, activity: &str) -> tempfile::TempDir {
+    let repo = render_lane();
+    let root = repo.path();
+    let rk = root.join(".redkiln");
+    std::fs::write(rk.join("catalog").join(format!("{id}.toml")), activity)
+        .expect("the closeout activity is written");
+    for pack in ["bug-standard.toml", "story.toml"] {
+        let path = rk.join("packs").join(pack);
+        patch(
+            &path,
+            r#"stage_order = ["triage", "discovery", "implement", "review"]"#,
+            r#"stage_order = ["triage", "discovery", "implement", "review", "closeout"]"#,
+        );
+        patch(
+            &path,
+            r#"review = "mandatory" }"#,
+            r#"review = "mandatory", closeout = "recommended" }"#,
+        );
+        let mut src = std::fs::read_to_string(&path).expect("the pack reads");
+        src.push_str(&format!(
+            "\n[stage.closeout]\nbaseline = [\"{kind}\"]\n\n[activity.{id}]\ntimeout_secs = 900\n"
+        ));
+        std::fs::write(&path, src).expect("the pack writes");
+    }
+    patch(
+        &rk.join("facets.toml"),
+        r#"values = ["triage", "implement", "review"]"#,
+        r#"values = ["triage", "implement", "review", "closeout"]"#,
+    );
+    let mut artifacts = std::fs::read_to_string(rk.join("artifacts.toml")).expect("artifacts");
+    for k in ["DebtRegisterEntry", "ClosureRecord"] {
+        artifacts.push_str(&format!(
+            "\n[artifact.{k}]\nsource = \"activity\"\nschema = \"{k}\"\n"
+        ));
+    }
+    std::fs::write(rk.join("artifacts.toml"), artifacts).expect("artifacts writes");
+    for k in ["DebtRegisterEntry", "ClosureRecord", "SelfCheck"] {
+        std::fs::write(
+            rk.join("schemas").join(format!("{k}.json")),
+            format!(
+                "{{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \
+                 \"title\": \"{k}\",\n  \"type\": \"object\"\n}}\n"
+            ),
+        )
+        .expect("the schema writes");
+    }
+    let pin = "0123456789abcdef0123456789abcdef01234567";
+    std::fs::write(
+        rk.join("registry.toml"),
+        format!(
+            "[verb]\n{}\n{}\n\n[toolchain.rust]\nbuild_timeout = {{ secs = 60, measured = [30], \
+             rule = \"r\", pin = \"{pin}\", command = \"c\" }}\n\n{}\n{}",
+            shipped_verb_row("item_create"),
+            shipped_verb_row("backlog"),
+            shipped_feed_table("rust"),
+            shipped_feed_table("node"),
+        ),
+    )
+    .expect("the registry writes");
+    repo
+}
+
+/// The environment a lane with a detected Rust toolchain runs under: `clean_env` plus the
+/// process-start keys the toolchain adapters refuse to run without (as `lane_e2e`'s own).
+fn toolchain_env() -> rk_cli::env::Env {
+    let mut map = std::collections::BTreeMap::new();
+    for key in [
+        "PATH",
+        "Path",
+        "PATHEXT",
+        "SystemRoot",
+        "SystemDrive",
+        "TMP",
+        "TEMP",
+    ] {
+        if let Some(v) = std::env::var_os(key) {
+            map.insert(key.to_owned(), v.to_string_lossy().into_owned());
+        }
+    }
+    rk_cli::env::Env::from_map(map)
+}
+
+/// The `activity_committed` rows of `activity`'s step `step`.
+fn step_committed(root: &Path, activity: &str, step: &str) -> Vec<Event> {
+    support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::ActivityCommitted)
+        .filter(|e| {
+            e.payload["activity_id_at_version"].as_str() == Some(activity)
+                && e.payload["step_id"].as_str() == Some(step)
+        })
+        .collect()
+}
+
+/// **D21-47 cross #6: `debt-logging` walks past `file` through `item_create`'s `store`-route
+/// handler** (`s8f` §8f.7). A `FakeHarness` `extract` outputs two items; the activity walks past
+/// `file` to its `emit`; the `file` step commits the `ItemRefs` value naming both ids; and the run
+/// ref holds the two item files, each carrying its `[provenance]` (the activity at its version and
+/// the run). M46 leaves the row refusing.
+#[test]
+fn debt_logging_walks_past_file_through_item_create() {
+    let repo = closeout_lane("DebtRegisterEntry", "debt-logging", DEBT_LOGGING);
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    let extract = Ok(Typed::new(
+        rk_types::typed::SchemaId::new("DebtRegisterEntry"),
+        serde_json::json!({ "items": [{ "title": "a shortcut" }, { "title": "a second" }] }),
+    ));
+    let lane = ScriptedFactory::new(vec![lane_e2e::implement(), lane_e2e::review(), extract]);
+    assert_eq!(run(root, item, &lane), Exit::Success);
+    assert_eq!(
+        lane.dispatches(),
+        3,
+        "PREMISE: implement, review and extract each dispatched once"
+    );
+
+    let files = step_committed(root, "debt-logging@1", "file");
+    let ids: Vec<String> = [1, 2].iter().map(|n| format!("{item}-debt-{n}")).collect();
+    assert_eq!(
+        files.len(),
+        1,
+        "`file` did not commit: `debt-logging` stopped at `item_create` (rows: {files:?})"
+    );
+    assert_eq!(
+        (
+            files[0].payload["schema"].as_str(),
+            files[0].payload["result"].clone()
+        ),
+        (Some("ItemRefs"), serde_json::json!({ "ids": ids })),
+        "the committed `ItemRefs` names both minted ids"
+    );
+    let completion: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| {
+            e.kind == EventKind::ActivityCommitted
+                && e.payload["activity_id_at_version"].as_str() == Some("debt-logging@1")
+                && e.payload["completion"] == serde_json::json!(true)
+        })
+        .collect();
+    assert_eq!(
+        completion.len(),
+        1,
+        "the activity walked past `file` to its `emit`"
+    );
+    let run_ref = lane_e2e::run_ref(item);
+    for id in &ids {
+        let path = format!(".redkiln/items/{id}.toml");
+        let bytes = blob(root, &run_ref, &path)
+            .unwrap_or_else(|| panic!("`{path}` is not on {run_ref}: the item write did not land"));
+        let text = String::from_utf8(bytes).expect("UTF-8");
+        assert!(
+            text.contains(&format!(
+                "id = \"{id}\"\nkind = \"tech-debt\"\nstage = \"triage\"\n"
+            )) && text.contains("activity = \"debt-logging@1\"")
+                && text.contains("run = \"closeout-"),
+            "`{path}` is not an item record with its provenance:\n{text}"
+        );
+    }
+    assert_eq!(
+        lane_e2e::story_stages(root, item)
+            .last()
+            .map(String::as_str),
+        Some("closed"),
+        "the lane walks to its end past `debt-logging`"
+    );
+}
+
+/// **D21-46 R7: `closure-record` walks past `audit` on the `backlog` feed** (`s8f` §8f.7). `audit`
+/// reads `toolchain:backlog` as a MANDATORY input; the feed resolves through the shipped `backlog`
+/// verb's `store` route (the run's store-route seam), and the snapshot the audit is handed names the
+/// item itself, a tier-1 boundary's `item`. The activity completes and the lane closes. M34 leaves
+/// the shipped `[feed.rust.backlog]` `unprovided`.
+#[test]
+fn closure_record_walks_past_audit_on_the_backlog_feed() {
+    let repo = closeout_lane("ClosureRecord", "closure-record", CLOSURE_RECORD);
+    let root = repo.path();
+    support::install_review_toolchain(root);
+    let item = THROUGH_ITEM;
+    let audit = Ok(Typed::new(
+        rk_types::typed::SchemaId::new("SelfCheck"),
+        serde_json::json!({ "passed": 1, "failed": 0, "notes": "all hold" }),
+    ));
+    let specs = Arc::new(Mutex::new(Vec::new()));
+    let lane = ScriptedFactory::over(Box::new(Capturing {
+        inner: FakeHarness::scripted(vec![lane_e2e::implement(), lane_e2e::review(), audit]),
+        specs: Arc::clone(&specs),
+    }));
+    let exit = lane_e2e::ran(
+        rk_cli::verbs::run::run(
+            &lane_e2e::cli(root, item),
+            &lane_e2e::args(item),
+            &toolchain_env(),
+            lane_e2e::seam(&lane),
+        ),
+        item,
+    );
+    assert_eq!(exit, Exit::Success, "the lane refused");
+    assert_eq!(
+        lane.dispatches(),
+        3,
+        "`audit` was not dispatched: `closure-record` stopped on its `toolchain:backlog` input"
+    );
+    let completion: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| {
+            e.kind == EventKind::ActivityCommitted
+                && e.payload["activity_id_at_version"].as_str() == Some("closure-record@1")
+                && e.payload["completion"] == serde_json::json!(true)
+        })
+        .collect();
+    assert_eq!(
+        completion.len(),
+        1,
+        "`closure-record` walked past `audit` to its `emit`"
+    );
+    // What `audit` was handed: the snapshot of the ids the STORE names. The item itself is named by
+    // its tier-1 boundaries; its record lives in the checkout, not the run-owned tree, so it is
+    // listed ABSENT there, never dropped.
+    let specs = specs.lock().expect("not poisoned").clone();
+    let audit_spec = specs.last().expect("PREMISE: three dispatches");
+    let backlog = audit_spec
+        .inputs
+        .iter()
+        .find(|(k, _)| k == "backlog")
+        .map(|(_, v)| v.clone())
+        .unwrap_or_else(|| panic!("`audit` was handed no `backlog`: {:?}", audit_spec.inputs));
+    assert_eq!(
+        backlog["absent"],
+        serde_json::json!([{ "id": item, "named_by": ["stage_transition"] }]),
+        "the backlog is not the snapshot of the ids the store names: {backlog}"
+    );
+    assert_eq!(backlog["items"], serde_json::json!([]), "{backlog}");
+    assert_eq!(
+        lane_e2e::story_stages(root, item)
+            .last()
+            .map(String::as_str),
+        Some("closed"),
+        "the lane walks to its end past `closure-record`"
+    );
+}

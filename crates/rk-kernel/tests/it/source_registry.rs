@@ -383,12 +383,16 @@ fn the_catalog_source_census_is_fifty_with_fourteen_declared() {
                 "`{key}` is declared but no catalog input reaches it"
             );
         }
-        // The feeds: backlog is mandatory where the lane reads it and refuses; logs? and sbom? are
-        // optional and null.
-        assert!(matches!(
+        // The feeds: ~~backlog is mandatory where the lane reads it and refuses;~~ logs? and sbom?
+        // are optional and null.
+        // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106
+        // ruling 5.)* `backlog` is produced by the `backlog` verb (`s8f` §8f.7), so it resolves to
+        // its producing verb, and the census's declared-key count is unchanged. Was:
+        // `Err(SourceRefusal::Unprovided { .. })`.
+        assert_eq!(
             reg.resolve_source(toolchain, "toolchain:backlog"),
-            Err(SourceRefusal::Unprovided { .. })
-        ));
+            Ok(SourceValue::FeedVerb("backlog".to_owned()))
+        );
         for optional in ["toolchain:logs?", "toolchain:sbom?"] {
             assert_eq!(
                 reg.resolve_source(toolchain, optional),

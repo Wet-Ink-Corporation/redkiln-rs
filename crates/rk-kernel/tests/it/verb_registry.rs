@@ -185,7 +185,11 @@ fn shipped_catalog() -> Catalog {
 /// *(dated 2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* Twelve, not ten: R5 adds
 /// `shallow_clone` (route `review_clone`) and `verdict_record` (route `review_confirm`), each by
 /// record, as ADR-0170 decision 1 provides. The test keeps its name; its premise moved with R5.
-const SHIPPED_ROWS: [(&str, &str, &str, bool); 12] = [
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106; the render
+/// record ADR-0189 decision 12, proposed.)* Thirteen: `s8f` adds `backlog`, the `store` route's first
+/// read (`live = true`), in the same commit as the two `[feed.*.backlog]` rows. No route is added.
+const SHIPPED_ROWS: [(&str, &str, &str, bool); 13] = [
     ("build", "port", "BuildReport", false),
     ("change_summary", "port", "ChangeSummary", false),
     ("item_create", "store", "ItemRefs", false),
@@ -198,6 +202,7 @@ const SHIPPED_ROWS: [(&str, &str, &str, bool); 12] = [
     ("test", "port", "TestReport", false),
     ("shallow_clone", "review_clone", "Workspace", false),
     ("verdict_record", "review_confirm", "Verdict", false),
+    ("backlog", "store", "BacklogSnapshot", true),
 ];
 
 #[test]
@@ -206,7 +211,8 @@ fn the_shipped_registry_loads_with_route_outputs_and_live_on_every_row() {
     assert_eq!(
         reg.len(),
         SHIPPED_ROWS.len(),
-        "the shipped `[verb]` table holds exactly record V decision 1's ten rows and R5's two"
+        "the shipped `[verb]` table holds exactly record V decision 1's ten rows, R5's two and \
+         s8f's `backlog`"
     );
     for (verb, route, outputs, live) in SHIPPED_ROWS {
         let row = reg

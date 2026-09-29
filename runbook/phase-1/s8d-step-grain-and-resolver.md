@@ -1766,6 +1766,29 @@ this section and moves the two `lane_walk` tests' expectations in the same commi
 re-homed escalation is keyed on `criticality >= high`. The same move flips `smoke-test` to **walks** and replaces
 `rolling-deploy` with `tag-release`, and its dated line here says so.)*
 
+*(dated 2026-09-28, `s8f` build, package S8F-P6-ITEMS-BACKLOG-FEEDS; `s8f` §8f.7, §8f.10; D21-46 R7; D21-47 cross #6;
+D21-106.)* **`s8f`'s flip, made.** Both lanes' `closeout` rows move: `debt-logging` and `closure-record` **walk**.
+`debt-logging`'s `file` step is served by `item_create`'s `store`-route handler (`rk-store`'s item writer), and
+`closure-record`'s `audit` reads `toolchain:backlog` through the `backlog` verb (`[feed.rust.backlog]` and
+`[feed.node.backlog]` now read `verb = "backlog"`). The two `lane_walk` tests' expected verdicts moved in the same change,
+and their rig binds the `store` route as `rk-cli`'s composition root does. Measured through the no-dispatch helper:
+**`LANE_WALK fix walked=12 refused=3`** (`confirmation-test`, `smoke-test`, `rolling-deploy`) and **`LANE_WALK story
+walked=10 refused=4`** (`bdd-scenarios`, `docs-update`, `smoke-test`, `rolling-deploy`), both tests `ok`. The claims
+therefore read **12 of 15** and **10 of 14**, as `s8f` §8f.10 stated them. The fix lane's `closure-record` opens
+`closure.signoff` (`rigor >= recommended`) and walks on its first option. Every remaining refusal is `s8g`'s. Checkpoint
+8d (6a)'s floors, 10 and 8, need no edit: *"A later stage that flips a row to **walks** raises `n"*. The rows are still
+its premise, so **Checkpoint 8d is provisional**, and Checkpoint 8f (9) re-runs it whole (D21-47's time-bound-guard
+rule).
+
+*(dated 2026-09-28, `s8f` build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106, taken provisionally under D21-105.)*
+**`Runtime::call_feed` is widened by one shape.** It read *"a feed is produced by a `toolchain` row with no inputs"*,
+and it now also admits a `store` row with no inputs (`backlog`). That row is served by ONE composition-root-bound seam,
+`runtime::step::StoreRoute`, which also serves the step-grain `Route::Store` arm (`item_create`). The seam's kernel
+default refuses by name and never answers empty, and the result still passes the closed decode table against the row's
+`outputs`. Every other route or input count keeps the refusal above, byte-unchanged. This widens `s8d`'s code and not a
+record: ADR-0170 decision 8 admits *"a registry verb"*, and ADR-0189 decision 12 (proposed) records the arm.
+`feed::a_git_route_feed_and_a_store_route_feed_with_an_input_still_refuse` pins the unchanged refusal.
+
 ### 8d.10 Tests, red first, and the mutants that must die
 
 Every test below is authored, run, and **watched fail for the right reason** before the code it pins
@@ -2404,7 +2427,9 @@ D21-77 ruled on all three, and the round's four minors are fixed with them. All 
 - `a_null_until_or_gate_when_is_not_journaled` fixes the records minor by changing code, not the record. **RED** on the
   D21-76 build: *"left: [("g", "repeat:1", Object {"kind": String("until"), "holds": Bool(false)}), ("g", "repeat:2",
   …)] right: [("g", "repeat:2", …)]"*. Its gate arm was red under mutant N2, which is the pre-fix gate code.
-  *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, proposed.)* Replaced: D21-92 rules that a
+  *(dated 2026-09-28, `s8e` build, package S8E-RULINGS; D21-92; ADR-0187, ~~proposed~~.)* *(dated 2026-09-28, `s8f`
+  build, package S8F-P6-ITEMS-BACKLOG-FEEDS: ADR-0187 is **accepted** since `abeb578`, D21-104; the stamp above read
+  "proposed" when it was written.)* Replaced: D21-92 rules that a
   `null` `until` or gate `when` is journaled when its route continues the walk, so this test pinned the rule the ruling
   reverses. Its successors are `a_null_until_or_gate_when_whose_route_continues_is_journaled_and_replayed` and
   `a_null_until_routed_to_a_refusal_is_not_journaled_so_a_fixed_re_run_completes` (`s8e` §8e.12), and Checkpoint 8d's
@@ -2895,7 +2920,8 @@ run_lib_named rk-kernel "step5 in-crate" \
 # ---- replayed, a null is not journaled, at most once per key and kind, and a replayed true is marked run (section
 # ---- 8d.10's D2177-8d note). `want` moves from 22 to 28 with them.
 # ---- (dated 2026-09-28, s8e build, package S8E-RULINGS; D21-92) One name removed and two added by dated edit, the
-# ---- operator's ruling that a routing null is journaled when its route continues the walk (ADR-0187, proposed):
+# ---- operator's ruling that a routing null is journaled when its route continues the walk (ADR-0187, ~~proposed~~
+# ---- accepted since abeb578, D21-104; dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS):
 # ---- ~~on_false_exec::a_null_until_or_gate_when_is_not_journaled~~ pinned the rule D21-92 reverses and is replaced by
 # ---- on_false_exec::a_null_until_or_gate_when_whose_route_continues_is_journaled_and_replayed and
 # ---- on_false_exec::a_null_until_routed_to_a_refusal_is_not_journaled_so_a_fixed_re_run_completes (s8e section 8e.12).

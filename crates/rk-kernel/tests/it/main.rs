@@ -308,6 +308,7 @@ mod execute;
 mod facet_provenance;
 mod facet_registry;
 mod facet_stability;
+mod feed;
 mod forward_ref_lint;
 mod fsm;
 mod gate_step;

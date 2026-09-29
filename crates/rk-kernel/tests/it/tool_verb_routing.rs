@@ -616,6 +616,12 @@ fn a_registry_verb_whose_input_the_resolver_refuses_is_refused_before_the_port()
 }
 
 /// **A `store` / `git` row refuses naming the route and the stage that builds it** (§8c.4).
+///
+/// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106 ruling 3.)* The
+/// `store` route has an executor now: the composition-root-bound store-route seam. With none bound,
+/// as here, the kernel's default refuses by name, naming the route and the unbound handler, so the
+/// `store` row's needle moves from ~~`s8f`~~ to `no store-route handler is bound`. The `git` row is
+/// unchanged (`s8g`'s).
 #[test]
 fn a_row_whose_route_has_no_executor_refuses_naming_the_route() {
     let ctx = Context::new();
@@ -623,7 +629,7 @@ fn a_row_whose_route_has_no_executor_refuses_naming_the_route() {
                 inputs = [], route = \"store\", side_effecting = false }\nrelease_tag = { outputs = \"ReleaseTag\", live = \
                 false, timeout = \"build_timeout\", inputs = [], route = \"git\", side_effecting = false }";
     for (verb, route, stage) in [
-        ("item_create", "store", "s8f"),
+        ("item_create", "store", "no store-route handler is bound"),
         ("release_tag", "git", "s8g"),
     ] {
         let (rt, tc) = rt_routed(
@@ -650,6 +656,7 @@ fn a_row_whose_route_has_no_executor_refuses_naming_the_route() {
             0,
             "`{verb}`'s route has no executor and reached the port"
         );
+        let _ = route;
     }
 }
 

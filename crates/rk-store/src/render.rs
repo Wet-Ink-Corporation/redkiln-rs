@@ -142,6 +142,23 @@ pub enum RenderError {
         served: String,
         bound: String,
     },
+    /// **A vouched root that cannot be stored** (ADR-0189 decision 10): the attached file is
+    /// absent or unreadable at its recorded `attached_path`. Nothing is stored. *(Added
+    /// 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+    VouchedUnreadable {
+        kind: String,
+        path: String,
+        vouched: String,
+        detail: String,
+    },
+    /// **A vouched root whose bytes are not the ones vouched** (ADR-0189 decision 10): the digest
+    /// of the file at `attached_path` differs from the attach row's. Nothing is stored.
+    VouchedMismatch {
+        kind: String,
+        path: String,
+        vouched: String,
+        observed: String,
+    },
 }
 
 impl std::fmt::Display for RenderError {
@@ -200,6 +217,28 @@ impl std::fmt::Display for RenderError {
                 f,
                 "HALT: the `{kind}` bytes on the run ref digest to {served}, but the committed \
                  `emit` binding digests to {bound}; neither is chosen silently (Halt 4)"
+            ),
+            Self::VouchedUnreadable {
+                kind,
+                path,
+                vouched,
+                detail,
+            } => write!(
+                f,
+                "the vouched root `{kind}` was not stored: its attached file `{path}` (vouched \
+                 digest {vouched}) could not be read: {detail}; nothing is stored (AC-127, ADR-0129 \
+                 decision 4)"
+            ),
+            Self::VouchedMismatch {
+                kind,
+                path,
+                vouched,
+                observed,
+            } => write!(
+                f,
+                "the vouched root `{kind}` was not stored: its attached file `{path}` digests to \
+                 {observed}, but the attach vouched {vouched}; nothing is stored, and only a new \
+                 attach through `redkiln answer` moves the vouched digest (AC-127)"
             ),
         }
     }
@@ -690,6 +729,46 @@ impl ArtifactWriter {
             digest,
             replayed: false,
         })
+    }
+
+    /// **A vouched root's store** (AC-127's first half; ADR-0189 decision 10, proposed): `bytes`
+    /// at `name` in the managed directory, with ONE `artifact.write` naming the path and the
+    /// `rk-types` digest of the bytes. The caller has checked the digest against the attach's;
+    /// this is the single write path that puts them there. On replay: zero writes, the recorded
+    /// digest served. *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+    pub(crate) fn write_root(
+        &self,
+        kind: &str,
+        name: &str,
+        bytes: &[u8],
+    ) -> Result<Written, RenderError> {
+        let path = self.dir.rel(name);
+        let digest = sha256(bytes);
+        if self.replay {
+            return self.served(kind, &path, &digest);
+        }
+        self.put(name, bytes)?;
+        self.journal.append(self.row(kind, &path, &digest))?;
+        Ok(Written {
+            path,
+            digest,
+            replayed: false,
+        })
+    }
+
+    /// The item's rows, in append order (the vouched pass reads the attach rows off them).
+    pub(crate) fn rows(&self) -> Result<Vec<Event>, RenderError> {
+        self.journal.rows()
+    }
+
+    /// Append one row through the writer's journal (the vouched pass's admitted advisory).
+    pub(crate) fn append(&self, event: Event) -> Result<(), RenderError> {
+        self.journal.append(event)
+    }
+
+    /// Is this a replaying writer?
+    pub(crate) const fn is_replaying(&self) -> bool {
+        self.replay
     }
 
     /// A kind's typed value, read from its sidecar in the managed directory — never from the

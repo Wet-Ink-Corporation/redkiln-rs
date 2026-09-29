@@ -1200,10 +1200,44 @@ fn ac410_admitted_attachment_stored_as_human_root() {
              slot, not a payload member. payload: {payload:?}"
         );
     }
+    // ~~`Some(4)`: "ADR-0116 decision 1's shape is exactly four members."~~ *(dated 2026-09-28, s8f
+    // build, package S8F-P5-DRIFT-GATE-VOUCHED; `s8f` §8f.5 and §8f.2 items 12 and 14; the render
+    // record ADR-0189 decision 8, proposed; D21-47, review M2.)* The row gains `stage` and `run`
+    // (the answered gate's stage and the `run_id` of the run that opened it, read from the token's
+    // `opened` row) and the carrier `attached_path`, so `RK-D-UNREAD` can key it and the next
+    // entry can store the root. The member set is still CLOSED: exactly these seven, named.
+    let mut members: Vec<&str> = payload
+        .as_object()
+        .map(|o| o.keys().map(String::as_str).collect())
+        .unwrap_or_default();
+    members.sort_unstable();
     assert_eq!(
-        payload.as_object().map(serde_json::Map::len),
-        Some(4),
-        "ADR-0116 decision 1's shape is exactly four members. payload: {payload:?}"
+        members,
+        [
+            "attached_path",
+            "digest",
+            "item",
+            "kind",
+            "run",
+            "schema_version",
+            "stage"
+        ],
+        "the attach row's closed member set (ADR-0116 decision 1's four, plus ADR-0189 decision \
+         8's three). payload: {payload:?}"
+    );
+    assert_eq!(
+        payload.get("attached_path").and_then(|v| v.as_str()),
+        Some("findings.md"),
+        "the carrier is the attachment's path relative to the checkout's root. payload: \
+         {payload:?}"
+    );
+    assert!(
+        payload
+            .get("stage")
+            .is_some_and(serde_json::Value::is_string)
+            && payload.get("run").is_some_and(serde_json::Value::is_string),
+        "the gate's `opened` row carries its opening run, so `stage` and `run` are named. \
+         payload: {payload:?}"
     );
 }
 

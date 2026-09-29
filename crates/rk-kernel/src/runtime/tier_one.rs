@@ -775,7 +775,15 @@ pub fn commit_act(
     act: Act,
 ) -> Result<Committed, TierOneError> {
     let mut guard = store.lock().expect(LOCK_HALTS);
-    land_act(git, recorder, &mut *guard, target, &BTreeSet::new(), act)
+    land_act(
+        git,
+        recorder,
+        &mut *guard,
+        target,
+        &BTreeSet::new(),
+        None,
+        act,
+    )
 }
 
 /// Where the act's baseline comes from (ADR-0188 decision 4).
@@ -857,6 +865,11 @@ fn land_act(
     store: &mut dyn EventStore,
     target: &Target,
     excluded: &BTreeSet<String>,
+    // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; AC-525's second AND;
+    // ADR-0025's *"the next gate the item reaches carries an advisory note"*; ADR-0189 decision
+    // 10.)* The run's advisories not yet carried: a gate OPENED by this act carries them
+    // (`carried_by_gate`), and they are taken once its rows are appended.
+    pending: Option<&super::advisory::PendingAdvisories>,
     mut act: Act,
 ) -> Result<Committed, TierOneError> {
     // One arm may carry no trailer: the step checkpoint (N10).
@@ -1030,6 +1043,32 @@ fn land_act(
     let invocations = recorder.take();
     let landed = landed?;
 
+    // The next gate the item reaches carries the run's advisories not yet carried (AC-525's
+    // second AND): beside the members the token binds, so the token does not move.
+    let carried: Vec<super::advisory::Advisory> = match (pending, &act.mark) {
+        (
+            Some(pending),
+            Some(Mark::Gate {
+                state: GateState::Opened,
+                ..
+            }),
+        ) => pending.lock().expect(LOCK_HALTS).clone(),
+        _ => Vec::new(),
+    };
+    if !carried.is_empty() {
+        act.rows = act
+            .rows
+            .into_iter()
+            .map(|row| {
+                if row.kind == EventKind::GateOpened {
+                    super::advisory::carried_by_gate(&row, &carried)
+                } else {
+                    row
+                }
+            })
+            .collect();
+    }
+
     // 4. Every row of the act, then its `git_op` rows, each anchored to the one commit — or, for a
     //    step that changed nothing, appended unanchored as a tier-2 row is.
     let rows = act
@@ -1053,6 +1092,11 @@ fn land_act(
                     .map_err(|e| TierOneError::Store {
                         detail: format!("{e:?}"),
                     })?;
+            }
+            if let Some(pending) = pending.filter(|_| !carried.is_empty()) {
+                let mut left = pending.lock().expect(LOCK_HALTS);
+                let n = carried.len().min(left.len());
+                left.drain(..n);
             }
             Ok(Committed::Live { sha, tree })
         }
@@ -1245,6 +1289,211 @@ pub fn landing_answers(state: &crate::workflow::fsm::RunState, events: &[Event])
     out
 }
 
+// ------------------------------------------------------------------------- the drift gate
+
+/// The drift gate's class (`crate::workflow::fsm::DRIFT_GATE_KIND`), re-exported beside the
+/// landing gate's. *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+pub const DRIFT_KIND: &str = crate::workflow::fsm::DRIFT_GATE_KIND;
+/// Its option that lets the restore stand (ADR-0189 decision 5).
+pub const DRIFT_CONFIRM_RESTORE: &str = "confirm-restore";
+/// The prefix of its per-section option: `move-to-prose:<section>` moves the drifted bytes into
+/// the named prose section at the next entry (ADR-0189 decision 5). One option per prose section
+/// `rk-store`'s templates declare, since an option carries no argument.
+pub const DRIFT_MOVE_TO_PROSE: &str = "move-to-prose:";
+
+/// **The drift gate's question** (ADR-0129 decisions 3-4; ADR-0189 decision 5): `confirm-restore`,
+/// or `move-to-prose:<section>` for each prose section of `rk-store`'s human-facing templates.
+/// Neither attaches anything. The kernel owns it, as it owns the refused landing's.
+#[must_use]
+pub fn drift_question() -> crate::workflow::question::Question {
+    let sections: BTreeSet<String> = rk_store::render::TEMPLATES
+        .iter()
+        .flat_map(|t| t.prose.iter())
+        .map(|p| format!("{DRIFT_MOVE_TO_PROSE}{p}"))
+        .collect();
+    crate::workflow::question::Question::new(
+        std::iter::once(DRIFT_CONFIRM_RESTORE.to_owned()).chain(sections),
+    )
+    .with_text(
+        "A structured section of a store-rendered artifact was edited, recorded as \
+         `structured_drift` and restored from the type. `confirm-restore`: the restore stands. \
+         `move-to-prose:<section>`: at the next entry the drifted text, read from the causing \
+         commit, is appended to that prose section. Until answered, the stage does not exit.",
+    )
+}
+
+/// **The drift gate's record** — class [`DRIFT_KIND`], over `tree` (re-minted over the landing's
+/// T when the act lands, defect (b)).
+///
+/// # Errors
+/// [`TierOneError::NotAGateRow`] when the token cannot be minted.
+pub fn drift_gate_record(
+    tree: &str,
+    deadline: rk_types::time::Timestamp,
+    reach: u32,
+) -> Result<GateRecord, TierOneError> {
+    GateRecord::derive_reach(DRIFT_KIND, tree, deadline, reach).map_err(|e| {
+        TierOneError::NotAGateRow {
+            detail: format!("the drift gate's token cannot be minted: {e:?}"),
+        }
+    })
+}
+
+/// **The drift gate, as one act** (ADR-0189 decision 4): its `Gate: … opened` mark rides the
+/// LANDED arm, so its commit is the checkpoint that lands the restore; its `gate_opened` row
+/// names the stage it holds (`stage`) and every drift it was opened over (`drifts`, each a
+/// `structured_drift` payload), beside the members the token binds.
+///
+/// # Errors
+/// As [`Act::gate_opened`].
+pub fn drift_gate_act(
+    record: &GateRecord,
+    stage: &str,
+    drifts: Vec<serde_json::Value>,
+) -> Result<Act, TierOneError> {
+    let mut row = super::gate_opened_event(record);
+    if let Some(map) = row.payload.as_object_mut() {
+        map.insert("stage".to_owned(), serde_json::Value::from(stage));
+        map.insert("drifts".to_owned(), serde_json::Value::Array(drifts));
+    }
+    Act::gate_opened(row)
+}
+
+/// An open drift gate that holds a stage's exit: its token and the drifted artifacts it names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OpenDriftGate {
+    pub token: String,
+    pub stage: String,
+    /// `<kind>` at `<anchor>`, one per drift the gate was opened over.
+    pub artifacts: Vec<String>,
+}
+
+impl std::fmt::Display for OpenDriftGate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the stage `{}` does not exit: its `{DRIFT_KIND}` gate {} is unanswered, over the \
+             drifted artifact(s) {}; answer it with `{DRIFT_CONFIRM_RESTORE}` or \
+             `{DRIFT_MOVE_TO_PROSE}<section>` (ADR-0189 decision 4; N11). No boundary commit is \
+             made and no row is appended",
+            self.stage,
+            self.token,
+            self.artifacts.join(", ")
+        )
+    }
+}
+
+/// **The stage advance's drift check** (`s8f` §8f.5; D21-47, cross #16; ADR-0189 decision 4): the
+/// first gate of class [`DRIFT_KIND`] for the item at `stage` whose latest state is OPENED (not
+/// answered, void or expired), read off the fold and the journal's `gate_opened` rows. A gate
+/// whose row carries no `stage` (one healed from git after a deleted database) holds every stage,
+/// fail-closed. `None`: the stage may exit.
+#[must_use]
+pub fn open_drift_gate(
+    state: &crate::workflow::fsm::RunState,
+    events: &[Event],
+    stage: &str,
+) -> Option<OpenDriftGate> {
+    state.open_gates().find_map(|record| {
+        let token = record.token();
+        if record.kind() != DRIFT_KIND
+            || state.is_answered(token)
+            || state.is_void(token)
+            || state.is_expired(token)
+        {
+            return None;
+        }
+        let row = events.iter().rev().find(|e| {
+            e.kind == EventKind::GateOpened
+                && e.payload.get("token").and_then(serde_json::Value::as_str)
+                    == Some(token.as_str())
+        });
+        let gate_stage = row
+            .and_then(|r| r.payload.get("stage"))
+            .and_then(serde_json::Value::as_str);
+        if gate_stage.is_some_and(|s| s != stage) {
+            return None;
+        }
+        let artifacts = row
+            .and_then(|r| r.payload.get("drifts"))
+            .and_then(serde_json::Value::as_array)
+            .into_iter()
+            .flatten()
+            .map(|d| {
+                let text = |m: &str| {
+                    d.get(m)
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("?")
+                        .to_owned()
+                };
+                format!("`{}` at `{}`", text("kind"), text("anchor"))
+            })
+            .collect::<Vec<_>>();
+        Some(OpenDriftGate {
+            token: token.as_str().to_owned(),
+            stage: gate_stage.unwrap_or(stage).to_owned(),
+            artifacts: if artifacts.is_empty() {
+                vec!["(not named: the gate's row was healed from git)".to_owned()]
+            } else {
+                artifacts
+            },
+        })
+    })
+}
+
+/// One applied `move-to-prose:<section>` answer (ADR-0189 decision 5): the gate's token, the
+/// answer row's position in the journal, the prose section, and every drift the gate named.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MoveToProse {
+    pub token: String,
+    pub answered_at: usize,
+    pub section: String,
+    pub drifts: Vec<serde_json::Value>,
+}
+
+/// **The drift gates answered `move-to-prose:<section>`**, read off the fold's answered set (an
+/// APPLIED answer; a void is not one) and the journal. The composition root applies each at the
+/// next entry through `rk-store`'s writer, once.
+#[must_use]
+pub fn drift_moves(state: &crate::workflow::fsm::RunState, events: &[Event]) -> Vec<MoveToProse> {
+    let mut out = Vec::new();
+    for answer in state.answered_gates() {
+        let token = answer.token();
+        if state.gate_record(token).map(GateRecord::kind) != Some(DRIFT_KIND) {
+            continue;
+        }
+        let Some(section) = answer.verdict().strip_prefix(DRIFT_MOVE_TO_PROSE) else {
+            continue;
+        };
+        let names = |e: &Event, kind: EventKind| {
+            e.kind == kind
+                && e.payload.get("token").and_then(serde_json::Value::as_str)
+                    == Some(token.as_str())
+        };
+        let Some(answered_at) = events
+            .iter()
+            .rposition(|e| names(e, EventKind::GateAnswered))
+        else {
+            continue;
+        };
+        let drifts = events
+            .iter()
+            .rev()
+            .find(|e| names(e, EventKind::GateOpened))
+            .and_then(|e| e.payload.get("drifts"))
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        out.push(MoveToProse {
+            token: token.as_str().to_owned(),
+            answered_at,
+            section: section.to_owned(),
+            drifts,
+        });
+    }
+    out
+}
+
 /// **The one slice validator.**
 ///
 /// Every refusal ADR-0160's first bullet names, by name, shared by the mint ([`seal_act`]) and the
@@ -1356,6 +1605,10 @@ pub struct Boundary {
     /// The paths the lane's `landing.refused-path` `exclude` answers leave unstaged (ADR-0188
     /// decision 6). *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
     excluded: BTreeSet<String>,
+    /// The run's advisories the next gate opened through this boundary (or a sibling) carries
+    /// (AC-525's second AND; ADR-0189 decision 10). *(dated 2026-09-28, s8f build, package
+    /// S8F-P5-DRIFT-GATE-VOUCHED.)*
+    advisories: Option<super::advisory::PendingAdvisories>,
 }
 
 impl Boundary {
@@ -1369,7 +1622,16 @@ impl Boundary {
             mode: Mode::Live,
             writes: 0,
             excluded: BTreeSet::new(),
+            advisories: None,
         }
+    }
+
+    /// The same boundary, whose gate openings carry the run's `pending` advisories
+    /// (`carried_by_gate`). *(Added 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)*
+    #[must_use]
+    pub fn with_advisories(mut self, pending: super::advisory::PendingAdvisories) -> Self {
+        self.advisories = Some(pending);
+        self
     }
 
     /// The same boundary, leaving `excluded` unstaged at every landing (ADR-0188 decision 6).
@@ -1397,6 +1659,7 @@ impl Boundary {
             mode: self.mode,
             writes: 0,
             excluded: self.excluded.clone(),
+            advisories: self.advisories.clone(),
         }
     }
 
@@ -1438,6 +1701,7 @@ impl Boundary {
             store,
             &self.target,
             &self.excluded,
+            self.advisories.as_ref(),
             act,
         );
         self.writes += ops.writes_performed();

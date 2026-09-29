@@ -327,3 +327,101 @@ fn ac525_drift_advisory_once() {
     let _ = a.load(Ordering::SeqCst);
     let _: &Digest = emitted[0].new_digest();
 }
+
+/// **The own-change advisory** (AC-127's first half; `s8f` §8f.5; the render record ADR-0189
+/// decision 10, proposed; D21-47, review m11). *(Added 2026-09-28, s8f build, package
+/// S8F-P5-DRIFT-GATE-VOUCHED.)*
+///
+/// `Advisory::own_change(root, vouched, observed)` writes `"upstream": null` — the key PRESENT,
+/// its value `null`, so *"all four fields and no fifth"* still holds against [`Advisory::FIELDS`] —
+/// with `old_digest` the vouched digest and `new_digest` the observed one. Its key
+/// `(root, None, new_digest)` is distinct from any upstream key over the same root and digest, so
+/// one run's sink admits both. And the UPSTREAM advisory's bytes are unchanged by the type change:
+/// `from_signal`'s `upstream` serialises as the same string it did before. Red under M50 (`""` in
+/// place of `null`).
+#[test]
+fn an_own_change_advisory_writes_upstream_null_with_all_four_fields() {
+    let vouched = digest_of(b"vouched bytes");
+    let observed = digest_of(b"the root edited after vouching");
+    let own = Advisory::own_change("VouchedBrief", vouched.clone(), observed.clone());
+
+    let json = own.to_json();
+    let object = json.as_object().expect("an object payload");
+    let mut keys: Vec<&str> = object.keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        Advisory::FIELDS.to_vec(),
+        "all four fields, and no fifth: the key `upstream` is PRESENT"
+    );
+    assert_eq!(
+        object.get("upstream"),
+        Some(&serde_json::Value::Null),
+        "the own-change mark is `\"upstream\": null` — never an empty string, never absent"
+    );
+    assert_eq!(own.upstream(), None, "the typed value is `None`");
+    assert_eq!(object["root"], serde_json::json!("VouchedBrief"));
+    assert_eq!(
+        object["old_digest"],
+        serde_json::json!(vouched.as_str()),
+        "`old_digest` is the VOUCHED digest"
+    );
+    assert_eq!(
+        object["new_digest"],
+        serde_json::json!(observed.as_str()),
+        "`new_digest` is the file's observed digest"
+    );
+    let event = own.to_event();
+    assert_eq!(event.kind, EventKind::DriftAdvisory);
+    assert_eq!(
+        event.payload, json,
+        "the event carries exactly the advisory"
+    );
+
+    // ---- the triple is distinct from any UPSTREAM triple over the same root and digest ----------
+    let signal = signal_at("scan-v2").expect("an in-set upstream moved");
+    let upstream = Advisory::from_signal(&signal);
+    let upstream_over_same_digest = {
+        let mut s = signal.clone();
+        s.new_digest = observed.clone();
+        Advisory::from_signal(&s)
+    };
+    assert_eq!(
+        own.triple(),
+        (
+            "VouchedBrief".to_owned(),
+            None,
+            observed.as_str().to_owned()
+        )
+    );
+    assert_ne!(own.triple(), upstream.triple());
+    assert_ne!(
+        own.triple(),
+        upstream_over_same_digest.triple(),
+        "the own-change key is never equal to an upstream key, even over the same root and digest"
+    );
+    let mut sink = AdvisorySink::for_run();
+    assert!(sink.admit(&own), "the own change is admitted once per run");
+    assert!(
+        sink.admit(&upstream_over_same_digest),
+        "and an upstream advisory over the same root and new digest is a DIFFERENT key"
+    );
+    assert!(
+        !sink.admit(&own),
+        "a second own change with the same observed digest is suppressed within the run"
+    );
+
+    // ---- an UPSTREAM advisory's bytes are unchanged by the type change --------------------------
+    let bytes = rk_store::canon::canonical(&upstream.to_json()).expect("canonical");
+    let expected = format!(
+        "{{\"new_digest\":\"{}\",\"old_digest\":null,\"root\":\"VouchedBrief\",\"upstream\":\"MarketScan\"}}",
+        signal.new_digest.as_str()
+    );
+    assert_eq!(
+        String::from_utf8(bytes).expect("utf-8"),
+        expected,
+        "`Some(s)` serialises as the same string as before: no `drift_advisory` row, golden log or \
+         `carried_by_gate` payload moves a byte"
+    );
+    assert_eq!(upstream.upstream(), Some("MarketScan"));
+}

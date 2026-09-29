@@ -989,6 +989,70 @@ silent choice of one. On replay the seam serves the recorded digest and appends 
 `RK-D-UNREAD` (AC-472's second clause, built at `s7d`) reads real ones. Today it reads none, because nothing
 produces them.
 
+*(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* **C2's gate and AC-127's vouched-root half are
+built** (ADR-0189 decisions 4, 5, 8 and 10, `proposed`).
+- **The drift gate.** `rk-cli`'s `run` opens it right after `stage_seams`' entry pass, over `Reconciled::drifts()`,
+  through the stage's tier-1 boundary: class `render.structured-drift` (`rk_kernel::workflow::fsm::DRIFT_GATE_KIND`,
+  re-exported as `tier_one::DRIFT_KIND`), the LANDED arm (`tier_one::drift_gate_act`), so its `Gate: … opened`
+  commit is the checkpoint that lands the restore and its token is re-minted over T. Its `gate_opened` row carries
+  two members beside the bound ones: `stage` (the stage it holds) and `drifts` (each `structured_drift` payload).
+- **The stage advance's drift check** is `tier_one::open_drift_gate(state, events, stage)`, called in
+  `Runtime::step`'s `AdvanceStage` arm before the advance's boundary act. A hit returns
+  `StepOutcome::AdvanceRefused` (nothing appended, no commit); `replay::resume` breaks without advancing and
+  carries the named refusal out on `RecordedRun::advance_refused()`, which `run` prints (*"the stage `review` does
+  not exit: its `render.structured-drift` gate <token> is unanswered, over the drifted artifact(s) `Spec` at
+  `summary`; …"*). The terminal read reports the gate and `run` exits `0`.
+- **The two answers** are the kernel's own question (`tier_one::drift_question`, bound by
+  `processes::with_kernel_questions` beside the refused landing's): `confirm-restore`, and
+  `move-to-prose:<section>` once per prose section `rk_store::render::TEMPLATES` declares. An applied
+  `move-to-prose:<section>` is taken at the next entry, before C2's pass (`move_answered_drifts_to_prose` over
+  `tier_one::drift_moves`), through `rk_store::render::move_to_prose` with the bytes read from `causing_commit`.
+- **The vouched root** is `rk_store::vouched` (`vouched_pass`, run in the same entry pass after C2). `answer`'s
+  attach row gains `stage`, `run` (the token's `opened` row's `opening_run` columns, both `null` when that row was
+  rebuilt, X11) and `attached_path`, and is keyed to the item. The next entry stores the root as
+  `<Kind>.root<ext>` under its vouched digest, with one `artifact.write`, or refuses by name
+  (`RenderError::VouchedMismatch` / `VouchedUnreadable`: the kind, the path and the digests), storing nothing. A
+  stored root whose file changed is one `Drift::Advisory` handed to the run's advise function. `run` binds that
+  function over the run's `AdvisorySink` and `Advisory::own_change`, and the sink's admission decides the one
+  append per `(root, null, new_digest)` per run. Nothing is restored, rewritten or gated. The admitted advisories
+  wait in the run's `PendingAdvisories`, and the next gate opened through any of the run's boundaries carries
+  them (`Boundary::with_advisories`, `carried_by_gate` inside `land_act`).
+- **`runtime/advisory.rs`**: `upstream: Option<String>`, `upstream() -> Option<&str>`, `triple() ->
+  (String, Option<String>, String)`, `Advisory::own_change`, `from_signal`'s *"The only constructor"* doc
+  corrected; `advisory::ac525_drift_advisory_once` passes unedited.
+
+Readings no record settles, each stated for the review packet (each reversible):
+1. **A drift gate holds the stage's exit, not its steps**, so `next_action`'s first rule reads
+   `RunState::awaiting_dispatch_gate()` (every class but the drift gate). `awaiting_gate()` presents a
+   dispatch-holding gate before a drift gate, then token order, so `answer` answers the gate holding the run
+   first.
+2. **The lane's end is the last stage's exit.** The same check refuses the `closed` mark: `resume_and_read`
+   checks before the review pass, and `close_lane` checks again. **A held stage runs no review pass.** Its seal
+   sits on the stage's exit outcome (`s8e` §8e.8), and without the hold every invocation that re-entered the held
+   `review` stage sealed it again (measured: two `slice sealed` commits over two invocations).
+3. **A void answer releases the drift gate.** The check reads the spec literally: the latest state is not
+   `opened`. A voided drift gate is not re-opened, since nothing mints a fresh one after a void. This is a
+   residual, and it is owed to whoever settles AC-252 for kernel-owned gates.
+4. **`move-to-prose` is applied once.** It counts as applied when an `artifact.write` naming the kind's sidecar
+   follows the answer row.
+5. **The vouched pass runs once per invocation**, at the lane's first stage entry like C2, so one run sees each
+   root once. The per-run memory is the kernel's `AdvisorySink`. `rk-store` depends on no kernel crate, so
+   `vouched::one_advisory_per_run_for_one_observed_digest` binds a sink of the same shape (one set per run, keyed
+   on the triple). The landing test exercises the real sink through `run`.
+6. **Which roots exist, and when one is stored.** A root is the latest attach row per kind. It is stored when a
+   writer row names its managed path under the vouched digest after that attach row. A new attach re-stores it.
+   An absent stored root reads as zero bytes, which is a change like any other.
+7. **Carriage is written only when something is pending.** A gate opened with no pending advisory gains no
+   `advisories` member, so no existing `gate_opened` row, snapshot or golden log moves a byte. `carried_by_gate`'s
+   empty-list form stays AC-525's test's.
+8. **When the opening run is unknown, `stage` is `null` too, not only `run`.** The `stage` column is null on a
+   rebuilt `opened` row as well, and no value is invented (X11).
+
+**Not built here, owed by name:** the reader's root arm (ADR-0189 decision 9: *"the reader serves its bytes and
+digest without that check"*; `ArtifactReader::serve` still reads `<Kind>.json` only); the class's `gate_expiry`
+row (`s8h`'s table, §8f.1: until then an expired drift gate's class has no row); `RK-D-UNREAD`'s `run_of`
+widening and `doctor`'s two rules (S8F-P7, S8F-P8).
+
 ### 8f.6 Where rendered artifacts land, and the run-path `artifact.write` producer (D21-42 5b)
 
 **The managed directory — settled by the render record.** An item's rendered artifacts are written by `rk-store`
@@ -1192,6 +1256,54 @@ consistency pass 2026-09-24:* `s8c` now cites ADR-0103 decision 4, and the quota
 *Reversed 2026-09-24 (D21-47):* the re-point was wrong. `superseded_by` marks a supersession **in part**. ADR-0103's
 own text reads *"none of their stated rules is withdrawn except 0032's "vacuously true" for `any`"*. So ADR-0032's
 Decision is the citation, as the paragraph above now gives it.
+
+*(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106, taken provisionally under D21-105.)*
+**Built.** What landed, and the readings this section's text did not fix:
+1. **The item write** is `rk_store::item_write` (`write_items`), the handler behind `item_create`'s `store` row. It
+   writes `.redkiln/items/<id>.toml` in the run-owned worktree. An entry's own `id` is used when it carries one, and
+   otherwise the id is `<source item>-debt-<n>`, 1-based in entry order. An id must match `[A-Za-z0-9][A-Za-z0-9._-]*`
+   with no `..`. The record's `kind` is the handler's constant `tech-debt`, because `item_create` mints
+   `DebtRegisterEntry` items, and an extracted `kind` is a `human` facet like any other. `[provenance]` carries
+   `activity`, `run`, `source_impl_report` and two keys this section did not name. `entry` is the canonical digest of
+   the extracted entry, so a loop-back whose entry differs only outside `[facets]` differs in bytes and is refused, not
+   served. `withheld` is a list of `{ facet, source }`. A facet is written only when its registry `source` is `declared`.
+   `human` and `llm` are withheld as this section rules; `derived`, `kernel` and undeclared names are withheld too,
+   because `build_item` refuses the first and never reads the second. Every withheld facet is named.
+   `source_impl_report` is the `rk_store::canon` digest of the item's latest `emit` binding of `ImplReport`, which is
+   the value `extract` read. The route refuses by name when there is none. Existing ids are compared before anything is
+   written, so a refused call writes nothing.
+2. **The `backlog` read** is `rk_store::backlog`. `names` takes the store's rows: a `stage_transition` carrying `from`
+   names its `item`, and an `activity_committed` row whose `schema` is `ItemRefs` names its `result.ids`. `snapshot`
+   reads each named id by its exact path, and lists a missing record as absent. `rk-store` takes no TOML dependency,
+   because it would enter `rk-kernel`'s resolved graph, which is a dependency decision. So the record parser is handed
+   in: `rk-cli`'s `verbs::run::parse_item_record` over the `toml` crate. Which paths are read, by exact path, and what
+   a missing file means all stay in `rk-store`. `BacklogSnapshot`, `BacklogItem`, `BacklogAbsent` and `NamedBy` are in
+   `rk_types::verb_output`. The kernel's closed decode table gains `BacklogSnapshot`.
+3. **The seam (D21-106).** `rk_kernel::runtime::step::StoreRoute` is ONE seam, bound by `ToolRouting::with_store_route`.
+   It serves the step-grain `Route::Store` arm and `call_feed`'s one new shape. The default is `UnboundStoreRoute`,
+   which refuses by name. `rk-cli`'s `RunStoreRoute` binds it over the run-owned worktree. It reads the item's journal
+   for `item_create` and the store's whole snapshot (`EventStore::snapshot`) for `backlog`.
+4. **The registry.** The `backlog` row (`outputs = "BacklogSnapshot"`, `live = true`, `timeout = "build_timeout"`,
+   `inputs = []`, `route = "store"`, `side_effecting = false`) landed in the same change as both `[feed.*.backlog]`
+   rows, which read `verb = "backlog"`. Checkpoint 8f (6b)'s feed probe, run read-only with its control first, reads
+   `node.backlog=verb:backlog node.logs=unprovided node.sbom=unprovided rust.backlog=verb:backlog
+   rust.logs=unprovided rust.sbom=unprovided`. Its no-walk floor over `crates/rk-store/src` reads 0 code lines, after
+   a planted control that kept the code line and dropped the comment.
+5. **Tests moved, each by a dated in-file note (D21-106 ruling 5).**
+   `source_registry::the_catalog_source_census_is_fifty_with_fourteen_declared` now reads `backlog` as
+   `FeedVerb("backlog")`.
+   `reference_resolver::kb_checklist_and_feed_keys_resolve_through_the_declared_tables_and_an_undeclared_key_refuses_by_name`
+   moves its `unprovided` pair to `sbom` and asserts that `backlog` reaches its verb. Both `lane_walk` tests move their
+   `closeout` rows to walks, and their rig binds the `store` route. Two more tests pinned the pre-`s8f` state and move
+   the same way. `tool_verb_routing::a_row_whose_route_has_no_executor_refuses_naming_the_route`'s `store` needle is now
+   the unbound seam's refusal. `verb_registry::the_shipped_registry_loads_with_route_outputs_and_live_on_every_row`
+   now counts thirteen rows.
+6. **`item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run` does not read
+   `env!("CARGO_BIN_EXE_rk-fixture-child-claude")`.** Cargo sets that variable only for `rk-adapter-claude`'s own
+   tests, so it does not compile in `rk-cli`. The test takes the `pack-min` fixtures' actual route instead:
+   `support::pack_min_repo` rewrites `harness_binary` to `support::fixture_child()`, the sibling of `redkiln`, and
+   asserts it is present. The mint uses the handler's own function, `rk_store::item_write::write_items`. The lane
+   variant is narrowed to `triage -> implement`, and it admits `tech-debt`.
 
 ### 8f.8 `dispatch_completed`'s interim members, AC-395's breakdown and AC-372's `status` half (D21-42 12b)
 
@@ -1541,6 +1653,74 @@ clippy exit 0. Checkpoint 8f (6)'s no-float floor and (6b)'s no-walk floor over 
 lines, with a planted control first. Census over `crates/*/src` code lines outside `rk-types`: the one `artifact.read`
 construction is `rk-store`'s reader. The other hits are the three kernel fold arms, `doctor`'s `unread`, and the
 reader's own replay filter.
+
+*(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* 8 of the tests above are built: the 4 `vouched`
+tests (`crates/rk-store/tests/it/vouched.rs`, a new module), `advisory::an_own_change_advisory_writes_upstream_null_with_all_four_fields`
+(in the existing module), and `landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered`,
+`landing::answering_the_drift_gate_either_way_releases_the_stage_exit` and
+`landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it`. The landing tests run
+over a *drift lane*: the fixture lane with `Spec` emitted at `implement`, a last stage `wrapup` so `review`'s exit is
+an advance, and the human's edit committed on the run ref. The vouched landing test runs over `lane-1`, whose
+abstention gate a pack question binds with a `vouch` option attaching `Findings`, and its "next gate" is a refused
+landing's, opened later in the same invocation. Red first, each for the absent behaviour:
+- `advisory::…` failed on *"`upstream`: `Some(String(""))` ≠ `Some(Null)`"* over a skeleton `own_change` (M50's
+  shape).
+- The 4 `vouched` tests failed on *"stored 0 ≠ 1"* over an inert `vouched_pass`.
+- `landing::a_drift_gate_blocks_…` and `landing::answering_…` failed on *"exactly one drift gate: 0 ≠ 1"*.
+- `landing::a_changed_vouched_root_…` failed on *"one attach row: 0 ≠ 1"*, because no row carried `attached_path`.
+
+`advisory::ac525_drift_advisory_once` passes unedited. **Amended, not added:** `answer::ac410_admitted_attachment_stored_as_human_root`'s
+*"exactly four members"* now reads the closed seven-member set, ADR-0189 decision 8's three added, by a dated in-test
+note. Mutant log (`target/wt-s8fp5`, a private overlay worktree, after a 9/9 green control; driver
+`S8F-P5-mutants.py`, each cycle's restore verified by sha256): **M23, M36 (on both of its tests), M37, M38, M39,
+M40, M47 and M50 killed**, each on its named test and for its named reason. M23: *"exactly one drift gate: []"*.
+M47: *"no `Story: … wrapup` mark"*. M36: the root-changed row reads `blocks: true`, and the lane appends no advisory.
+M37: `drift_advisory: 0`. M38: *"the changed root was restored"*. M39: `(1, 0)` on the second entry. M40: a
+mismatching root was stored. M50: `""` for `null`. No survivor. Whole suite at the main checkout, through the
+no-dispatch helper, after `cargo fmt --all` and `cargo clippy --workspace --all-targets` (rc 0): **1170 passed, 0
+failed, 9 ignored over 44 result lines**, the prior 1162 plus 8.
+
+*(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS.)* 12 of the tests above are built: the 4
+`item_write` and 3 `backlog` tests (`crates/rk-store/tests/it/`, new modules), the 2 `feed` tests (`crates/rk-kernel/tests/it/feed.rs`,
+a new module), `item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run` (a new module), and
+`landing::debt_logging_walks_past_file_through_item_create` and `landing::closure_record_walks_past_audit_on_the_backlog_feed`.
+D21-106 ruling 6 adds two tests to the `feed` module beyond this list:
+`feed::an_unbound_store_route_refuses_by_name_and_never_serves_empty` and
+`feed::a_git_route_feed_and_a_store_route_feed_with_an_input_still_refuse`. So this package adds 14 tests, and the floor
+(85 by this list) is unchanged. Red first:
+- The 7 `rk-store` tests failed over inert stubs (`S8F-P6-stub.py`: `write_items` answers `Ok` and writes nothing,
+  and `names` and `snapshot` iterate nothing), each for the absent behaviour. The `item_write` tests failed on
+  *"the ItemRefs value names both ids in entry order: left: []"*, *"the record is written"*, *"a differing existing
+  record must refuse the write: ItemWrite { ids: [] … }"* and an empty `ids` at the served test's premise. The
+  `backlog` tests failed on `left: []` against the named ids, the listed absences and the ordered ids.
+- `feed::closure_record_audit_…` failed on *"`feed.rust.backlog` is mandatory and declared `unprovided`"* over the
+  shipped registry, before the registry flip (M34's shape). `feed::every_shipped_unprovided_feed_…` failed listing
+  `("backlog", "closure-record/audit", false)` and `("backlog", "problem-record/draft", false)` as mandatory reaches.
+  `feed::an_unbound_store_route_…` failed on the same `unprovided` refusal. `feed::a_git_route_feed_…` pins
+  behaviour that already stood, so it was green at its first run, and it is shown red under M-NEG below.
+- The three `rk-cli` tests were written after the handler, the seam and the registry rows, and each was green at its
+  first run. Each is shown red under its mutant instead (below): M46, M34 and M14.
+
+Mutant log (`target/wt-s8fp6`, a private overlay worktree on a detached HEAD, after a 12/12 green control; driver
+`S8F-P6-mutants.py`, each cycle's restore verified by sha256). Every mutant was **killed**, on its named test and for
+its named reason. No mutant survived.
+- M14 flipped `item_write::human_sourced_…` (*"a human, llm or derived facet reached [facets]"*) and
+  `item_create::a_minted_debt_item_…` (*"the minted item's selection did not abstain on the withheld facet … left:
+  []"*).
+- M15: *"a differing existing record must refuse the write"*. The mutant wrote both entries.
+- M29: *"a byte-identical re-execution is served, never refused: Exists { … }"*.
+- M32: `left: ["entered", "named-a", "stray"]`.
+- M33: `absent` `left: []`.
+- M34 flipped `feed::closure_record_audit_…` (*"mandatory and declared `unprovided`: M34"*) and
+  `landing::closure_record_walks_…` (the lane exits `Unsupported`).
+- M35: the census reads no `unprovided` reach at all.
+- M46 flipped `landing::debt_logging_walks_…` (the lane exits `Unsupported`).
+- Two more mutants were added for D21-106. M-UNB, whose unbound default serves an empty `BacklogSnapshot`, flipped
+  `feed::an_unbound_store_route_…` (*"an unbound store route served the feed: Continue"*). M-NEG, whose
+  `call_feed` store arm admits any non-`toolchain` route, flipped `feed::a_git_route_feed_…`.
+
+Whole suite at the main checkout, through the no-dispatch helper, after `cargo fmt --all` and `cargo clippy --workspace
+--all-targets` (rc 0): **1184 passed, 0 failed, 9 ignored over 44 result lines**, the prior 1170 plus 14.
 
 `cost::cost_output_grammar_is_closed` is **amended**, not added. So is `s8e`'s
 `tier_one::every_run_commit_resolves_through_the_worktree_resolver`, widened to the landing's writes (§8f.4; final
