@@ -509,3 +509,213 @@ fn the_recording_sources_are_the_committed_logs_inputs_byte_for_byte() {
         run.display()
     );
 }
+
+// ======================================= `ActivitySpec.activity_id_at_version` (ADR-0190; D21-107)
+//
+// *(Added 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decision 2,
+// proposed; D21-107 item 3, TAKEN PROVISIONALLY.)* The sixth spec member is carried to the adapter
+// for its own `dispatch_completed` row and for nothing else. The two tests below pin its two
+// halves over the record: it moves no byte `run_id` or the memo key reads, and a record's reader
+// repopulates it from the binding's own recorded `activity_id_at_version`.
+
+/// A spec for the two tests below, its sixth member given.
+fn member_spec(member: Option<&str>) -> rk_types::activity::ActivitySpec {
+    rk_types::activity::ActivitySpec {
+        card_digest: rk_types::digest::sha256(b"card/member-probe"),
+        tools: vec!["Read".to_owned()],
+        schema: rk_types::typed::SchemaId::new("ImplReport"),
+        timeout_secs: 900,
+        inputs: vec![("item".to_owned(), serde_json::json!("bug-1"))],
+        activity_id_at_version: member.map(str::to_owned),
+    }
+}
+
+/// Write `run` under a fresh scratch root named `name` and return the written directory.
+fn written(name: &str, run: &rk_kernel::replay::RecordedRun) -> PathBuf {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/golden-log-scratch")
+        .join(name);
+    let _ = std::fs::remove_dir_all(&root);
+    rk_kernel::replay::write_run(&root, run).expect("the record writes")
+}
+
+/// **The byte-identity half (D21-107 item 3).** The committed log's input set, with one binding
+/// added whose spec carries the member `Some("member-probe@2")` and, in the twin, `None`: the two
+/// `run_id`s are equal, the two written `inputs/specs.json` files are byte-identical, and neither
+/// holds the member inside the spec's object; and the memo key `StepContext::for_agent_step`
+/// assembles from the two specs is one digest. (The card digest is the binder's, over the bound
+/// card alone; `cost::a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed` pins
+/// that half.)
+///
+/// PREMISE: a binding added under a DIFFERENT activation moves the `run_id`, so the equality below
+/// is over a preimage that holds the bindings at all.
+///
+/// Red by: `spec_json` writing the member (the `run_id`s and the bytes differ); the memo key
+/// reading the spec whole.
+#[test]
+fn the_activity_member_moves_no_specs_json_byte_no_run_id_and_no_memo_key() {
+    let dir = copy_into_scratch("member-bytes");
+    let base = read_run(&dir).expect("the committed log reads back");
+    let with = |member: Option<&str>, activation: &str| {
+        let mut run = base.clone();
+        run.inputs = run.inputs.clone().with_spec(
+            "member-probe[node]",
+            // A per-step spec too (R1): the activation spec's object also carries the binding's
+            // own `activity_id_at_version` key, so a spec member written there would be masked by
+            // it; a per-step spec's object carries no such key and would show it.
+            rk_kernel::replay::RecordedSpec::supplied(activation, member_spec(member))
+                .and_step_specs(
+                    std::iter::once(("check".to_owned(), member_spec(member))).collect(),
+                ),
+        );
+        run
+    };
+    let some = with(Some("member-probe@2"), "member-probe@2");
+    let none = with(None, "member-probe@2");
+    let other = with(Some("member-probe@2"), "member-probe@3");
+
+    let id = |run: &rk_kernel::replay::RecordedRun| run.inputs.run_id().expect("the set hashes");
+    assert_ne!(
+        id(&some),
+        id(&other),
+        "PREMISE: the binding is in `run_id`'s preimage at all"
+    );
+    assert_eq!(
+        id(&some),
+        id(&none),
+        "the spec's `activity_id_at_version` moved `run_id` (ADR-0190 forbids it in the preimage)"
+    );
+
+    let bytes = |name: &str, run: &rk_kernel::replay::RecordedRun| {
+        std::fs::read(written(name, run).join("inputs").join("specs.json"))
+            .expect("specs.json is written")
+    };
+    let (a, b) = (bytes("member-some", &some), bytes("member-none", &none));
+    assert_eq!(a, b, "specs.json differs with the member Some or None");
+    let specs: serde_json::Value = serde_json::from_slice(&a).expect("specs.json is JSON");
+    let probe = &specs["member-probe[node]"];
+    assert_eq!(
+        probe["activity_id_at_version"],
+        serde_json::json!("member-probe@2"),
+        "PREMISE: the binding's OWN member is recorded"
+    );
+    assert_eq!(
+        probe.as_object().map(serde_json::Map::len),
+        Some(7),
+        "the binding writes the spec's five members, its own activation and its per-step specs: \
+         {probe}"
+    );
+    assert_eq!(
+        probe["step_specs"]["check"]
+            .as_object()
+            .map(serde_json::Map::len),
+        Some(5),
+        "a per-step spec's object is the spec's five members and no sixth: {probe}"
+    );
+
+    let key = |member: Option<&str>| {
+        rk_kernel::memo::StepContext::for_agent_step(
+            "member-probe@2",
+            rk_kernel::rigor::Rigor::Mandatory,
+            "check",
+            &member_spec(member),
+            0,
+        )
+        .key()
+        .expect("the key assembles")
+    };
+    assert_eq!(
+        key(Some("member-probe@2")),
+        key(None),
+        "the memo key moved with the spec's `activity_id_at_version`"
+    );
+}
+
+/// **The replay round-trip half (D21-107 item 3).** Written and read back, a spec's member is
+/// repopulated from the binding's own recorded `activity_id_at_version`, never from the spec's
+/// five members: a binding recorded as `member-probe@2` whose spec carried `None` reads back
+/// `Some("member-probe@2")`, and an UNVERSIONED binding reads back `None`, so a value without its
+/// `@version` never reaches an adapter (ADR-0190 decision 1). Over the committed log, every
+/// versioned binding's spec reads back its own activation.
+///
+/// Red by `M16a` (`spec_from_json` forcing the member to `None`).
+#[test]
+fn the_activity_member_is_repopulated_from_the_recorded_binding_on_read() {
+    let dir = copy_into_scratch("member-round-trip");
+    let mut run = read_run(&dir).expect("the committed log reads back");
+    let committed: Vec<(String, Option<String>)> = run
+        .inputs
+        .specs()
+        .iter()
+        .filter_map(|(_, b)| {
+            b.spec().map(|s| {
+                (
+                    b.activity_id_at_version().to_owned(),
+                    s.activity_id_at_version.clone(),
+                )
+            })
+        })
+        .collect();
+    assert!(
+        !committed.is_empty(),
+        "PREMISE: the committed log carries activation specs"
+    );
+    for (activation, member) in &committed {
+        assert!(
+            activation.contains('@'),
+            "PREMISE: the committed activation `{activation}` is versioned"
+        );
+        assert_eq!(
+            member.as_deref(),
+            Some(activation.as_str()),
+            "the committed log's `{activation}` spec did not read back its own activation"
+        );
+    }
+
+    run.inputs = run
+        .inputs
+        .clone()
+        .with_spec(
+            "member-probe[node]",
+            rk_kernel::replay::RecordedSpec::supplied("member-probe@2", member_spec(None))
+                .and_step_specs(std::iter::once(("check".to_owned(), member_spec(None))).collect()),
+        )
+        .with_spec(
+            "member-plain[node]",
+            rk_kernel::replay::RecordedSpec::supplied("member-plain", member_spec(None)),
+        );
+    let back = read_run(&written("member-rt", &run)).expect("the written record reads back");
+    let member = |node: &str| {
+        back.inputs
+            .specs()
+            .iter()
+            .find(|(n, _)| n == node)
+            .and_then(|(_, b)| b.spec())
+            .unwrap_or_else(|| panic!("`{node}` reads back with a spec"))
+            .activity_id_at_version
+            .clone()
+    };
+    assert_eq!(
+        member("member-probe[node]").as_deref(),
+        Some("member-probe@2"),
+        "the member is repopulated from the binding's recorded `activity_id_at_version`"
+    );
+    assert_eq!(
+        member("member-plain[node]"),
+        None,
+        "an unversioned activation reads back as `None`, never as an id without its `@version`"
+    );
+    let step = back
+        .inputs
+        .specs()
+        .iter()
+        .find(|(n, _)| n == "member-probe[node]")
+        .and_then(|(_, b)| b.step_specs())
+        .and_then(|m| m.get("check"))
+        .expect("the per-step spec reads back");
+    assert_eq!(
+        step.activity_id_at_version.as_deref(),
+        Some("member-probe@2"),
+        "a per-step spec is repopulated from its binding too"
+    );
+}

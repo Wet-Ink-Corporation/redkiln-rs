@@ -122,7 +122,9 @@ fn key_of(ctx: &StepContext) -> Digest {
 }
 
 /// An [`ActivitySpec`] differing from its siblings **only in `schema`**, so a key that moved
-/// moved because component 8 did. The other four fields are ADR-0099:61's, filled with the shape
+/// moved because component 8 did. *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* The sixth,
+/// `activity_id_at_version`, is `None` and outside the key. The other four fields are ADR-0099:61's,
+/// filled with the shape
 /// `tests/it/degradation.rs`:60 already uses.
 fn spec_with_schema(id: &str) -> ActivitySpec {
     ActivitySpec {
@@ -131,6 +133,7 @@ fn spec_with_schema(id: &str) -> ActivitySpec {
         schema: SchemaId::new(id),
         timeout_secs: 900,
         inputs: vec![("item".to_owned(), json!("issue-81"))],
+        activity_id_at_version: None,
     }
 }
 

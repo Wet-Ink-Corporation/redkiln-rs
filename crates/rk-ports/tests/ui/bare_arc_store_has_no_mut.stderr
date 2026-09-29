@@ -10,9 +10,9 @@ error[E0308]: mismatched types
               found reference `&Arc<std::sync::Mutex<(dyn EventStore + 'static)>>`
 
 error[E0596]: cannot borrow data in an `Arc` as mutable
-  --> tests/ui/bare_arc_store_has_no_mut.rs:56:43
+  --> tests/ui/bare_arc_store_has_no_mut.rs:57:43
    |
-56 |     let _ = ports.harness.dispatch(&spec, &mut *ports.store);
+57 |     let _ = ports.harness.dispatch(&spec, &mut *ports.store);
    |                                           ^^^^^^^^^^^^^^^^^ cannot borrow as mutable
    |
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Arc<dyn EventStore>`

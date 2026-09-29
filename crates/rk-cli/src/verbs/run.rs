@@ -4533,7 +4533,7 @@ fn bind_nodes(
                 binder,
                 owned,
                 &root,
-                &node.id,
+                (&node.id, activity.id_at_version()),
                 (&role_name, &kind, timeout_secs),
             )?;
             step_specs.insert(step.id.clone(), spec);
@@ -4549,7 +4549,7 @@ fn bind_nodes(
             binder,
             owned,
             &root,
-            &node.id,
+            (&node.id, activity.id_at_version()),
             (
                 first.role.as_deref().unwrap_or_default(),
                 first.output_type.as_deref().unwrap_or_default(),
@@ -4575,12 +4575,18 @@ fn bind_nodes(
 
 /// **One `Binder::bind`**: a role's card, a kind's schema, a bound — the three things a spec binds
 /// that differ between agent steps (R1). `(role, kind, timeout_secs)`.
+///
+/// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decision 2,
+/// proposed; D21-107.)* `(node_id, activity_id_at_version)`: the activity's
+/// `catalog::Activity::id_at_version()`, which is `None` for an activity that declares no version,
+/// so a value without its `@version` is never handed on (ADR-0190 decision 1, `M16`'s rule). It
+/// rides on the spec for the adapter's `dispatch_completed` row alone.
 fn bind_one(
     resolved: &Resolved,
     binder: &mut rk_adapter_claude::binder::Binder,
     owned: &Path,
     root: &Path,
-    node_id: &str,
+    (node_id, activity_id_at_version): (&str, Option<String>),
     (role_name, kind, timeout_secs): (&str, &str, u64),
 ) -> Result<rk_types::activity::ActivitySpec, Exit> {
     let card_path = root
@@ -4633,6 +4639,7 @@ fn bind_one(
             timeout_secs,
             worktree: owned,
             inputs: vec![("item".to_owned(), serde_json::json!(resolved.item.id()))],
+            activity_id_at_version,
         })
         .map_err(|e| {
             eprintln!("redkiln: the binder refused `{node_id}`: {e}");

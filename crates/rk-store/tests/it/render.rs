@@ -1040,3 +1040,343 @@ fn a_read_before_the_entrys_reconcile_is_refused() {
         .expect("a read after the entry's reconcile is served");
     assert_eq!(rows_of(&rows, EventKind::ArtifactRead).len(), 1);
 }
+
+// ------------------------------------------------------------------------------- D21-109
+
+/// The code lines of `src` (1-based numbers kept): a line whose trimmed start is `//`, `/*` or `*`
+/// is a comment and is dropped. It cannot see a trailing comment after code or a string literal,
+/// and says so rather than claiming them away.
+fn code_lines(src: &str) -> Vec<(usize, &str)> {
+    src.lines()
+        .enumerate()
+        .filter(|(_, l)| {
+            let t = l.trim_start();
+            !(t.starts_with("//") || t.starts_with("/*") || t.starts_with('*'))
+        })
+        .map(|(i, l)| (i + 1, l))
+        .collect()
+}
+
+/// The `fn` a line sits in: the last line at or before it that declares one.
+fn owner_fn(lines: &[(usize, &str)], at: usize) -> String {
+    lines
+        .iter()
+        .rev()
+        .filter(|(n, _)| *n <= at)
+        .find(|(_, l)| {
+            let t = l.trim_start();
+            t.starts_with("fn ") || t.contains(" fn ")
+        })
+        .map(|(_, l)| l.trim().to_owned())
+        .unwrap_or_default()
+}
+
+/// Every word-boundary `Reconciled` in `line`, as the text before it and the text after it.
+fn reconciled_at(line: &str) -> Vec<(&str, &str)> {
+    line.match_indices("Reconciled")
+        .filter(|(at, _)| {
+            line[..*at]
+                .chars()
+                .next_back()
+                .is_none_or(|p| !(p.is_ascii_alphanumeric() || p == '_'))
+                && line[at + "Reconciled".len()..]
+                    .chars()
+                    .next()
+                    .is_none_or(|n| !(n.is_ascii_alphanumeric() || n == '_'))
+        })
+        .map(|(at, w)| (&line[..at], &line[at + w.len()..]))
+        .collect()
+}
+
+/// **D21-109's construction lint, as one function over `(repo-relative path, source)` pairs** so
+/// each check can be driven red over a planted file first. Returns every violation, each naming
+/// its check. `crates/rk-git/src/` is not scanned: it declares an unrelated generic
+/// `rk_git::reconciled::Reconciled<T>` and cannot name `rk-store`'s type (no dependency either way).
+fn reconciled_violations(files: &[(String, String)]) -> Vec<String> {
+    let mut bad = Vec::new();
+    let mut literals = Vec::new();
+    let mut returns = Vec::new();
+    let mut bindings = Vec::new();
+    for (path, src) in files {
+        if path.starts_with("crates/rk-git/src/") {
+            continue;
+        }
+        let lines = code_lines(src);
+        for (n, line) in &lines {
+            for (before, after) in reconciled_at(line) {
+                let decl = before.trim_end();
+                let is_decl =
+                    decl.ends_with("struct") || decl.ends_with("impl") || decl.ends_with("for");
+                // (1) a struct literal: `Reconciled {` that declares nothing.
+                if after.trim_start().starts_with('{') && !is_decl {
+                    literals.push((path.clone(), *n, owner_fn(&lines, *n)));
+                }
+                // (2) a return type naming it.
+                if before.contains("->") {
+                    returns.push((path.clone(), *n, owner_fn(&lines, *n)));
+                }
+                // (3) a Default or From impl for it.
+                if decl.ends_with("for")
+                    && before.contains("impl")
+                    && (before.contains("Default") || before.contains("From"))
+                {
+                    bad.push(format!(
+                        "(3) {path}:{n}: a Default or From impl builds a Reconciled: {}",
+                        line.trim()
+                    ));
+                }
+            }
+            // (6) no holder that outlives an invocation.
+            if !reconciled_at(line).is_empty()
+                && [
+                    "static ",
+                    "OnceLock",
+                    "LazyLock",
+                    "OnceCell",
+                    "thread_local!",
+                    "lazy_static",
+                ]
+                .iter()
+                .any(|h| line.contains(h))
+            {
+                bad.push(format!(
+                    "(6) {path}:{n}: a holder that outlives an invocation: {}",
+                    line.trim()
+                ));
+            }
+            // (5) rk-cli's bindings of `Option<…Reconciled>`.
+            if path.starts_with("crates/rk-cli/src/")
+                && line.contains("Option<")
+                && reconciled_at(line).iter().any(|(_, a)| a.starts_with('>'))
+                && line.trim_start().starts_with("let ")
+            {
+                bindings.push((
+                    path.clone(),
+                    *n,
+                    owner_fn(&lines, *n),
+                    line.trim().to_owned(),
+                ));
+            }
+        }
+        // (2b) and (4): inside the type's own declaration and impl block.
+        if path == "crates/rk-store/src/render.rs" {
+            let block = |head: &str| -> Vec<(usize, &str)> {
+                let Some(i) = lines
+                    .iter()
+                    .position(|(_, l)| l.trim_start().starts_with(head))
+                else {
+                    return Vec::new();
+                };
+                lines[i + 1..]
+                    .iter()
+                    .take_while(|(_, l)| *l != "}")
+                    .copied()
+                    .collect()
+            };
+            for (n, l) in block("impl Reconciled {") {
+                if l.contains("-> Self") {
+                    bad.push(format!(
+                        "(2) {path}:{n}: a fn in `impl Reconciled` returns Self: {}",
+                        l.trim()
+                    ));
+                }
+            }
+            let fields = block("pub struct Reconciled {");
+            if fields.is_empty() {
+                bad.push(format!("(4) {path}: `pub struct Reconciled {{` not found"));
+            }
+            for (n, l) in fields {
+                if l.trim_start().starts_with("pub") {
+                    bad.push(format!(
+                        "(4) {path}:{n}: a pub field on Reconciled: {}",
+                        l.trim()
+                    ));
+                }
+            }
+            if let Some(i) = lines
+                .iter()
+                .position(|(_, l)| l.trim_start().starts_with("pub struct Reconciled {"))
+                && i > 0
+                && lines[i - 1].1.contains("derive(")
+                && lines[i - 1].1.contains("Default")
+            {
+                bad.push(format!(
+                    "(3) {path}:{}: Reconciled derives Default",
+                    lines[i - 1].0
+                ));
+            }
+        }
+    }
+    let in_entry_pass = |(p, _, f): &(String, usize, String)| {
+        p == "crates/rk-store/src/render.rs" && f.contains("fn reconcile_entry(")
+    };
+    if literals.len() != 1 || !literals.iter().all(in_entry_pass) {
+        bad.push(format!("(1) the struct literal `Reconciled {{` is not exactly once, inside reconcile_entry: {literals:?}"));
+    }
+    if returns.len() != 1 || !returns.iter().all(in_entry_pass) {
+        bad.push(format!(
+            "(2) a fn other than reconcile_entry returns a Reconciled: {returns:?}"
+        ));
+    }
+    if bindings.len() != 1
+        || !bindings.iter().all(|(p, _, f, l)| {
+            p == "crates/rk-cli/src/verbs/run.rs"
+                && f.contains("fn run_lane(")
+                && l.ends_with("= None;")
+        })
+    {
+        bad.push(format!("(5) rk-cli's Option<Reconciled> is not one function-local `= None` in run_lane: {bindings:?}"));
+    }
+    bad
+}
+
+/// Every `.rs` file under `crates/*/src`, as `(repo-relative path, source)`.
+fn workspace_sources() -> Vec<(String, String)> {
+    fn walk(dir: &Path, rel: &str, out: &mut Vec<(String, String)>) {
+        let mut entries: Vec<_> = std::fs::read_dir(dir)
+            .expect("a source directory reads")
+            .filter_map(Result::ok)
+            .collect();
+        entries.sort_by_key(std::fs::DirEntry::file_name);
+        for e in entries {
+            let name = e.file_name().to_string_lossy().into_owned();
+            let path = e.path();
+            if path.is_dir() {
+                walk(&path, &format!("{rel}/{name}"), out);
+            } else if name.ends_with(".rs") {
+                let src = std::fs::read_to_string(&path).expect("a source file reads");
+                out.push((format!("{rel}/{name}"), src));
+            }
+        }
+    }
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("crates/")
+        .to_path_buf();
+    let mut out = Vec::new();
+    let mut members: Vec<_> = std::fs::read_dir(&crates)
+        .expect("crates/ reads")
+        .filter_map(Result::ok)
+        .collect();
+    members.sort_by_key(std::fs::DirEntry::file_name);
+    for m in members {
+        let src = m.path().join("src");
+        if src.is_dir() {
+            walk(
+                &src,
+                &format!("crates/{}/src", m.file_name().to_string_lossy()),
+                &mut out,
+            );
+        }
+    }
+    out
+}
+
+/// **D21-109's construction lint (mandatory; floor +1)**: a [`Reconciled`] — the proof a reader
+/// needs that its entry's reconcile ran (AC-126) — is built ONLY by the entry pass, so no lane can
+/// serve a read before its entry's reconcile. M24's lane arm is unobservable by construction
+/// (D21-109); this lint pins the construction instead. CODE LINES ONLY under `crates/*/src`, with
+/// EXACT counts:
+/// 1. the struct literal `Reconciled {` exactly once, inside `reconcile_entry`;
+/// 2. no fn but `reconcile_entry` returns a `Reconciled`, and no fn in `impl Reconciled` returns
+///    `Self`;
+/// 3. no `Default` or `From` impl (and no derived `Default`);
+/// 4. no `pub` field;
+/// 5. `rk-cli`'s `Option<Reconciled>` is ONE function-local `let … = None;` in the invocation
+///    (`run_lane`);
+/// 6. no `static` / `OnceLock` / `LazyLock` / `OnceCell` / `thread_local!` holder of one.
+///
+/// Every check is driven red first over a planted file set, and the unplanted synthetic set is
+/// clean, so the silence over the real tree is the lint's and not a scan that matches nothing.
+/// Mutant M24-G plants each of these in the real source in turn and flips this test.
+/// *(Added 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; D21-109 ruling 2, taken
+/// provisionally under D21-105.)*
+#[test]
+fn a_reconciled_is_built_only_by_the_entry_pass() {
+    let store = "crates/rk-store/src/render.rs".to_owned();
+    let cli = "crates/rk-cli/src/verbs/run.rs".to_owned();
+    let good_store = "#[derive(Debug, Clone, PartialEq, Eq)]\npub struct Reconciled {\n    entry: usize,\n}\n\nimpl Reconciled {\n    pub const fn entry(&self) -> usize {\n        self.entry\n    }\n}\n\npub fn reconcile_entry(\n    w: &W,\n) -> Result<Reconciled, E> {\n    let done = Reconciled {\n        entry: 0,\n    };\n    Ok(done)\n}\n";
+    let good_cli = "fn run_lane(\n    x: u8,\n) {\n    // let x: Option<Reconciled> = static;\n    let mut reconciled: Option<rk_store::render::Reconciled> = None;\n}\n\nfn stage_seams(\n    reconciled: &mut Option<rk_store::render::Reconciled>,\n) {\n}\n";
+    let set = |s: &str, c: &str| vec![(store.clone(), s.to_owned()), (cli.clone(), c.to_owned())];
+    assert_eq!(
+        reconciled_violations(&set(good_store, good_cli)),
+        Vec::<String>::new(),
+        "CONTROL: the unplanted synthetic set is clean"
+    );
+    let plants: [(&str, String, String); 7] = [
+        (
+            "(1)",
+            format!(
+                "{good_store}\npub fn second() -> usize {{\n    Reconciled {{ entry: 1 }}.entry\n}}\n"
+            ),
+            good_cli.to_owned(),
+        ),
+        (
+            "(2)",
+            good_store.replace(
+                "    pub const fn entry(&self) -> usize {\n        self.entry\n    }\n",
+                "    pub const fn empty() -> Self {\n        Self { entry: 0 }\n    }\n",
+            ),
+            good_cli.to_owned(),
+        ),
+        (
+            "(3)",
+            format!(
+                "{good_store}\nimpl Default for Reconciled {{\n    fn default() -> Self {{\n        Self {{ entry: 0 }}\n    }}\n}}\n"
+            ),
+            good_cli.to_owned(),
+        ),
+        (
+            "(3)",
+            good_store.replace(
+                "#[derive(Debug, Clone, PartialEq, Eq)]",
+                "#[derive(Debug, Clone, Default, PartialEq, Eq)]",
+            ),
+            good_cli.to_owned(),
+        ),
+        (
+            "(4)",
+            good_store.replace(
+                "pub struct Reconciled {\n    entry",
+                "pub struct Reconciled {\n    pub entry",
+            ),
+            good_cli.to_owned(),
+        ),
+        (
+            "(5)",
+            good_store.to_owned(),
+            good_cli.replace("= None;", "= Option::default();"),
+        ),
+        (
+            "(6)",
+            good_store.to_owned(),
+            format!(
+                "{good_cli}\npub static HELD: std::sync::OnceLock<Option<rk_store::render::Reconciled>> = std::sync::OnceLock::new();\n"
+            ),
+        ),
+    ];
+    for (check, s, c) in &plants {
+        let found = reconciled_violations(&set(s, c));
+        assert!(
+            found.iter().any(|v| v.starts_with(check)),
+            "CONTROL: the planted {check} violation was not found: {found:?}"
+        );
+    }
+
+    let sources = workspace_sources();
+    assert!(
+        sources
+            .iter()
+            .any(|(p, _)| p == "crates/rk-store/src/render.rs")
+            && sources
+                .iter()
+                .any(|(p, _)| p == "crates/rk-cli/src/verbs/run.rs"),
+        "PREMISE: the scan reads rk-store's render.rs and rk-cli's run.rs ({} files)",
+        sources.len()
+    );
+    assert_eq!(
+        reconciled_violations(&sources),
+        Vec::<String>::new(),
+        "a Reconciled can be built, returned, defaulted, exposed or held outside the entry pass"
+    );
+}

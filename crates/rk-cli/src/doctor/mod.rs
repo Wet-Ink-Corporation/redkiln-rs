@@ -231,6 +231,13 @@ pub struct Ctx {
     pub now: i64,
     /// The recorded journal the six `s7b-ii` gate rows and the headroom row fold.
     ///
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; `s8f` §8f.9,
+    /// ADR-0190 decision 7, proposed.)* **The sentence below was FALSE until this change**: the
+    /// builder read `events.jsonl` on every path, the shipped binary's included, so no rule ever
+    /// read a real run's rows (ADR-0163 decision 5: *"`doctor`'s journal never comes from the store's
+    /// event rows"*). It is true now: [`Ctx::build`] takes a [`JournalSource`], the verb passes
+    /// [`JournalSource::Store`], and only a fixture test names `events.jsonl`.
+    ///
     /// 🛑 **Read from the STORE in the shipped binary and from `events.jsonl` in a fixture**, and
     /// the rules cannot tell which — which is the point. `SqliteStore::query` ignores its selector
     /// and returns the whole `t2_event` table (`crates/rk-adapter-sqlite/src/lib.rs`), so *"the
@@ -260,6 +267,23 @@ pub enum TimeoutTable {
     /// No table could be selected: no adapter detected, no `registry.toml`, a registry that did not
     /// load, or no table for the detected adapter's toolchain.
     NoTable(String),
+}
+
+/// **Where [`Ctx::build`] reads the journal** (`s8f` §8f.9; D21-42 12c; ADR-0190 decision 7,
+/// proposed). *(Added 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL.)*
+///
+/// The source is a parameter, so which one a caller reads is visible at the call: the verb passes
+/// [`JournalSource::Store`] and **never** names the fixture source; a fixture test may name
+/// `events.jsonl`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JournalSource {
+    /// The store's rows, the whole journal: the handle the root opened (`Ctx.store`), read with an
+    /// inert selector. A store that did not open (`None` on the rebuild path, `Some(Err)` for a
+    /// foreign store, which `RK-D-STORE-ID` reports) is an EMPTY journal, never a fallback to a
+    /// file.
+    Store,
+    /// `<worktree>/events.jsonl`, one JSON row per line — a FIXTURE's journal.
+    FixtureEventsJsonl,
 }
 
 /// One journal row as `doctor` reads it.
@@ -325,7 +349,18 @@ impl Ctx {
     /// **Nothing here refuses.** Every absence — no catalog directory, no `facets.toml`, no
     /// journal — is a value a rule reports, never an error this returns. A builder that refused
     /// would decide, before the table ran, which defects `doctor` is allowed to find.
+    ///
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; `s8f` §8f.9.)*
+    /// **`journal` names where the journal comes from** ([`JournalSource`]), and it is the one
+    /// builder still: the verb passes the store's rows; a fixture test may pass `events.jsonl`; the
+    /// verb never names the fixture source (`doctor_journal::the_doctor_verb_never_selects_the_fixture_source`).
     #[must_use]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the arity is §8f.9's: the journal source is a PARAMETER so the call site shows which \
+                  journal it reads, and ONE builder is the rule (a struct of arguments would be a \
+                  second way to assemble a Ctx)"
+    )]
     pub fn build(
         worktree: PathBuf,
         common_dir: PathBuf,
@@ -334,6 +369,7 @@ impl Ctx {
         store: Option<Result<SqliteStore, StoreOpenError>>,
         probe: Box<dyn probe::VersionProbe>,
         now: i64,
+        journal: JournalSource,
     ) -> Self {
         let redkiln = worktree.join(".redkiln");
 
@@ -349,7 +385,10 @@ impl Ctx {
         let registry = std::fs::read_to_string(redkiln.join("facets.toml"))
             .ok()
             .and_then(|src| Registry::from_toml(&src).ok());
-        let journal = read_journal(&worktree.join("events.jsonl"));
+        let journal = match journal {
+            JournalSource::Store => store_journal(store.as_ref()),
+            JournalSource::FixtureEventsJsonl => read_journal(&worktree.join("events.jsonl")),
+        };
         let timeout_table =
             timeout_table(&worktree, &common_dir, &config, &env, &catalog, &pack_files);
 
@@ -452,6 +491,32 @@ fn timeout_table(
             reports.join("; ")
         )),
     }
+}
+
+/// **The store's rows, the whole journal** ([`JournalSource::Store`]; `s8f` §8f.9).
+///
+/// Read through the handle the root opened, with an inert selector (`Query::ByRun`, which returns
+/// every row — `cost` and `status` read the whole journal the same way), and mapped to [`Row`] by
+/// each kind's wire name. A store that did not open is an EMPTY journal, never a fallback to a
+/// file: `RK-D-STORE-ID` reports the refusal, and a journal read from somewhere else would put rows
+/// in front of the rules that no store holds. A read that fails is empty for the same reason.
+fn store_journal(store: Option<&Result<SqliteStore, StoreOpenError>>) -> Vec<Row> {
+    use rk_ports::event_store::EventStore as _;
+    let Some(Ok(store)) = store else {
+        return Vec::new();
+    };
+    store
+        .query(rk_ports::event_store::Query::ByRun(String::new()))
+        .map(|events| {
+            events
+                .into_iter()
+                .map(|e| Row {
+                    kind: e.kind.wire_name().to_owned(),
+                    payload: e.payload,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Read a fixture journal, one JSON object per line.

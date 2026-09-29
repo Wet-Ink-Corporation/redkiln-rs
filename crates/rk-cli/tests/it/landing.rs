@@ -1258,7 +1258,7 @@ fn patch(path: &Path, from: &str, to: &str) {
 }
 
 /// The fixture lane, with `Spec` emitted at `implement` and a last stage `wrapup` after `review`.
-fn drift_lane() -> tempfile::TempDir {
+pub(crate) fn drift_lane() -> tempfile::TempDir {
     let repo = lane_e2e::lane_repo();
     let rk = repo.path().join(".redkiln");
     std::fs::write(rk.join("catalog").join("emit-report.toml"), EMIT_SPEC)
@@ -1291,7 +1291,7 @@ fn spec_md(item: &str) -> String {
 
 /// **A human's edit of a structured section, committed on `rk-run/<item>`**: the canonical JSON
 /// of `summary` in `Spec.md` is rewritten, and the run-owned tree commits it.
-fn human_edits_the_spec(root: &Path, item: &str) -> String {
+pub(crate) fn human_edits_the_spec(root: &Path, item: &str) -> String {
     let tree = crate::run_tree(root, item).path;
     let md = tree.join(spec_md(item));
     let text = std::fs::read_to_string(&md).expect("PREMISE: the rendering is in the run tree");
@@ -1332,7 +1332,12 @@ fn transitions_into(root: &Path, stage: &str) -> usize {
 }
 
 /// `answer <item> <option> [--attach <kind>=<path>]`, in process, as the operator types it.
-fn answer(root: &Path, item: &str, option: &str, attach: Option<(&str, PathBuf)>) -> Exit {
+pub(crate) fn answer(
+    root: &Path,
+    item: &str,
+    option: &str,
+    attach: Option<(&str, PathBuf)>,
+) -> Exit {
     let cli = rk_cli::cli::Cli {
         cwd: Some(root.to_path_buf()),
         command: rk_cli::cli::Command::Status,

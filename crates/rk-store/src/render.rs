@@ -905,6 +905,54 @@ fn drifts_of(
     Ok(out)
 }
 
+/// One structured section, or the frontmatter, whose bytes on disk differ from the rendering of the
+/// typed value: `doctor`'s `RK-D-ARTIFACT-MUTATION` reads these (AC-159).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Difference {
+    /// The section's anchor text, [`FRONTMATTER_ANCHOR`], or [`DOCUMENT_ANCHOR`] when the rendering
+    /// is absent.
+    pub anchor: String,
+    /// The digest of the rendering's bytes for that anchor.
+    pub rendered: Digest,
+    /// The digest of the bytes on disk for that anchor.
+    pub observed: Digest,
+}
+
+/// **The per-section comparison `doctor` asks for** (AC-159; ADR-0189 decision 13, proposed): the
+/// frontmatter and every structured section of `rendering` (the `.md` on disk, `None` when absent)
+/// compared with the rendering of the value in `sidecar`, located by [`crate::locator`] — `doctor`
+/// parses no markdown itself (AC-120). **Prose sections are never compared** (AC-152), and **no
+/// whole-file digest is taken** (PIA-043's amendment). `Ok(None)` for a machine-only kind, which has
+/// no rendering to compare. *(Added 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES.)*
+///
+/// # Errors
+/// [`RenderError::Sidecar`] when `sidecar` is not JSON; the renderer's own.
+pub fn differences(
+    kind: &str,
+    sidecar: &[u8],
+    rendering: Option<&[u8]>,
+) -> Result<Option<Vec<Difference>>, RenderError> {
+    let Some(template) = template_of(kind) else {
+        return Ok(None);
+    };
+    let value = value_of_sidecar(sidecar).map_err(|detail| RenderError::Sidecar {
+        kind: kind.to_owned(),
+        path: sidecar_name(kind),
+        detail,
+    })?;
+    let disk = rendering.map(|b| String::from_utf8_lossy(b).into_owned());
+    Ok(Some(
+        drifts_of(template, &value, disk.as_deref())?
+            .into_iter()
+            .map(|(anchor, rendered, observed)| Difference {
+                anchor,
+                rendered,
+                observed,
+            })
+            .collect(),
+    ))
+}
+
 /// The value with every prose section edited on disk accepted whole (AC-152): the field's new
 /// value is the section's bytes, uninspected. `None` when nothing changed.
 fn accepted_prose(

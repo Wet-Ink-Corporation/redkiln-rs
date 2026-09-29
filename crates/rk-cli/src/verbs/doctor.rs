@@ -148,6 +148,10 @@ pub fn run_to(
         // THE ONE WALL-CLOCK READ (§7d.5). No rule reads a clock; the quarantine row's age
         // is `now - until` off this value.
         crate::clock::now().unix_seconds(),
+        // *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; `s8f` §8f.9,
+        // ADR-0190 decision 7, proposed.)* THE STORE'S ROWS, the whole journal, through the handle
+        // opened above. The verb never names the `events.jsonl` fixture source.
+        crate::doctor::JournalSource::Store,
     );
 
     Ok(evaluate_and_render(&ctx, out))

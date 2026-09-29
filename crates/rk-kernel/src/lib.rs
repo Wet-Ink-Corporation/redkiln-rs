@@ -231,8 +231,9 @@
 //! it, and it is design §3.3 P5's *"capability differences are **data**"* read literally.
 //!
 //! 🛑 **Three halves are ARMED and none is claimed.** Where an activity's capability **need** comes
-//! from is a decision no record has taken — `ActivitySpec` carries *"five fields and no sixth"* and
-//! the catalog schema declares no `capability` key — so the need is handed in and **a record routing
+//! from is a decision no record has taken — `ActivitySpec` carries *"five fields and no sixth"*
+//! (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* now six: ADR-0190's
+//! `activity_id_at_version`, which is not a capability) and the catalog schema declares no `capability` key — so the need is handed in and **a record routing
 //! it is OWED** (`00-preamble.md`:55). AC-495's *"before any activity runs"* is discharged as a type
 //! fact and not as an ordering inside a live run, which needs `rk-cli`'s composition root at **Step
 //! 7d**. And **AC-500 is ARMED, not claimed**: the route-around is a *dispatch-time* behaviour that

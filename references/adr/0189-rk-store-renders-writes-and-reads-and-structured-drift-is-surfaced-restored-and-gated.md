@@ -237,6 +237,14 @@ true, timeout = "build_timeout", inputs = [], route = "store", side_effecting = 
   `runtime::step::StoreRoute`, which also serves the step-grain `Route::Store` arm (`item_create`, decision 11). Its
   kernel default, `UnboundStoreRoute`, is **fail-closed**: it refuses by name and never answers with an empty value.
   The seam's result still passes the closed decode table against the row's `outputs`.
+  *(dated 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; an in-record correction, the record being `proposed`.)* The clause
+  *"because `rk-kernel` cannot depend on `rk-store`"* above is **inaccurate**: `rk-kernel` depends on `rk-store`
+  (`crates/rk-kernel/Cargo.toml`, for `rk_store::canon` since Slice 3; `rk_store::render::ArtifactReader` implements
+  the kernel's `ArtifactReadSeam` in `runtime/reference.rs`). The real reason the handler is a composition-root-bound
+  seam is that **the kernel opens no managed tree**: the store route reads and writes files in the run-owned worktree
+  (`.redkiln/items/`), whose path and git reads the composition root owns, and an unbound kernel must refuse by name
+  rather than touch a filesystem (D21-106 ruling 3). D21-106 ruling 2's *"`rk-kernel` still does not depend on
+  `rk-store`"* carries the same inaccuracy; the ledger is not edited here, and it is flagged for the review packet.
 - **What it reads.** The item ids the store names: a tier-1 `stage_transition` row's `item`, or a journalled `ItemRefs`
   output of an `item_create` step. Each is read at `.redkiln/items/<id>.toml` in the run-owned worktree **by its exact
   path** (`doctor --rebuild`'s precedent); `.redkiln/` and `.redkiln/items/` are **never walked**.
@@ -261,6 +269,24 @@ true, timeout = "build_timeout", inputs = [], route = "store", side_effecting = 
   property from `rk_types::drift::Drift::blocks()` and reports (a) a `drift_advisory` followed in the same entry by a
   `render.structured-drift` gate naming its root, and (b) a `structured_drift` with no such gate naming its artifact
   opened after it in the same entry. Each finding names the drift kind, the artifact or root, and the digests.
+
+*(dated 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.9.)* **As built.** Both rules are `Error` (§8f.9 fixes no
+severity; each reports a breach of a forbids, never a condition an operator may leave standing). `RK-D-ARTIFACT-MUTATION`
+reads the artifacts named by `artifact.write` rows whose `path` is the kind's sidecar `<Kind>.json` (so a stored root
+`<Kind>.root<ext>` is never read), in each tree a `worktree_assigned` row names and then the checkout; it first checks
+the sidecar against the LATEST write of its path (a rewrite, a reconcile-accepted prose edit and a `move-to-prose`
+each rewrite it through the writer, so each is its own record), and then compares the frontmatter and each structured
+section with the rendering of that value through `rk_store::render::differences`, which calls the locator (the rule
+parses no markdown). A file the store named that is absent from a tree is not read. `.redkiln/items/` is in scope and
+yields nothing: an item record has no layout-C section, no sidecar and no `artifact.write` (decision 11). `RK-D-DRIFT-KIND`
+reads an ENTRY as the rows from one `reconcile_started` to the next, classes every `structured_drift` and
+`drift_advisory` by `rk_types::drift::Drift::blocks()`, and takes a gate as naming a drift when one of its `drifts`
+carries the drift's kind (and, for a structured drift, its anchor). Tests: `doctor_artifact` (5) and `doctor_drift`
+(3); rejecting fixtures `crates/rk-cli/tests/fixtures/doctor/RK-D-ARTIFACT-MUTATION/` and `…/RK-D-DRIFT-KIND/`.
+**Decision 9's last sentence is NOT built** (the reader's root arm): `rk-kernel`'s `read_artifact_input` resolves an
+`artifact:` input only from a committed `emit` binding and refuses before any seam call when none exists, so a root
+arm in `ArtifactReader` alone would have no caller; no shipped question carries an `attaches` option. It is returned
+to the judge panel as a blocker by S8F-P8.
 
 ## Consequences
 

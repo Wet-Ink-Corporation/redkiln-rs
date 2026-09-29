@@ -93,6 +93,7 @@ pub fn spec() -> ActivitySpec {
         schema: SchemaId::new("findings"),
         timeout_secs: 5,
         inputs: Vec::new(),
+        activity_id_at_version: None,
     }
 }
 

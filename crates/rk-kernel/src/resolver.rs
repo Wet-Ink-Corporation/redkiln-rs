@@ -58,7 +58,9 @@
 //! # Where the NEEDS come from is a decision this stage does not take
 //!
 //! `rk_types::activity::ActivitySpec` carries five fields and no sixth (ADR-0099:61, and
-//! `crates/rk-types/src/activity.rs`:26 says *"five fields and no sixth"* in terms); the activity
+//! `crates/rk-types/src/activity.rs`:26 says *"five fields and no sixth"* in terms)
+//! (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* six now: ADR-0190's
+//! `activity_id_at_version`, which is not a capability either); the activity
 //! catalog's schema declares no capability key [measured 2026-09-14:
 //! `grep -rhoE '^[a-z_]+ *=' spikes/p9/catalog/*.toml | tr -d ' =' | sort -u` lists **36** keys
 //! across the 102 shipped activities and none of them is `capability`]; and `rk-types` is

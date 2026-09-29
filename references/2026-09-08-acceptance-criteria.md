@@ -110,12 +110,16 @@ The areas were authored independently against one proposal, so the same behaviou
 | Per-AC mutation evidence; a surviving mutant is not `pinned` | **AC-334** | AC-317, AC-458 (migrated rows), AC-140 (rendering) | AC-334 owns the flip predicate and the `mutation-survived` status; AC-317 is the harness invocation that calls it and no longer carries a second predicate (ADR-0104 decision 2; PIA-051). |
 | No model-authored decision field reaches policy | **AC-280 + AC-283** | AC-343 | AC-283's type-signature test is the load-bearing instrument in all three. |
 
-**Five contradictions.** Three (C1–C3) the 2026-09-08 assembly could not resolve and left for a human decision. **Amended 2026-09-15:** the operator took C1 and C3 on 2026-09-14 — **C1** by ADR-0122 (`spikes/DECISIONS-2026-09-14.md` D-1) and **C3** by `spikes/DECISIONS-2026-09-14.md` D-13 (committed `d75a7fc`) — so of the original three **only C2 is still unresolved**. The clause this replaces read *"C1 is now decidable by measurement (PIA-068)"*, which was true on 2026-09-11 and was overtaken by the decision it invited. C4 was found by the audit and resolved by decision #5 of 2026-09-11; C5 was found while absorbing ADR-0095 on 2026-09-11 and was **recorded and resolved the same day by ADR-0112** (successor-in-part to ADR-0095) — which is what C5's own row cell has said all along *(corrected 2026-09-15: this half of the sentence read "and is recorded, not resolved", contradicting that cell. **Pre-existing, not introduced by the 2026-09-15 pass**, which was instructed to correct the C1 half of this sentence and did)*. **The arithmetic, derived here from the five rows of the table below rather than carried from a summary:** C1 resolved 2026-09-14 (ADR-0122), C2 **unresolved**, C3 resolved 2026-09-14 (`DECISIONS-2026-09-14` D-13), C4 resolved 2026-09-11 (decision #5), C5 resolved 2026-09-11 (ADR-0112) — so **exactly one of the five contradictions, C2, remains unresolved**, and it is the only one this section still leaves open.
+**Five contradictions.** Three (C1–C3) the 2026-09-08 assembly could not resolve and left for a human decision. **Amended 2026-09-15:** the operator took C1 and C3 on 2026-09-14 — **C1** by ADR-0122 (`spikes/DECISIONS-2026-09-14.md` D-1) and **C3** by `spikes/DECISIONS-2026-09-14.md` D-13 (committed `d75a7fc`) — so of the original three **none is still unresolved**: C2 is resolved too *(amended in place 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; C2
+on D21-42 5a, D21-43 N11 and the render record ADR-0189, proposed; row C2 below. The clause this replaces read
+*"only C2 is still unresolved"*.)* The clause this replaces read *"C1 is now decidable by measurement (PIA-068)"*, which was true on 2026-09-11 and was overtaken by the decision it invited. C4 was found by the audit and resolved by decision #5 of 2026-09-11; C5 was found while absorbing ADR-0095 on 2026-09-11 and was **recorded and resolved the same day by ADR-0112** (successor-in-part to ADR-0095) — which is what C5's own row cell has said all along *(corrected 2026-09-15: this half of the sentence read "and is recorded, not resolved", contradicting that cell. **Pre-existing, not introduced by the 2026-09-15 pass**, which was instructed to correct the C1 half of this sentence and did)*. **The arithmetic, derived here from the five rows of the table below rather than carried from a summary:** C1 resolved 2026-09-14 (ADR-0122), C2 resolved 2026-09-29 (D21-42 5a, D21-43 N11, ADR-0189; this item read *"C2 unresolved"* until then), C3 resolved 2026-09-14 (`DECISIONS-2026-09-14` D-13), C4 resolved 2026-09-11 (decision #5), C5 resolved 2026-09-11 (ADR-0112) — so **none of the five contradictions remains open** *(amended in place 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; the clause this replaces
+read *"exactly one of the five contradictions, C2, remains unresolved, and it is the only one this section still
+leaves open"*.)*
 
 | # | the contradiction | criteria | why it matters |
 | --- | --- | --- | --- |
 | C1 | **Do harness-internal retries charge the activity's attempt budget?** AC-026 and AC-232 say each observed inner attempt is counted against the budget and the kernel adds no retry of its own. AC-391 explicitly **cut** that clause in refutation as unlicensed — ADR-0037 counts *steps per pass*, and §4.3's own row says observe and record, do not duplicate — on the ground that it would make the budget a function of platform-side behaviour the kernel cannot bound. 🛑 *(Read this cell with column 4. It states the contradiction **as found on 2026-09-08 and as refuted** — §0's convention for this whole register, *"It preserves the criteria as authored and as refuted"* — and it is **not** a statement of the current state: **AC-391's *Cut* is WITHDRAWN and its cut clause restored, 2026-09-15**, per ADR-0122 decision 5(a). The historical sentence above is left exactly as authored.)* | AC-026, AC-232 vs AC-391 | **Resolved 2026-09-14 by the operator's decision at Step 7b Slice 4, recorded as ADR-0122 (`spikes/DECISIONS-2026-09-14.md` D-1; the register amendments landed 2026-09-15): AC-026 and AC-232 stand — an inner attempt charges, one charge per recorded `system/api_retry` event, in the pass that dispatched it — and AC-391's *Cut* is withdrawn with its clause restored.** Both readings are implementable and they give different budgets. **Re-opened as decidable by measurement (2026-09-11, PIA-068):** the `system/api_retry` payload *is* captured — 139 rows in 12 result files; per row 1 attempt on 89, 2 on 21, 3 on 12, 4 on 4, 5 on 1, 6 on 6, 10 on 6 (the `max_retries = 10` ceiling) [measured, recount at AC-026]. Under AC-026's reading, six recorded dispatches would have spent ten attempts of an activity budget on platform-side `overloaded`/529 weather before the kernel acted once. The decision is the operator's; the register records the distribution and does not take it — *as this row stood before the resolution above*. **Correction (2026-09-15, ADR-0122 decision 4, via decision 5(b)):** this row also read *"If C1 resolves against AC-391, ADR-0037 is superseded, never edited"*, and **that sentence is false**. ADR-0037's whole `## Decision` is one sentence — *"Lint rule 8 becomes: `budget.attempts_total ≥ number of agent/tool steps on one pass`."* — a **load-time lint on a DECLARED field**; nothing in it moves, ADR-0122 carries `supersedes: []` and ADR-0037 keeps `superseded_by: []`. What overreached was four criteria — AC-021, AC-026, AC-390 and AC-391 — **citing** ADR-0037 as authority for a runtime rule it never states, and **an interpretation cannot be superseded**. The half of the old instruction that binds, and is honoured, is *"never edited"*: ADR-0037 is not edited. **Still owed from this resolution:** ADR-0122 decision 5(c)'s dated clarification of AC-391's surviving class-scoped clause against AC-026's *"the same failure"* — residual **R-2** of `spikes/DECISIONS-2026-09-15.md`. |
-| C2 | **Is a hand-edit inside a rendered section drift, or is it silently overwritten?** AC-124, AC-411 and AC-159 say the edit is surfaced as typed drift with both digests, and AC-159 has `doctor` report an unrecorded artifact mutation by digest comparison. AC-478 says the typed values are returned unchanged, the markdown is regenerated over the edit, and — verbatim — *no comparison of stored-vs-regenerated rendering is performed, so no drift state exists to report*. | AC-124, AC-159, AC-411 vs AC-478 | AC-478 records this as the intended ADR-0005 trade and states the consequence honestly. It is nonetheless the opposite behaviour, on the one surface a human touches most. |
+| C2 | **Is a hand-edit inside a rendered section drift, or is it silently overwritten?** AC-124, AC-411 and AC-159 say the edit is surfaced as typed drift with both digests, and AC-159 has `doctor` report an unrecorded artifact mutation by digest comparison. AC-478 says the typed values are returned unchanged, the markdown is regenerated over the edit, and — verbatim — *no comparison of stored-vs-regenerated rendering is performed, so no drift state exists to report*. | AC-124, AC-159, AC-411 vs AC-478 | AC-478 records this as the intended ADR-0005 trade and states the consequence honestly. It is nonetheless the opposite behaviour, on the one surface a human touches most. **Resolved 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES — on D21-42 5a (*"Surface, then restore"*), D21-43 N11 (*"`structured_drift` opens a drift gate that blocks the stage's exit until it is answered"*) and the render record ADR-0189 (proposed):** a structured edit is surfaced as one `structured_drift`, restored from the type, and gated by a `render.structured-drift` gate; AC-124, AC-159 and AC-411 stand; AC-478's AND line is removed in place with a dated note, and its Note is corrected. |
 | C3 | **How is a per-item token appetite raised?** AC-023 refuses an in-run raise *unless it arrives as a typed budget-change event with an author*. AC-389 refuses it outright: *raising the appetite is possible only by returning the item to triage*. | AC-023 vs AC-389 | **Resolved 2026-09-14 by the operator's decision at Step 7b Slice 4, recorded at `spikes/DECISIONS-2026-09-14.md` D-13 (committed `d75a7fc`): AC-389 — refuse outright.** AC-023's *unless* clause **and its second instrument** are **cut in place**, dated 2026-09-15; **AC-389 and AC-396 are unchanged**. Ground: the escape hatch needs an `EventKind`, the enum is closed at 29 (`crates/rk-types/src/event_kind.rs`) and ADR-0116:40-41 permits minting only by record. AC-396 routes the appetite **value** to a human gate, which suits either mechanism — but a build cannot implement both refusals. 🛑 **What this row does NOT settle, said here so a later reader does not rediscover it:** AC-389's *other* THEN half — *"and the attempt is appended as an event"* — **names no event kind that exists**, for the same reason the escape hatch was unbuildable. `EventKind` is closed at 29, ADR-0112's eleven `StepError` variants carry no member for a refused appetite raise, and design §5's table has no row; the crate says so in `crates/rk-kernel/tests/it/budget.rs` — its module-header section *"AND AC-389's OTHER HALF IS STILL UNBUILT AND STILL OWED A RECORD"* (*"`EventKind` for a refused appetite raise, the enum is closed at 29"* … *"variants carry no member for one, and design §5's table has no row."*), and the doc on `appetite_raise_from_an_activity_result_is_refused` (*"and AC-389's append is not built either"*). **Cited by section, symbol and quotation, not by line (2026-09-15): the line window this cite first carried named a different paragraph of that header, and the file is under edit.** That is residual **R-1** of `spikes/DECISIONS-2026-09-15.md` and needs its own record — an ADR in ADR-0116's or ADR-0120's form, or a dated amendment withdrawing the append clause. **It is not settled here and no amendment in this pass touches AC-389.** |
 | C4 | **What class is a tool set unequal to the card's allowlist?** AC-204 said `StepError::NotAdopted`; AC-202, AC-386 and design §7.4 said `StepError::NotIsolated`; only `NotIsolated` triggers AC-399's quarantine, so the pick silently decided whether adoption failures quarantined a run's metrics. | AC-204 vs AC-386 (and AC-202, AC-399) | **Resolved 2026-09-11 — decision #5 of `spikes/DECISIONS-2026-09-11.md` (PIA-016): `NotIsolated` everywhere.** AC-204 amended; AC-386 and AC-399 unchanged; ADR-0095's `StepError` table reserves `NotAdopted` for the wrong agent answering; SM-061's instrument is a set digest. |
 | C5 | **Which `StepError` variants exist?** ADR-0095 decision 2 fixes the closed set at eight — `Transport`, `Schema`, `Timeout`, `Cancelled`, `NonZero`, `RateLimited`, `NotAdopted`, `NotIsolated` — and forbids any variant not in the table. Nine criteria and design §3.6 name three others as variants: `Platform { status, retry_after }` (AC-029, AC-218, AC-233, AC-237, AC-428), `Unsupported(capability)` (AC-027, AC-234, AC-238, AC-328, AC-494, AC-500) and `Overage` (AC-027, AC-221, AC-234, AC-378). | AC-027, AC-029, AC-218, AC-221, AC-233, AC-234, AC-237, AC-238, AC-328, AC-378, AC-428, AC-494, AC-500 vs ADR-0095 | **Recorded and resolved 2026-09-11 by ADR-0112** (successor-in-part to ADR-0095): the table gains `Platform { status, retry_after }` (retry with backoff honouring `retry_after`; `spoke()` true; `step_failed { class: platform }`), `Unsupported { capability }` (never retried; `step_refused { class: unsupported }`) and `Overage { reason }` (refused before spawn; `step_refused { class: overage }`) — eleven variants; the thirteen criteria keep their names. |
@@ -2594,6 +2598,11 @@ into any typed field
 AND resolving the drift requires a typed write through the CLI, web or a gate answer.
 *Verified by:* a re-render equality test after a drift record exists; an integration test asserting the drift-resolution
 API accepts only a typed value; an architecture test that no code path passes drift-record text into a deserializer.
+*(Reading note 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.10; D21-43 N11; the render record ADR-0189 decisions 4 and 5,
+proposed.)* *"resolving the drift"* means answering the **drift gate** that the `structured_drift` opened (class
+`render.structured-drift`), with `confirm-restore` or `move-to-prose:<section>`, each a typed write through a gate
+answer.
+
 
 **AC-126** — `rk-store` reconcile · evidence: F19 drift is RR 3.6 (CI [1.0, 12.9], Fisher p = 0.039 — directional,
 marginal at n = 174) more likely on gates over 1 h (9/79 = 11% vs 3/95 = 3%) [measured, one operator, one repo] and 45–48% of gates exceed 1 h (F18) [measured]; brief §C3 "forces `reconcile()` on
@@ -3587,6 +3596,11 @@ THEN they merge strictly one at a time
 AND a second merge never begins before the first has produced a commit and its trailer.
 *Verified by:* a concurrency test asserting a single-writer invariant on the integration ref and that no `merge_started`
 event precedes the preceding merge's trailer commit.
+*(Disposition 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.4 and §8f.10; the landing record ADR-0188, proposed.)* Routed to
+**Phase 2**'s `rk-git` merge-queue stage (design §10.2's Phase-2 row: *"project DAG in parallel worktrees plus a
+merge queue"*). Phase 1 integrates nothing: a landed commit is a content checkpoint on `rk-run/<item>`, and
+`GitOp::Integrate` has no caller.
+
 
 **AC-197** — `rk-git` (merge queue) · evidence: §4.6 verification gate (`GreenAt(sha)`, `basis`) [documented]; F31 (four
 adjudicated defects survived fully green suites of 1,890/1,890 and 1,907/1,907) [measured — **motivating, not
@@ -3598,6 +3612,11 @@ THEN the verdict is invalidated and verification re-runs against the merged tree
 AND no verdict is carried forward across a changed tree.
 *Verified by:* an integration test with a conflicting concurrent merge, asserting a second `verify` event keyed to the
 merged tree hash and refusal of the stale verdict.
+*(Disposition 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.4 and §8f.10; the landing record ADR-0188, proposed.)* Routed to
+**Phase 2**'s `rk-git` merge-queue stage (design §10.2's Phase-2 row: *"project DAG in parallel worktrees plus a
+merge queue"*). Phase 1 integrates nothing: a landed commit is a content checkpoint on `rk-run/<item>`, and
+`GitOp::Integrate` has no caller.
+
 
 **AC-198** — `rk-git` (merge queue) · evidence: F22 (~12 background kills vs one 12,000 s detached survivor; `issue-81`
 killed 3× as background, 116 s in foreground) [measured, operational] · decisions: ADR-0018
@@ -4272,6 +4291,14 @@ with a tracked modification (whose presence must). *(Amended 2026-09-11, PIA-050
 dirty worktree was undefined.)*
 *Why:* ADR-0017's decision is "the tree hash the human saw". A hash of anything else makes the void rule (AC-249) check a
 claim nobody made. F19 [measured] found drift on 12/174 gates, so the difference is reachable in normal operation.
+*(Amended 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.4 and §8f.10; D21-43 N10; D21-47 review M6; the landing record ADR-0188,
+proposed.)* The untracked-file property in *Verified by* (*"one with an untracked file (whose presence must not
+change the hash)"*) is scoped to the **no-checkpoint-due** basis. At a due checkpoint, and at every step checkpoint
+(N10), **run-created** files are staged before the derivation, so the derivation still sees no untracked file. The
+landing record's reading of *"when a checkpoint commit is due"*: a checkpoint commit is due when a landing will
+commit. A **refused landing** lands nothing, so no checkpoint commit is due at its gate, and that gate's tree is the
+no-checkpoint-due derivation (`git write-tree` over the temporary index), never the empty commit's tree.
+
 
 **AC-246** — `rk-kernel` · evidence: — · decisions: ADR-0017
 GIVEN a gate whose token has already been consumed by an applied answer
@@ -6028,6 +6055,11 @@ pair is exactly one tick and the rule flags it, so the named instrument contradi
 (b) "every rendering surface" was unbounded and unverifiable by the one snapshot test named, so the obligation is bound to
 the two surfaces that exist. *And a third time (2026-09-11):* the decimal-fraction rule certified a defective `f64`
 implementation on every named vector.
+*(Reading note 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.8 and §8f.10; D21-43 N12; the telemetry-key record ADR-0190,
+proposed.)* *Verified by*'s *"a doctor rule that a flagged reading is never rendered bare"* is read as a test of `cost`'s
+renderer, which `status` shares (`cost::draw_line`), with AC-415's red case: a bare rendering of a
+flagged reading is rejected (`cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected`).
+
 
 **AC-373** — `rk-kernel` · evidence: F6 [measured]; F29 [measured: per-draw `five_hour` **0.0098** as a mean over 60 draws,
 0 void; F21's 0.077 is superseded, 7.8× too high] · decisions: **ADR-0110** (ADR-0003 related)
@@ -7572,12 +7604,23 @@ redkiln's `template_sig`/`rendered_sig` drift is the failure to avoid") · decis
 GIVEN a typed artifact whose rendered markdown on disk has been edited to disagree with the typed values
 WHEN the artifact is next read
 THEN the typed values are returned unchanged and the markdown is regenerated from them, overwriting the edit
-AND no comparison of stored-vs-regenerated rendering is performed, so no drift state exists to report.
 *Verified by:* a mutation test that edits the rendered markdown of a stored artifact and asserts the next read returns
 the original typed values and rewrites the file; a schema assertion that no artifact carries a drift or
-signature-comparison field. **Note:** this makes hand-edits to rendered markdown silently lossy, which is the
-intended trade (ADR-0005 puts human edits in prose fields, not in rendered structure) and is stated so it is a
-recorded consequence rather than a surprise.
+signature-comparison field. **Note:** *(corrected in place 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; C2 resolved, §0.3.)* A hand-edit to rendered
+markdown is **no longer silently lossy**: a structured edit is surfaced as one `structured_drift` before the restore
+regenerates the markdown over it, and a prose edit is accepted whole (AC-152). The note read: *"this makes
+hand-edits to rendered markdown silently lossy, which is the intended trade (ADR-0005 puts human edits in prose
+fields, not in rendered structure) and is stated so it is a recorded consequence rather than a surprise"*.
+*(Amended 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.10; D21-42 5a; D21-43 N11; the render record ADR-0189 decisions 4 and 5,
+proposed; §0.3 row C2.)* The THEN's AND line is **removed in place**. It read: *"AND no comparison of
+stored-vs-regenerated rendering is performed, so no drift state exists to report."* What replaces it is
+surface-then-restore: the entry pass compares each structured section and the frontmatter with the rendering of the
+typed value, appends one `structured_drift` `{ kind, item, anchor, old_digest, new_digest, causing_commit }` per
+difference, **then** regenerates the markdown from the type, and the kernel opens a `render.structured-drift` drift
+gate that holds the stage's exit until it is answered. The THEN's first line stands, because the restore regenerates
+the markdown over the edit. *Verified by*'s *"no artifact carries a drift or signature-comparison field"* stays:
+the drift is an event and the gate a gate row, never a field on an artifact.
+
 
 **AC-472** — `rk-store` / artifact instrumentation · evidence: S-MIG decision 4 (`plan.md` dead in 110/110, found by
 census long after it shipped); proposal §4.4 rev. 4 ("every activity input emits an `artifact.read` event so a stage
@@ -7615,6 +7658,12 @@ AND — self-hosting means **both lanes** (ADR-0094 decision 3; ADR-0011:47's wo
 half is AC-521, checked in the same release.
 *Verified by:* a release check over the event log (stage-completeness assertion; an adapter-identity assertion on the
 toolchain stage's dispatch record); the run id is the evidence, not a statement.
+*(Reading note 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.4's first paragraph; the landing record ADR-0188, proposed.)* *"a landed
+commit"* is read as a kernel-made content checkpoint commit on the run ref `rk-run/<item>`: after the lane's
+terminal `closed` mark (N9) the diff `<base>..rk-run/<item>` is not empty. **Nothing is integrated in Phase 1**
+(`GitOp::Integrate` has no caller; design §7.7): integration is Phase 2's merge queue (AC-196, AC-197), and the
+operator's merge of `rk-run/<item>` is the hand-off, whose command `explain` prints.
+
 
 **AC-521** *(added 2026-09-11 — allocated outside this area's exhausted range; see §0.4)* — self-hosting switch, story
 lane · evidence: ADR-0011:47 ("runs its own fix lane end to end (self-hosting) **and Phase 2's stories are authored under
@@ -7630,6 +7679,11 @@ reachable from the run's event log (runbook Step 8 check (1b); design §10.2's P
 *Verified by:* a release check over the event log (stage-completeness assertion per story-lane stage; an assertion that
 the story artifact's digest appears in the run's `artifact.write` events); the run id and the story id are the
 evidence. Twin of AC-473 (§0.3).
+*(Reading note 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.6 and §8f.10; the render record ADR-0189 decisions 6 and 8,
+proposed.)* *"authored into this repository's own backlog"* is read as the story artifact on the run ref
+`rk-run/<item>`, reachable from the run's event log through its `artifact.write` digest (the row's `path` names the
+managed file in the run-owned worktree). The operator's merge of `rk-run/<item>` is the hand-off (AC-473's note).
+
 
 **AC-474** — clean break, negative · evidence: proposal §5 ("The old redkiln keeps running its own development until
 … self-hosting"; "not a phased cutover") · decisions: ADR-0002

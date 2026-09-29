@@ -51,7 +51,9 @@ fn code_only(src: &str) -> String {
         .join("\n")
 }
 
-/// A dispatch specification. Five fields and no sixth (ADR-0099 clause 1) — and **no tier**, which
+/// A dispatch specification. Five fields and no sixth (ADR-0099 clause 1)
+/// (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* plus `activity_id_at_version`, `None` in a
+/// fixture) — and **no tier**, which
 /// is the point: the tier reaches this test as a token and could not have reached it through here.
 ///
 /// # Panics
@@ -64,6 +66,7 @@ fn spec() -> ActivitySpec {
         schema: SchemaId::new("ImplReport/v1"),
         timeout_secs: 900,
         inputs: vec![("item".to_owned(), serde_json::json!("issue-81"))],
+        activity_id_at_version: None,
     }
 }
 

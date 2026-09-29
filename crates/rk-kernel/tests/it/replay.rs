@@ -398,6 +398,7 @@ fn inputs() -> RunInputs {
                         ("item".to_owned(), serde_json::json!(ITEM)),
                         ("kind".to_owned(), serde_json::json!(kind)),
                     ],
+                    activity_id_at_version: None,
                 },
             ),
         );
@@ -461,6 +462,7 @@ impl Harness for RecordingHarness {
                 subagent_prompt_cache_ttl: "1h".to_owned(),
                 cancelled_by: None,
                 detected_by: None,
+                activity_id_at_version: None,
             },
             // **A function of the SPEC, never of the call order.** The value is derived from the
             // card digest and the kind the binding supplied, so two runs of identical inputs

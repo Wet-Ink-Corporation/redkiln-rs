@@ -589,7 +589,18 @@ fn render_empty_is_nothing_to_attribute_never_low_sample() {
         !foreign.is_empty(),
         "the foreign-only fixture is empty, so its half would repeat the empty-journal half"
     );
-    for (label, rows) in [("empty journal", Vec::new()), ("foreign-only", foreign)] {
+    // *(Amended 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 4, proposed.)* A journal
+    // whose `dispatch_completed` rows are all foreign or unkeyed: the item owns none, so the
+    // breakdown ADR-0190 adds prints nothing and the empty case is still the one line (M18).
+    let completions = vec![
+        completed(Some("story-1"), Some("a@1"), t(1, 1, 1, 1), 1, Some("1")),
+        completed(None, None, None, 1, None),
+    ];
+    for (label, rows) in [
+        ("empty journal", Vec::new()),
+        ("foreign-only", foreign),
+        ("foreign and unkeyed completions", completions),
+    ] {
         let text = cost::render(&rows, "x").expect("the empty case renders");
         assert_eq!(text, nothing_line("x", 0), "{label}");
         for forbidden in [
@@ -598,6 +609,8 @@ fn render_empty_is_nothing_to_attribute_never_low_sample() {
             "delta",
             "not attributable",
             "resolution_limited",
+            "breakdown",
+            "activity ",
         ] {
             assert!(
                 !text.contains(forbidden),
@@ -629,7 +642,13 @@ fn positive(s: &str) -> bool {
 /// ^(five_hour|seven_day): unkeyed=[1-9][0-9]*$
 /// ^(five_hour|seven_day): no sample$
 /// ^unwindowed=[1-9][0-9]*$
+/// ^breakdown \S+: dispatch_completed rows owned: [1-9][0-9]*$
+/// ^activity (\S+@\S+|\(none\)): dispatches=[1-9][0-9]* input_tokens=<S> output_tokens=<S> cache_read_input_tokens=<S> cache_creation_input_tokens=<S> wall_ms=[0-9]+ total_cost_usd=<D>$
 /// ```
+///
+/// *(Amended 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 4, proposed.)* Forms 9 and 10
+/// are the breakdown's. `<S>` is `[0-9]+`, `[0-9]+\(absent=[1-9][0-9]*\)` or `absent`; `<D>` is the
+/// same with the sum a decimal, `[0-9]+(\.[0-9]+)?`. Neither carries a headroom figure (AC-373).
 ///
 /// The two draw forms encode what `throttle::batch_draw` makes true: below ten a draw is
 /// `low_sample` with no delta, and `resolution_limited` (a raw delta of `0` or `1`) excludes
@@ -637,6 +656,19 @@ fn positive(s: &str) -> bool {
 /// exactly when it is `non_monotonic` (and then is not `resolution_limited`), and is
 /// `resolution_limited` exactly when its delta is `0` or `1`.
 fn in_grammar(line: &str) -> bool {
+    if let Some(rest) = line.strip_prefix("breakdown ") {
+        let Some((item, tail)) = rest.split_once(": ") else {
+            return false;
+        };
+        return !item.is_empty()
+            && !item.chars().any(char::is_whitespace)
+            && tail
+                .strip_prefix("dispatch_completed rows owned: ")
+                .is_some_and(positive);
+    }
+    if let Some(rest) = line.strip_prefix("activity ") {
+        return breakdown_line(rest);
+    }
     if let Some(rest) = line.strip_prefix("cost ") {
         let Some((item, tail)) = rest.split_once(": ") else {
             return false;
@@ -710,6 +742,63 @@ fn in_grammar(line: &str) -> bool {
     positive(after) && after != "1"
 }
 
+/// Is `s` a decimal — `[0-9]+(\.[0-9]+)?`?
+fn decimal(s: &str) -> bool {
+    match s.split_once('.') {
+        Some((int, frac)) => digits(int) && digits(frac),
+        None => digits(s),
+    }
+}
+
+/// One breakdown sum: `<sum>`, `<sum>(absent=<k>)` with `k >= 1`, or `absent`.
+fn sum_form(s: &str, sum: fn(&str) -> bool) -> bool {
+    if s == "absent" {
+        return true;
+    }
+    match s.split_once("(absent=") {
+        Some((v, k)) => sum(v) && k.strip_suffix(')').is_some_and(positive),
+        None => sum(s),
+    }
+}
+
+/// Form 10, after its `activity ` prefix (ADR-0190 decision 4).
+fn breakdown_line(rest: &str) -> bool {
+    let Some((activity, tail)) = rest.split_once(": ") else {
+        return false;
+    };
+    let named = activity
+        .split_once('@')
+        .is_some_and(|(id, v)| !id.is_empty() && !v.is_empty())
+        && !activity.chars().any(char::is_whitespace);
+    if !(named || activity == "(none)") {
+        return false;
+    }
+    let fields: Vec<&str> = tail.split(' ').collect();
+    let names = [
+        "dispatches",
+        "input_tokens",
+        "output_tokens",
+        "cache_read_input_tokens",
+        "cache_creation_input_tokens",
+        "wall_ms",
+        "total_cost_usd",
+    ];
+    if fields.len() != names.len() {
+        return false;
+    }
+    fields.iter().zip(names).all(|(field, name)| {
+        let Some(value) = field.strip_prefix(name).and_then(|v| v.strip_prefix('=')) else {
+            return false;
+        };
+        match name {
+            "dispatches" => positive(value),
+            "wall_ms" => digits(value),
+            "total_cost_usd" => sum_form(value, decimal),
+            _ => sum_form(value, digits),
+        }
+    })
+}
+
 /// **The output grammar is closed** — AC-373: no per-run or per-dispatch figure, and no line
 /// outside the eight forms of ADR-0163 decision 4's closed grammar (the `cost.rs` module doc).
 ///
@@ -737,6 +826,14 @@ fn cost_output_grammar_is_closed() {
         "unwindowed=2",
         "five_hour: n=12 resets_at=1 delta_ticks=0 resolution_limited",
         "seven_day: n=3 resets_at=1 low_sample non_monotonic",
+        // *(Amended 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 4.)* Forms 9 and 10.
+        "breakdown bug-1: dispatch_completed rows owned: 3",
+        "activity emit-report@1: dispatches=2 input_tokens=11 output_tokens=22 \
+         cache_read_input_tokens=103 cache_creation_input_tokens=54 wall_ms=100 \
+         total_cost_usd=0.0040",
+        "activity (none): dispatches=1 input_tokens=5(absent=1) output_tokens=absent \
+         cache_read_input_tokens=0 cache_creation_input_tokens=1(absent=2) wall_ms=0 \
+         total_cost_usd=12(absent=1)",
     ] {
         assert!(
             in_grammar(good),
@@ -763,6 +860,24 @@ fn cost_output_grammar_is_closed() {
         "five_hour: n=12 resets_at=1 delta_ticks=3 non_monotonic",
         "five_hour: n=12 resets_at=1 delta_ticks=5 resolution_limited",
         "five_hour: n=12 resets_at=1 delta_ticks=1",
+        // *(Amended 2026-09-29, s8f build, package S8F-P7.)* Breakdown lines the forms refuse:
+        // a zero-owned header, an id without its `@version`, a per-dispatch or headroom figure, a
+        // zero written for an absence, a float cost, and a member out of order.
+        "breakdown bug-1: dispatch_completed rows owned: 0",
+        "activity emit-report: dispatches=1 input_tokens=1 output_tokens=1 \
+         cache_read_input_tokens=1 cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1",
+        "activity a@1: dispatches=1 input_tokens=1 output_tokens=1 cache_read_input_tokens=1 \
+         cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1 headroom_five_hour=3",
+        "activity a@1: dispatches=0 input_tokens=1 output_tokens=1 cache_read_input_tokens=1 \
+         cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1",
+        "activity a@1: dispatches=1 input_tokens=1(absent=0) output_tokens=1 \
+         cache_read_input_tokens=1 cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1",
+        "activity a@1: dispatches=1 input_tokens=1 output_tokens=1 cache_read_input_tokens=1 \
+         cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=3.0000000000000004e-1",
+        "activity a@1: dispatches=1 output_tokens=1 input_tokens=1 cache_read_input_tokens=1 \
+         cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1",
+        "activity a@1: dispatches=1 input_tokens=1 output_tokens=1 cache_read_input_tokens=1 \
+         cache_creation_input_tokens=1 wall_ms=absent total_cost_usd=1",
     ] {
         assert!(
             !in_grammar(bad),
@@ -812,6 +927,25 @@ fn cost_output_grammar_is_closed() {
             texts.push((format!("{name} rendered for {item}"), text));
         }
     }
+    // *(Amended 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 4.)* The breakdown's
+    // forms, rendered over a journal carrying every one of them, for the owning item, a foreign one
+    // and an absent one; and the corpus's `single-owned` journal with one owned completion added.
+    let journal = breakdown_journal();
+    for item in ["bug-1", "story-1", "absent-9"] {
+        let text = cost::render(&journal, item)
+            .unwrap_or_else(|e| panic!("the breakdown journal as {item} renders: {e}"));
+        texts.push((format!("breakdown journal rendered for {item}"), text));
+    }
+    let mut with_reading = cost_rows(&cost_dir().join("single-owned").join("rows.jsonl"));
+    with_reading.extend(breakdown_journal());
+    let text = cost::render(&with_reading, "bug-1").expect("the reading and the breakdown render");
+    assert!(
+        text.lines().any(|l| l.starts_with("breakdown "))
+            && text.lines().any(|l| l.starts_with("five_hour: n=")),
+        "PREMISE: a reading and a breakdown in one rendering:\n{text}"
+    );
+    texts.push(("single-owned with the breakdown journal".to_owned(), text));
+
     let lines: usize = texts.iter().map(|(_, t)| t.lines().count()).sum();
     assert!(lines > CASES.len(), "only {lines} lines were checked");
 
@@ -832,5 +966,406 @@ fn cost_output_grammar_is_closed() {
                 );
             }
         }
+    }
+}
+
+// ======================================== AC-395's breakdown and AC-372's renderer (`s8f` §8f.8)
+//
+// *(Added 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; the telemetry-key
+// record ADR-0190 decisions 3, 4 and 6, proposed.)* A `dispatch_completed` row is OWNED by `<ITEM>`
+// when ADR-0182's key beside it reads `<ITEM>` — never off its payload and never off journal
+// position. Rows here are built in process; the corpus under `fixtures/cost/` carries only
+// item-less `dispatch_completed` rows, so none of its renderings moves.
+
+/// One `dispatch_completed` row: `usage` from `tokens` (`None` → a `null` usage), the given
+/// wall clock and cost, the activity member, and ADR-0182's key when `item` is `Some`.
+fn completed(
+    item: Option<&str>,
+    activity: Option<&str>,
+    tokens: Option<[Option<u64>; 4]>,
+    wall_ms: u64,
+    cost: Option<&str>,
+) -> Event {
+    let usage = tokens.map_or(serde_json::Value::Null, |[i, o, r, c]| {
+        serde_json::json!({
+            "input_tokens": i,
+            "output_tokens": o,
+            "cache_read_input_tokens": r,
+            "cache_creation_input_tokens": c,
+            "ephemeral_cache_read_input_tokens": null,
+            "ephemeral_cache_creation_input_tokens": null,
+            "cache_creation": null,
+        })
+    });
+    let event = Event::new(
+        EventKind::DispatchCompleted,
+        serde_json::json!({
+            "usage": usage,
+            "timings": { "wall_ms": wall_ms, "api_ms": null },
+            "total_cost_usd": cost,
+            "cli_version": { "observed": "2.1.278" },
+            "activity_id_at_version": activity,
+        }),
+    );
+    match item {
+        Some(item) => event.with_item(item),
+        None => event,
+    }
+}
+
+/// A full token block.
+const fn t(i: u64, o: u64, r: u64, c: u64) -> Option<[Option<u64>; 4]> {
+    Some([Some(i), Some(o), Some(r), Some(c)])
+}
+
+/// A synthetic journal carrying owned `dispatch_completed` rows of every breakdown form: a full
+/// group, a partly absent group, a wholly absent group and a `(none)` group. Read by
+/// [`cost_output_grammar_is_closed`] and by [`per_activity_breakdown_from_owned_dispatch_completed_rows`].
+fn breakdown_journal() -> Vec<Event> {
+    let mut unkeyed = completed(None, Some("emit-report@1"), t(9, 9, 9, 9), 9, Some("9"));
+    unkeyed.payload["item"] = serde_json::json!("bug-1");
+    vec![
+        completed(
+            Some("bug-1"),
+            Some("review-min@1"),
+            t(5, 6, 7, 8),
+            40,
+            Some("0.02"),
+        ),
+        completed(
+            Some("bug-1"),
+            Some("emit-report@1"),
+            t(10, 20, 100, 50),
+            82,
+            Some("0.0031"),
+        ),
+        completed(
+            Some("story-1"),
+            Some("emit-report@1"),
+            t(1, 1, 1, 1),
+            1,
+            Some("1"),
+        ),
+        unkeyed,
+        completed(
+            Some("bug-1"),
+            Some("emit-report@1"),
+            t(1, 2, 3, 4),
+            18,
+            Some("0.0009"),
+        ),
+        completed(Some("bug-1"), None, t(1, 1, 1, 1), 5, Some("0.5")),
+        completed(
+            Some("bug-1"),
+            Some("partial@2"),
+            Some([Some(4), None, Some(2), None]),
+            1,
+            None,
+        ),
+        completed(
+            Some("bug-1"),
+            Some("partial@2"),
+            t(1, 1, 1, 1),
+            1,
+            Some("1"),
+        ),
+        completed(Some("bug-1"), Some("zero@1"), None, 3, None),
+    ]
+}
+
+/// **AC-395's breakdown** — one header and one line per activity over the rows the item OWNS, in
+/// ADR-0190 decision 4's forms, ordered bytewise by activity with `(none)` last; a foreign row and
+/// an unkeyed row are owned by nobody and counted nowhere. An item owning rows and no reading prints
+/// the empty line and THEN the breakdown; an item owning a reading prints its existing lines and
+/// then the breakdown.
+///
+/// Red by: the breakdown absent (no `breakdown` line); a foreign or unkeyed row counted; ownership
+/// read off the payload's `item` (the unkeyed row's payload names `bug-1`).
+#[test]
+fn per_activity_breakdown_from_owned_dispatch_completed_rows() {
+    let text = cost::render(&breakdown_journal(), "bug-1").expect("the journal renders");
+    assert_eq!(
+        text,
+        format!(
+            "{}breakdown bug-1: dispatch_completed rows owned: 7\n\
+             activity emit-report@1: dispatches=2 input_tokens=11 output_tokens=22 \
+             cache_read_input_tokens=103 cache_creation_input_tokens=54 wall_ms=100 \
+             total_cost_usd=0.0040\n\
+             activity partial@2: dispatches=2 input_tokens=5 output_tokens=1(absent=1) \
+             cache_read_input_tokens=3 cache_creation_input_tokens=1(absent=1) wall_ms=2 \
+             total_cost_usd=1(absent=1)\n\
+             activity review-min@1: dispatches=1 input_tokens=5 output_tokens=6 \
+             cache_read_input_tokens=7 cache_creation_input_tokens=8 wall_ms=40 \
+             total_cost_usd=0.02\n\
+             activity zero@1: dispatches=1 input_tokens=absent output_tokens=absent \
+             cache_read_input_tokens=absent cache_creation_input_tokens=absent wall_ms=3 \
+             total_cost_usd=absent\n\
+             activity (none): dispatches=1 input_tokens=1 output_tokens=1 \
+             cache_read_input_tokens=1 cache_creation_input_tokens=1 wall_ms=5 \
+             total_cost_usd=0.5\n",
+            nothing_line("bug-1", 0)
+        ),
+        "the breakdown over bug-1's seven owned rows"
+    );
+
+    // With an owned reading: the existing lines, byte for byte, then the breakdown.
+    let mut with_reading = cost_rows(&cost_dir().join("single-owned").join("rows.jsonl"));
+    let before = cost::render(&with_reading, "bug-1").expect("renders");
+    with_reading.push(completed(
+        Some("bug-1"),
+        Some("emit-report@1"),
+        t(1, 2, 3, 4),
+        7,
+        Some("3"),
+    ));
+    let after = cost::render(&with_reading, "bug-1").expect("renders");
+    assert_eq!(
+        after,
+        format!(
+            "{before}breakdown bug-1: dispatch_completed rows owned: 1\n\
+             activity emit-report@1: dispatches=1 input_tokens=1 output_tokens=2 \
+             cache_read_input_tokens=3 cache_creation_input_tokens=4 wall_ms=7 total_cost_usd=3\n"
+        )
+    );
+}
+
+/// **ADR-0133 clause 5 and AC-362** — `total_cost_usd` is summed as decimal digits, with no binary
+/// float anywhere, and an absent counter is never zero: a group names how many of its rows lacked
+/// the counter, and a group none of whose rows carries it reads `absent`.
+///
+/// `0.1 + 0.2` is `0.3` here and `0.30000000000000004` through `f64`; `2.337147 + 0.000001 + 10` is
+/// `12.337148`. A float-shaped or signed cost on an owned row is malformed, never coerced.
+///
+/// Red by `M17` (the sum through `f64`); by an absent counter summed as `0`; by a `null` `usage`
+/// read as zeros.
+#[test]
+fn per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero() {
+    let rows = vec![
+        completed(Some("bug-1"), Some("a@1"), t(1, 1, 1, 1), 1, Some("0.1")),
+        completed(Some("bug-1"), Some("a@1"), t(1, 1, 1, 1), 1, Some("0.2")),
+        completed(
+            Some("bug-1"),
+            Some("b@1"),
+            t(1, 1, 1, 1),
+            1,
+            Some("2.337147"),
+        ),
+        completed(Some("bug-1"), Some("b@1"), None, 1, Some("0.000001")),
+        completed(
+            Some("bug-1"),
+            Some("b@1"),
+            Some([Some(4), None, Some(2), None]),
+            1,
+            Some("10"),
+        ),
+        completed(Some("bug-1"), Some("c@1"), None, 3, None),
+        completed(Some("bug-1"), Some("c@1"), None, 4, None),
+    ];
+    let text = cost::render(&rows, "bug-1").expect("the journal renders");
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(
+        lines.get(2).copied(),
+        Some(
+            "activity a@1: dispatches=2 input_tokens=2 output_tokens=2 cache_read_input_tokens=2 \
+             cache_creation_input_tokens=2 wall_ms=2 total_cost_usd=0.3"
+        ),
+        "the decimals are summed digit by digit, never through a float:\n{text}"
+    );
+    assert_eq!(
+        lines.get(3).copied(),
+        Some(
+            "activity b@1: dispatches=3 input_tokens=5(absent=1) output_tokens=1(absent=2) \
+             cache_read_input_tokens=3(absent=1) cache_creation_input_tokens=1(absent=2) \
+             wall_ms=3 total_cost_usd=12.337148"
+        ),
+        "a partly absent counter names its absences:\n{text}"
+    );
+    assert_eq!(
+        lines.get(4).copied(),
+        Some(
+            "activity c@1: dispatches=2 input_tokens=absent output_tokens=absent \
+             cache_read_input_tokens=absent cache_creation_input_tokens=absent wall_ms=7 \
+             total_cost_usd=absent"
+        ),
+        "a wholly absent counter is `absent`, never 0:\n{text}"
+    );
+    for bad in ["1e-3", "-0.5", "0.", ".5", "1,5"] {
+        let rows = vec![completed(
+            Some("bug-1"),
+            Some("a@1"),
+            t(1, 1, 1, 1),
+            1,
+            Some(bad),
+        )];
+        assert!(
+            cost::render(&rows, "bug-1").is_err(),
+            "the owned cost {bad:?} is not decimal digits and was rendered"
+        );
+    }
+}
+
+/// **No breakdown for an item that owns no `dispatch_completed` row** (ADR-0190's forbids): a
+/// journal whose completions are all foreign or unkeyed renders exactly what it rendered before the
+/// breakdown existed — the corpus case's `expected.stdout` with an owned reading, the one empty
+/// line without one.
+///
+/// Red by `M18` (the header printed with `owned: 0`).
+#[test]
+fn no_breakdown_for_an_item_that_owns_no_dispatch_completed_row() {
+    let case = cost_dir().join("single-owned");
+    let mut rows = cost_rows(&case.join("rows.jsonl"));
+    rows.push(completed(
+        Some("story-1"),
+        Some("a@1"),
+        t(1, 1, 1, 1),
+        1,
+        Some("1"),
+    ));
+    rows.push(completed(None, Some("a@1"), t(1, 1, 1, 1), 1, Some("1")));
+    let expected =
+        std::fs::read_to_string(case.join("expected.stdout")).expect("expected.stdout reads");
+    assert_eq!(
+        cost::render(&rows, "bug-1").expect("renders"),
+        expected,
+        "an item owning no completion gains no line"
+    );
+    assert_eq!(
+        cost::render(&rows, "absent-9").expect("renders"),
+        nothing_line("absent-9", 0),
+        "an item owning nothing prints exactly the one empty line"
+    );
+}
+
+/// Does `line` carry, as a space-separated token, every flag `draw` sets?
+fn carries_every_flag(draw: &rk_adapter_claude::throttle::BatchDraw, line: &str) -> bool {
+    let tokens: Vec<&str> = line.split(' ').collect();
+    [
+        ("low_sample", draw.low_sample),
+        ("non_monotonic", draw.non_monotonic),
+        ("resolution_limited", draw.resolution_limited),
+    ]
+    .iter()
+    .all(|(flag, set)| !set || tokens.contains(flag))
+}
+
+/// **AC-372's doctor clause, read as a renderer test (D21-43 N12; ADR-0190 decision 6)** — the one
+/// draw renderer `cost` and `status` share never renders a flagged reading bare. Every flag-bearing
+/// draw `throttle::batch_draw` can produce is rendered and each flag it sets is asserted in the
+/// line. AC-415's red case: a BARE rendering of the same draw (its `n` and key, no flags) is
+/// REJECTED by the same check, so the check is not a pass-everything.
+///
+/// Red by `M28` (the renderer drops `resolution_limited`).
+#[test]
+fn a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected() {
+    use rk_adapter_claude::config::Window;
+    use rk_adapter_claude::throttle::batch_draw;
+    let at = rk_types::time::Timestamp::from_unix_seconds(1_788_370_800);
+    let vectors = [
+        (Window::FiveHour, 4, 7, 3),
+        (Window::FiveHour, 7, 4, 3),
+        (Window::SevenDay, 4, 5, 3),
+        (Window::SevenDay, 4, 4, 1),
+        (Window::FiveHour, 9, 4, 12),
+        (Window::FiveHour, 4, 5, 12),
+        (Window::SevenDay, 4, 4, 12),
+    ];
+    let mut seen = [false; 3];
+    for (window, first, last, n) in vectors {
+        let draw = batch_draw(window, at, first, last, n);
+        assert!(
+            draw.low_sample || draw.non_monotonic || draw.resolution_limited,
+            "PREMISE: every vector here is flag-bearing: {draw:?}"
+        );
+        seen[0] |= draw.low_sample;
+        seen[1] |= draw.non_monotonic;
+        seen[2] |= draw.resolution_limited;
+        let line = cost::draw_line(&draw);
+        assert!(
+            carries_every_flag(&draw, line.trim_end()),
+            "the shared renderer rendered a flagged draw without its flag: {line:?} for {draw:?}"
+        );
+        // AC-415's red case: the bare rendering of the same draw is rejected by the same check.
+        let bare = format!(
+            "{}: n={} resets_at={}",
+            window.as_str(),
+            draw.n,
+            draw.resets_at.unix_seconds()
+        );
+        assert!(
+            !carries_every_flag(&draw, &bare),
+            "the check accepted a bare rendering of a flagged draw: {bare:?}"
+        );
+    }
+    assert_eq!(seen, [true; 3], "PREMISE: every flag is exercised");
+}
+
+/// **The producer path (D21-107 item 3; ADR-0190 decisions 1–4, proposed)** — `redkiln run bug-1`
+/// over `pack-min`'s base variant, through `bind_nodes`, the binder, the kernel and the REAL
+/// adapter over the fixture child: the store's `dispatch_completed` row carries the dispatching
+/// activity's `<id>@<version>` as `pack-min`'s catalog declares it (`emit-report`, `version = 1`),
+/// is keyed to `bug-1` beside the event, and `cost bug-1` breaks it down under that activity.
+/// *(Added 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL.)*
+///
+/// Red by `M16b` (`bind_nodes` hands the binder `None`: the row reads `null` and the breakdown
+/// groups under `(none)`); by the row left item-less (no breakdown at all).
+#[test]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the run is driven AS A PROCESS, exactly as AC-438's binary arm drives it"
+)]
+fn a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+    let frames = cost_dir().join("run-frames.jsonl");
+    let markers = root.join(".rk-markers");
+    std::fs::create_dir_all(&markers).expect("the marker directory is created");
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.arg("-C").arg(root).arg("run").arg("bug-1");
+    cmd.env("RK_FIXTURE_MODE", format!("replay:{}", frames.display()))
+        .env("RK_FIXTURE_MARKER_DIR", &markers);
+    let ran = output_bounded(&mut cmd);
+    assert_eq!(
+        ran.status.code(),
+        Some(Exit::Schema.code()),
+        "PREMISE: the cost transcript's run exits 11.\nstderr:\n{}",
+        String::from_utf8_lossy(&ran.stderr)
+    );
+
+    let completions: Vec<Event> = store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::DispatchCompleted)
+        .collect();
+    assert_eq!(
+        completions.len(),
+        1,
+        "PREMISE: one dispatch, one dispatch_completed row"
+    );
+    assert_eq!(
+        completions[0].payload.get("activity_id_at_version"),
+        Some(&serde_json::json!("emit-report@1")),
+        "the adapter's row carries the activity `bind_nodes` bound: {}",
+        completions[0].payload
+    );
+    assert_eq!(
+        completions[0].item(),
+        Some("bug-1"),
+        "the row is keyed to the item beside the event (ADR-0182)"
+    );
+
+    let out = spawn_cost(root, "bug-1");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(out.status.code(), Some(0), "cost exits 0:\n{stdout}");
+    assert!(
+        stdout.contains("\nbreakdown bug-1: dispatch_completed rows owned: 1\n"),
+        "no breakdown header:\n{stdout}"
+    );
+    assert!(
+        stdout
+            .lines()
+            .any(|l| l.starts_with("activity emit-report@1: dispatches=1 ")),
+        "the breakdown does not name the activity:\n{stdout}"
+    );
+    for line in stdout.lines() {
+        assert!(in_grammar(line), "a line outside the grammar: {line:?}");
     }
 }

@@ -20,8 +20,9 @@
 //!    cannot hold a card that fails them"*. The user message is not part of the argv (AC-209), so
 //!    the assembly at bind time measures the same command line every dispatch of this bound card
 //!    will.
-//! 3. **Materialises the [`ActivitySpec`]** the port takes — ADR-0099:61's five fields and no
-//!    sixth: `card_digest` (SHA-256 over the bound card's `--agents` bytes — a digest, never the
+//! 3. **Materialises the [`ActivitySpec`]** the port takes — ADR-0099:61's five fields ~~and no
+//!    sixth~~ (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* plus `activity_id_at_version`, copied from the
+//!    request unchanged and read by nothing here): `card_digest` (SHA-256 over the bound card's `--agents` bytes — a digest, never the
 //!    body), `tools` (the card's declared list, which is also what `system/init` is compared
 //!    against at Slice 5 — AC-204), `schema` (the id), `timeout_secs`, `inputs` (the activity's,
 //!    plus RT-21's key).
@@ -105,6 +106,11 @@ pub struct BindRequest<'a> {
     pub timeout_secs: u64,
     pub worktree: &'a Path,
     pub inputs: Vec<(String, serde_json::Value)>,
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+    /// decision 2, proposed; D21-107.)* The dispatching activity's `<id>@<version>`, or `None`,
+    /// copied onto the spec's own member unchanged. The binder reads nothing from it: it is outside
+    /// the card, the argv lints and the card digest.
+    pub activity_id_at_version: Option<String>,
 }
 
 /// The binder: owns the validated `Config` while cards are bound into its store, and hands it back
@@ -218,6 +224,7 @@ impl Binder {
             schema: req.schema.id.clone(),
             timeout_secs: req.timeout_secs,
             inputs,
+            activity_id_at_version: req.activity_id_at_version,
         };
         self.config
             .insert_card(agent, req.schema.id.clone(), req.schema.json.clone())?;

@@ -148,6 +148,22 @@ pub fn run_with(
                 return Ok(Exit::ConfigError);
             }
         }
+        // *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+        // decision 5, proposed; AC-372's `status` half.)* The item's draw lines, every flag
+        // included, through `cost`'s ONE draw renderer — `status` has no renderer of its own, so a
+        // flag cannot be kept on one surface and dropped on the other. An item owning no reading
+        // gets the empty string and so no headroom line; the shipped store holds none.
+        match crate::verbs::cost::draw_lines(&events, &item) {
+            Ok(draws) => {
+                for line in draws.lines() {
+                    writeln!(out, "{item}\t{line}").unwrap_or(());
+                }
+            }
+            Err(e) => {
+                eprintln!("redkiln: {item}: a reading it owns is malformed: {e}");
+                return Ok(Exit::ConfigError);
+            }
+        }
     }
     Ok(Exit::Success)
 }
@@ -201,7 +217,7 @@ fn roll_up(events: &[Event]) -> Vec<(String, Result<StageAction, fsm::FsmError>)
         .collect()
 }
 
-/// One line per item. **Its shape is not pinned** — §7d.7: *"Its stdout is unpinned (E5)."* No
+/// One line per item, followed by the item's draw lines (above). **Its shape is not pinned** — §7d.7: *"Its stdout is unpinned (E5)."* No
 /// snapshot and no `.trycmd` body asserts these bytes, so this rendering may change without a
 /// record moving.
 fn render(action: &StageAction) -> String {

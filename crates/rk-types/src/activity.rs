@@ -42,7 +42,12 @@ use crate::usage::{CliVersion, CostUsd, DetectedBy, Timings, Usage, WindowReadin
 
 /// From `StepSpec`: what the adapter needs to assemble one dispatch.
 ///
-/// ADR-0099:61's five fields and no sixth.
+/// ~~ADR-0099:61's five fields and no sixth.~~ *(dated 2026-09-29, s8f build, package
+/// S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decision 2, proposed; D21-107, TAKEN
+/// PROVISIONALLY.)* ADR-0099:61's five fields, plus ONE member ADR-0190 adds for
+/// `dispatch_completed` alone: [`Self::activity_id_at_version`]. It is outside the prompt, the card
+/// digest, the memo key and `run_id`, and every construction site sets it explicitly (no `Default`
+/// exists, and no `..` spread builds one).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ActivitySpec {
     /// The card's content digest. A digest, never the card body.
@@ -61,6 +66,14 @@ pub struct ActivitySpec {
     pub timeout_secs: u64,
     /// The activity's inputs, as assembled.
     pub inputs: Vec<(String, serde_json::Value)>,
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+    /// decisions 1 and 2, proposed; D21-107.)* The dispatching activity's `<id>@<version>`, or
+    /// `None` (a fixture's or a fake's spec, or an activity that declares no version). **Read by the
+    /// adapter alone**, and only to write it on its own `dispatch_completed` row. It is never part
+    /// of the prompt, the card digest, the memo key or `run_id`'s inputs (`spec_json` does not
+    /// write it; `spec_from_json` repopulates it from the run record's own `activity_id_at_version`
+    /// member). An interim member: it moves to ADR-0131's tag when that wiring lands.
+    pub activity_id_at_version: Option<String>,
 }
 
 /// From `StepRecord`, completed by ADR-0126: the record half of `DispatchOutcome`, and the payload
@@ -124,6 +137,14 @@ pub struct DispatchRecord {
     pub cancelled_by: Option<CancelledBy>,
     /// How a usage-limit result was recognised, `Some` only on the `RateLimited` path (AC-523).
     pub detected_by: Option<DetectedBy>,
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+    /// decision 1, proposed.)* The dispatching activity's `<id>@<version>`, copied from
+    /// [`ActivitySpec::activity_id_at_version`] by the adapter, or `None`. Serialised on EVERY row
+    /// (the key is present, `null` for `None`); a row written before this member existed reads back
+    /// as `None`. An interim payload key (ADR-0190 decision 9), never written without its
+    /// `@version`.
+    #[serde(default)]
+    pub activity_id_at_version: Option<String>,
 }
 
 /// Everything [`DispatchRecord::new`] cannot derive from the raw material: the members the adapter
@@ -147,6 +168,9 @@ pub struct RecordTail {
     pub headroom_after: Option<WindowReading>,
     pub cancelled_by: Option<CancelledBy>,
     pub detected_by: Option<DetectedBy>,
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+    /// decision 1.)* The spec's `activity_id_at_version`, handed over as the rest of the tail is.
+    pub activity_id_at_version: Option<String>,
 }
 
 impl DispatchRecord {
@@ -208,6 +232,7 @@ impl DispatchRecord {
             headroom_after,
             cancelled_by,
             detected_by,
+            activity_id_at_version,
         } = tail;
         Self {
             argv_digest: sha256(argv_joined.as_bytes()),
@@ -226,6 +251,7 @@ impl DispatchRecord {
             subagent_prompt_cache_ttl,
             cancelled_by,
             detected_by,
+            activity_id_at_version,
         }
     }
 }

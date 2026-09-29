@@ -89,6 +89,15 @@ fn ac360_one_event_per_termination_path() {
         );
         let got = variant(&r.outcome.result);
         assert_eq!(got, want, "path {name}: {:?}", r.outcome.result);
+        // *(Amended 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1, proposed.)* Every
+        // path's row carries `activity_id_at_version` as a PRESENT member — `null` here, because
+        // the probe binding names no activity — and never an omitted key.
+        let payload = completed_payload(&r.store);
+        assert_eq!(
+            payload.get("activity_id_at_version"),
+            Some(&serde_json::Value::Null),
+            "path {name}: the row carries `activity_id_at_version`, present and null: {payload}"
+        );
         // The adapter writes TWO kinds and no other (the kernel's step_*/rate_limited rows are
         // the kernel's): exactly one dispatch_completed, at most one rate_limit_reading, and a
         // reading — when there is one — BEFORE the completion (ADR-0163 clause 2).
@@ -1452,4 +1461,150 @@ fn a_poisoned_accumulator_is_never_recovered() {
             "the refusal names the record and the fault: {detail}"
         ),
     }
+}
+
+/// **ADR-0190 decisions 1 and 3 (proposed; D21-107)** — the adapter writes the dispatching
+/// activity's `<id>@<version>` on its OWN `dispatch_completed` row, verbatim from the spec, or a
+/// PRESENT `null` when the spec carries none; and it keys that row with the spec's `"item"` input
+/// beside the event (ADR-0182's carrier), never in the payload. *(Added 2026-09-29, s8f build,
+/// package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL.)*
+///
+/// Three arms, each through the REAL `dispatch`: a dispatch through the child whose spec carries
+/// `Some("probe-activity@3")` and an `"item"` input; the same with `None` and no item; and a
+/// pre-spawn refusal (no worktree key) carrying `Some`, because the member rides on EVERY
+/// termination path, not only the ones that reached the child. The returned record equals the row.
+///
+/// Red by: the member never copied (the row reads `null`); `M16` — the member written without its
+/// `@version` (the row reads `probe-activity`); the row left item-less (`item()` is `None`).
+#[test]
+fn dispatch_completed_carries_activity_id_at_version_or_null() {
+    let transcript = ok_transcript();
+    let arm = |activity: Option<&str>, item: Option<&str>, keyless: bool| {
+        let markers = Markers::new();
+        let worktree = tempfile::tempdir().expect("a temp worktree");
+        let config = spawn_config(&markers, &format!("replay:{}", transcript.path.display()));
+        let extra: Vec<(&str, serde_json::Value)> = item
+            .map(|i| vec![("item", serde_json::json!(i))])
+            .unwrap_or_default();
+        let (config, bound) =
+            crate::support::bind_probe_with_inputs(config, 30, worktree.path(), "hello", &extra);
+        let spec = ActivitySpec {
+            card_digest: bound.card_digest.clone(),
+            tools: bound.tools.clone(),
+            schema: bound.schema.clone(),
+            timeout_secs: bound.timeout_secs,
+            inputs: bound
+                .inputs
+                .iter()
+                .filter(|(k, _)| !keyless || k != WORKTREE_KEY)
+                .cloned()
+                .collect(),
+            activity_id_at_version: activity.map(str::to_owned),
+        };
+        let mut store = VecStore::default();
+        let outcome = harness(config).dispatch(&spec, &mut store);
+        (outcome, store, markers)
+    };
+
+    // (1) through the child, Some, keyed.
+    let (outcome, store, markers) = arm(Some("probe-activity@3"), Some("bug-7"), false);
+    assert!(
+        outcome.result.is_ok(),
+        "PREMISE: the ok transcript dispatches Ok: {:?}",
+        outcome.result
+    );
+    assert_eq!(markers.count(), 1, "PREMISE: the child ran");
+    let rows: Vec<&rk_types::event::Event> = store
+        .events()
+        .iter()
+        .filter(|e| e.kind == EventKind::DispatchCompleted)
+        .collect();
+    assert_eq!(rows.len(), 1, "exactly one dispatch_completed row");
+    assert_eq!(
+        rows[0].payload.get("activity_id_at_version"),
+        Some(&serde_json::json!("probe-activity@3")),
+        "the row carries the spec's `<id>@<version>` verbatim: {}",
+        rows[0].payload
+    );
+    assert_eq!(
+        outcome.record.activity_id_at_version.as_deref(),
+        Some("probe-activity@3"),
+        "the returned record IS the row"
+    );
+    assert_eq!(
+        rows[0].item(),
+        Some("bug-7"),
+        "the row is keyed with the spec's `item` input, beside the event (ADR-0182)"
+    );
+    assert!(
+        rows[0].payload.get("item").is_none(),
+        "the item key never enters the payload (ADR-0131; ADR-0182)"
+    );
+
+    // (2) through the child, None, unkeyed: the member is a PRESENT null.
+    let (outcome, store, _markers) = arm(None, None, false);
+    assert!(outcome.result.is_ok(), "PREMISE: {:?}", outcome.result);
+    let payload = completed_payload(&store);
+    assert_eq!(
+        payload.get("activity_id_at_version"),
+        Some(&serde_json::Value::Null),
+        "a spec with no activity writes a PRESENT null, never an omitted key: {payload}"
+    );
+    let row = store
+        .events()
+        .iter()
+        .find(|e| e.kind == EventKind::DispatchCompleted)
+        .expect("the row");
+    assert_eq!(row.item(), None, "no `item` input, no key");
+
+    // (3) a pre-spawn refusal still carries the member.
+    let (outcome, store, markers) = arm(Some("probe-activity@3"), Some("bug-7"), true);
+    assert!(
+        matches!(
+            outcome.result,
+            Err(StepError::Transport {
+                kind: TransportKind::Spawn,
+                ..
+            })
+        ),
+        "PREMISE: a spec without the worktree key is refused before spawn: {:?}",
+        outcome.result
+    );
+    assert_eq!(markers.count(), 0, "PREMISE: nothing spawned");
+    let payload = completed_payload(&store);
+    assert_eq!(
+        payload.get("activity_id_at_version"),
+        Some(&serde_json::json!("probe-activity@3")),
+        "the pre-spawn row carries the member too: {payload}"
+    );
+
+    // (4) D21-107 item 3's card-digest half: the binder copies the member onto the spec and reads
+    // nothing from it — the same card bound with `Some` and with `None` has one card digest.
+    let bind = |member: Option<&str>| {
+        let markers = Markers::new();
+        let worktree = tempfile::tempdir().expect("a temp worktree");
+        let mut binder = rk_adapter_claude::binder::Binder::new(spawn_config(&markers, "exit:0"));
+        binder
+            .bind(rk_adapter_claude::binder::BindRequest {
+                role_name: "haiku",
+                role: &crate::support::role("haiku"),
+                card: &crate::support::catalog_card("probe"),
+                schema: &crate::support::schema(),
+                timeout_secs: 30,
+                worktree: worktree.path(),
+                inputs: vec![("prompt".to_owned(), serde_json::json!("hello"))],
+                activity_id_at_version: member.map(str::to_owned),
+            })
+            .expect("the probe card binds")
+    };
+    let (with, without) = (bind(Some("probe-activity@3")), bind(None));
+    assert_eq!(
+        with.activity_id_at_version.as_deref(),
+        Some("probe-activity@3"),
+        "the binder copies the member onto the spec"
+    );
+    assert_eq!(
+        with.card_digest, without.card_digest,
+        "the member moved the card digest"
+    );
 }

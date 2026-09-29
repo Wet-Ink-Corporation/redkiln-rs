@@ -1426,6 +1426,7 @@ pub fn any_activity_spec() -> ActivitySpec {
         schema: rk_types::typed::SchemaId::new("ImplReport"),
         timeout_secs: 900,
         inputs: Vec::new(),
+        activity_id_at_version: None,
     }
 }
 

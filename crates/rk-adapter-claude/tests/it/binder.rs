@@ -36,6 +36,7 @@ fn request<'a>(
         timeout_secs: 300,
         worktree,
         inputs: vec![("item".to_owned(), serde_json::json!("issue-81"))],
+        activity_id_at_version: None,
     }
 }
 
@@ -193,7 +194,8 @@ fn ac212_model_effort_from_bound_card_only() {
     assert_eq!(markers.count(), 0);
 }
 
-/// D-11 / §7c.12: the binder materialises ADR-0099:61's five fields — `card_digest` (the bound
+/// D-11 / §7c.12: the binder materialises ADR-0099:61's five fields (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)*
+/// plus `activity_id_at_version`, copied from the request) — `card_digest` (the bound
 /// card's `--agents` bytes, digested), `tools` (the card's declared list), `schema` (the id),
 /// `timeout_secs`, `inputs` (the activity's plus RT-21's `"worktree"`) — and the `Config`'s
 /// digest-keyed store holds the bound card and the schemas it was bound with, so `dispatch` reads

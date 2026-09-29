@@ -1,11 +1,11 @@
 ---
 id: "0190"
-title: "**`dispatch_completed` carries `activity_id_at_version` in its payload, `cost` breaks an item's owned rows down by activity, `status` renders draws through `cost`'s one renderer, and `doctor` reads the store's journal** (`s8f`'s telemetry-key record; D21-42 12b and 12c; D21-43 N5 (cited) and N12; D21-46 R3): the member is an interim payload key, a string or `null`, carried to the adapter on `ActivitySpec` outside the prompt and every digest; ownership is ADR-0182's `item` key beside the row; the breakdown lines join `cost`'s closed grammar; AC-372's doctor clause is read as a renderer test; `RK-D-HEADROOM-MARGIN` reads the latest reading that answers for `five_hour`, which deliberately differs from `cost`. Supersedes in part ADR-0131's first forbids bullet and four passages of ADR-0163, for this one member, until ADR-0131's tag is wired; and, TAKEN PROVISIONALLY, ADR-0138's *\"or any sixth field\"* for this one member"
+title: "**`dispatch_completed` carries `activity_id_at_version` in its payload, `cost` breaks an item's owned rows down by activity, `status` renders draws through `cost`'s one renderer, and `doctor` reads the store's journal** (`s8f`'s telemetry-key record; D21-42 12b and 12c; D21-43 N5 (cited) and N12; D21-46 R3): the member is an interim payload key, a string or `null`, carried to the adapter on `ActivitySpec` outside the prompt and every digest; ownership is ADR-0182's `item` key beside the row; the breakdown lines join `cost`'s closed grammar; AC-372's doctor clause is read as a renderer test; `RK-D-HEADROOM-MARGIN` reads the latest reading that answers for `five_hour`, which deliberately differs from `cost`. Supersedes in part ADR-0131's first forbids bullet and four passages of ADR-0163, for this one member, until ADR-0131's tag is wired; and, TAKEN PROVISIONALLY under D21-107, ADR-0138 (its first forbids bullet's *\"or any sixth field\"*, decision 3's `ActivitySpec` half and decision 2's *\"NOT a sixth spec field\"* as applied to this id) and ADR-0174 (decision 1's parenthetical and decision 10's sentence) for this one member"
 status: proposed
 date: 2026-09-28
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-42 (12b — *"**ADR-0163's interim key is extended** to `dispatch_completed` (`item`, `activity_id_at_version`), moving to ADR-0131's tag when that wiring lands. The per-activity breakdown and the status half are built now."*; 12c — *"**Read from the store before any real run**; fixture mode keeps `events.jsonl`. The flat-reading silencing of `RK-D-HEADROOM-MARGIN` is fixed too."*), D21-43 (N5; N12 — *"**AC-372's** unfireable doctor rule is read, by dated note, as a test of `cost`'s renderer, with AC-415's red case."*) and D21-46 (R3 — *"**Carried outside the canonical digest**, as ADR-0131 places its tag set."*); runbook/phase-1/s8f-landing-and-rendering.md §8f.2 (items 4 and 5, measured 2026-09-28 at `37bba5c`), §8f.3's third row, §8f.8 and §8f.9; references/adr/0099 (decision 1), 0126, 0131 (its first forbids bullet), 0133 (clause 5), 0138 (its first forbids bullet), 0163 (decisions 4 and 5 and three forbids bullets) and 0182; crates/rk-types/src/activity.rs (`ActivitySpec`, `DispatchRecord`), crates/rk-adapter-claude/src/record.rs (`completed_event`), crates/rk-kernel/src/replay.rs (`spec_json`), crates/rk-kernel/src/workflow/memo.rs (`for_agent_step`), crates/rk-cli/src/verbs/cost.rs and crates/rk-cli/src/doctor/mod.rs, as read 2026-09-28 at `37bba5c`
-supersedes: ["0131", "0138", "0163"]
+source: spikes/DECISIONS-2026-09-21.md D21-42 (12b — *"**ADR-0163's interim key is extended** to `dispatch_completed` (`item`, `activity_id_at_version`), moving to ADR-0131's tag when that wiring lands. The per-activity breakdown and the status half are built now."*; 12c — *"**Read from the store before any real run**; fixture mode keeps `events.jsonl`. The flat-reading silencing of `RK-D-HEADROOM-MARGIN` is fixed too."*), D21-43 (N5; N12 — *"**AC-372's** unfireable doctor rule is read, by dated note, as a test of `cost`'s renderer, with AC-415's red case."*) and D21-46 (R3 — *"**Carried outside the canonical digest**, as ADR-0131 places its tag set."*); runbook/phase-1/s8f-landing-and-rendering.md §8f.2 (items 4 and 5, measured 2026-09-28 at `37bba5c`), §8f.3's third row, §8f.8 and §8f.9; references/adr/0099 (decision 1), 0126, 0131 (its first forbids bullet), 0133 (clause 5), 0138 (its first forbids bullet), 0163 (decisions 4 and 5 and three forbids bullets) and 0182; crates/rk-types/src/activity.rs (`ActivitySpec`, `DispatchRecord`), crates/rk-adapter-claude/src/record.rs (`completed_event`), crates/rk-kernel/src/replay.rs (`spec_json`), crates/rk-kernel/src/workflow/memo.rs (`for_agent_step`), crates/rk-cli/src/verbs/cost.rs and crates/rk-cli/src/doctor/mod.rs, as read 2026-09-28 at `37bba5c`; spikes/DECISIONS-2026-09-21.md D21-107 (TAKEN PROVISIONALLY 2026-09-28, left open for the operator) and references/adr/0174 (decisions 1 and 10), added 2026-09-29 by package S8F-P7
+supersedes: ["0131", "0138", "0163", "0174"]
 superseded_by: []
 related: ["0099", "0110", "0126", "0133", "0182", "0188", "0189"]
 evidence: []
@@ -113,9 +113,26 @@ sixth field"* and only for this one member, and reads ADR-0099 decision 1's *"`A
 fields (card digest, tools, schema id, timeout, inputs)"* as naming what the spec carries from `StepSpec`, not as a
 closed list; ADR-0138's bullet is the closure. ADR-0138's ground was *"`rk-types` is Checkpoint 5's and is not edited in
 this range"*; `s8e` edited `rk-types` and re-ran Checkpoint 5 whole (D21-97, (10i)). The step list stays off the spec,
-and every other clause of ADR-0138 stands. **This decision waits on the operator's ruling** on the blocker this record
+and every other clause of ADR-0138 stands. ~~**This decision waits on the operator's ruling** on the blocker this record
 reports; if another option is ruled, this decision is rewritten before the record flips and `0138` leaves
-`supersedes`.
+`supersedes`.~~
+
+*(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; D21-107 item 2.)* **Taken
+PROVISIONALLY under D21-107** (the AFK rule D21-105; weigh-in wi-838696, left OPEN for the operator). The member is set
+**explicitly at every construction site** — no `Default` exists and no `..` spread builds a spec from nothing:
+`Some("<id>@<version>")` from `rk-cli`'s `bind_nodes` (through `BindRequest.activity_id_at_version`, which the binder
+copies unchanged and reads nothing from) for the activation's spec and each per-step spec, `None` in fixtures and
+fakes. `spec_json` stays its five-member object; `spec_from_json` repopulates the member from the binding's own
+recorded `activity_id_at_version`, and only when that carries its `@version` (an unversioned activation's spec reads
+back `None`, exactly as `bind_nodes` sets it). The member is kept out of the prompt, the card digest, the memo key and
+`run_id`; the adapter alone writes it, on its own `dispatch_completed` row (ADR-0126 cited, untouched). The
+supersessions this takes are decision 9's last two bullets. **ADR-0099 decision 1 is carried as a DECLARED READING,
+flagged for the operator's ruling:** it names what the spec carries FROM `StepSpec` and is not a closed list; if the
+operator declines that reading, it converts to a supersession in part of ADR-0099 decision 1 for this one member.
+**If the operator declines D21-107**, the fallback is its option B — a kernel-side `EventStore` decorator that stamps
+the member onto the adapter's rows, with its ADR-0126 tension recorded in a record — and this decision is rewritten,
+and `0138` and `0174` leave `supersedes`, before the record flips. This record does not flip at `s8f`'s close while
+D21-107 is unconfirmed (D21-49's flip-stop).
 
 **3. Ownership is ADR-0182's key.** The adapter keys its `dispatch_completed` row with `Event::with_item`, taking the
 value as the reading's `item` is taken, from `ActivitySpec.inputs`' `"item"` (`ITEM_KEY`, *"Read for attribution
@@ -176,7 +193,19 @@ ADR-0131's tag is wired:**
   position"*, **for its first half only**: the breakdown reads a row's owner from the `item` key ADR-0182 carries
   beside it, so its ground, *"which carry none"*, is gone for a keyed row. Reading item ownership off
   `dispatch_completed` rows is admitted only through that key; the **journal-position** half stands whole.
-- **ADR-0138's first forbids bullet**, *"or any sixth field"*, for this one member (decision 2, TAKEN PROVISIONALLY).
+- ~~**ADR-0138's first forbids bullet**, *"or any sixth field"*, for this one member (decision 2, TAKEN PROVISIONALLY).~~
+  *(dated 2026-09-29, s8f build, package S8F-P7; D21-107 item 2 widens this bullet into the five below, each TAKEN
+  PROVISIONALLY and each for `ActivitySpec.activity_id_at_version` alone.)*
+- **ADR-0138's first forbids bullet**, only its *"or any sixth field"*: *"Forbids adding a step list, or any sixth
+  field, to `rk_types::activity::ActivitySpec`."* The step list stays forbidden.
+- **ADR-0138 decision 3's `ActivitySpec` half**: *"**`ActivitySpec` is not edited**, and the catalog is not loaded from
+  `runtime/`."* The catalog half stands whole.
+- **ADR-0138 decision 2's *"NOT a sixth spec field"***, as applied to this id: *"that it is **"NOT a sixth spec
+  field"**"* — `activity_id_at_version` is now ALSO a spec member, beside the binding's own recorded one, which stays.
+- **ADR-0174 decision 1's parenthetical**: *"`ActivitySpec` is not edited (ADR-0099's five fields; ADR-0138's
+  forbids)."* The per-step specs stand; each carries its own activity's member.
+- **ADR-0174 decision 10's sentence**: *"ADR-0138's decisions 1–5 and its forbids stand"*, for the three ADR-0138
+  passages above only.
 
 **Cited, not superseded:** ADR-0182 (the `item` key and its inclusive `ByItem` interim), ADR-0126 (the row is the
 adapter's), ADR-0133 clause 5, and every other decision and bullet of ADR-0131 and ADR-0163.
@@ -214,3 +243,24 @@ adapter's), ADR-0133 clause 5, and every other decision and bullet of ADR-0131 a
 in full, with its `superseded_by` (`0141`, `0174`) leaving it whole. **Documented:** the ledger lines and records
 quoted. **Not measured:** the breakdown over a real run's rows, which waits on `s8j`. This record is `proposed` and
 flips only on the operator's dated ledger line.
+
+## As built *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; this record stays `proposed`)*
+
+- **Decisions 1–3:** `DispatchRecord.activity_id_at_version` (serialised on every row; an older row reads back `None`)
+  and `RecordTail`'s member; the adapter copies the spec's member on every termination path and keys its row with the
+  spec's `item` input through `Event::with_item` (`record::completed_event(record, item)`). Tests:
+  `dispatch::dispatch_completed_carries_activity_id_at_version_or_null` (with the card-digest half),
+  `recorded_log::the_activity_member_moves_no_specs_json_byte_no_run_id_and_no_memo_key`,
+  `recorded_log::the_activity_member_is_repopulated_from_the_recorded_binding_on_read`,
+  `cost::a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed`.
+- **Decision 4:** `cost::breakdown` and `cost::render`; `cost_output_grammar_is_closed` amended to ten forms.
+- **Decisions 5 and 6:** `cost::draw_line` is the one draw renderer; `status` prints `cost::draw_lines`.
+- **Decision 7:** `doctor::JournalSource`; the verb passes `JournalSource::Store`.
+- **Decision 8:** `RK-D-HEADROOM-MARGIN` reads `five_hour_ticks`, which rebuilds the adapter's `RateLimitReading` and
+  calls `ticks(Window::FiveHour)`.
+- **Measured residual, for the operator:** `RK-D-UNREAD` now reads real rows. Its kind-per-stage predicate (D-08) keys a
+  write and a read by each row's OWN stage, so an artifact emitted at one stage and read only at a later one (the
+  fixture lane's `ImplReport`, written at `implement` and read at `review`) is counted as unread at the writing stage.
+  `doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes` reads the emitted kind back at the
+  stage that wrote it, which is the case §8f.5 names as silent. Whether cross-stage consumption should count as a read
+  at the writing stage is not settled by this record.

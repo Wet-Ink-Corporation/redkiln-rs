@@ -41,7 +41,15 @@
 //! ^(five_hour|seven_day): unkeyed=[1-9][0-9]*$
 //! ^(five_hour|seven_day): no sample$
 //! ^unwindowed=[1-9][0-9]*$
+//! ^breakdown \S+: dispatch_completed rows owned: [1-9][0-9]*$
+//! ^activity (\S+@\S+|\(none\)): dispatches=[1-9][0-9]* input_tokens=<S> output_tokens=<S> cache_read_input_tokens=<S> cache_creation_input_tokens=<S> wall_ms=[0-9]+ total_cost_usd=<D>$
 //! ```
+//!
+//! *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decision
+//! 4, proposed.)* The last two forms are AC-395's breakdown ([`breakdown`]), printed after the
+//! lines above when the item OWNS at least one `dispatch_completed` row. `<S>` is `<sum>`,
+//! `<sum>(absent=<k>)` or `absent`; `<D>` is the same with the sum a decimal. ADR-0163's eight forms
+//! stand as written.
 //!
 //! `first` and `last` are never printed — their difference is a delta, and printing both beside a
 //! withheld one would quote it at `n < 10` by subtraction. **Nothing is divided by anything**, so
@@ -49,7 +57,14 @@
 //!
 //! # 🛑 WHAT IS NOT RENDERED, AND WHY
 //!
-//! AC-395's per-activity breakdown — token counters, `total_cost_usd`, wall clock, cache counters —
+//! *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decisions 3
+//! and 4, proposed.)* **The paragraph below no longer holds, and is kept as the history.** The
+//! adapter keys its `dispatch_completed` row with the spec's `item` on ADR-0182's carrier beside the
+//! event, and the row carries `activity_id_at_version`; [`breakdown`] renders AC-395's per-activity
+//! lines over the rows an item OWNS by that key. Ownership is never read off the payload and never
+//! off journal position (ADR-0163's journal-position half stands whole).
+//!
+//! ~~AC-395's per-activity breakdown~~ — token counters, `total_cost_usd`, wall clock, cache counters —
 //! lives on `dispatch_completed`, and **`dispatch_completed` carries no item**. Attributing it would
 //! need the same ownership key on a row `rk-types` owns, and `s7i` §7i.2 says *"nothing else"*; so
 //! it is not rendered here and nothing here reads item ownership off that row or off journal
@@ -230,9 +245,41 @@ fn owned(row: &Event, item: &str) -> bool {
 /// The whole rendering, from the journal rows and the item alone. **Pure**: no store, no clock, no
 /// environment.
 ///
+/// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decision 4,
+/// proposed.)* The readings' lines, then AC-395's [`breakdown`] when the item owns at least one
+/// `dispatch_completed` row. An item owning neither prints exactly the one empty line.
+///
 /// # Errors
-/// [`Malformed`] when a reading in the span does not carry the ADR-0163 decision 3 shape.
+/// [`Malformed`] when a reading in the span does not carry the ADR-0163 decision 3 shape, or an
+/// owned `dispatch_completed` row does not carry the members the breakdown reads.
 pub fn render(rows: &[Event], item: &str) -> Result<String, Malformed> {
+    let mut out = readings(rows, item)?;
+    out.push_str(&breakdown(rows, item)?);
+    Ok(out)
+}
+
+/// **The draw lines alone** (ADR-0190 decision 5).
+///
+/// Every line [`render`] prints after its header for an item owning at
+/// least one reading, and the EMPTY string for an item owning none (no headroom line is ever
+/// printed without a reading: AC-372's `status` half, ADR-0190 decision 5). Each draw is rendered
+/// through [`draw_line`], the one draw renderer; `status` prints these lines and has no renderer of
+/// its own.
+///
+/// # Errors
+/// As [`render`], for the readings.
+pub fn draw_lines(rows: &[Event], item: &str) -> Result<String, Malformed> {
+    if !rows.iter().any(|r| owned(r, item)) {
+        return Ok(String::new());
+    }
+    let text = readings(rows, item)?;
+    Ok(text
+        .split_once('\n')
+        .map_or_else(String::new, |(_, rest)| rest.to_owned()))
+}
+
+/// ADR-0163's rendering: the readings' lines only.
+fn readings(rows: &[Event], item: &str) -> Result<String, Malformed> {
     let first = rows.iter().position(|r| owned(r, item));
     let last = rows.iter().rposition(|r| owned(r, item));
     let (Some(first), Some(last)) = (first, last) else {
@@ -282,6 +329,218 @@ pub fn render(rows: &[Event], item: &str) -> Result<String, Malformed> {
         out.push_str(&format!("unwindowed={unwindowed}\n"));
     }
     Ok(out)
+}
+
+/// The four token counters the breakdown sums, in the order its line prints them (ADR-0190 decision
+/// 4): the documented names on `usage`, read verbatim — the `ephemeral_*` SDK namings are not
+/// substituted for an absent one, because a substituted counter would be a second naming passed off
+/// as the first.
+const COUNTERS: [&str; 4] = [
+    "input_tokens",
+    "output_tokens",
+    "cache_read_input_tokens",
+    "cache_creation_input_tokens",
+];
+
+/// One activity's group of owned rows.
+#[derive(Default)]
+struct Group {
+    dispatches: u64,
+    /// Per counter: the sum over the rows that carry it, and how many rows did not.
+    counters: [(u128, u64); 4],
+    wall_ms: u128,
+    /// The decimal sum of the rows that carry a cost, and how many rows did not.
+    cost: (Option<Decimal>, u64),
+}
+
+/// **AC-395's breakdown** (ADR-0190 decision 4).
+///
+/// The header and one line per activity over the
+/// `dispatch_completed` rows `item` OWNS — the rows whose ADR-0182 key beside the event is `item`
+/// (`Event::item`), never a payload member and never journal position — or the EMPTY string when it
+/// owns none. Activities are ordered bytewise by `<id>@<version>`; owned rows whose
+/// `activity_id_at_version` is `null` or absent group under `(none)`, printed last.
+///
+/// An absent counter is never zero (AC-362): a group names how many of its rows lacked it, and a
+/// group none of whose rows carries it reads `absent`. `total_cost_usd` is summed as decimal digits
+/// ([`Decimal`]), with no binary float anywhere (ADR-0133 clause 5). No line carries a headroom
+/// figure (AC-373).
+///
+/// # Errors
+/// [`Malformed`] for an owned row whose counters are not integers, whose `timings.wall_ms` is not an
+/// integer, whose `total_cost_usd` is not decimal digits, or whose `activity_id_at_version` is
+/// neither a string carrying its `@version` nor `null`.
+pub fn breakdown(rows: &[Event], item: &str) -> Result<String, Malformed> {
+    let mut named: std::collections::BTreeMap<String, Group> = std::collections::BTreeMap::new();
+    let mut none: Option<Group> = None;
+    let mut owned_rows = 0_u64;
+    for (at, row) in rows.iter().enumerate() {
+        if row.kind != EventKind::DispatchCompleted || row.item() != Some(item) {
+            continue;
+        }
+        owned_rows += 1;
+        let malformed = |what: String| Malformed { row: at, what };
+        let group = match row.payload.get("activity_id_at_version") {
+            None | Some(serde_json::Value::Null) => none.get_or_insert_with(Group::default),
+            Some(serde_json::Value::String(a))
+                if a.split_once('@')
+                    .is_some_and(|(id, v)| !id.is_empty() && !v.is_empty()) =>
+            {
+                named.entry(a.clone()).or_default()
+            }
+            Some(other) => {
+                return Err(malformed(format!(
+                    "`activity_id_at_version` is {other:?}, neither `<id>@<version>` nor null"
+                )));
+            }
+        };
+        group.dispatches += 1;
+        let usage = row.payload.get("usage").filter(|u| !u.is_null());
+        for (i, name) in COUNTERS.iter().enumerate() {
+            match usage.and_then(|u| u.get(*name)) {
+                None | Some(serde_json::Value::Null) => group.counters[i].1 += 1,
+                Some(v) => {
+                    let n = v.as_u64().ok_or_else(|| {
+                        malformed(format!("`usage.{name}` is {v:?}, not an integer count"))
+                    })?;
+                    group.counters[i].0 += u128::from(n);
+                }
+            }
+        }
+        let wall = row
+            .payload
+            .get("timings")
+            .and_then(|t| t.get("wall_ms"))
+            .and_then(serde_json::Value::as_u64)
+            .ok_or_else(|| malformed("`timings.wall_ms` is not an integer".to_owned()))?;
+        group.wall_ms += u128::from(wall);
+        match row.payload.get("total_cost_usd") {
+            None | Some(serde_json::Value::Null) => group.cost.1 += 1,
+            Some(serde_json::Value::String(text)) => {
+                let d = Decimal::parse(text).ok_or_else(|| {
+                    malformed(format!("`total_cost_usd` is {text:?}, not decimal digits"))
+                })?;
+                group.cost.0 = Some(match group.cost.0.take() {
+                    Some(sum) => sum.add(&d),
+                    None => d,
+                });
+            }
+            Some(other) => {
+                return Err(malformed(format!(
+                    "`total_cost_usd` is {other:?}, not the decimal string the CLI printed"
+                )));
+            }
+        }
+    }
+    if owned_rows == 0 {
+        return Ok(String::new());
+    }
+    let mut out = format!("breakdown {item}: dispatch_completed rows owned: {owned_rows}\n");
+    let groups = named
+        .iter()
+        .map(|(a, g)| (a.as_str(), g))
+        .chain(none.iter().map(|g| ("(none)", g)));
+    for (activity, g) in groups {
+        let sum = |value: String, absent: u64| {
+            if absent == g.dispatches {
+                "absent".to_owned()
+            } else if absent > 0 {
+                format!("{value}(absent={absent})")
+            } else {
+                value
+            }
+        };
+        let mut line = format!("activity {activity}: dispatches={}", g.dispatches);
+        for (i, name) in COUNTERS.iter().enumerate() {
+            let (total, absent) = g.counters[i];
+            line.push_str(&format!(" {name}={}", sum(total.to_string(), absent)));
+        }
+        line.push_str(&format!(" wall_ms={}", g.wall_ms));
+        let cost = g.cost.0.as_ref().map_or_else(String::new, Decimal::render);
+        line.push_str(&format!(" total_cost_usd={}", sum(cost, g.cost.1)));
+        line.push('\n');
+        out.push_str(&line);
+    }
+    Ok(out)
+}
+
+/// **A non-negative decimal as its digits** — `total_cost_usd`'s arithmetic (ADR-0133 clause 5:
+/// *"sum them **as decimals** with no intermediate binary floating-point step"*).
+///
+/// The value is `digits × 10^-scale`, held as the digit string itself (most significant first).
+/// Addition aligns the two scales by appending zeros and adds digit by digit with a carry; the sum
+/// keeps the larger scale, so `0.0031 + 0.0009` is `0.0040`, never a trimmed or rounded figure. No
+/// `f64`, and no fixed-width integer that a long digit string could overflow.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Decimal {
+    digits: Vec<u8>,
+    scale: usize,
+}
+
+impl Decimal {
+    /// `[0-9]+(\.[0-9]+)?`, or `None`. No sign, no exponent, no bare point.
+    fn parse(text: &str) -> Option<Self> {
+        let (int, frac) = text.split_once('.').unwrap_or((text, ""));
+        let all = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+        if !all(int) || (text.contains('.') && !all(frac)) {
+            return None;
+        }
+        let digits = int.bytes().chain(frac.bytes()).map(|b| b - b'0').collect();
+        Some(Self {
+            digits,
+            scale: frac.len(),
+        })
+    }
+
+    /// The digit-wise sum, at the larger of the two scales.
+    fn add(&self, other: &Self) -> Self {
+        let scale = self.scale.max(other.scale);
+        let widen = |d: &Self| {
+            let mut v = d.digits.clone();
+            v.extend(std::iter::repeat_n(0, scale - d.scale));
+            v
+        };
+        let (a, b) = (widen(self), widen(other));
+        let mut out: Vec<u8> = Vec::with_capacity(a.len().max(b.len()) + 1);
+        let mut carry = 0_u8;
+        let (mut i, mut j) = (a.len(), b.len());
+        while i > 0 || j > 0 || carry > 0 {
+            let x = if i > 0 {
+                i -= 1;
+                a[i]
+            } else {
+                0
+            };
+            let y = if j > 0 {
+                j -= 1;
+                b[j]
+            } else {
+                0
+            };
+            let t = x + y + carry;
+            out.push(t % 10);
+            carry = t / 10;
+        }
+        out.reverse();
+        Self { digits: out, scale }
+    }
+
+    /// The digits back as text, with the point at `scale` and the integer part's leading zeros
+    /// dropped (one kept).
+    fn render(&self) -> String {
+        let split = self.digits.len().saturating_sub(self.scale);
+        let text: String = self.digits.iter().map(|d| char::from(b'0' + d)).collect();
+        let (int, frac) = text.split_at(split);
+        let int = int.trim_start_matches('0');
+        let int = if int.is_empty() { "0" } else { int };
+        if self.scale == 0 {
+            int.to_owned()
+        } else if frac.len() < self.scale {
+            format!("{int}.{}{frac}", "0".repeat(self.scale - frac.len()))
+        } else {
+            format!("{int}.{frac}")
+        }
+    }
 }
 
 /// Is `row` a flat reading (`windows: null`) whose `rate_limit_type` names neither window — `null`
@@ -517,7 +776,7 @@ fn render_window(
         match throttle::attribute(window, samples, &owned) {
             Attribution::Attributable(draws) => {
                 for draw in &draws {
-                    out.push_str(&draw_line(name, draw));
+                    out.push_str(&draw_line(draw));
                     drew = true;
                 }
             }
@@ -537,7 +796,14 @@ fn render_window(
 
 /// One draw, in the closed grammar: `n`, the batch key, the delta only when `throttle` quoted one,
 /// then the flags. `first` and `last` are never printed (the module doc).
-fn draw_line(name: &str, draw: &BatchDraw) -> String {
+///
+/// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decisions
+/// 5 and 6, proposed.)* **THE one draw renderer.** `status` prints an item's draws through
+/// [`draw_lines`], which renders each draw here, so a flag cannot be kept on one surface and dropped
+/// on the other (AC-372). It has no second home.
+#[must_use]
+pub fn draw_line(draw: &BatchDraw) -> String {
+    let name = draw.window.as_str();
     let mut line = format!(
         "{name}: n={} resets_at={}",
         draw.n,

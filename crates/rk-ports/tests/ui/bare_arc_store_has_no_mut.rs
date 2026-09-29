@@ -50,6 +50,7 @@ fn main() {
         schema: SchemaId::new("findings"),
         timeout_secs: 1,
         inputs: Vec::new(),
+        activity_id_at_version: None,
     };
 
     // ERROR 2 — ADR-0115:130-132's own measured finding, the REASON the shape was withdrawn.

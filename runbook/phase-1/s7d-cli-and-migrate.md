@@ -1202,6 +1202,14 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   `timeout_secs`, `inputs` — the binder's binding is not logged), and **no admissibility exclusion is recorded**
   (`SkipReason` has exactly two stage variants, `ForbiddenStage` and `ForbiddenStageViaRequires` [measured 2026-09-18,
   `crates/rk-kernel/src/select/step1.rs`]).
+  *(dated 2026-09-29, `s8f` build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.4 and §8f.10; the landing record
+  ADR-0188 decision 12, proposed.)* *"prints **from the recorded resolution only**"* now governs the RESOLUTION block,
+  not the whole output. `explain` gains a **landing block** after the recorded resolution (`s8f` §8f.4), and its source
+  is not the run record: it is read from git through `GitOp::RevParse` (the tip of `rk-run/<item>`, how many commits it
+  is ahead of the base and how many of them carry content) and from the tier-1 rows' `anchor_sha`, and it prints the
+  operator's hand-off command, `git merge --no-ff rk-run/<item>`. It computes no selection, so AC-432 holds (the
+  unreachability scan still reads `explain.rs`). An item with no run ref prints a blank line and `landing: nothing
+  landed (no rk-run/<item>)`, which is what the three `explain` snapshots (`ac430`, `ac433`, `ac434`) gained.
   - **AC-430** — BINDING. *"GIVEN an item whose DAG has been selected / WHEN `redkiln explain <item>` runs / THEN the
     output prints, for every included activity, BOTH its admissibility row from the activity (`provides`, `requires`,
     `applicable_if`, `method_rank`, `min_rigor`) AND the requirement rows from the process pack (`baseline` and each

@@ -33,7 +33,8 @@
 //! GIVEN names is **not** on any file this crate reads: it is a value the binder computes at plan
 //! time, and `runbook/PROGRESS.md`:279 records that *"no stage authors an agent card or builds the
 //! binder"*. `ActivitySpec` carries the card as `card_digest` — *"ADR-0099:61's five fields and no
-//! sixth"* — so the resolved tier and the dispatch are separated by a hash in any case.
+//! sixth"* (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* plus `activity_id_at_version`, which
+//! carries no tier) — so the resolved tier and the dispatch are separated by a hash in any case.
 //!
 //! [`ModelTier`] therefore has exactly one constructor, [`ModelTier::resolved`], which takes the
 //! token from the caller. **The binding is ARMED, NOT DISCHARGED against Step 7c**, and it is the

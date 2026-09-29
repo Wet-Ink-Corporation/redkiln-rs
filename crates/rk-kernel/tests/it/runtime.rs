@@ -194,6 +194,7 @@ impl Harness for CountingHarness {
                 subagent_prompt_cache_ttl: "1h".to_owned(),
                 cancelled_by: None,
                 detected_by: None,
+                activity_id_at_version: None,
             },
             result: next.unwrap_or_else(|| {
                 Err(StepError::Transport {
@@ -561,6 +562,7 @@ pub fn spec() -> ActivitySpec {
         schema: SchemaId::new(SCHEMA),
         timeout_secs: 900,
         inputs: vec![("item".to_owned(), serde_json::json!(ITEM))],
+        activity_id_at_version: None,
     }
 }
 

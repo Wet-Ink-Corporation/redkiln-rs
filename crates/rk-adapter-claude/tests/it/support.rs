@@ -397,6 +397,7 @@ pub fn bind_probe_with_inputs(
             timeout_secs,
             worktree,
             inputs,
+            activity_id_at_version: None,
         })
         .expect("the probe card binds");
     (binder.into_config(), spec)
@@ -700,6 +701,7 @@ pub fn belt_dispatch_authored(card: &AuthoredCard, tier: Tier, effort: Option<Ef
         timeout_secs: 30,
         worktree: worktree.path(),
         inputs: vec![("prompt".to_owned(), serde_json::json!("belt"))],
+        activity_id_at_version: None,
     });
     if let Ok(spec) = bound {
         let h = harness(binder.into_config());

@@ -149,25 +149,36 @@ impl AppendWarnings {
 /// # Panics
 /// Never in practice: every member derives `Serialize` and none can fail to serialise; the
 /// `expect` names the invariant.
+///
+/// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decision 3,
+/// proposed.)* `item`, when `Some`, keys the row beside the event (`Event::with_item`, ADR-0182's
+/// interim carrier, outside `payload` and outside the canonical digest); `None` leaves the row
+/// item-less, owned by no item.
 #[must_use]
-pub fn completed_event(record: &DispatchRecord) -> Event {
-    Event::new(
+pub fn completed_event(record: &DispatchRecord, item: Option<&str>) -> Event {
+    let event = Event::new(
         EventKind::DispatchCompleted,
         serde_json::to_value(record)
             .expect("a DispatchRecord serialises (every member derives Serialize)"),
-    )
+    );
+    match item {
+        Some(item) => event.with_item(item),
+        None => event,
+    }
 }
 
-/// Append the `dispatch_completed` row for `record` through `store`.
+/// Append the `dispatch_completed` row for `record` through `store`, keyed with `item` when the
+/// spec carried one ([`completed_event`]).
 ///
 /// On failure, count and type it on `warnings` and return the error for the caller's own
 /// accounting — never a `StepError` that fails the activity (AC-368).
 pub fn append_completed(
     store: &mut dyn EventStore,
     record: &DispatchRecord,
+    item: Option<&str>,
     warnings: &AppendWarnings,
 ) -> Result<(), StepError> {
-    append_counted(store, completed_event(record), warnings)
+    append_counted(store, completed_event(record, item), warnings)
 }
 
 /// The `rate_limit_reading` event for a reading and the dispatch's item: the payload is

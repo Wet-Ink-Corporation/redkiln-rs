@@ -268,6 +268,21 @@ pub static RULES: &[Rule] = &[
         severity: Severity::Ok,
         check: executed_ledger,
     },
+    // *(dated 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.9, the render
+    // record ADR-0189 decision 13, proposed.)* The table moves from 39 ids to 41. Both are `Error`:
+    // §8f.9 fixes no severity, and each reports a breach of an invariant the design names in its
+    // forbids (design §8.4's "an out-of-band edit that leaves no record"; ADR-0025's first forbids
+    // bullet and N11), never a condition an operator may leave standing.
+    Rule {
+        id: "RK-D-ARTIFACT-MUTATION",
+        severity: Severity::Error,
+        check: artifact_mutation,
+    },
+    Rule {
+        id: "RK-D-DRIFT-KIND",
+        severity: Severity::Error,
+        check: drift_kind,
+    },
 ];
 
 /// Evaluate every rule in table order, into a [`super::Report`].
@@ -1613,11 +1628,23 @@ fn of_kind<'a>(ctx: &'a Ctx, wire: &str) -> Vec<&'a super::Row> {
 /// **The LAST reading**, not the maximum and not any: AC-220's GIVEN is *"the last recorded
 /// `five_hour` utilisation"*. Utilisation is in ticks out of a hundred, so *inside the margin* is
 /// `100 − ticks <= margin`.
+///
+/// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; `s8f` §8f.9, D21-42
+/// 12c, ADR-0190 decision 8, proposed.)* ~~The last row's `windows.five_hour`~~ — a flat reading as
+/// the last row has `windows: null`, which silenced the rule. **The latest reading that ANSWERS FOR
+/// `five_hour`**, read exactly as the guard reads it: [`five_hour_ticks`] rebuilds the adapter's
+/// `RateLimitReading` from the row and calls `ticks(Window::FiveHour)` — a unified reading's window,
+/// and a flat reading whose `rate_limit_type` is `null` or `five_hour`. A flat reading naming
+/// `seven_day` is skipped. **This deliberately differs from `cost`**, which counts a flat reading
+/// with no named window as `unwindowed` and forms no sample (attribution never extrapolates); the
+/// margin rule shows the guard's own margin, and AC-220's two halves must agree. Nobody "unifies"
+/// the two.
 fn headroom_margin(ctx: &Ctx) -> Vec<Finding> {
     const LIMIT: i64 = 100;
     let Some(last) = of_kind(ctx, "rate_limit_reading")
-        .last()
-        .and_then(|r| r.payload.get("windows")?.get("five_hour")?.as_i64())
+        .into_iter()
+        .rev()
+        .find_map(five_hour_ticks)
     else {
         return Vec::new();
     };
@@ -1639,6 +1666,47 @@ fn headroom_margin(ctx: &Ctx) -> Vec<Finding> {
             })
         })
         .collect()
+}
+
+/// The five-hour ticks one `rate_limit_reading` row answers for, **as the guard reads them**
+/// (`s8f` §8f.9): the row's ADR-0163 decision 3 members rebuilt into the adapter's
+/// `RateLimitReading` — `windows` an object of two `u16` ticks is the unified shape, `windows: null`
+/// with a `u16` `utilization` is the flat one, `rate_limit_type` a string or `null` — and then
+/// `RateLimitReading::ticks(Window::FiveHour)`, the one reading the throttle's guard takes. A row
+/// that is neither shape answers for nothing, and is skipped.
+fn five_hour_ticks(row: &super::Row) -> Option<i64> {
+    use rk_adapter_claude::headroom::{RateLimitReading, Shape};
+    let u16_of = |v: &serde_json::Value| v.as_u64().and_then(|t| u16::try_from(t).ok());
+    let shape = match row.payload.get("windows") {
+        Some(serde_json::Value::Object(w)) => Shape::Unified {
+            windows: rk_types::usage::WindowReading {
+                five_hour: w.get("five_hour").and_then(u16_of)?,
+                seven_day: w.get("seven_day").and_then(u16_of)?,
+            },
+            five_hour_resets_at: None,
+            seven_day_resets_at: None,
+        },
+        None | Some(serde_json::Value::Null) => Shape::Flat {
+            utilization: row.payload.get("utilization").and_then(u16_of)?,
+        },
+        Some(_) => return None,
+    };
+    let rate_limit_type = match row.payload.get("rate_limit_type") {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::String(t)) => Some(t.clone()),
+        Some(_) => return None,
+    };
+    let reading = RateLimitReading {
+        shape,
+        status: None,
+        resets_at: None,
+        rate_limit_type,
+        is_using_overage: None,
+        overage_status: None,
+    };
+    reading
+        .ticks(rk_adapter_claude::config::Window::FiveHour)
+        .map(i64::from)
 }
 
 /// **`RK-D-REVIEW-REEXEC`** — AC-290 (D18-19): a `reproduced` finding with no re-execution record.
@@ -1900,7 +1968,19 @@ fn verification_policy(ctx: &Ctx) -> Vec<Finding> {
 /// `ac415_` needs every one of the thirty-eight rows to reject its fixture.
 fn unread(ctx: &Ctx) -> Vec<Finding> {
     let window = i64::from(ctx.config.doctor.unread_window_runs);
-    let run_of = |r: &super::Row| r.payload.get("run").and_then(serde_json::Value::as_i64);
+    // *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; `s8f` §8f.5,
+    // D21-47 review M2, D21-48 X11.)* ~~`run` read as an integer only~~ — the real producers write
+    // a STRING `run` (the stage run's `run_id`, ADR-0152), which that reading passed over, so the
+    // rule could never fire on a real row. `run` is read as a string or an integer, keyed by the JSON
+    // value's CANONICAL TEXT, so an integer `0` and a string `"0"` stay two runs. **A `null` `run` is
+    // an unknown run, never a key** (X11: *"RK-D-UNREAD reads null as an unknown run, never as a
+    // match"*): `null`, an absent `run` and any other JSON type return no run, and the row is
+    // passed over — keying `null` by its text would make every null-run row one run.
+    let run_of = |r: &super::Row| match r.payload.get("run") {
+        Some(v @ serde_json::Value::String(_)) => Some(v.to_string()),
+        Some(v @ serde_json::Value::Number(n)) if n.is_i64() || n.is_u64() => Some(v.to_string()),
+        _ => None,
+    };
     let key = |r: &super::Row| {
         Some((
             r.str_field("stage")?.to_owned(),
@@ -1913,8 +1993,10 @@ fn unread(ctx: &Ctx) -> Vec<Finding> {
         .into_iter()
         .filter_map(key)
         .collect();
-    let mut written: std::collections::BTreeMap<(String, String), std::collections::BTreeSet<i64>> =
-        std::collections::BTreeMap::new();
+    let mut written: std::collections::BTreeMap<
+        (String, String),
+        std::collections::BTreeSet<String>,
+    > = std::collections::BTreeMap::new();
     for row in of_kind(ctx, "artifact.write") {
         let (Some(k), Some(run)) = (key(row), run_of(row)) else {
             continue;
@@ -2086,4 +2168,293 @@ fn executed_ledger(ctx: &Ctx) -> Vec<Finding> {
         .iter()
         .map(|(name, _)| finding(ID, Severity::Ok, detail(&format!("pack `{name}`: "))))
         .collect()
+}
+
+// ================================================================ s8f: the store's two rows
+//
+// *(Added 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.9.)*
+
+/// **`RK-D-ARTIFACT-MUTATION`** — AC-159, an **error**: a managed artifact whose structured-section
+/// or frontmatter digest differs from the store's last recorded rendering, with no store write
+/// record accounting for it (`s8f` §8f.9; ADR-0189 decision 13, proposed).
+///
+/// **What it reads — the directories the store NAMES, never a walk.** Each `worktree_assigned`
+/// row's `worktree` (the run-owned tree), then the checkout's own root. In each, only the artifacts
+/// the store's own `artifact.write` rows name: a row whose `path` is its kind's SIDECAR,
+/// `.redkiln/artifacts/<item>/<Kind>.json` (ADR-0189 decision 3). `.redkiln/` is never read
+/// recursively, so D21-44's `worktrees/` exclusion holds by construction: a copy under
+/// `.redkiln/worktrees/` that no `worktree_assigned` row names is never opened. `.redkiln/items/`
+/// is in scope and holds nothing this rule can compare: an item record has no layout-C section, no
+/// sidecar and no `artifact.write` (ADR-0189 decision 11), so no recorded rendering exists for it.
+///
+/// **What it compares.** The sidecar is the typed value: its digest must be the one the LATEST
+/// `artifact.write` for its path records — a rewrite through the store is its own record, and a
+/// reconcile-accepted prose edit or a `move-to-prose` rewrites it through the writer, which is
+/// AC-159's *"the reconcile that accepted it counts as the write record"*. Then the rendering's
+/// frontmatter and every STRUCTURED section are recomputed through `rk-store`'s locator
+/// ([`rk_store::render::differences`]) against the rendering of that value. **A prose section is
+/// never compared** (AC-152) and **no whole-file digest is the instrument** (PIA-043's amendment).
+///
+/// **Out of scope.** A vouched root (`<Kind>.root<ext>`): it is not layout C, and its change is
+/// `drift_advisory`'s (§8f.5); reporting it here would report every advisory as a mutation. A file
+/// the store named that is ABSENT from a tree is not read (the checkout's own tree is never written,
+/// AC-518, so it is absent there until an operator merges the run ref).
+///
+/// Each finding names the artifact, the anchor, both digests and the last recorded write.
+fn artifact_mutation(ctx: &Ctx) -> Vec<Finding> {
+    use rk_store::render::{differences, managed_path, rendering_name, sidecar_name};
+    const ID: &str = "RK-D-ARTIFACT-MUTATION";
+
+    // The trees the store names, in journal order, then the checkout.
+    let mut trees: Vec<std::path::PathBuf> = Vec::new();
+    for row in of_kind(ctx, "worktree_assigned") {
+        if let Some(tree) = row.str_field("worktree").map(std::path::PathBuf::from)
+            && !trees.contains(&tree)
+        {
+            trees.push(tree);
+        }
+    }
+    if !trees.contains(&ctx.worktree) {
+        trees.push(ctx.worktree.clone());
+    }
+
+    // The artifacts the store names: (item, kind) → every writer row for its sidecar or its
+    // rendering, in journal order.
+    let mut named: std::collections::BTreeMap<(String, String), Vec<&super::Row>> =
+        std::collections::BTreeMap::new();
+    for row in of_kind(ctx, "artifact.write") {
+        let (Some(item), Some(kind), Some(path)) = (
+            row.str_field("item"),
+            row.str_field("kind"),
+            row.str_field("path"),
+        ) else {
+            continue;
+        };
+        if path == managed_path(item, &sidecar_name(kind))
+            || path == managed_path(item, &rendering_name(kind))
+        {
+            named
+                .entry((item.to_owned(), kind.to_owned()))
+                .or_default()
+                .push(row);
+        }
+    }
+
+    let mut out = Vec::new();
+    for ((item, kind), rows) in &named {
+        let sidecar_rel = managed_path(item, &sidecar_name(kind));
+        let rendering_rel = managed_path(item, &rendering_name(kind));
+        // The value's record: the LATEST write of the sidecar. A kind named only by a restore row
+        // has no recorded value, and nothing to compare.
+        let Some(recorded) = rows
+            .iter()
+            .rev()
+            .find(|r| r.str_field("path") == Some(sidecar_rel.as_str()))
+            .and_then(|r| r.str_field("digest"))
+        else {
+            continue;
+        };
+        let last = rows.last().map_or_else(String::new, |r| {
+            format!(
+                "`artifact.write` of `{kind}` at `{}`, stage `{}`, run {}, digest {}",
+                r.str_field("path").unwrap_or("?"),
+                r.str_field("stage").unwrap_or("?"),
+                r.payload
+                    .get("run")
+                    .map_or_else(|| "absent".to_owned(), ToString::to_string),
+                r.str_field("digest").unwrap_or("?")
+            )
+        });
+        for tree in &trees {
+            let Ok(sidecar) = std::fs::read(tree.join(&sidecar_rel)) else {
+                continue;
+            };
+            let on_disk = rk_types::digest::sha256(&sidecar);
+            if on_disk.as_str() != recorded {
+                out.push(finding(
+                    ID,
+                    Severity::Error,
+                    format!(
+                        "unrecorded artifact mutation: `{sidecar_rel}` in `{}`, the typed value \
+                         itself: the store's last recorded write digests to {recorded}, the bytes \
+                         on disk to {}; no store write record accounts for it (last recorded \
+                         write: {last})",
+                        tree.display(),
+                        on_disk.as_str()
+                    ),
+                ));
+                continue;
+            }
+            let rendering = std::fs::read(tree.join(&rendering_rel)).ok();
+            match differences(kind, &sidecar, rendering.as_deref()) {
+                Ok(None) => {}
+                Ok(Some(diffs)) => out.extend(diffs.into_iter().map(|d| {
+                    finding(
+                        ID,
+                        Severity::Error,
+                        format!(
+                            "unrecorded artifact mutation: `{rendering_rel}` in `{}` at `{}`: the \
+                             store's last recorded rendering digests to {}, the bytes on disk to \
+                             {}; no store write record accounts for it (last recorded write: \
+                             {last})",
+                            tree.display(),
+                            d.anchor,
+                            d.rendered.as_str(),
+                            d.observed.as_str()
+                        ),
+                    )
+                })),
+                Err(e) => out.push(finding(
+                    ID,
+                    Severity::Error,
+                    format!(
+                        "`{rendering_rel}` in `{}` could not be compared with its recorded value: \
+                         {e} (last recorded write: {last})",
+                        tree.display()
+                    ),
+                )),
+            }
+        }
+    }
+    out
+}
+
+/// **`RK-D-DRIFT-KIND`** — AC-127's doctor row, an **error** (`s8f` §8f.9; D21-46 R7; ADR-0189
+/// decision 13, proposed): *"a `doctor` rule-table row distinguishing the two drift kinds"*.
+///
+/// Over the store's journal in append order, every `structured_drift` and every `drift_advisory`
+/// is classed by **`rk_types::drift::Drift::blocks()`** — its doc: *"AC-127 is the criterion this
+/// encodes"* — never by a second table. An ENTRY is the run of rows from one `reconcile_started` to
+/// the next (every invocation writes one before its entry pass). Two crossings are reported:
+/// - **(a)** a drift that does NOT block (a vouched root's `drift_advisory`) followed, in the same
+///   entry, by a `render.structured-drift` gate naming its root: an advisory promoted to a
+///   blocking gate (ADR-0025's first forbids bullet; AC-067);
+/// - **(b)** a drift that BLOCKS (`structured_drift`) with no `render.structured-drift` gate naming
+///   its artifact and anchor opened after it in the same entry: a blocking drift that did not
+///   block (N11).
+///
+/// A gate "names" a drift when one of its `drifts` (each a `structured_drift` payload, ADR-0189
+/// decision 4) carries the drift's artifact kind — and, for a structured drift, its anchor. A gate
+/// of another class carrying an advisory is ADR-0025's rule, not a promotion. The digests the
+/// finding names are the row's own text; they do not enter the classification, which reads the
+/// kind alone.
+fn drift_kind(ctx: &Ctx) -> Vec<Finding> {
+    use rk_types::drift::Drift;
+    const ID: &str = "RK-D-DRIFT-KIND";
+    let gate_class = rk_kernel::workflow::fsm::DRIFT_GATE_KIND;
+    let rows = &ctx.journal;
+
+    let mut entry = 0usize;
+    let entry_of: Vec<usize> = rows
+        .iter()
+        .map(|r| {
+            if r.kind == "reconcile_started" {
+                entry += 1;
+            }
+            entry
+        })
+        .collect();
+    let gates: Vec<usize> = rows
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| r.kind == "gate_opened" && r.str_field("kind") == Some(gate_class))
+        .map(|(i, _)| i)
+        .collect();
+    let names = |gate: &super::Row, kind: &str, anchor: Option<&str>| {
+        gate.payload
+            .get("drifts")
+            .and_then(serde_json::Value::as_array)
+            .is_some_and(|drifts| {
+                drifts.iter().any(|d| {
+                    d.get("kind").and_then(serde_json::Value::as_str) == Some(kind)
+                        && anchor.is_none_or(|a| {
+                            d.get("anchor").and_then(serde_json::Value::as_str) == Some(a)
+                        })
+                })
+            })
+    };
+    // The classification reads the kind alone; an unparseable digest is not a reason to skip a
+    // row, so the typed value carries the digest of the row's own text in its place.
+    let digest = |r: &super::Row, key: &str| {
+        let text = r.payload.get(key).map_or_else(
+            || "absent".to_owned(),
+            |v| v.as_str().map_or_else(|| v.to_string(), ToOwned::to_owned),
+        );
+        let typed = rk_types::digest::Digest::from_hex(&text)
+            .unwrap_or_else(|_| rk_types::digest::sha256(text.as_bytes()));
+        (typed, text)
+    };
+
+    let mut out = Vec::new();
+    for (i, row) in rows.iter().enumerate() {
+        let (drift, name, anchor, old, new) = match row.kind.as_str() {
+            "structured_drift" => {
+                let (Some(kind), Some(anchor)) = (row.str_field("kind"), row.str_field("anchor"))
+                else {
+                    continue;
+                };
+                let (stored, old) = digest(row, "old_digest");
+                let (observed, new) = digest(row, "new_digest");
+                (
+                    Drift::StructuredSection {
+                        artifact: kind.to_owned(),
+                        anchor: anchor.to_owned(),
+                        stored,
+                        observed,
+                    },
+                    kind,
+                    Some(anchor),
+                    old,
+                    new,
+                )
+            }
+            "drift_advisory" => {
+                let Some(root) = row.str_field("root") else {
+                    continue;
+                };
+                let (vouched, old) = digest(row, "old_digest");
+                let (observed, new) = digest(row, "new_digest");
+                (
+                    Drift::Advisory {
+                        root: root.to_owned(),
+                        vouched,
+                        observed,
+                    },
+                    root,
+                    None,
+                    old,
+                    new,
+                )
+            }
+            _ => continue,
+        };
+        let gated = gates
+            .iter()
+            .any(|&g| g > i && entry_of[g] == entry_of[i] && names(&rows[g], name, anchor));
+        let at = anchor.map_or_else(String::new, |a| format!(" at `{a}`"));
+        match (drift.blocks(), gated) {
+            (false, true) => out.push(finding(
+                ID,
+                Severity::Error,
+                format!(
+                    "`{}` of `{name}`{at} (old {old}, new {new}) does not block, and a \
+                     `{gate_class}` gate naming it was opened after it in the same entry: an \
+                     advisory promoted to a blocking gate (ADR-0025; AC-067)",
+                    drift.kind()
+                ),
+            )),
+            (true, false) => out.push(finding(
+                ID,
+                Severity::Error,
+                format!(
+                    "`{}` of `{name}`{at} (old {old}, new {new}) blocks, and no `{gate_class}` \
+                     gate naming it was opened after it in the same entry: a blocking drift that \
+                     did not block (N11; AC-127)",
+                    drift.kind()
+                ),
+            )),
+            _ => {}
+        }
+    }
+    out
 }

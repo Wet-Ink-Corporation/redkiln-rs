@@ -1,0 +1,3 @@
+{"kind":"reconcile_started","payload":{"branch":"rk-run/RK-S0001"}}
+{"kind":"drift_advisory","payload":{"new_digest":"4a1a5abf56ce6f24a9774b28b80a92874e6c85bd057092e872ee8c786cc691d4","old_digest":"e813d564bccbeefe1db875d1c9abb55d63c52b639acc61134a5f1d19cc489b67","root":"Findings","upstream":null}}
+{"kind":"gate_opened","payload":{"deadline":1800086400,"drifts":[{"anchor":"document","causing_commit":null,"item":"RK-S0001","kind":"Findings","new_digest":"4a1a5abf56ce6f24a9774b28b80a92874e6c85bd057092e872ee8c786cc691d4","old_digest":"e813d564bccbeefe1db875d1c9abb55d63c52b639acc61134a5f1d19cc489b67"}],"kind":"render.structured-drift","reach":1,"stage":"implement","token":"g-drift-fixture-0001","tree_hash":"4b825dc642cb6eb9a060e54bf8d69288fbee4904"}}

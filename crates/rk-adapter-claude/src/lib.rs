@@ -357,6 +357,7 @@ impl ClaudeHarness {
     /// usage-adjacent member `None`, the argv/env digests over what was assembled (or nothing).
     fn pre_spawn_record(
         &self,
+        spec: &ActivitySpec,
         argv: &[String],
         env_pairs: &[(String, String)],
         wall_ms: u64,
@@ -385,19 +386,27 @@ impl ClaudeHarness {
                 headroom_after: None,
                 cancelled_by: err.and_then(classify::cancelled_by_of),
                 detected_by: None,
+                // ADR-0190 decision 1 (proposed): on EVERY path, the pre-spawn ones included.
+                activity_id_at_version: spec.activity_id_at_version.clone(),
             },
         )
     }
 
     /// Append the row through the handed-in store (AC-360; ADR-0126's forbids) — a failure is
     /// counted on the AC-368 warning counter and never becomes the outcome.
+    ///
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+    /// decision 3, proposed.)* The row is keyed with the spec's `"item"` input ([`Self::item`], the
+    /// value the reading's `item` is taken from), beside the event on ADR-0182's carrier — never in
+    /// the payload.
     fn finish(
         &self,
         store: &mut dyn EventStore,
+        spec: &ActivitySpec,
         record: DispatchRecord,
         result: Result<rk_types::typed::Typed, StepError>,
     ) -> DispatchOutcome {
-        let _ = record::append_completed(store, &record, &self.append_warnings);
+        let _ = record::append_completed(store, &record, Self::item(spec), &self.append_warnings);
         DispatchOutcome { record, result }
     }
 }
@@ -439,6 +448,7 @@ impl Harness for ClaudeHarness {
         let pre = |err: StepError, argv: &[String]| {
             let result = Err(err);
             let record = self.pre_spawn_record(
+                spec,
                 argv,
                 &env_pairs,
                 Self::wall_ms_since(started),
@@ -462,7 +472,7 @@ impl Harness for ClaudeHarness {
                 },
                 &[],
             );
-            return self.finish(store, record, result);
+            return self.finish(store, spec, record, result);
         };
         if let Some(detail) = Self::worktree_refusal(&worktree) {
             let (record, result) = pre(
@@ -472,7 +482,7 @@ impl Harness for ClaudeHarness {
                 },
                 &[],
             );
-            return self.finish(store, record, result);
+            return self.finish(store, spec, record, result);
         }
         let Some(bound) = self.config.bound(&spec.card_digest) else {
             let (record, result) = pre(
@@ -486,7 +496,7 @@ impl Harness for ClaudeHarness {
                 },
                 &[],
             );
-            return self.finish(store, record, result);
+            return self.finish(store, spec, record, result);
         };
         let Some(schema) = bound.schemas.get(&spec.schema) else {
             let (record, result) = pre(
@@ -501,7 +511,7 @@ impl Harness for ClaudeHarness {
                 },
                 &[],
             );
-            return self.finish(store, record, result);
+            return self.finish(store, spec, record, result);
         };
         match verdict {
             Verdict::Proceed => {}
@@ -515,11 +525,11 @@ impl Harness for ClaudeHarness {
                     },
                     &[],
                 );
-                return self.finish(store, record, result);
+                return self.finish(store, spec, record, result);
             }
             Verdict::Halt { resets_at, .. } => {
                 let (record, result) = pre(StepError::RateLimited { resets_at }, &[]);
-                return self.finish(store, record, result);
+                return self.finish(store, spec, record, result);
             }
         }
         // a token that has already fired is not a reason to start a tree (R5-5; ADR-0099 d2)
@@ -530,7 +540,7 @@ impl Harness for ClaudeHarness {
                 },
                 &[],
             );
-            return self.finish(store, record, result);
+            return self.finish(store, spec, record, result);
         }
         let user_message = Self::user_message(spec);
         let assembled = match assemble(
@@ -552,7 +562,7 @@ impl Harness for ClaudeHarness {
                     },
                     &[],
                 );
-                return self.finish(store, record, result);
+                return self.finish(store, spec, record, result);
             }
         };
         let argv = assembled.argv.clone();
@@ -595,7 +605,7 @@ impl Harness for ClaudeHarness {
                     },
                     &argv,
                 );
-                return self.finish(store, record, result);
+                return self.finish(store, spec, record, result);
             }
         };
         let wall_ms = Self::wall_ms_since(started);
@@ -661,6 +671,9 @@ impl Harness for ClaudeHarness {
                     .err()
                     .and_then(classify::cancelled_by_of),
                 detected_by: run.detected_by,
+                // ADR-0190 decision 1 (proposed; D21-107): the spec's member, verbatim — the
+                // adapter alone writes it, on its own row (ADR-0126).
+                activity_id_at_version: spec.activity_id_at_version.clone(),
             },
         );
         // ADR-0163 clause 2: ONE rate_limit_reading per dispatch through the child, from the
@@ -677,6 +690,6 @@ impl Harness for ClaudeHarness {
                 &self.append_warnings,
             );
         }
-        self.finish(store, record, run.result)
+        self.finish(store, spec, record, run.result)
     }
 }

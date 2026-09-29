@@ -72,6 +72,7 @@ fn pre_spawn_record() -> DispatchRecord {
             headroom_after: None,
             cancelled_by: None,
             detected_by: None,
+            activity_id_at_version: None,
         },
     )
 }

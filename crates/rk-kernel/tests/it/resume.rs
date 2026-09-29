@@ -111,6 +111,7 @@ fn spec_for(node: &str) -> ActivitySpec {
         schema: SchemaId::new(RECORDED_SCHEMA),
         timeout_secs: 900,
         inputs: vec![("item".to_owned(), serde_json::json!(ITEM))],
+        activity_id_at_version: None,
     }
 }
 

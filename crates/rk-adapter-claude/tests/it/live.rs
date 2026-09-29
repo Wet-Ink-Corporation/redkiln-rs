@@ -202,6 +202,7 @@ fn bind_live(
             timeout_secs,
             worktree,
             inputs: vec![("prompt".to_owned(), serde_json::json!(prompt))],
+            activity_id_at_version: None,
         })
         .expect("the live card binds");
     (binder.into_config(), spec)

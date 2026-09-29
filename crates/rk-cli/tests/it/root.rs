@@ -1441,6 +1441,7 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
             timeout_secs,
             worktree: wt.path(),
             inputs: vec![("item".to_owned(), serde_json::json!("bug-1"))],
+            activity_id_at_version: None,
         })
         .expect("pack-min's one card binds");
 

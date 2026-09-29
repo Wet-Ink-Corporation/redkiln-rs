@@ -129,6 +129,7 @@ impl Harness for FakeAdapter {
                 subagent_prompt_cache_ttl: "1h".to_owned(),
                 cancelled_by: None,
                 detected_by: None,
+                activity_id_at_version: None,
             },
             result: Ok(Typed::new(
                 spec.schema.clone(),

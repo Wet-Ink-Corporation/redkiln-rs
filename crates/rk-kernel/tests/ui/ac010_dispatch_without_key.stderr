@@ -1,33 +1,33 @@
 error: cannot construct `PlannedDispatch` with struct literal syntax due to private fields
-  --> tests/ui/ac010_dispatch_without_key.rs:53:20
+  --> tests/ui/ac010_dispatch_without_key.rs:54:20
    |
-53 |     let _literal = PlannedDispatch {
+54 |     let _literal = PlannedDispatch {
    |                    ^^^^^^^^^^^^^^^
-54 |         spec: spec(),
+55 |         spec: spec(),
    |         ------------ private field
-55 |         degraded: None,
+56 |         degraded: None,
    |         -------------- private field
    |
    = note: ...and other private field `key` that was not provided
 help: you might have meant to use an associated function to build this type
    |
-53 -     let _literal = PlannedDispatch {
-54 -         spec: spec(),
-55 -         degraded: None,
-56 -     };
-53 +     let _literal = PlannedDispatch::new(_, _);
+54 -     let _literal = PlannedDispatch {
+55 -         spec: spec(),
+56 -         degraded: None,
+57 -     };
+54 +     let _literal = PlannedDispatch::new(_, _);
    |
-53 -     let _literal = PlannedDispatch {
-54 -         spec: spec(),
-55 -         degraded: None,
-56 -     };
-53 +     let _literal = PlannedDispatch::substituted(_, _, _);
+54 -     let _literal = PlannedDispatch {
+55 -         spec: spec(),
+56 -         degraded: None,
+57 -     };
+54 +     let _literal = PlannedDispatch::substituted(_, _, _);
    |
 
 error[E0308]: arguments to this function are incorrect
-  --> tests/ui/ac010_dispatch_without_key.rs:59:21
+  --> tests/ui/ac010_dispatch_without_key.rs:60:21
    |
-59 |     let _optional = PlannedDispatch::new(spec(), None);
+60 |     let _optional = PlannedDispatch::new(spec(), None);
    |                     ^^^^^^^^^^^^^^^^^^^^ ------  ---- unexpected argument #2 of type `Option<_>`
    |                                          |
    |                                          argument #1 of type `IdempotencyKey` is missing
@@ -39,14 +39,14 @@ note: associated function defined here
    |                  ^^^
 help: did you mean
    |
-59 -     let _optional = PlannedDispatch::new(spec(), None);
-59 +     let _optional = PlannedDispatch::new(/* IdempotencyKey */, spec());
+60 -     let _optional = PlannedDispatch::new(spec(), None);
+60 +     let _optional = PlannedDispatch::new(/* IdempotencyKey */, spec());
    |
 
 error[E0061]: this function takes 2 arguments but 1 argument was supplied
-  --> tests/ui/ac010_dispatch_without_key.rs:62:20
+  --> tests/ui/ac010_dispatch_without_key.rs:63:20
    |
-62 |     let _omitted = PlannedDispatch::new(spec());
+63 |     let _omitted = PlannedDispatch::new(spec());
    |                    ^^^^^^^^^^^^^^^^^^^^ ------ argument #1 of type `IdempotencyKey` is missing
    |
 note: associated function defined here
@@ -56,5 +56,5 @@ note: associated function defined here
    |                  ^^^
 help: provide the argument
    |
-62 |     let _omitted = PlannedDispatch::new(/* IdempotencyKey */, spec());
+63 |     let _omitted = PlannedDispatch::new(/* IdempotencyKey */, spec());
    |                                         +++++++++++++++++++++

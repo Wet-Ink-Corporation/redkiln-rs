@@ -90,6 +90,7 @@ fn step_spec(hex: &str, schema: &str) -> ActivitySpec {
         schema: SchemaId::new(schema),
         timeout_secs: 60,
         inputs: vec![("item".to_owned(), serde_json::json!(ITEM))],
+        activity_id_at_version: None,
     }
 }
 
@@ -178,6 +179,7 @@ impl Harness for SpecEchoHarness {
                 subagent_prompt_cache_ttl: "1h".to_owned(),
                 cancelled_by: None,
                 detected_by: None,
+                activity_id_at_version: None,
             },
             result: next.map_or_else(
                 || {

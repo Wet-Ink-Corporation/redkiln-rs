@@ -45,7 +45,9 @@
 //! **already** a pack value asserted by pack validation (AC-033's own Verified by), and the breaker
 //! expiry's home falls out in the same place."* It needs no ADR supersession, re-words no
 //! criterion's GIVEN, and touches neither `ActivitySpec` nor `rk-types` — `ActivitySpec` is still
-//! *"ADR-0099:61's five fields and no sixth"* and no sixth was added.
+//! *"ADR-0099:61's five fields and no sixth"* and no sixth was added. *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)*
+//! A sixth was added LATER, for another reason: `activity_id_at_version`, for the adapter's
+//! `dispatch_completed` row; the breaker still reads nothing off the spec.
 //!
 //! **CORRECTED HERE, NOT QUIETLY REPLACED.** The section that stood here until 2026-09-14 was
 //! headed *"🛑 THE KEY HAS NO CARRIER"* and said *"**nothing in this tree represents a model

@@ -127,6 +127,7 @@ impl Harness for LoopHarness {
                 subagent_prompt_cache_ttl: "1h".to_owned(),
                 cancelled_by: None,
                 detected_by: None,
+                activity_id_at_version: None,
             },
             result: next.map_or_else(
                 || {

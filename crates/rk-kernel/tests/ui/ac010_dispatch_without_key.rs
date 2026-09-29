@@ -45,6 +45,7 @@ fn spec() -> ActivitySpec {
         schema: SchemaId::new("ImplReport/v1"),
         timeout_secs: 900,
         inputs: Vec::new(),
+        activity_id_at_version: None,
     }
 }
 

@@ -355,6 +355,10 @@ fn ctx_for(dir: &std::path::Path) -> rk_cli::doctor::Ctx {
         store,
         Box::new(StubProbe::read(dir)),
         NOW,
+        // *(dated 2026-09-29, s8f build, package S8F-P7; `s8f` §8f.9, ADR-0190 decision 7,
+        // proposed.)* A fixture's journal is its `events.jsonl`, named explicitly: `Ctx::build`
+        // takes the source as a parameter, and the verb passes the store's rows.
+        rk_cli::doctor::JournalSource::FixtureEventsJsonl,
     )
 }
 
@@ -619,6 +623,8 @@ fn rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table() {
             None,
             Box::new(StubProbe::read(root)),
             NOW,
+            // *(dated 2026-09-29, s8f build, package S8F-P7; `s8f` §8f.9.)* The fixture source.
+            rk_cli::doctor::JournalSource::FixtureEventsJsonl,
         )
     };
 

@@ -624,6 +624,7 @@ fn step_specs(activity: &Activity) -> BTreeMap<String, ActivitySpec> {
                     schema: SchemaId::new(format!("{kind}@{}/{}", activity.id, s.id)),
                     timeout_secs: 900,
                     inputs: vec![("item".to_owned(), serde_json::json!(ITEM))],
+                    activity_id_at_version: None,
                 },
             )
         })

@@ -56,7 +56,8 @@
 //! 3. The [`rk_types::activity::ActivitySpec`] is a **RECORDED INPUT** — `inputs/specs.json`, in
 //!    the layout below, folded into `run_id` and `inputs_digest` like every other input. See
 //!    [`RecordedSpec`] for the measurement behind that: the five fields are the **binder's**
-//!    output, the binder is unbuilt, and **a record routing spec assembly is OWED**.
+//!    output (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* the spec's sixth
+//!    member, `activity_id_at_version`, is never written into the record's spec objects), the binder is unbuilt, and **a record routing spec assembly is OWED**.
 //! 4. Every earlier recorded `run_id` moved again, so `implement-d8401695754074c7` is gone and the
 //!    fixture directory it names is re-blessed through `bless_the_committed_golden_log` — never
 //!    hand-edited. *(And moved once more on 2026-09-14 when [`SCHEMA`] went to `v2`; the committed
@@ -661,7 +662,9 @@ impl RuntimeContext {
 /// need, plus the activation identity the idempotency key's second part is.
 ///
 /// 🛑 **Why it is an input and not something this crate resolves.** `rk_types::activity::
-/// ActivitySpec` has five fields and **this tree resolves none of them from a DAG node**
+/// ActivitySpec` has five fields (*(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* six; the sixth,
+/// `activity_id_at_version`, is repopulated from this binding on read) and **this tree resolves
+/// none of them from a DAG node**
 /// [measured 2026-09-14: `card_digest`, `tools` and `schema` appear in **zero** catalog fixtures;
 /// `timeout_secs` is declared in 10 and parsed by nothing — `grep -c timeout_secs
 /// crates/rk-kernel/src/catalog.rs` → 0 — and one of the ten is `"${toolchain.test_timeout}"`, a
@@ -675,7 +678,11 @@ impl RuntimeContext {
 /// `inputs/specs.json`, it participates in `run_id`, and a replay reads it back rather than being
 /// told it out of band. That is AC-064's own model for the deviation record.
 ///
-/// **`activity_id_at_version` is here for the same reason and is NOT a sixth spec field.** The
+/// **`activity_id_at_version` is here for the same reason and is NOT a sixth spec field.**
+/// *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 2, proposed; D21-107.)* ~~NOT a sixth spec field~~: ADR-0190 decision 2 adds it to
+/// `ActivitySpec` as well, for the adapter's `dispatch_completed` row alone (superseding ADR-0138
+/// decision 2's *"NOT a sixth spec field"* in part, for this id). The binding's own member stays the
+/// recorded one, and the spec's is repopulated from it on read (`spec_from_json`). The
 /// join between a DAG node and `crate::catalog::Activity::id_at_version` has three candidate homes
 /// and `crate::workflow::fsm`'s header records that choosing one is a decision this stage may not
 /// take; the binding transcribes it instead, and the record naming the join's home is still OWED.
@@ -783,6 +790,11 @@ impl RecordedSpec {
     }
 
     /// One spec's five fields as the record writes them.
+    ///
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+    /// decision 2, proposed.)* The spec's `activity_id_at_version` is deliberately NOT written: the
+    /// binding already records it as its own member, and writing it here would move `run_id` (a
+    /// digest over these bytes) and every pinned `specs.json`.
     fn spec_json(spec: &ActivitySpec) -> serde_json::Value {
         serde_json::json!({
             "card_digest": spec.card_digest.as_str(),
@@ -876,7 +888,10 @@ impl RecordedSpec {
                     .ok_or_else(|| bad("`step_specs` is not an object".to_owned()))?;
                 let mut out = std::collections::BTreeMap::new();
                 for (id, spec) in map {
-                    out.insert(id.clone(), Self::spec_from_json(node, spec)?);
+                    out.insert(
+                        id.clone(),
+                        Self::spec_from_json(node, spec, &activity_id_at_version)?,
+                    );
                 }
                 Some(out)
             }
@@ -884,7 +899,7 @@ impl RecordedSpec {
         // An activation spec is present exactly when its `card_digest` is. A binding with NONE is
         // lawful only as R1's explicit absence — per-step specs carried, and empty.
         let spec = if value.get("card_digest").is_some() {
-            Some(Self::spec_from_json(node, value)?)
+            Some(Self::spec_from_json(node, value, &activity_id_at_version)?)
         } else if step_specs
             .as_ref()
             .is_some_and(std::collections::BTreeMap::is_empty)
@@ -906,7 +921,18 @@ impl RecordedSpec {
     }
 
     /// One spec's five members, every one required.
-    fn spec_from_json(node: &str, value: &serde_json::Value) -> Result<ActivitySpec, ReplayError> {
+    ///
+    /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
+    /// decision 2, proposed; D21-107.)* The spec's sixth member, `activity_id_at_version`, is NOT
+    /// read from these five: `spec_json` never writes it. It is repopulated from the binding's own
+    /// recorded `activity_id_at_version` (`activation`), and only when that carries its `@version`;
+    /// an unversioned activation's id reads back as `None`, exactly as `bind_nodes` sets it, so a
+    /// value without its `@version` never reaches a `dispatch_completed` row.
+    fn spec_from_json(
+        node: &str,
+        value: &serde_json::Value,
+        activation: &str,
+    ) -> Result<ActivitySpec, ReplayError> {
         let bad = |detail: String| ReplayError::Malformed {
             path: "inputs/specs.json".to_owned(),
             detail: format!("{node}: {detail}"),
@@ -956,6 +982,7 @@ impl RecordedSpec {
             schema: SchemaId::new(text("schema")?),
             timeout_secs,
             inputs,
+            activity_id_at_version: activation.contains('@').then(|| activation.to_owned()),
         })
     }
 }

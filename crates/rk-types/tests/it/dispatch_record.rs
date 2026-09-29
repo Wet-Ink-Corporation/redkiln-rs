@@ -60,6 +60,8 @@ fn full_tail() -> RecordTail {
         }),
         cancelled_by: Some(CancelledBy::Timeout),
         detected_by: Some(DetectedBy::TextMarker),
+        // *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1, proposed.)*
+        activity_id_at_version: Some("emit-report@1".to_owned()),
     }
 }
 
@@ -80,6 +82,7 @@ fn pre_spawn_tail() -> RecordTail {
         headroom_after: None,
         cancelled_by: None,
         detected_by: None,
+        activity_id_at_version: None,
     }
 }
 
@@ -120,6 +123,7 @@ fn ac360_dispatch_record_carries_the_usage_fields() {
         subagent_prompt_cache_ttl,
         cancelled_by,
         detected_by,
+        activity_id_at_version,
     } = rec.clone();
 
     // The digests are digests: 64 hex characters, and the secret is in neither.
@@ -164,6 +168,9 @@ fn ac360_dispatch_record_carries_the_usage_fields() {
     assert_eq!(total_cost_usd, Some(CostUsd("2.337147".to_owned())));
     assert_eq!(cancelled_by, Some(CancelledBy::Timeout));
     assert_eq!(detected_by, Some(DetectedBy::TextMarker));
+    // *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1, proposed.)* The interim
+    // correlation key the tail hands in, unchanged.
+    assert_eq!(activity_id_at_version.as_deref(), Some("emit-report@1"));
     assert_eq!(
         usage.as_ref().and_then(Usage::ttl_split),
         Some((148, 100)),
@@ -190,6 +197,10 @@ fn ac360_dispatch_record_carries_the_usage_fields() {
     );
     assert_eq!(payload["cancelled_by"], serde_json::json!("timeout"));
     assert_eq!(payload["detected_by"], serde_json::json!("text_marker"));
+    assert_eq!(
+        payload["activity_id_at_version"],
+        serde_json::json!("emit-report@1")
+    );
     assert_eq!(
         payload["headroom_before"]["five_hour"],
         serde_json::json!(4)
@@ -227,6 +238,8 @@ fn a_pre_spawn_record_carries_the_pin_and_absence_as_null() {
         "headroom_after",
         "cancelled_by",
         "detected_by",
+        // *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1.)* Present as `null`.
+        "activity_id_at_version",
     ] {
         // `.get()`, not `[]`: `Value`'s `Index<&str>` answers `Null` for a MISSING key too, so the
         // indexed form could not tell "present as null" from "omitted" and a
@@ -244,9 +257,18 @@ fn a_pre_spawn_record_carries_the_pin_and_absence_as_null() {
     );
     assert_eq!(payload["api_retry_events"], serde_json::json!(0));
 
-    let back: DispatchRecord = serde_json::from_value(payload).expect("deserialises");
+    let back: DispatchRecord = serde_json::from_value(payload.clone()).expect("deserialises");
     assert_eq!(back, rec);
     assert_eq!(back.usage, None);
+    // *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1, proposed.)* A row
+    // written before the member existed carries no key, and reads back as `None`.
+    let mut older = payload;
+    older
+        .as_object_mut()
+        .expect("the payload is an object")
+        .remove("activity_id_at_version");
+    let back: DispatchRecord = serde_json::from_value(older).expect("an older row deserialises");
+    assert_eq!(back.activity_id_at_version, None);
 }
 
 /// **`Retained`'s bytes travel as the derived `Vec<u8>` form — a JSON array of integers** (§7c.11):

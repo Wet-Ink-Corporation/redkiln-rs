@@ -64,6 +64,16 @@ already enforces by returning `None` for the flat shape), and no synthesised `re
 
 ### 7i.2 The verb — the three renderings and nothing else
 
+*(dated 2026-09-29, `s8f` build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; `s8f` §8f.10's `s7i` row and §8f.8;
+the telemetry-key record ADR-0190 decision 4, `proposed`.)* **"Nothing else" no longer holds for the item that owns
+`dispatch_completed` rows.** The adapter now keys its `dispatch_completed` row with the spec's `item` beside the event
+(ADR-0182's carrier) and writes `activity_id_at_version` in its payload, so `cost <item>` prints AC-395's per-activity
+breakdown after the lines below: a `breakdown <item>: dispatch_completed rows owned: <k>` header and one `activity <A>:
+…` line per activity (ADR-0190 decision 4's forms 9 and 10). An item owning neither a reading nor a
+`dispatch_completed` row still prints exactly the one empty line, and no line anywhere carries a headroom figure
+(AC-373). The table below and the renderings it names are unchanged. Checkpoint 7i (5)'s `GRAMMAR` and its
+owns-no-reading branch are amended by the same dated edit.
+
 `redkiln cost <item>` reads the item's `dispatch_completed` rows and its `rate_limit_reading` rows, builds the
 `Sample` sequence, and renders through `throttle::attribute`. ***Corrected 2026-09-23 (`ADR-0163` decision 4):***
 *"the item's `dispatch_completed` rows" is unimplementable — `DispatchRecord` carries no `item` and the store's selector
@@ -182,6 +192,10 @@ for it in rk-story-codex-adapter "$FIX_ITEM"; do
   test -f ".redkiln/items/$it.toml" || { echo "FAIL: .redkiln/items/$it.toml does not exist — the empty case would be asserted over a misspelling"; exit 1; }
 done
 probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); t2=c.execute("SELECT COUNT(*) FROM t2_event").fetchone()[0]; rl=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("rate_limit_reading",))]; print(t2,len(rl),sum(1 for r in rl if r.get("item")==sys.argv[2]))'
+# (dated 2026-09-29, s8f build, package S8F-P7; s8f §8f.10's s7i row, ADR-0190 decisions 3 and 4, proposed) How many
+# `dispatch_completed` rows the item OWNS: the row's ADR-0182 key beside the event, the `t2_event.item` column s8e's
+# 0002 migration added — never a payload member (the row carries none). `mode=ro`, as above.
+dc_probe='import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(c.execute("SELECT COUNT(*) FROM t2_event WHERE kind=? AND item=?",("dispatch_completed",sys.argv[2])).fetchone()[0])'
 # The CLOSED grammar of every line `cost` prints (ADR-0163 decision 4's eight forms; `crates/rk-cli/src/verbs/cost.rs`'s
 # module doc). ⚠️ One gap against the Rust matcher, stated: `[^[:space:]]` in Git Bash does not class U+00A0 as space,
 # so an item carrying a no-break space would pass here and not in `in_grammar`. Unreachable in this block — both items
@@ -191,6 +205,21 @@ probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro"
 EMPTY_TAIL=' nothing to attribute — no rate_limit_reading row in this store names this item \([0-9]+ dispatch rows\)$'
 EMPTY_RE='^cost [^[:space:]]+:'"$EMPTY_TAIL"
 GRAMMAR="$EMPTY_RE"'|^cost [^[:space:]]+: rate_limit_reading rows in span: [0-9]+, this store'"'"'s traffic only$|^not attributable interleaving=[1-9][0-9]*$|^(five_hour|seven_day): n=[1-9] resets_at=-?[0-9]+ low_sample( non_monotonic| resolution_limited)?$|^(five_hour|seven_day): n=[1-9][0-9]+ resets_at=-?[0-9]+( non_monotonic| delta_ticks=[01] resolution_limited| delta_ticks=([2-9]|[1-9][0-9]+))$|^(five_hour|seven_day): (unkeyed=[1-9][0-9]*|no sample)$|^unwindowed=[1-9][0-9]*$'
+# (dated 2026-09-29, s8f build, package S8F-P7; s8f §8f.10's s7i row) The GRAMMAR WIDENS to ADR-0190 decision 4's two
+# breakdown forms (proposed), the forms `cost_output_grammar_is_closed` holds beside ADR-0163's eight: the header, and
+# one line per activity whose sums are `<sum>`, `<sum>(absent=<k>)` or `absent`, the cost a decimal. SELF-CONTROLLED
+# first: one line of each form matches, and a zero-owned header, an id without its `@version`, an absence written as a
+# `(absent=0)` and a headroom figure do not.
+BS='([0-9]+|[0-9]+\(absent=[1-9][0-9]*\)|absent)'
+BD='([0-9]+(\.[0-9]+)?|[0-9]+(\.[0-9]+)?\(absent=[1-9][0-9]*\)|absent)'
+BREAKDOWN_RE='^breakdown [^[:space:]]+: dispatch_completed rows owned: [1-9][0-9]*$|^activity ([^[:space:]@]+@[^[:space:]]+|\(none\)): dispatches=[1-9][0-9]* input_tokens='"$BS"' output_tokens='"$BS"' cache_read_input_tokens='"$BS"' cache_creation_input_tokens='"$BS"' wall_ms=[0-9]+ total_cost_usd='"$BD"'$'
+for good in 'breakdown rk-x: dispatch_completed rows owned: 2' 'activity emit-report@1: dispatches=2 input_tokens=11 output_tokens=1(absent=1) cache_read_input_tokens=absent cache_creation_input_tokens=0 wall_ms=100 total_cost_usd=0.0040' 'activity (none): dispatches=1 input_tokens=1 output_tokens=1 cache_read_input_tokens=1 cache_creation_input_tokens=1 wall_ms=5 total_cost_usd=12(absent=1)'; do
+  printf '%s\n' "$good" | grep -qE "$BREAKDOWN_RE" || { echo "FAIL (control): the breakdown grammar rejects a grammatical line: $good"; exit 1; }
+done
+for bad in 'breakdown rk-x: dispatch_completed rows owned: 0' 'activity emit-report: dispatches=1 input_tokens=1 output_tokens=1 cache_read_input_tokens=1 cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1' 'activity a@1: dispatches=1 input_tokens=1(absent=0) output_tokens=1 cache_read_input_tokens=1 cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1' 'activity a@1: dispatches=1 input_tokens=1 output_tokens=1 cache_read_input_tokens=1 cache_creation_input_tokens=1 wall_ms=1 total_cost_usd=1 headroom_five_hour=3'; do
+  if printf '%s\n' "$bad" | grep -qE "$BREAKDOWN_RE"; then echo "FAIL (control): the breakdown grammar accepts an ungrammatical line: $bad"; exit 1; fi
+done
+GRAMMAR="$GRAMMAR|$BREAKDOWN_RE"
 pre=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pre" ] || { echo "FAIL: the read-only store probe did not run (rc=$rc)"; exit 1; }
 read -r t2_before _ owned <<< "$pre"
@@ -207,6 +236,8 @@ printf '%s\n' "$empty" | grep -qE "^cost rk-story-codex-adapter:$EMPTY_TAIL" || 
 fx=$(python -c "$probe" "$store" "$FIX_ITEM"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$fx" ] || { echo "FAIL: the store probe did not run for $FIX_ITEM (rc=$rc)"; exit 1; }
 read -r _ _ fx_owned <<< "$fx"
+fx_dc=$(python -c "$dc_probe" "$store" "$FIX_ITEM"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$fx_dc" ] || { echo "FAIL: the dispatch_completed ownership probe did not run for $FIX_ITEM (rc=$rc)"; exit 1; }
 fout=$("$RK" cost "$FIX_ITEM" 2>&1); frc=$?
 if "$RK" cost "$FIX_ITEM" 2>&1 | od -c | grep -qF '\r'; then echo "FAIL: cost $FIX_ITEM's output carries a CR byte"; exit 1; fi
 [ "$frc" -eq 0 ] || { echo "FAIL: cost $FIX_ITEM exited $frc"; printf '%s\n' "$fout"; exit 1; }
@@ -217,7 +248,10 @@ test -n "$fout" || { echo "FAIL: cost $FIX_ITEM printed nothing"; exit 1; }
 # asserted by (3) over the fixture corpus, whose `cost_output_grammar_is_closed` applies the same forms to every line.
 bad=$(printf '%s\n' "$fout" | grep -vE "$GRAMMAR" | grep .)
 [ -z "$bad" ] || { echo "FAIL: a line outside ADR-0163's closed grammar (AC-373):"; printf '%s\n' "$bad"; exit 1; }
-if [ "$fx_owned" = "0" ]; then
+# (dated 2026-09-29, s8f build, package S8F-P7; s8f §8f.10's s7i row) ~~`if [ "$fx_owned" = "0" ]; then`~~ — after
+# ADR-0190 decision 4 an item that owns `dispatch_completed` rows and no reading prints the empty line AND a breakdown, so
+# the one-line assertion holds only when the item owns NEITHER. The widened GRAMMAR above still checks every line.
+if [ "$fx_owned" = "0" ] && [ "$fx_dc" = "0" ]; then
   [ "$(printf '%s\n' "$fout" | grep -c .)" -eq 1 ] && printf '%s\n' "$fout" | grep -qE "^cost $FIX_ITEM:$EMPTY_TAIL" || { echo "FAIL: $FIX_ITEM owns no reading and cost does not print exactly the empty line"; printf '%s\n' "$fout"; exit 1; }
 fi
 post=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
