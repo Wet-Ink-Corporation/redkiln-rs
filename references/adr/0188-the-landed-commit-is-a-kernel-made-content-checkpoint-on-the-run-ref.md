@@ -1,7 +1,7 @@
 ---
 id: "0188"
 title: "**The landed commit is a kernel-made content checkpoint on `rk-run/<item>`, made at every committed step that changed the tree and at every tier-1 boundary that finds work unlanded, through `s8e`'s one boundary function** (`s8f`'s landing record; D21-41 b; D21-42 9; D21-43 N10): the staging set is tracked modifications and deletions plus the untracked files not in the journalled baseline, honouring ignores, computed by one function that re-entry also discards; every staged path is checked against a named denylist, a 2 MiB blob limit and `0180`'s worst-case path bound, and a refusal lands nothing, opens a `landing.refused-path` gate (`exclude` | `abort`) whose tree is `0105` clause 4's no-checkpoint-due derivation, and is never a silent drop; each commit is `read-tree HEAD` + `add` on a per-item temporary index, `write-tree`, `commit-tree`, a re-read, `update-ref`, and `read-tree HEAD` on the worktree's own index; a step checkpoint carries no trailer, names its step-grain key on its subject line and carries its row in its body, so `reconcile`'s heal re-appends a lost row; the gate binds the run-owned tree (defect b); nothing is integrated, and `explain` prints `git merge --no-ff rk-run/<item>`. Supersedes `0105` clause 5 in part, for three writes"
-status: proposed
+status: accepted
 date: 2026-09-28
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-41 (row b — *"**A kernel-made content checkpoint commit on `rk-run/<item>` that carries the tier-1 trailer. No integration in Phase 1.**"*), D21-42 (row 8a — *"**The kernel owns it, through the journalled `GitOps` seam.** It commits (zero writes on replay), then appends the t1 and t2 rows with `anchor_sha`. `reconcile` heals a commit without a row."*; row 9 — *"**The worktree diff plus named refusals.**"*), D21-43 (N10 — *"**Land at every committed step that changed the worktree.** The commit and the content checkpoint are one boundary act."*; N9), D21-45 (W2), D21-47 (*"**ADR-0105 clause 5 has one reading.** A git WRITE not on its closed list is a supersession in part. That covers s8f's `commit-tree`/`update-ref`"*), D21-48 (awareness line on the refused landing's loose object) and D21-97 (the owed-forward list: defect (b), finding 11, AC-518's two halves); runbook/phase-1/s8f-landing-and-rendering.md §8f.1, §8f.2 (items 1, 3, 6, 7 and 15, measured 2026-09-28 at `37bba5c`), §8f.3's first row and §8f.4; references/adr/0105 (clauses 1–5 and its forbids list), 0109 (decision 2), 0180 (decisions 15 and 16), 0181, 0183, 0184 and 0185; crates/rk-kernel/src/runtime/tier_one.rs (`Act`, `Content`, `commit_act`, `heal`), crates/rk-kernel/src/runtime/activity.rs (`commit_at`, `commit_walk_row_emitting`), crates/rk-git/src/git_exec.rs (`GitOp`), crates/rk-git/src/tree.rs and crates/rk-cli/src/verbs/run.rs (`prepare_inputs`), as read 2026-09-28 at `37bba5c`
@@ -11,6 +11,16 @@ related: ["0009", "0017", "0018", "0109", "0129", "0152", "0164", "0174", "0180"
 evidence: []
 consumers: []
 ---
+
+*(Corrected 2026-09-29 in-record at `s8f`'s close, in the flip commit (D21-117); refuting round 4's records minor
+(package R4FIX-8f) and D21-112, TAKEN PROVISIONALLY under D21-105.)* **The title's supersession clause is incomplete:
+this record supersedes ADR-0105 clause 4 in part as well as clause 5.** The title, written at writing, reads
+*"Supersedes `0105` clause 5 in part, for three writes"*. Decision 6's R4FIX-8f note states the second supersession:
+*"this record **supersedes ADR-0105 clause 4 in part**, for this case only"*, once the lane's journal records an
+`exclude`, the no-checkpoint-due derivation being the current index plus tracked modifications less the lane's
+excluded paths. The `supersedes:` line already names `0105`, so the id list does not move; ADR-0105's `superseded_by`
+gains `0188` in this commit, for both clauses. No Decision clause and no forbids bullet moves with this note, and the
+title is not re-worded.
 
 ## Context and problem
 

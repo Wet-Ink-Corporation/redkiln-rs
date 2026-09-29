@@ -792,7 +792,7 @@ nothing."* Two records bar the obvious build and are moved by record, not worked
     `s8d-ii`'s worktree record adds the writes `worktree lock`, `worktree unlock`, the `RK_BASE` marker write,
     `reset --hard` and `clean -fd`. Its reads are not part of the supersession. `s8f`'s landing record adds
     `commit-tree`, `update-ref` and `read-tree HEAD` on the run-owned worktree's own index (`s8f` §8f.3; the third
-    added 2026-09-24 by the final consistency pass).
+    added 2026-09-24 by the final consistency pass). *(dated 2026-09-29, `s8f` close: `s8f`'s landing record is **ADR-0188**, accepted on D21-117; it also supersedes ADR-0105 clause 4 in part (D21-112, TAKEN PROVISIONALLY), and ADR-0105's `superseded_by` reads `["0116", "0180", "0183", "0184", "0188"]`; `s8d-ii`'s worktree record is ADR-0180)*
   - R3 cites each of the two records by the id that stage recorded when it wrote the record, never by a title phrase
     (D21-47: *"Records are located by the id recorded at write time"*).
   - R3 then states the consolidated write set: clause 5's list plus the three records' additions. A reader of ADR-0105
@@ -1146,7 +1146,7 @@ and each must turn its named test red. A survivor blocks the close.
 
 **Checkpoint 7c is not re-run here.** Its live probe is `s8j`'s (§8g.1).
 
-**The floor is re-derived at stage open.** (9)'s `PREV` is Checkpoint 8f's recorded passed count. It is written in by
+**The floor is re-derived at stage open.** (9)'s `PREV` is Checkpoint 8f's recorded passed count. *(dated 2026-09-29, `s8f` close: Checkpoint 8f's recorded count is **1243 passed** / 0 failed / 9 ignored over 44 result lines, the formal reading at `ae38553` (D21-116), so `PREV` is written as 1243 by the stage-open dated edit)* It is written in by
 a dated edit before the block's first run and never lowered to make a red run green. The expected value,
 **re-derived at stage open from Checkpoint 8f's recorded count**, is PREV = **1123**, `s8f`'s Checkpoint 8f `FLOOR`
 (`s8f` §8f.2 item 9: *"That gives 740 + 9 + 25 + 78 + 62 + 50 + 74 = 1038 at Checkpoint 8e, and 1038 + 85 =

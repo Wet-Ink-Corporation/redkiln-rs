@@ -595,7 +595,7 @@ loader."*
    together, if a lane reads a root's **bytes** through an `artifact:` input."* The value is typed by the kind's
    declared source or schema, never by whether the bytes parse as JSON, and the ADR-0173 widening is the
    conditional record above. *"If `s8j`'s lanes need only a `requires` presence check, `s8j`'s close states that
-   the arm stays owed to the first consumer of a root's bytes."*
+   the arm stays owed to the first consumer of a root's bytes."* *(dated 2026-09-29, `s8f` close: ADR-0189 flipped `accepted` on D21-118 with decision 9 narrowed in-record (D21-110 ruling 3), and ADR-0173's `superseded_by` now reads `["0189"]`; the root arm stays owed here (D21-116), and the conditional record above would be ADR-0173's second partial superseder)*
 
 **The human-root files the real runs attach are committed now**, so that `s8`'s attach can be reproduced:
 

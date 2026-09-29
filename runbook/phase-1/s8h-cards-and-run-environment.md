@@ -288,7 +288,7 @@ write each reading into the stage-open commit:
    choices are recorded in the stage-open commit.
 7. **The gate classes `s8d`–`s8g` mint** (§8h.10's table lists every `s8` class, one row each). `s8f` mints two,
    drafted as `landing.refused-path` (`s8f` §8f.4) and `render.structured-drift` (`s8f` §8f.5). `s8f`'s landing and
-   render records fix the spellings. `s8d`'s R6 opens `gate_opened { reason: unknown_facet, axis: "change" }` at
+   render records fix the spellings. *(dated 2026-09-29, `s8f` close: the records are ADR-0188 and ADR-0189, accepted on D21-117 and D21-118; the code spells the classes `landing.refused-path` (`tier_one::LANDING_REFUSED_KIND`) and `render.structured-drift` (`fsm::DRIFT_GATE_KIND`), and until this stage lands neither class reaches an expiry (D21-116))* `s8d`'s R6 opens `gate_opened { reason: unknown_facet, axis: "change" }` at
    triage, and the gate is answered with the `facet.change` question (`s8d` §8d.6, §8d.7), so its class is
    `unknown_facet:change`. Read each spelling from the code the minting stage landed, never from this file.
    - Write `MINTED_CLASSES` into Checkpoint 8h's INPUTS line, by a dated edit in the stage-open commit, as the

@@ -618,7 +618,7 @@ Checkpoint 8f (2)'s `REC_` lines carry the three ids by the same package's dated
 number reads `0191`. **The `superseded_by` back-links move in each record's flip commit**, not at writing, on
 `s8e`'s stated precedent (D21-97: *"Back-links and the README Supersessions-table rows move in each flip commit, as
 `0181`'s do."*): `0105` gains `0188`, and `0131`, `0138`~~ and `0163`~~, `0163` and `0174` gain `0190`, with the README
-Supersessions rows, when those records flip. Until then Checkpoint 8f (2) fails on *"not accepted"*, *"no dated
+Supersessions rows, when those records flip. *(dated 2026-09-29, `s8f` close: `0105` gained `0188` on D21-117 and `0173` gained `0189` on D21-118, each with its README Supersessions row. `0190` is held `proposed` under D21-107, so its four back-links, on `0131`, `0138`, `0163` and `0174`, have not moved, and (2) names it in `FLIP_PENDING`)* Until then Checkpoint 8f (2) fails on *"not accepted"*, *"no dated
 DECISIONS heading flips"* and the ~~three~~ ~~five~~ six `superseded_by` lines, and on nothing else *(dated 2026-09-29,
 s8f build, package R5FIX-8f: `0173` gains `0189` too, D21-113)*. *(dated 2026-09-29, s8f
 build (R1FIX-8f-B-RECORDS): `0174` joined ADR-0190's `supersedes` at S8F-P7 under D21-107 item 2, *"`0174` joins
@@ -2807,6 +2807,8 @@ refused by name, exit `2`, nothing appended, and `abort` is the remedy (§8f.4's
 6's D21-115 note, `proposed`). One test joins (4) and the R7FIX-8f test is re-shaped; the floor moves to 1241 (§8f.2
 item 9). The formal Checkpoint 8f waits on the orchestrator.
 
+*(dated 2026-09-29, `s8f` close.)* **Refuting round 8 was dry**: no blocker and no major, its two minors corrected at `2acb35a`. The faithful formal run at `2acb35a` read rc 1 at (2) on the three `proposed` records and nothing else, so `ae38553` gave (2) its `FLIP_PENDING` line (D21-49 option C; s8d-ii (9)'s status-branch form). **The formal Checkpoint 8f passed whole at `ae38553`** with all three records flip-pending: rc 0, 0 `FAIL`, `CP8F-END-OF-BLOCK reached`, (5)'s whole suite 1243 passed / 0 failed / 9 ignored over 44 result lines, FLOOR 1241 (D21-116). ADR-0188 and ADR-0189 flipped `accepted` on D21-117 and D21-118 under D21-105 item 1; ADR-0190 is held `proposed` under D21-107, and (2)'s `FLIP_PENDING` now names only `0190`, by a dated line. Checkpoint 8f is re-run whole after the flip commit.
+
 - **The three records exist and are accepted.** Each is located by the id written into its `REC_` line at writing,
   never by a title phrase (D21-47). Each has two or more `### Option — ` headings and a **What this forbids** block.
   Each has its README row, and a dated DECISIONS heading that flips it to `accepted`. The landing record supersedes
@@ -2957,8 +2959,13 @@ REC_TELEMETRY=0190
 # ---- heading flipping it, and no back-link naming it on any record it supersedes (the back-links move in the flip
 # ---- commit). Every other record keeps every accepted check. The form is s8d-ii (9)'s, which branches on status
 # ---- (s8d-ii §8d-ii.11, D21-49 paragraph). The faithful run at 2acb35a, before this line, read rc 1 at (2) on the
-# ---- three records (target/cp-runs/cp8f-formal-MAIN.out). The flip commit shortens the list to what stays held.
-FLIP_PENDING="0188 0189 0190"
+# ---- three records (target/cp-runs/cp8f-formal-MAIN.out). The flip commit at the s8f close shortened the
+# ---- list to what stays held (struck: "The flip commit shortens the list to what stays held.").
+# ---- (dated 2026-09-29, s8f close, the flip commit; D21-116, D21-117 and D21-118) ADR-0188 flipped on D21-117 and
+# ---- ADR-0189 on D21-118, so each keeps every accepted check. ADR-0190 stays held under D21-107, which keeps
+# ---- it proposed while D21-107 is unconfirmed (Weigh-In wi-838696 open). The flip commit of ADR-0190, once
+# ---- the operator confirms D21-107, empties this list (struck: FLIP_PENDING="0188 0189 0190").
+FLIP_PENDING="0190"
 recs='import glob,re,sys
 names=("landing","render","telemetry")
 ids=dict(zip(names,sys.argv[1:4]))
@@ -3352,9 +3359,9 @@ commit, which writes the first commit's hash into `PROGRESS.md` §1 (00-preamble
 full corpus, not a condensation of it.
 
 Each record's id is written into its `REC_` line in Checkpoint 8f (2), by a dated edit, in the commit that writes the
-record (D21-47). The records flip only on the operator's dated lines, and Checkpoint 8f (2) is red until they do.
+record (D21-47). The records flip only on the operator's dated lines, and Checkpoint 8f (2) is red until they do. *(dated 2026-09-29, `s8f` close: ADR-0188 and ADR-0189 flipped on D21-117 and D21-118, on the operator's standing authority (D21-105 item 1; D21-64 ruling 10). ADR-0190 is held `proposed` under D21-107, and (2) reads it as flip-pending (D21-49), so (2) is green with it `proposed` and turns red if it is flipped without its `FLIP_PENDING` line being emptied in the same commit)*
 The work commit also carries the dated line in `s8d` §8d.9 that flips both `closure-record` rows and both
 `debt-logging` rows to walks. That line marks Checkpoint 8d as provisional, and it is re-run whole in (9).
 
 A `PROGRESS.md` row that still reads *"a LANDED run leaves zero commits"* takes a dated correction at this close:
-since `s7h` a run leaves empty commits, and after this stage it leaves content commits. The next stage is `s8g`.
+since `s7h` a run leaves empty commits, and after this stage it leaves content commits. The next stage is `s8g`. *(dated 2026-09-29, `s8f` close: the row is `PROGRESS.md` §1's row 8, whose *"so a LANDED run leaves zero commits"* takes its dated correction in the flip commit. What `s8f` hands on is D21-116's owed-forward list: `s8g` the shipped `Findings` producer and its `PREV` from Checkpoint 8f's recorded count, `s8h` the two `gate_expiry` rows, `s8j` ADR-0189 decision 9's root arm (D21-110), and the operator ADR-0190's flip (D21-107))*
