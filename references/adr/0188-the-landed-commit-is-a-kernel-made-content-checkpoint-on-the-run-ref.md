@@ -214,6 +214,18 @@ names every refused path with its rule, spelled `denylist:<glob>`, `size:<bytes>
 `run` exits `0` at the gate (golden constraint 2; `exit.rs`'s `Success` row, *"**and a run that opens a gate**"*). A
 new exit-table row was considered and rejected: AC-438's table is closed, and a gate uses the one answer channel
 (ADR-0009). The class needs a `gate_expiry` row in `s8h`'s table; until `s8h` lands it reaches no expiry.
+*(Corrected 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R3FIX-8f); refuting round 3's
+spec-conformance major; D21-112, TAKEN PROVISIONALLY under D21-105, pending the operator's confirmation.)* **`exclude`
+over a TRACKED path.** An excluded tracked modification is never staged, so it stays modified in the run-owned
+worktree after every later landing's commit, and a gate a landed act opens binds that landing's T, which lacks it
+(decision 12). `answer` therefore derives its tree as clause 4's no-checkpoint-due derivation **less the lane's
+excluded paths**, read exactly as `run` reads them (`rk_kernel::runtime::tier_one::landing_answers` over the fold at
+the resolved stage): `rk_git::tree::TreeBasis::WorkingStateLess`, the same `read-tree HEAD` / `add -u` with each
+excluded path a literal `exclude` pathspec. With no exclusion it is the plain derivation, argument for argument. So
+the next gate's answer is applied, not void (AC-176), and a drift gate's `move-to-prose` is not dropped. `exclude` is
+not restricted to untracked paths (D21-112's rejected option B): a tracked false hit such as `id_map.rs` keeps its
+remedy. Pinned by `landing::a_tracked_exclusion_leaves_the_next_gates_answer_applied` and
+`landing::a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied`.
 
 **7. What "due" means, and the gate's tree at a refused landing** (ADR-0105 clause 4's *"When a checkpoint commit is
 due"*). A checkpoint commit is **due** when a landing **will commit**: its staging set passes every refusal and its T
@@ -223,7 +235,11 @@ worktree: `write-tree` on a temporary index built from the current index plus tr
 excluded. It is **not** the empty commit's tree. The refused step's edits stay in the worktree until the next entry,
 so `answer`'s identical derivation gives the same tree and cannot void the gate (AC-176). **The cost, stated:** the
 derivation writes a refused tracked blob into the object store as a loose object that no ref reaches (D21-48's
-awareness line); an untracked refused file never enters it.
+awareness line); an untracked refused file never enters it. *(Corrected 2026-09-29 in-record, while `proposed`, at
+`s8f`'s build (package R3FIX-8f); D21-112, TAKEN PROVISIONALLY.)* Under an earlier `exclude` (decision 6's dated
+note), the refused landing's gate tree is that derivation **less the lane's excluded paths**, as `answer`'s is, so
+*"`answer`'s identical derivation gives the same tree"* holds with an exclusion in force; a later refused landing
+under a tracked exclusion is answerable (`landing::a_refused_landing_under_a_tracked_exclusion_is_answerable`).
 
 **8. This record's reading of ADR-0105's bullet *"forbids including untracked files in it"*.** The bullet's *"it"* is
 the `tree_hash` derivation, and the rule it protects is clause 4's no-checkpoint-due basis. At a due checkpoint, and

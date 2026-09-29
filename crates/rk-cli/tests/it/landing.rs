@@ -1908,6 +1908,314 @@ fn a_document_drift_answered_move_to_prose_applies_and_the_lane_walks_on() {
     );
 }
 
+// ------------------------------------------ an `exclude` over a TRACKED path (D21-112)
+//
+// *(Added 2026-09-29, s8f build, package R3FIX-8f; refuting round 3's spec-conformance major;
+// D21-112, TAKEN PROVISIONALLY under D21-105; ADR-0188 decisions 6 and 7, proposed.)* A tracked
+// path the denylist refuses (`id_map.rs`, the false hit `rk_git::landing::DENYLIST`'s own doc names)
+// is answered `exclude`. Every later landing leaves it unstaged, so the owned tree keeps its
+// modification after the commit, and a gate a landed act opens binds the landing's T, which lacks
+// it. `answer` must derive the working state LESS the lane's excluded paths, read as `run` reads
+// them, or its tree is not the gate's and the answer is void (AC-176).
+
+/// The tracked file the denylist refuses by `id_*`: committed at the fork, so the run tree tracks it.
+const ID_MAP: &str = "id_map.rs";
+
+/// Commit [`ID_MAP`] in the checkout, so the run tree forked from it tracks the file.
+fn track_id_map(root: &Path) {
+    write(root, ID_MAP, b"pub const MAP: &[u8] = b\"\";\n");
+    assert_eq!(git_rc(root, &["add", "--", ID_MAP]), Some(0));
+    assert_eq!(
+        git_rc(root, &["commit", "--quiet", "-m", "track id_map.rs"]),
+        Some(0),
+        "PREMISE: `{ID_MAP}` is committed at the fork"
+    );
+}
+
+/// The `gate_answered` rows and the `gate_answer_void` rows for `token` (a void answer writes both).
+fn answered_and_void(root: &Path, token: &str) -> (usize, usize) {
+    let rows = support::store_rows(root);
+    (
+        rows.iter()
+            .filter(|e| e.kind == EventKind::GateAnswered)
+            .filter(|e| e.payload.get("token").and_then(serde_json::Value::as_str) == Some(token))
+            .count(),
+        rows.iter()
+            .filter(|e| e.kind == EventKind::GateAnswerVoid)
+            .filter(|e| e.payload.get("token").and_then(serde_json::Value::as_str) == Some(token))
+            .count(),
+    )
+}
+
+/// Invocation 1's `implement` modifies the tracked [`ID_MAP`]; the landing refuses it by `id_*`,
+/// and `answer … exclude` applies. PREMISES only.
+fn refuse_and_exclude_id_map(root: &Path, item: &str, tree: &Path) {
+    let first = writing(tree, vec![lane_e2e::implement()], |_, t| {
+        append(t, ID_MAP, EDIT);
+    });
+    assert_eq!(
+        run(root, item, &first),
+        Exit::Success,
+        "PREMISE: exit 0 at the landing gate"
+    );
+    let gates = landing_gates(root);
+    assert_eq!(gates.len(), 1, "PREMISE: one landing gate: {gates:?}");
+    assert_eq!(
+        refused_of(&gates[0]),
+        vec![(ID_MAP.to_owned(), "denylist:id_*".to_owned())],
+        "PREMISE: the TRACKED `{ID_MAP}` is refused by `id_*`"
+    );
+    let token = gates[0].payload["token"]
+        .as_str()
+        .expect("the gate's token")
+        .to_owned();
+    assert_eq!(lane_e2e::answer_item(root, item, "exclude"), Exit::Success);
+    assert_eq!(
+        answered_and_void(root, &token),
+        (1, 0),
+        "PREMISE: `exclude` was APPLIED to the landing gate"
+    );
+}
+
+/// **After an `exclude` of a TRACKED path, the next gate's answer is APPLIED, not void** (D21-112
+/// ruling 2; ADR-0188 decisions 6-7). `implement`'s activity is given a catalog `gate` step AFTER
+/// its agent step. Invocation 1's agent step modifies the tracked `id_map.rs`: refused, answered
+/// `exclude`. Invocation 2's agent step modifies it again and edits `README`: the step's landing
+/// lands `README` and leaves `id_map.rs` unstaged (still modified in the run tree), and the gate
+/// step then opens its gate over the landed T. `answer … accept` is APPLIED. Red while `answer`
+/// derives the plain working state (the excluded modification in it), and under M-EXCL (the
+/// subtraction dropped).
+#[test]
+fn a_tracked_exclusion_leaves_the_next_gates_answer_applied() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    track_id_map(root);
+    let catalog = root
+        .join(".redkiln")
+        .join("catalog")
+        .join("emit-report.toml");
+    let src = std::fs::read_to_string(&catalog).expect("emit-report.toml reads");
+    assert_eq!(
+        src.matches("[[step]]").count(),
+        1,
+        "PREMISE: emit-report.toml has its one agent step"
+    );
+    std::fs::write(
+        &catalog,
+        format!(
+            "{src}\n[[step]]\nid       = \"probe\"\nkind     = \"gate\"\nquestion = \"probe.accept\"\n"
+        ),
+    )
+    .expect("the gate step is written");
+    let processes = rk_cli::processes::processes_dir(root);
+    std::fs::create_dir_all(&processes).expect("the processes directory");
+    std::fs::write(
+        processes.join("questions.toml"),
+        "[question.\"probe.accept\"]\ntext = \"Accept the probe?\"\noptions = [\"accept\", \"reject\"]\n",
+    )
+    .expect("the question is declared");
+    let tree = crate::run_tree(root, item).path;
+    let fork = rev(root, "HEAD").expect("the checkout's HEAD");
+
+    refuse_and_exclude_id_map(root, item, &tree);
+
+    let second = writing(&tree, vec![lane_e2e::implement()], |_, t| {
+        append(t, ID_MAP, EDIT);
+        append(t, "README", EDIT);
+    });
+    assert_eq!(
+        run(root, item, &second),
+        Exit::Success,
+        "exit 0 at the probe gate"
+    );
+    let probes: Vec<Event> = support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.kind == EventKind::GateOpened)
+        .filter(|e| {
+            e.payload.get("kind").and_then(serde_json::Value::as_str) == Some("probe.accept")
+        })
+        .collect();
+    assert_eq!(
+        probes.len(),
+        1,
+        "PREMISE: the probe gate opened: {probes:?}"
+    );
+    let token = probes[0].payload["token"]
+        .as_str()
+        .expect("the probe gate's token")
+        .to_owned();
+    let run_ref = lane_e2e::run_ref(item);
+    assert!(
+        blob(root, &run_ref, "README").is_some_and(|b| b.ends_with(EDIT)),
+        "PREMISE: the step's landing landed the README edit"
+    );
+    assert_eq!(
+        blob(root, &run_ref, ID_MAP),
+        blob(root, &fork, ID_MAP),
+        "PREMISE: the excluded `{ID_MAP}` did not land"
+    );
+    assert!(
+        git_read(&tree, &["status", "--porcelain", "--", ID_MAP])
+            .is_some_and(|s| s.contains(ID_MAP)),
+        "PREMISE: the excluded modification is still in the run tree"
+    );
+    assert_eq!(
+        landing_gates(root).len(),
+        1,
+        "PREMISE: the exclusion held, so no second landing gate opened"
+    );
+
+    assert_eq!(lane_e2e::answer_item(root, item, "accept"), Exit::Success);
+    assert_eq!(
+        answered_and_void(root, &token),
+        (1, 0),
+        "the probe gate's answer was VOID: `answer` derived a tree with the excluded tracked \
+         modification in it, which the gate's T lacks (D21-112)"
+    );
+}
+
+/// **A refused landing under a TRACKED exclusion is answerable** (D21-112; ADR-0188 decision 7).
+/// `id_map.rs` is refused and excluded; invocation 2's step modifies it again and writes `.env`, so
+/// its landing refuses `.env` and opens a second landing gate over the no-checkpoint-due derivation.
+/// That derivation is LESS the lane's excluded paths, as `answer`'s is, so `exclude` is APPLIED.
+/// Red under M-EXCL-R (the refusal's tree taken as the plain working state while `answer`
+/// subtracts). *(Added 2026-09-29, s8f build, package R3FIX-8f.)*
+#[test]
+fn a_refused_landing_under_a_tracked_exclusion_is_answerable() {
+    let repo = lane_e2e::lane_repo();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    track_id_map(root);
+    let tree = crate::run_tree(root, item).path;
+
+    refuse_and_exclude_id_map(root, item, &tree);
+
+    let second = writing(&tree, vec![lane_e2e::implement()], |_, t| {
+        append(t, ID_MAP, EDIT);
+        write(t, ".env", b"API_TOKEN=not-a-real-secret\n");
+    });
+    assert_eq!(
+        run(root, item, &second),
+        Exit::Success,
+        "exit 0 at the second landing gate"
+    );
+    let gates = landing_gates(root);
+    assert_eq!(
+        gates.len(),
+        2,
+        "PREMISE: a second landing gate opened: {gates:?}"
+    );
+    assert_eq!(
+        refused_of(&gates[1]),
+        vec![(".env".to_owned(), "denylist:.env".to_owned())],
+        "PREMISE: only `.env` is refused; `{ID_MAP}` is excluded, not refused"
+    );
+    assert!(
+        git_read(&tree, &["status", "--porcelain", "--", ID_MAP])
+            .is_some_and(|s| s.contains(ID_MAP)),
+        "PREMISE: the excluded modification is in the run tree"
+    );
+    let token = gates[1].payload["token"]
+        .as_str()
+        .expect("the second gate's token")
+        .to_owned();
+    assert_eq!(lane_e2e::answer_item(root, item, "exclude"), Exit::Success);
+    assert_eq!(
+        answered_and_void(root, &token),
+        (1, 0),
+        "the second landing gate's `exclude` was VOID under a tracked exclusion (D21-112)"
+    );
+}
+
+/// **A drift gate answered `move-to-prose` under a TRACKED exclusion is applied** (D21-112 ruling
+/// 2; ADR-0189 decision 5). `id_map.rs` is refused and excluded; invocation 2 lands the spec; the
+/// human's edit of a structured section is committed; invocation 3's entry opens the drift gate
+/// over the landed T, and `review`'s step then modifies `id_map.rs`, which its landing leaves
+/// unstaged. `answer … move-to-prose:notes` is APPLIED, and invocation 4 moves the drifted bytes
+/// into `notes` and walks to `closed`. Red while `answer` derives the plain working state: the
+/// answer is void and the move is dropped without a word.
+#[test]
+fn a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied() {
+    let repo = drift_lane();
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    track_id_map(root);
+    let tree = crate::run_tree(root, item).path;
+
+    refuse_and_exclude_id_map(root, item, &tree);
+
+    let second = writing(&tree, vec![lane_e2e::implement()], |_, t| {
+        append(t, ID_MAP, EDIT);
+    });
+    run(root, item, &second);
+    let run_ref = lane_e2e::run_ref(item);
+    assert!(
+        blob(root, &run_ref, &spec_md(item)).is_some(),
+        "PREMISE: invocation 2 landed the spec's rendering"
+    );
+    human_edits_the_spec(root, item);
+
+    let third = writing(&tree, vec![lane_e2e::review()], |_, t| {
+        append(t, ID_MAP, EDIT);
+    });
+    assert_eq!(
+        run(root, item, &third),
+        Exit::Success,
+        "exit 0 at the drift gate"
+    );
+    let drifts = drift_gates(root);
+    assert_eq!(
+        drifts.len(),
+        1,
+        "PREMISE: the drift gate is open: {drifts:?}"
+    );
+    let token = drifts[0].payload["token"]
+        .as_str()
+        .expect("the drift gate's token")
+        .to_owned();
+    assert!(
+        git_read(&tree, &["status", "--porcelain", "--", ID_MAP])
+            .is_some_and(|s| s.contains(ID_MAP)),
+        "PREMISE: `review`'s modification of the excluded path is in the run tree"
+    );
+    assert_eq!(
+        landing_gates(root).len(),
+        1,
+        "PREMISE: the exclusion held, so no second landing gate opened"
+    );
+
+    assert_eq!(
+        answer(root, item, "move-to-prose:notes", None),
+        Exit::Success
+    );
+    assert_eq!(
+        answered_and_void(root, &token),
+        (1, 0),
+        "the drift gate's `move-to-prose` was VOID under a tracked exclusion (D21-112)"
+    );
+    assert_eq!(
+        run(root, item, &ScriptedFactory::new(Vec::new())),
+        Exit::Success
+    );
+    let sidecar = format!(".redkiln/artifacts/{item}/Spec.json");
+    let after = blob(root, &run_ref, &sidecar).expect("the sidecar is on the run ref");
+    let notes = serde_json::from_slice::<serde_json::Value>(&after).expect("json")["notes"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    assert!(
+        notes.contains("a human edited this"),
+        "the drifted bytes are in the `notes` prose section: {notes:?}"
+    );
+    let stages = lane_e2e::story_stages(root, item);
+    assert_eq!(
+        stages.last().map(String::as_str),
+        Some("closed"),
+        "the lane walks to its end: {stages:?}"
+    );
+}
+
 // ------------------------------------------ the item write and the backlog feed (§8f.7)
 //
 // *(Added 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-47 cross #6;

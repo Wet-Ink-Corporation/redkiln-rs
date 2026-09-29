@@ -504,8 +504,15 @@ pub fn stage(git: &mut GitOps<'_>, req: &Request<'_>) -> Result<Staged, GitError
     let common = common_dir(git, req.cwd)?;
     let set = staging_set(git, req.cwd, req.baseline, req.excluded)?;
 
+    // *(dated 2026-09-29, s8f build, package R3FIX-8f; D21-112.)* ~~`TreeBasis::WorkingState`~~ —
+    // the no-checkpoint-due derivation LESS the lane's excluded paths, which is what `answer`
+    // derives, so a refused landing under an earlier tracked exclusion is answerable too.
     let refused = |git: &mut GitOps<'_>, refusals: Vec<Refusal>, set: StagingSet| {
-        let tree = git.tree_hash(req.cwd, &common, &TreeBasis::WorkingState)?;
+        let tree = git.tree_hash(
+            req.cwd,
+            &common,
+            &TreeBasis::WorkingStateLess(req.excluded.clone()),
+        )?;
         Ok(Staged::Refused {
             refusals,
             tree: tree.as_str().to_owned(),

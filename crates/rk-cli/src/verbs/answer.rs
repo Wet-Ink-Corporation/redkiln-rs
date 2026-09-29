@@ -323,11 +323,25 @@ pub fn run_with(
     // the expiry pass must run before the record is read, or an expired gate would be answered as
     // live. The gate record the ANSWER presents is read after the pass, which is the property the
     // ordering exists for. §7d.6's phrasing is RAISED, not edited.
+    //
+    // *(dated 2026-09-29, s8f build, package R3FIX-8f; refuting round 3's major; D21-112, TAKEN
+    // PROVISIONALLY under D21-105; ADR-0188 decisions 6 and 7, proposed.)* ~~`WorkingState`~~ —
+    // the working state LESS the lane's excluded paths, read exactly as `run` reads them
+    // (`tier_one::landing_answers` over the fold at the resolved stage). Every landing of the lane
+    // leaves an excluded TRACKED path unstaged, so its modification stays in the owned tree after
+    // the commit and a gate a landed act opens binds a T without it; the plain working state has
+    // it, and the first answer would be void (AC-176). The fold moves above the hash for this; it
+    // reads the journal the heal left and nothing the hash could move.
+    let state = match fold(&events, resolved, &args.item) {
+        Ok(state) => state,
+        Err(exit) => return Ok(exit),
+    };
+    let excluded = rk_kernel::runtime::tier_one::landing_answers(&state, &events).excluded;
     let tree = match rk_git::tree::tree_hash(
         &resolved.exec,
         owned.path(),
         &resolved.common_dir,
-        &rk_git::tree::TreeBasis::WorkingState,
+        &rk_git::tree::TreeBasis::WorkingStateLess(excluded),
     ) {
         Ok(tree) => tree,
         Err(e) => {
@@ -337,11 +351,8 @@ pub fn run_with(
     };
     let tree_hash = tree.as_str().to_owned();
 
-    // ---- THE EXPIRY PASS (step (9)'s, called from here -- §7d.6). AC-257.
-    let state = match fold(&events, resolved, &args.item) {
-        Ok(state) => state,
-        Err(exit) => return Ok(exit),
-    };
+    // ---- THE EXPIRY PASS (step (9)'s, called from here -- §7d.6). AC-257. Over the fold taken
+    // above the hash.
     let expiry_events = match run::expiry_pass(&resolved.extras, &state, now, &tree_hash) {
         Ok(events) => events,
         Err(exit) => return Ok(exit),

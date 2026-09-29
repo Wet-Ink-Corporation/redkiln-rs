@@ -104,6 +104,54 @@ fn the_temporary_index_is_not_the_real_one_and_does_not_survive() {
     );
 }
 
+/// **The working state LESS a lane's excluded paths drops exactly those paths** (`s8f` D21-112;
+/// ADR-0188 decisions 6-7). Three tracked files are modified: `a.txt`, `id_1.rs` and `id_[1].rs`.
+/// Excluding `id_[1].rs` must give the tree the plain derivation gives once that one file is back
+/// as `HEAD` has it — a path, never a pattern (`[1]` as a glob would also drop `id_1.rs`).
+/// Controls: an empty exclusion is the plain derivation, and the exclusion does move the tree.
+/// *(Added 2026-09-29, s8f build, package R3FIX-8f.)*
+#[test]
+fn working_state_less_drops_exactly_the_excluded_paths() {
+    let fx = crate::support::Fixture::new();
+    let exec = exec_for(&fx);
+    let repo = fx.repo_with_one_commit("t5");
+    let cwd = WorktreePath::new(&repo).expect("normalises");
+    let common = repo.join(".git");
+    for name in ["id_1.rs", "id_[1].rs"] {
+        std::fs::write(repo.join(name), b"committed\n").expect("write");
+    }
+    fx.git(&repo, &["add", "--", "id_1.rs", "id_[1].rs"]);
+    fx.git(&repo, &["commit", "--quiet", "-m", "two more"]);
+    for name in ["a.txt", "id_1.rs", "id_[1].rs"] {
+        std::fs::write(repo.join(name), b"modified\n").expect("modify");
+    }
+    let less = |paths: &[&str]| {
+        tree::tree_hash(
+            &exec,
+            &cwd,
+            &common,
+            &TreeBasis::WorkingStateLess(paths.iter().map(|p| (*p).to_owned()).collect()),
+        )
+        .expect("the derivation less the paths")
+    };
+    let all = tree::tree_hash(&exec, &cwd, &common, &TreeBasis::WorkingState).expect("plain");
+    assert_eq!(
+        less(&[]),
+        all,
+        "CONTROL: an empty exclusion is the plain derivation"
+    );
+    let excluded = less(&["id_[1].rs", "not-a-path.txt"]);
+    assert_ne!(excluded, all, "CONTROL: the exclusion moved nothing");
+
+    std::fs::write(repo.join("id_[1].rs"), b"committed\n").expect("restore");
+    let reference = tree::tree_hash(&exec, &cwd, &common, &TreeBasis::WorkingState).expect("ref");
+    assert_eq!(
+        excluded, reference,
+        "the derivation less `id_[1].rs` is not the working state with exactly that path as HEAD \
+         has it"
+    );
+}
+
 /// There is exactly one `write-tree` call site in the crate. A second derivation is the thing
 /// clause 4 forbids, and a grep is the only instrument that can see it.
 #[test]

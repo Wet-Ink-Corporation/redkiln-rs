@@ -14,6 +14,13 @@
 //!   touches only paths git already tracks. There is no `add -A` in this module, and that absence
 //!   is what makes the exclusion true.
 //!
+//! *(dated 2026-09-29, s8f build, package R3FIX-8f; D21-112, TAKEN PROVISIONALLY under D21-105;
+//! ADR-0188 decisions 6 and 7, proposed.)* The second case has one form more, still one derivation:
+//! [`TreeBasis::WorkingStateLess`] is the same `read-tree HEAD` / `add -u`, with the lane's excluded
+//! paths named as literal `exclude` pathspecs, so an excluded tracked modification (which every
+//! landing of the lane leaves unstaged) stays as `HEAD` has it. `answer` and a refused landing's
+//! gate both derive it; with no exclusion its argv is the plain case's.
+//!
 //! The temporary index lives under the common dir, never `std::env::temp_dir()`: a run-owned
 //! location keeps it inside the tree the store owns and out of a shared world-writable directory.
 
@@ -61,6 +68,13 @@ pub enum TreeBasis {
     CheckpointCommit(String),
     /// No checkpoint is due: the current index plus tracked modifications.
     WorkingState,
+    /// No checkpoint is due, over a lane whose applied `exclude` answers name these paths: the
+    /// same derivation LESS them, so an excluded tracked modification, which every landing of the
+    /// lane leaves unstaged and so in the owned tree after its commit, is not in the tree
+    /// (`s8f` D21-112; ADR-0188 decisions 6 and 7, proposed). With an empty set it is
+    /// [`Self::WorkingState`], argument for argument. *(Added 2026-09-29, s8f build, package
+    /// R3FIX-8f.)*
+    WorkingStateLess(std::collections::BTreeSet<String>),
 }
 
 /// Derive the tree hash. **The only derivation in this workspace.**
@@ -86,10 +100,20 @@ pub fn tree_hash(
             let mut run = |op: GitOp, args: &[&str], env: &[(OsString, OsString)]| {
                 run_with_index(exec, cwd, env, op, args)
             };
-            derive_working_state(common_dir, true, &mut run)
+            derive_working_state(common_dir, true, &NONE_EXCLUDED, &mut run)
+        }
+        TreeBasis::WorkingStateLess(excluded) => {
+            let mut run = |op: GitOp, args: &[&str], env: &[(OsString, OsString)]| {
+                run_with_index(exec, cwd, env, op, args)
+            };
+            derive_working_state(common_dir, true, excluded, &mut run)
         }
     }
 }
+
+/// No exclusion: [`TreeBasis::WorkingState`]'s set. *(Added 2026-09-29, s8f build, package
+/// R3FIX-8f.)*
+static NONE_EXCLUDED: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
 
 /// One wrapper operation run with a temporary index's environment: the wrapper's own, or the
 /// journalled seam's. *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
@@ -105,6 +129,7 @@ pub(crate) type IndexRun<'a> = dyn FnMut(GitOp, &[&str], &[(OsString, OsString)]
 fn derive_working_state(
     common_dir: &Path,
     fs: bool,
+    excluded: &std::collections::BTreeSet<String>,
     run: &mut IndexRun<'_>,
 ) -> Result<TreeHash, GitError> {
     let tmp_dir = common_dir.join("redkiln").join("tmp");
@@ -125,7 +150,19 @@ fn derive_working_state(
 
     // Seed the temporary index from HEAD, then take tracked modifications only.
     run(GitOp::Add, &["read-tree", "HEAD"], &env)?;
-    run(GitOp::Add, &["add", "-u"], &env)?;
+    // *(dated 2026-09-29, s8f build, package R3FIX-8f; D21-112.)* LESS the lane's excluded paths:
+    // each is an `exclude` pathspec with `literal` magic (a path, never a pattern), from the top,
+    // so its entry stays as `HEAD` has it. No exclusion keeps the argv exactly as it was.
+    let pathspecs: Vec<String> = excluded
+        .iter()
+        .map(|p| format!(":(exclude,literal,top){p}"))
+        .collect();
+    let mut add = vec!["add", "-u"];
+    if !pathspecs.is_empty() {
+        add.extend(["--", ":/"]);
+        add.extend(pathspecs.iter().map(String::as_str));
+    }
+    run(GitOp::Add, &add, &env)?;
     let tree = write_index_tree(run, &env)?;
 
     if fs {
@@ -171,12 +208,16 @@ impl crate::gitops::GitOps<'_> {
                 let out = self.run(GitOp::RevParse, cwd, &["rev-parse", spec.as_str()])?;
                 TreeHash::from_hex(&out.stdout_trimmed())
             }
-            TreeBasis::WorkingState => {
+            TreeBasis::WorkingState | TreeBasis::WorkingStateLess(_) => {
+                let excluded = match basis {
+                    TreeBasis::WorkingStateLess(excluded) => excluded,
+                    _ => &NONE_EXCLUDED,
+                };
                 let live = self.mode() == crate::gitops::Mode::Live;
                 let mut run = |op: GitOp, args: &[&str], env: &[(OsString, OsString)]| {
                     self.run_with_env(op, cwd, args, env)
                 };
-                derive_working_state(common_dir, live, &mut run)
+                derive_working_state(common_dir, live, excluded, &mut run)
             }
         }
     }

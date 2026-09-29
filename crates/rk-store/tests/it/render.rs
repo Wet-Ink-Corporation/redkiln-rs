@@ -1485,6 +1485,72 @@ fn has_word(text: &str, word: &str) -> bool {
     })
 }
 
+/// The traits a `Reconciled` may derive or implement: none of them builds one from nothing (a
+/// `Clone` needs one to exist). Every other derived or implemented trait is (3). *(Added
+/// 2026-09-29, s8f build, package R3FIX-8f; refuting round 3's tests-mutants major.)*
+const NON_CONSTRUCTING: [&str; 8] = [
+    "Debug",
+    "Display",
+    "Clone",
+    "PartialEq",
+    "Eq",
+    "Hash",
+    "PartialOrd",
+    "Ord",
+];
+
+/// The last path segment of a name, less its generic arguments: `serde::Deserialize<'de>` is
+/// `Deserialize`.
+fn last_segment(path: &str) -> String {
+    let path = path.split('<').next().unwrap_or_default().trim();
+    path.rsplit("::")
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_owned()
+}
+
+/// Every name in every `derive(…)` of `attrs`. *(Added 2026-09-29, s8f build, package R3FIX-8f.)*
+fn derived_names(attrs: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = attrs;
+    while let Some(at) = rest.find("derive(") {
+        let after = &rest[at + "derive(".len()..];
+        let list = after.split(')').next().unwrap_or_default();
+        out.extend(list.split(',').map(last_segment).filter(|n| !n.is_empty()));
+        rest = after;
+    }
+    out
+}
+
+/// The trait an `impl … for` head names (`head` ends at `for`): `impl<'de> serde::Deserialize<'de>
+/// for` is `Deserialize`; `None` when `head` holds no `impl`. *(Added 2026-09-29, s8f build,
+/// package R3FIX-8f.)*
+fn impl_trait_name(head: &str) -> Option<String> {
+    let at = head.rfind("impl")?;
+    let mut rest = head[at + "impl".len()..].trim_start();
+    if rest.starts_with('<') {
+        let mut depth = 0_usize;
+        let mut end = rest.len();
+        for (i, c) in rest.char_indices() {
+            match c {
+                '<' => depth += 1,
+                '>' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        end = i + 1;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        rest = rest[end..].trim_start();
+    }
+    let name = last_segment(rest.trim_end().strip_suffix("for").unwrap_or(rest));
+    (!name.is_empty()).then_some(name)
+}
+
 /// **D21-109's construction lint, as one function over `(repo-relative path, source)` pairs** so
 /// each check can be driven red over a planted file first. Returns every violation, each naming
 /// its check. `crates/rk-git/src/` is not scanned: it declares an unrelated generic
@@ -1532,15 +1598,25 @@ fn reconciled_violations(files: &[(String, String)]) -> Vec<String> {
                 if before.contains("->") {
                     returns.push((path.clone(), *n, owner_fn(&lines, *n)));
                 }
-                // (3) a Default or From impl for it.
-                if decl.ends_with("for")
-                    && before.contains("impl")
-                    && (before.contains("Default") || before.contains("From"))
-                {
-                    bad.push(format!(
-                        "(3) {path}:{n}: a Default or From impl builds a Reconciled: {}",
-                        line.trim()
-                    ));
+                // (3) a Default or From impl for it. *(dated 2026-09-29, s8f build, package
+                // R3FIX-8f; refuting round 3.)* ~~`Default` or `From` in the head~~ — ANY trait
+                // impl for it whose trait is not in [`NON_CONSTRUCTING`] (a `Deserialize`, a
+                // `FromStr`, a `TryFrom` each build one), read from a head rustfmt wrapped before
+                // `for Reconciled` too (the previous code line joined).
+                if decl.ends_with("for") {
+                    let head = if before.contains("impl") {
+                        before.to_owned()
+                    } else {
+                        format!("{prev} {before}")
+                    };
+                    if let Some(name) = impl_trait_name(&head)
+                        && !NON_CONSTRUCTING.contains(&name.as_str())
+                    {
+                        bad.push(format!(
+                            "(3) {path}:{n}: a `{name}` impl builds a Reconciled: {}",
+                            line.trim()
+                        ));
+                    }
                 }
             }
             // (6) no holder that outlives an invocation.
@@ -1647,11 +1723,19 @@ fn reconciled_violations(files: &[(String, String)]) -> Vec<String> {
                     .collect();
                 attrs.reverse();
                 let joined = attrs.join(" ");
-                if joined.contains("derive(") && has_word(&joined, "Default") {
-                    bad.push(format!(
-                        "(3) {path}:{}: Reconciled derives Default: {joined}",
-                        lines[i].0
-                    ));
+                // *(dated 2026-09-29, s8f build, package R3FIX-8f; refuting round 3.)*
+                // ~~`has_word(&joined, "Default")`~~ — every name in every `derive(…)` of the
+                // joined attributes (a `cfg_attr` one included) must be in [`NON_CONSTRUCTING`]:
+                // an allowlist, so `serde::Deserialize`, a bare `Deserialize` or a derive this lint
+                // has never heard of is refused, not only `Default`.
+                for name in derived_names(&joined) {
+                    if !NON_CONSTRUCTING.contains(&name.as_str()) {
+                        bad.push(format!(
+                            "(3) {path}:{}: Reconciled derives `{name}`, which can build one: \
+                             {joined}",
+                            lines[i].0
+                        ));
+                    }
                 }
             }
         }
@@ -1942,6 +2026,101 @@ fn a_reconciled_is_built_only_by_the_entry_pass() {
         missed,
         Vec::<String>::new(),
         "CONTROL: a planted violation was not found"
+    );
+    // *(dated 2026-09-29, s8f build, package R3FIX-8f; refuting round 3's tests-mutants major.)*
+    // (3) keyed on `Default` alone, and a derived `serde::Deserialize` let any crate build a
+    // Reconciled from JSON with the lint green (measured by the finder at `bab968e`). Six more
+    // plants, each (3): (H) `serde::Deserialize` in the derive; (H2) `Deserialize` by its bare name
+    // in a rustfmt-wrapped list; (H3) a `cfg_attr` derive on its own attribute line; (H4) a derive
+    // of a trait this lint has never heard of (the derive list is an allowlist, not a denylist);
+    // (I) a manual `impl<'de> serde::Deserialize<'de>` whose head rustfmt wrapped before `for
+    // Reconciled`, so the (2b) block scan never opens it; (J) `impl std::str::FromStr for
+    // Reconciled`.
+    let deserialize_impl = "\nimpl<'de> serde::Deserialize<'de>\n    for Reconciled\n{\n    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {\n        todo!()\n    }\n}\n";
+    let constructing: [(&str, Files); 6] = [
+        (
+            "(H)",
+            set(
+                &good_store.replace(
+                    "#[derive(Debug, Clone, PartialEq, Eq)]",
+                    "#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]",
+                ),
+                good_cli,
+            ),
+        ),
+        (
+            "(H2)",
+            set(
+                &good_store.replace(
+                    "#[derive(Debug, Clone, PartialEq, Eq)]",
+                    "#[derive(\n    Debug,\n    Clone,\n    PartialEq,\n    Eq,\n    Deserialize,\n)]",
+                ),
+                good_cli,
+            ),
+        ),
+        (
+            "(H3)",
+            set(
+                &good_store.replace(
+                    "#[derive(Debug, Clone, PartialEq, Eq)]",
+                    "#[derive(Debug, Clone, PartialEq, Eq)]\n#[cfg_attr(feature = \"wire\", derive(Deserialize))]",
+                ),
+                good_cli,
+            ),
+        ),
+        (
+            "(H4)",
+            set(
+                &good_store.replace(
+                    "#[derive(Debug, Clone, PartialEq, Eq)]",
+                    "#[derive(Debug, Clone, PartialEq, Eq, arbitrary::Arbitrary)]",
+                ),
+                good_cli,
+            ),
+        ),
+        (
+            "(I)",
+            set(&format!("{good_store}{deserialize_impl}"), good_cli),
+        ),
+        (
+            "(J)",
+            set(
+                &format!(
+                    "{good_store}\nimpl std::str::FromStr for Reconciled {{\n    type Err = ();\n    fn from_str(_: &str) -> Result<Self, ()> {{\n        Err(())\n    }}\n}}\n"
+                ),
+                good_cli,
+            ),
+        ),
+    ];
+    let missed: Vec<String> = constructing
+        .iter()
+        .filter_map(|(plant, files)| {
+            let found = reconciled_violations(files);
+            (!found.iter().any(|v| v.starts_with("(3)")))
+                .then(|| format!("plant {plant}'s (3): {found:?}"))
+        })
+        .collect();
+    assert_eq!(
+        missed,
+        Vec::<String>::new(),
+        "CONTROL: a planted constructing derive or impl was not found"
+    );
+    // CONTROL: the widening does not over-reach. A `Display` impl constructs nothing, and the
+    // derive's non-constructing names (`Hash`, `PartialOrd`, `Ord`) are admitted.
+    let display = "\nimpl std::fmt::Display for Reconciled {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        write!(f, \"{}\", self.entry)\n    }\n}\n";
+    assert_eq!(
+        reconciled_violations(&set(
+            &format!(
+                "{}{display}",
+                good_store.replace(
+                    "#[derive(Debug, Clone, PartialEq, Eq)]",
+                    "#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]",
+                )
+            ),
+            good_cli
+        )),
+        Vec::<String>::new(),
+        "CONTROL: a non-constructing impl and derive are clean"
     );
 
     let sources = workspace_sources();
