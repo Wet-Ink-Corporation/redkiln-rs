@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-114), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-115), and what they license
+
+*(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-114)"**; `D21-115` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-113)"**; `D21-114` is appended with this move.)*
 
@@ -4744,3 +4746,33 @@ lists four tests and three mutants and says nothing of a drift entry. It was the
 The fifth test, `landing::a_drift_entry_lands_its_accepted_write_once_through_its_gate`, is the builder's addition
 beyond the ruling's four, taken because no drift-gate test drove an entry that both drifts and writes. Nothing
 selected, counted or floored moves. `s8f` §8f.12 carries the same correction.
+
+---
+
+## D21-115 · `s8f`: `exclude` refuses a path under the item's managed artifact directory; `abort` is the remedy
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-968637** (two-way door, judgment; defaulted to B).
+
+**The residual.** R7FIX-8f measured it with a temporary probe:
+- A refused drift-gate landing names `.redkiln/artifacts/<item>/Spec.json` and `Spec.md`, and it is answered
+  `exclude`.
+- Every later landing therefore leaves the restore unstaged, as ADR-0188 decision 6 says.
+- The ref keeps the human's structured edit, so each entry pass surfaces the drift again.
+- Answering `confirm-restore` never releases the stage exit. Invocations 4 and 5 each exit 0 at a new
+  `render.structured-drift` gate, and the lane stays in `review`.
+
+This is a silent livelock. ADR-0188 decision 6, ADR-0189 decision 4 and D21-114 do not settle it.
+
+**Ruled (option B).**
+1. `answer … exclude` refuses, by name, a gate whose refused paths include a path under
+   `.redkiln/artifacts/<item>/`. It appends nothing. Such a gate is answered `abort`, or the operator commits a fix on
+   the run ref first. Other paths stay excludable.
+2. This is covered by a red-first lane test and a mutant that drops the refusal.
+3. ADR-0188 (proposed) states the rule in decision 6 by dated in-record note. No accepted Decision moves.
+
+**Rejected.**
+- Option A, a documented residual only, would leave a silent exit-0 livelock.
+- Option C, not re-gating an answered drift digest, risks hiding a real drift.
+
+**Reversal.** Remove the check, and take A or C.
