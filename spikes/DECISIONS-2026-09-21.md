@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-112), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-113), and what they license
+
+*(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-112)"**; `D21-113` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8f`: it read **"(D21-1 … D21-111)"**; `D21-112` is appended with this move.)*
 
@@ -4614,3 +4616,53 @@ derivation"* holds; the *"plus tracked modifications"* sentence does not, for an
 decision 6's R4FIX-8f note (decision 7 cites it). Its `supersedes:` line already names `0105`; ADR-0105's
 `superseded_by` back-link moves at ADR-0188's flip. For the review packet: confirm D21-112 together with this
 supersession. The option taken and the reversal are unchanged.
+
+---
+
+## D21-113 · `s8f`: the reader checks and serves the latest recorded write of the sidecar path; ADR-0189 supersedes ADR-0173 in part
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-61625f** (two-way door, judgment; defaulted to A). Under D21-105's AFK rule 4, this moves an accepted Decision. It is
+carried by a `proposed` record, ADR-0189, which flips at `s8f`'s close only if the operator has not objected in this
+ledger. It is on the review packet's confirm list.
+
+**The finding.** Refuting round 5 raised it as a major, and both refuters confirmed it.
+- Reconcile accepting a prose edit (AC-152), or a drift gate answered `move-to-prose:<section>`, rewrites
+  `<Kind>.json` through the writer, and nothing appends a new emit binding.
+- So every later `artifact:<Kind>` read compares the sidecar's digest with the stale binding's and halts (Halt 4).
+  It was measured in a private worktree at `2a5057d`: `Err(DigestMismatch { kind: "Spec" … })`.
+- Even without the check, the resolver served `value.clone()` of the binding.
+- It is reachable on shipped lanes: `adr-record.toml` reads `spec = "artifact:Spec"`.
+
+**Ruled.** The blocker panel chose option (a′) unanimously (8 / 8 / 8).
+
+1. **The emit binding stays the only presence and origin gate.** With no binding, a mandatory input refuses by name
+   and a `?` input is `null`, with no seam call either way. Otherwise there is exactly one seam call per resolved
+   input, and ADR-0173's count and single-emitter rule stand.
+2. **`ArtifactReadSeam::read` returns the served value**, and the resolver serves that value, not the binding.
+3. **`ArtifactReader::serve` checks against the latest `artifact.write`** whose item matches and whose `path` is the
+   kind's sidecar, `<Kind>.json`.
+   - It never selects by kind: a restore names `<Kind>.md`.
+   - With no such row it falls back to the binding's canonical digest, which is byte-identical to today.
+   - A digest that equals neither is still Halt 4.
+   - This is the same LATEST-write rule `RK-D-ARTIFACT-MUTATION` applies (ADR-0189 decision 13).
+4. **The replaying reader serves the blob at the recorded `tree`**, checked against the recorded digest, and appends
+   nothing.
+5. **No new row kind and no synthetic completion row.** Option (b) is rejected: completion rows feed five folds.
+   Option (c), a residual, would leave a reachable Halt 4.
+6. **Tests and mutants.**
+   - T1: an accepted prose edit is served to a later stage, asserting the text.
+   - T2: `move-to-prose`.
+   - T3: an out-of-band sidecar edit still halts.
+   - T4: replay.
+   - Mutants M1 to M5 (kind-keyed lookup, serving the binding, dropping the check, replay serving the binding,
+     always comparing with the binding), each killed.
+7. **Records.**
+   - ADR-0189 (proposed) gains `0173` in `supersedes`. Two quoted phrases of ADR-0173 are superseded in part: decision
+     1's `artifact:` row, *"the committed `emit` binding of the activation that produced `Kind` for this item, read
+     from the journal"*, and decision 8's *"serves the journalled binding"*. Only where the value and the digest come
+     from moves.
+   - ADR-0189's title's "Supersedes nothing" takes a dated correction, and decision 9 a dated note.
+   - ADR-0173 stays `accepted`, and its `superseded_by` gains `0189` at 0189's flip.
+
+**Reversal.** Revert the read path, retract the supersession, and take option (c).
