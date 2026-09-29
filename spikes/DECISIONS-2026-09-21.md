@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-105), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-108), and what they license
+
+*(Title moved 2026-09-28 during `s8f`'s build: it read **"(D21-1 … D21-105)"**; `D21-106` … `D21-108` are appended with this move.)*
 
 *(Title moved 2026-09-28 at `s8e`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-96)"**, true when package R2FIX-8e recorded it (the note below); `D21-97` … `D21-104` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 104, the last `D21-104`.)*
 
@@ -4333,3 +4335,99 @@ recommendation, before an extended AFK session.**
    and as provisional D-entries, for the operator's review.
 4. **The shipped `Findings` producer (D21-95 item 2)** is decided in `s8g` by the weigh-in method: measure both routes
    and take the recommendation provisionally.
+
+---
+
+## D21-106 · `s8f` §8f.2 item 11's STOP: `call_feed` gains one `store` arm, through one fail-closed seam shared with `item_create`
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-28, pending the operator's confirmation — Weigh-In
+wi-b59409** (two-way door, judgment; defaulted to A).
+
+**The STOP.** Measured at `37bba5c` by package S8F-P1-RECORDS: `Runtime::call_feed` (`crates/rk-kernel/src/runtime/step.rs`)
+refuses every feed verb that is not a no-input `toolchain` row (*"a feed is produced by a `toolchain` row with no
+inputs"*), and §8f.7's `backlog` verb is `route = "store"`. §8f.2 item 11: *"If the resolver has no path from a feed's
+`verb` to a `store`-route handler, the producer has no call site. STOP: the resolver is `s8d`'s."* No accepted record
+fixes feeds as toolchain-only (ADR-0170 decision 8 admits *"a registry verb"*).
+
+**Ruled (blocker panel, three lensed judges and a synthesiser; A scored 8.5 / 8.5 / 8, B 2 / 2 / 2, C 3 / 4.5 / 4).**
+1. `call_feed` admits exactly one new shape: `route == Store` with no declared inputs. Every other combination keeps
+   the existing by-name refusal, byte-unchanged.
+2. One composition-root-bound struct seam in `rk-kernel` serves both the step-grain `Route::Store` arm (`item_create`)
+   and the new feed arm. `rk-kernel` still does not depend on `rk-store`.
+3. The seam's kernel default **refuses by name** and never returns an empty value (unlike `UnwiredReadSeam`, whose
+   `read` returns `Ok(())`): an unbound kernel that served an empty `BacklogSnapshot` would be N14's silent `null`.
+4. The arm's result still passes `decode_verb_output` against the row's `outputs`.
+5. The `backlog` verb row, both `[feed.*.backlog]` rows and the two tests that pin `backlog` as `unprovided`
+   (`source_registry::the_catalog_source_census_is_fifty_with_fourteen_declared`,
+   `reference_resolver::kb_checklist_and_feed_keys_resolve_through_the_declared_tables_and_an_undeclared_key_refuses_by_name`)
+   move in one commit, each by a dated in-file note.
+6. Tests carried by the package that builds the arm: the red-first
+   `feed::closure_record_audit_resolves_toolchain_backlog_through_the_store_route`, an unbound-seam refusal, and a
+   negative-route test (a git-route feed and a store-route feed with one input still refuse with the existing
+   message).
+7. ADR-0189 decision 12 (proposed) carries it, with one added sentence quoting ADR-0170's *"`store`: an rk-store
+   write;"* and stating that a no-input store-route read is within that route (§8f.7: *"No route is added"*). No
+   accepted ADR is superseded. A dated note goes in `s8d`'s file. Checkpoint 8d stays provisional and is re-run whole
+   at Checkpoint 8f (9).
+
+**Reversal:** delete the arm and the seam's feed use; `[feed.*.backlog]` returns to `unprovided` and `closure-record`
+refuses at `audit` again (option C).
+
+---
+
+## D21-107 · `s8f`: ADR-0190's carrier widens `ActivitySpec`, superseding ADR-0138 and ADR-0174 in part for one member
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-28, pending the operator's confirmation — Weigh-In
+wi-838696** (authority-bound: **left OPEN** in the weigh-in ledger for the operator; the work proceeds on it).
+
+**The blocker.** ADR-0138 (accepted), first forbids bullet: *"Forbids adding a step list, or any sixth field, to
+`rk_types::activity::ActivitySpec`."* ADR-0174 (accepted) d1 repeats *"`ActivitySpec` is not edited (ADR-0099's five
+fields; ADR-0138's forbids)"* and d10 *"ADR-0138's decisions 1–5 and its forbids stand"*. §8f.8 settles the carrier
+as *"a member on `ActivitySpec` that is outside the prompt and outside every digest"*, and §8f.3's telemetry row named
+only ADR-0131 and ADR-0163 as superseded.
+
+**Ruled (blocker panel; option A′, A widened).**
+1. `ActivitySpec` gains `activity_id_at_version: Option<String>`, set explicitly at every construction site (no
+   `Default`, no `..` spread), `Some("<id>@<version>")` from `bind_nodes` and each per-step spec, `None` in fixtures
+   and fakes. `spec_json` stays its five-member object; `spec_from_json` repopulates the member from `RecordedSpec`.
+   The member is kept out of the prompt, the card digest, the memo key and `run_id`. The adapter alone writes it on
+   its own `dispatch_completed` row (ADR-0126 cited, untouched).
+2. ADR-0190 (proposed) d9 is widened to a quoted supersession in part, for this one member and until ADR-0131's tag
+   is wired, of: ADR-0138's first forbids bullet (*"or any sixth field"* only); ADR-0138 Decision 3's `ActivitySpec`
+   half; ADR-0138 Decision 2's *"NOT a sixth spec field"* as applied to this id; ADR-0174 d1's parenthetical and d10's
+   sentence. `0174` joins ADR-0190's `supersedes`. **ADR-0099 d1 is carried as a declared reading** (it names what
+   the spec carries from `StepSpec`; it is not a closed list), **flagged for the operator's ruling**; if declined it
+   converts to a supersession in part.
+3. Engineering conditions on the §8f.8 package: a byte-identity test (`spec_json`, card digest, memo key and `run_id`
+   identical with the member `Some` or `None`), a replay round-trip test, a producer-path test, mutants M16a/M16b
+   (the member forced to `None` in `spec_from_json` and in `bind_nodes`), the two compile-fail `.stderr` files shown
+   red then re-blessed if their lines move, and every code doc asserting *"five fields and no sixth"* amended to cite
+   ADR-0190 (proposed).
+4. `rk-types` moves, so **Checkpoint 5 is provisional** and is re-run whole inside Checkpoint 8f (D21-97 (10i)'s
+   precedent).
+
+**Fallback, if the operator declines:** option B, a kernel-side `EventStore` decorator that stamps the member onto the
+adapter's rows, with its ADR-0126 tension recorded in a record. **ADR-0190 does not flip at `s8f`'s close while this
+entry is unconfirmed** (it moves two accepted records' Decisions); it stays `proposed` under D21-49's flip-stop and
+goes on the review packet's confirm list.
+
+---
+
+## D21-108 · `s8f`: s8e's `lane_e2e` dirty arm is rewritten by S8F-P3 over a real `exclude` answer
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-28, pending the operator's confirmation — Weigh-In
+wi-205855** (two-way door, judgment; defaulted to A).
+
+**The blocker.** At `afb60ff` the whole suite reads 1130 passed / 1 failed / 9 ignored over 44; the one failure is the
+dirty arm of `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one`, whose harness writes *"a
+tracked file that nothing lands"*. D21-43 N10 and ADR-0188 decision 2 land that edit at the step's own commit, so the
+tree is clean at the closed mark and ADR-0180's removal rule (accepted) correctly removes it.
+
+**Ruled.** S8F-P3 owns the arm and rewrites it in the package that binds `Boundary::with_excluded` to the real
+`landing.refused-path` gate, through `answer … exclude` (no test-visible seam). The harness writes a denylisted
+untracked path on **every** dispatch (so the re-entry discard cannot erase it); invocation 1 stops at the gate;
+`exclude` is answered; invocation 2 reaches `closed`; the arm asserts the excluded path is dirty in the run tree and
+the tree still exists and is registered, with PREMISE asserts on the gate row, the answer and the closed mark. The
+test name and Checkpoint 8e's `sel rk-cli 38` line stay byte-unchanged. P3 re-runs S8E-M37/M38 in a private worktree
+and adds a mutant *"a landing stages excluded paths"*. **Until P3 lands, the arm stays red, not ignored**; if P3
+cannot finish it, P3 stops as a named blocker (no `#[ignore]`, no edit to Checkpoint 8e). No accepted ADR moves.
