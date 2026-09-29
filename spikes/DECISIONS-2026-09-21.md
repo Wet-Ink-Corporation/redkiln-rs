@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-108), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-109), and what they license
+
+*(Title moved 2026-09-28 during `s8f`: it read **"(D21-1 … D21-108)"**; `D21-109` is appended with this move.)*
 
 *(Title moved 2026-09-28 during `s8f`'s build: it read **"(D21-1 … D21-105)"**; `D21-106` … `D21-108` are appended with this move.)*
 
@@ -4431,3 +4433,38 @@ the tree still exists and is registered, with PREMISE asserts on the gate row, t
 test name and Checkpoint 8e's `sel rk-cli 38` line stay byte-unchanged. P3 re-runs S8E-M37/M38 in a private worktree
 and adds a mutant *"a landing stages excluded paths"*. **Until P3 lands, the arm stays red, not ignored**; if P3
 cannot finish it, P3 stops as a named blocker (no `#[ignore]`, no edit to Checkpoint 8e). No accepted ADR moves.
+
+---
+
+## D21-109 · `s8f`: M24's lane arm is unobservable by construction; the rk-store test kills M24 and a construction lint pins the guarantee
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-28, pending the operator's confirmation — Weigh-In
+wi-8443fa** (two-way door, judgment; defaulted to A).
+
+**The blocker.** Measured by S8F-P4 in a private worktree after a 10/10 green control. M24 (`if self.entry == 0 ||
+current != self.entry {` → `if false {` in `rk_store::render::ArtifactReader::serve`) is killed on
+`render::a_read_before_the_entrys_reconcile_is_refused` and survives, rc 0, on
+`landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile`. A reader is built only from the `Reconciled`
+that `reconcile_entry` returns (private fields), and every invocation writes one `reconcile_started` before the pass,
+so no lane can read before its entry's reconcile. §8f.12's M24 row named both tests as must-flip, and golden
+constraint 12 blocks on a survivor.
+
+**Ruled (blocker panel; option (a+)).**
+1. `render::a_read_before_the_entrys_reconcile_is_refused` is M24's killing test. The landing test stays as AC-126's
+   replay-ordering regression (red at entry with zero reads) and is no longer M24's must-flip. The survival is
+   **explained**, not quarantined (s8c §8c.9: *"the guard moves; it is not weakened"*; precedents s8c M25, s8b M11).
+2. A mandatory construction lint, `render::a_reconciled_is_built_only_by_the_entry_pass` (rk-store `tests/it/render.rs`,
+   one new test, floor +1), scans CODE LINES only under `crates/*/src` with EXACT counts: the struct literal
+   `Reconciled {` once, inside `reconcile_entry`; no `pub fn` returning `Self`/`Reconciled`, no `Default` or `From`
+   impl, no `pub` field; rk-cli's `Option<Reconciled>` binding a function-local `= None` in the invocation loop, with no
+   `static`/`OnceLock`/`LazyLock`/`thread_local!` holder. Each check has a planted-hit control. Mutant **M24-G** plants
+   each of these in turn and must flip the lint.
+3. **M24-C** (the entry pass taken after the invocation's first read, or the `Option<Reconciled>` carried across
+   invocations) is an optional informational row and does not gate. Deleting the `reconcile_entry` call is NOT
+   evidence about ordering: `stage_seams` then returns `Exit::ConfigError`, a proxy.
+4. Option (b), a test seam or a `pub` constructor, is rejected: it is the *"configuration, cache or fast path that
+   skips it"* AC-126 and ADR-0189 decision 9 forbid.
+5. No record moves: ADR-0189 is `proposed` and its Decision is unchanged.
+
+**Reversal:** delete the lint and M24-G, restore the landing test to M24's must-flip column, and take (b) or a measured
+(c).
