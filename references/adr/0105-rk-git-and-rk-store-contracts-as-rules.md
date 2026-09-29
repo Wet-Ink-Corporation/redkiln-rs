@@ -6,7 +6,7 @@ date: 2026-09-11
 legacy_id: none
 source: references/2026-09-10-pre-implementation-audit.md PIA-040, PIA-043, PIA-050 (§4.6), PIA-035; references/adr/0018, 0077, 0084, 0098; git interpret-trailers(1) `ifExists`; sqlite.org WAL; docs.rs rusqlite 0.40.2 (fetched 2026-09-10)
 supersedes: []
-superseded_by: ["0116", "0180"]
+superseded_by: ["0116", "0180", "0183", "0184"]
 related: ["0013", "0017", "0018", "0077", "0084", "0086", "0095", "0097", "0098", "0099"]
 evidence: ["PIA-040", "PIA-043", "PIA-050", "F12", "F19", "F20", "F38"]
 consumers: []

@@ -1,7 +1,7 @@
 ---
 id: "0185"
 title: "**`worktree_assigned`, `stage_empty` and `git_op`: three tier-2 kinds, minted by ADR-0116's route** (`s8e`'s record; D21-42 7 and 8d; D21-43 N7): a `run` writes `worktree_assigned { item, worktree, branch, reused, discarded }` at every start and every tier-1 write resolves its `RunOwnership` from the latest one for its item and from nothing else; an empty stage records `stage_empty { stage, reason }` from a closed reason set; the kernel's tier-1 boundary journals one `git_op` row per git invocation, anchored to the act's commit, and a journal holding none is read as a run that made no git write. RT-47's pair on `reconcile_started` is KEPT as tier-2 context that no reader resolves ownership from. Supersedes nothing"
-status: proposed
+status: accepted
 date: 2026-09-28
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 (7 — *"An empty stage records `stage_empty { reason }`."*; 8d — *"A `worktree_assigned` row is written at run start. Every tier-1 write is checked against it and refused with a typed rk-git error on mismatch."*) and D21-43 (N7 — *"A tier-2 `git_op` row is minted so replay serves git writes from the journal. Golden logs are read, by stated rule, as 'no git writes'."*); runbook/phase-1/s8e-tier-one-and-the-lane.md (the records table's sixth row, §8e.3, §8e.4, §8e.6, §8e.12); references/adr/0116 (the minting route), 0105 (clauses 1 and 8), 0180 (decision 9, W2's reuse and discard), 0181 (the tier-1 writer); references/2026-09-08-architecture-design.md §5.4's event table (the `reconcile_started` row's RT-47 members); crates/rk-types/src/event_kind.rs, crates/rk-git/src/gitops.rs, crates/rk-kernel/src/runtime/tier_one.rs, crates/rk-cli/src/verbs/run.rs and answer.rs, as built 2026-09-28 on `d80609b`

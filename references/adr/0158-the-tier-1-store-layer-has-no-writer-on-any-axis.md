@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: crates/rk-store/src/migrations/0001_initial.sql (lines 15-44 — the tier-1 header and the three tables, each with `anchor_sha TEXT NOT NULL -- repo-key`); crates/rk-ports/src/event_store.rs (the whole port surface — `append` at 52, `query` at 55, `snapshot` at 58, `rebuild` at 61); a live `.git/redkiln/store.sqlite3` after real `redkiln run` invocations (`t1_stage_transition` 0, `t1_gate` 0, `t1_slice_seal` 0, `t2_event` 30); crates/rk-cli/src/verbs/run.rs (`terminal_read`'s `Gate:` trailer commit — the one existing tier-1 trailer producer, with no store row beside it); references/2026-09-08-acceptance-criteria.md AC-160..AC-163; references/adr/0003 (the five ports); references/adr/0105 (clause 7's event-kind table); references/adr/0109 (the two-tier split)
 supersedes: []
-superseded_by: []
+superseded_by: ["0181"]
 related: ["0003", "0105", "0109", "0155", "0156", "0157"]
 evidence: []
 consumers: []

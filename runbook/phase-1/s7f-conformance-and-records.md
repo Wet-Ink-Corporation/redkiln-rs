@@ -193,7 +193,7 @@ The following remain true, and the four assertions of §7f.1 are run rather than
 - **No `method_rank` moved** — the tie is resolved by keying, per ADR-0056.
 
 *(Amended 2026-09-27, `s8d-ii` build, P6: `s8d-ii` §8d-ii.7's three amendments, in the commit that moves the run-tree
-root to `.redkiln/worktrees/<item>` under the main worktree (D21-44; ADR-0180, proposed).)* *(dated 2026-09-28, `s8d-ii`
+root to `.redkiln/worktrees/<item>` under the main worktree (D21-44; ADR-0180, proposed *(dated 2026-09-28, `s8e` close: accepted on D21-91, at `s8d-ii`'s close)*).)* *(dated 2026-09-28, `s8d-ii`
 build, package R2FIX-8dii: four amendments, not three. The fourth is refuting round 1's (package R1FIX-8dii, dated in
 the block): the catalog-LOAD failure line removes `$c7f` before it exits; `s8d-ii` §8d-ii.7 and §8d-ii.9 finding 27(f).)* Under that stage's binary
 the run arm would create a second, full checkout inside this repository that nothing removes (D21-45 W2 never

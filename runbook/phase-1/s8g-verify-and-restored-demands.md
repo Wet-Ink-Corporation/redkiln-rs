@@ -299,7 +299,7 @@ line in the earlier stage's file, in that commit:
    R1. *(dated 2026-09-28, s8e build, package R3FIX-8e; receiver note; `s8e` §8e.13 finding 24 and round 3.)* **The
    same variant moves Checkpoint 7c's `EventKind::ALL` guard.** `s8e` amended 7c's line to
    `grep -qE 'pub const ALL: \[Self; 41\]' crates/rk-types/src/event_kind.rs` (ADR-0126's 38 plus ADR-0185's three,
-   `proposed`). `verify_completed` makes `ALL` 42 (41 + n for n new kinds), so this stage's work commit amends that
+   `proposed` *(dated 2026-09-28, `s8e` close: accepted on D21-102)*). `verify_completed` makes `ALL` 42 (41 + n for n new kinds), so this stage's work commit amends that
    `s7c-adapters.md` line by dated in-place edit to the new size, keeping the replaced line struck in a dated comment,
    as `s8e` did. D21-47: *"A time-bound guard in an earlier checkpoint is amended by the stage that moves its premise,
    in the same commit."* Otherwise `s8j` §8j.6's whole re-run of 7c fails on *"EventKind::ALL is not 41"*. 7c is
@@ -358,7 +358,7 @@ fixtures and states the gap in ADR-0186."* Measured at `s8e` by a `tomllib` cens
 shipped `code-review` (`stage = "review"`) provides `["ReviewVerdict"]`. `rk-cli`'s `review_pass` selects its committed
 activation by `review_pass::FINDINGS_SCHEMA` (`"Findings"`), and since D21-94 `run`'s entry check reads the same key
 off each reached stage's catalog activities (`provides` first), through `tier_one::validate_slice`, the one validator
-`seal_act` also calls (ADR-0186 as amended, `proposed`). So on the shipped packs **both the entry check and the
+`seal_act` also calls (ADR-0186 as amended, `proposed` *(dated 2026-09-28, `s8e` close: accepted on D21-103)*). So on the shipped packs **both the entry check and the
 `Slice-Verdict:` seal are inert** until this stage decides, by a record, one of the two routes D21-95 names:
 - **`code-review` provides `Findings`** — a catalog edit under ADR-0072 (its `@version` moves), with `Findings` as the
   exported schema its step validates against; or

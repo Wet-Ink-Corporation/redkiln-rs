@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-96), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-104), and what they license
+
+*(Title moved 2026-09-28 at `s8e`'s close: it read **"2026-09-21 … 2026-09-28 (D21-1 … D21-96)"**, true when package R2FIX-8e recorded it (the note below); `D21-97` … `D21-104` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 104, the last `D21-104`.)*
 
 *(Title moved 2026-09-28 during `s8e`'s build, recorded by package R2FIX-8e (refuting round 2's minor): it read **"(D21-1 … D21-91)"** at `s8d-ii`'s close, and each move since was made in the commit that appended the entry without a dated note: `D21-92` and `D21-93` at `d80609b` (title → D21-93), `D21-94` at `9293882` (→ D21-94), `D21-95` at `ea62c62` (→ D21-95), `D21-96` at `a404cf3` (→ D21-96). No entry is added with this note. Measured: `grep -c '^## D21-'` over this file → 96, the last `D21-96`.)*
 
@@ -3950,3 +3952,361 @@ equal, which is why nothing caught it.
 so the tier-1 row equals what its mark carries and a rebuild reproduces it byte for byte. The answer's observed tree is
 not lost: it stays in the anchored tier-2 `gate_answer_void` row. ADR-0181 (`proposed`) is amended by dated text;
 built red-first on the `ac184` lane extended through a void, with a mutant (the observed tree restored) killed.
+
+---
+
+## D21-97 · `s8e` closes: tier-1 writes are git-first through the kernel, the stage lives on the run ref, the lane crosses processes, and `Slice-Verdict:` is sealed on both review outcomes
+
+**Taken 2026-09-28 by the session executing `s8e`, at the stage's close.** It records and cites. It re-takes no
+ruling and writes no go-ahead line. The stage's seven records, ADR-0181 … ADR-0187, flip under D21-64 ruling 10, each
+by its own dated ledger line (D21-98 … D21-104), not by this entry. `s8e` names no D-entry section of its own (its
+attendant edits end *"a ledger entry"*), so this entry takes D21-90's form, and what it records is what `s8e`'s
+records table, §8e.0, §8e.9, §8e.12, §8e.13, §8e.14 and §8e.15 record. Every figure below is quoted from the stage
+file's recorded readings, the tree or the committed records; none is new here.
+
+Records: the tier-1 writer = ADR-0181, the interim `item` key = ADR-0182, the stage on the run ref = ADR-0183, the
+`Gate:` value = ADR-0184, the three tier-2 kinds = ADR-0185, the slice = ADR-0186, the routing `null` (D21-92) =
+ADR-0187.
+
+**Recorded — the seven records, and how they flip.** Each id was recorded at write time by a dated line in the
+records table (D21-47: *"Records are located by the id recorded at write time"*); each record is `status: proposed`
+at `492e516`, in ADR-0085's `### Option — <name>` form, and `check-adr-options.py` scans 24 records from 0164 and
+flags 0. The README's next free number reads **`0188`**.
+- **ADR-0181**: *the tier-1 writer is one method on `EventStore`, `append_tier1(event, &TierOneAnchor)`, and it is
+  written git-first by the kernel*. **Supersedes in part** ADR-0158 decision 3 and its bullet *"Claiming AC-160,
+  AC-161, AC-162 or AC-163 is met, on any axis"*, and ADR-0155 decision 5(b) and its bullet *"Stating or implying
+  that AC-162 is satisfied for stage changes 2..N of a lane"*, *"only for the criteria `s8e` measures (§8e.14), which
+  are all four … and only once they are measured"*. Cites ADR-0105 clause 5 and ADR-0158's `rk-cli` bullet without
+  superseding them (D21-48 X10). Amended before acceptance by D21-96 (decision 3's dated bullet) and by S8E-P7's
+  dated notes on decision 11.
+- **ADR-0182**: *the interim `item` key rides beside the event, outside `payload` and outside `canonical_events`, and
+  `query` honours `ByItem`*. Supersedes nothing: ADR-0131's first forbids bullet is honoured, because R3 overtakes
+  N5's supersession (§8e.13 finding 12). Its decision 4 (the inclusive `ByItem` interim) is D21-94's confirmation 1.
+- **ADR-0183**: *the stage lives on the run ref*. **Supersedes in part** ADR-0105 clause 3's `Story:` value
+  delegation; ADR-0155 decisions 1, 2 and 5(a) and two of its forbids bullets; ADR-0157 decisions 4 and 5 and two of
+  its forbids bullets; and ADR-0161's bullet *"Describing the lane loop as covered by tests, or reading a green suite
+  as evidence about it."*, *"only once `s8e` §8e.11's `lane_e2e` tests pass"*. ADR-0109 decision 3 is **NOT
+  superseded** (D21-42 8d).
+- **ADR-0184**: *the `Gate:` value carries kind, reach and state, and its deadline is integer unix seconds*.
+  **Supersedes in part** ADR-0105 clause 3's value delegation for `Gate:`, and design §5.4's `Gate:` row and §5's
+  `gate_answer_void` row by dated lines. Its decisions 2 and 5 are D21-94's confirmation 2.
+- **ADR-0185**: *`worktree_assigned`, `stage_empty` and `git_op`, three tier-2 kinds, minted by ADR-0116's route*.
+  Supersedes nothing. Its decision 3 (`answer` refuses fail-closed on a deleted database) is D21-94's confirmation 3.
+- **ADR-0186**: *the slice is declared on the item record, and `Slice-Verdict:` is sealed on both review outcomes*.
+  Supersedes nothing: ADR-0160's first bullet is honoured in full. Amended before acceptance by D21-93 (the seal
+  scoped to its stage), D21-94 (the refusal moves to the lane's entry) and D21-95 (the entry check reads declared
+  `provides`), and by refuting rounds 1 and 3's record minors.
+- **ADR-0187** (D21-92's record): *a routing `null` is journaled when its route continues the walk; a `null` routed
+  to a refusal is not*. **Supersedes in part** ADR-0174 decision 7, its null sentence only, and discharges the
+  residual that bullet named.
+- **The back-links were not written with the records.** The records table: *"Back-links and the README
+  Supersessions-table rows move in each flip commit, as `0181`'s do."*; ADR-0187 decision 4: *"ADR-0174's
+  `superseded_by` back-link and the README Supersessions-table row move in this record's flip commit"*. The eight
+  links (`0181`'s two, `0183`'s four, `0184`'s one, `0187`'s one) move in the flip commit, with their six
+  predecessors' README status cells.
+- **They flip at this close under D21-64 ruling 10:** *"Standing authority for the rest of this session (`s8d`
+  onward): each stage's own records flip at that stage's close under the same two conditions, each with its own dated
+  ledger line citing this entry."* The conditions are ruling 9's, read for this stage: the formal Checkpoint 8e
+  passes whole, and a refuting round finds no blocker or major. Refuting round 4 was dry (below); the formal reading
+  is the last paragraph of this entry. One dated line per record follows the ruling's letter.
+
+**Recorded — the rulings this stage carries.** D21-92 (Weigh-In `wi-a0f617`, option B: *"A `null` `until` or gate
+`when` is journaled on the same rule as a `true` or `false`: **when its route continues the walk**"*); D21-93 (on
+§8e.0 item 8's STOP: *"The fold records the stage a seal was made in, and `terminal()` returns `Sealed` only until a
+later `stage_transition`"*); D21-94 (the operator's review of ADR-0181 … ADR-0186: *"The refusal moves to the lane's
+entry, before any dispatch"*, and three record choices confirmed as written); D21-95 (on S8E-RULINGS's blocker: the
+entry check *"decides from declared `provides` (option A)"*, and *"The shipped catalog's missing `Findings` producer
+is owed to `s8g`"*); D21-96 (on R1FIX-8e's defect (c): *"The live `answered` row of `t1_gate_transition` carries the
+gate's **bound** tree"*). All five were taken by the operator in the session.
+
+**Recorded — what was built** (`da5dff8` S8E-P0 … S8E-P7, `ea62c62` S8E-RULINGS, `3a0c5ee` S8E-D2194-ENTRY,
+`72fbff0` R1FIX-8e, `8619113` D2196-8e, `259f714` R2FIX-8e, `60cf67b` R3FIX-8e, `7bec7cd` R4FIX-8e and `492e516`,
+the shipped store's rebuild; the ledger lines `d80609b`, `9293882` and `a404cf3`).
+- **L3 (§8e.1).** *"The writer mutex halts"* (ADR-0118 clause 3), *"and no poison recovery remains in `rk-store`"*.
+- **The tier-1 writer (ADR-0181).** The anchored `t2_event` row and the kind's `t1_*` row are written in one
+  transaction through `rk-store`'s `tier_one` statements; the `0002_gate_transitions` migration adds the append-only
+  `t1_gate_transition`, drops the never-written `t1_gate`, adds `t2_event.item` and stamps schema version 2; a
+  version-1 store is refused by name and rebuilt, never migrated in place. The kernel commits first, re-reads `HEAD`
+  and the tree, and only then appends. `Capability::Rebuild` is implemented and the rebuild moves into
+  `rk-adapter-sqlite` (§8e.9); D21-96's bound tree is written by the one function the live act, the heal and the
+  rebuild share.
+- **The stage on the run ref, and the lane across processes (ADR-0183, §8e.5, §8e.6).** A stage-bearing `Story:`
+  mark at every boundary, folded by `reconcile`, seeds `through_step_seven`; *"Every non-forbidden stage is entered
+  and trailered in declared order, an empty stage records why, and the lane's end is a `closed` mark that removes a
+  clean, landed run tree and keeps a dirty one."*
+- **`Gate:` (ADR-0184, §8e.7).** Every gate transition is a git-first tier-1 mark, and `terminal_read` reads the
+  awaited gate; `answer` presents the awaited gate (R1FIX-8e, S8E-M57).
+- **The three kinds (ADR-0185, §8e.4).** *"A foreign-worktree tier-1 write is refused, typed, with ownership read
+  from the store"* (AC-529).
+- **`Slice-Verdict:` (ADR-0186, §8e.8).** *"sealed on both outcomes by a real fixture run, and the ARMED lint is
+  discharged"*; an undeclared slice is refused at the lane's entry, before any dispatch, through the validator the
+  mint shares (D21-94, D21-95).
+- **The routing `null` (ADR-0187).** Built red-first; `s8d`'s `a_null_until_or_gate_when_is_not_journaled` is
+  replaced by D21-92's two tests.
+- **The first end-to-end tests of `verbs::run::run` (§8e.11)**, over fixture repositories and the fixture child.
+- **The count** (§8e.12, D2196-8e's note): *"92 names"* and *"85 are new"*, so the suite gains 85 over Checkpoint
+  8d-ii's recorded 1034: `FLOOR=1119`.
+
+**Recorded — the shipped store (`492e516`).** R2's explicit rebuild, approved by the operator (Weigh-In
+`wi-ef7b00`): before, schema version 1 with 11 `t2_event` rows and 0 `t1_*` rows; after, schema version 2 with 1
+`t2_event` row and 0 `t1_*` rows. §8e.13 finding 13: *"Nothing reads them as authority, and the store is
+disposable, but Checkpoint 7i reads this store."*
+
+**Recorded — the checkpoints this stage amended or re-runs** (§8e.13, §8e.15).
+- **Checkpoints 7h, 8a and 7f** are amended by dated edit (7h guards (6)/(7) and (10a)'s FAIL message, 8a guard (7),
+  7f's literal) and re-run whole inside Checkpoint 8e ((10c), (10h), (10d)). **Checkpoints 7a and 7i** are
+  provisional (the port surface; the shipped store at schema version 2) and re-run whole ((10b), (10g)).
+  **Checkpoint 8d-ii**, the entry gate, is re-run whole ((10a)). **`s8` (2)** is re-run whole with the shipped store
+  backed up and restored byte-for-byte around its `doctor --rebuild` ((10e)), and **`s8` (3)**'s asserted half
+  ((10f)).
+- **Checkpoint 5** is provisional because this stage moves `crates/rk-types`, and is re-run whole by (10i) (R3FIX-8e,
+  on Checkpoint 8d (13)'s precedent).
+- **Checkpoint 7c**'s `EventKind::ALL` guard is amended 38 → 41 (finding 24); *"its whole re-run is `s8j`'s"*.
+  **Checkpoint 8d**'s `run_named` list is amended under D21-92 (finding 25); *"`s8f`'s Checkpoint 8f (9) re-runs it
+  whole"*.
+- `PROGRESS.md` §1's *"re-run pending"* marks on 5, 7a, 7h, 7f, 7i and 8a, cleared by the formal reading below, and
+  on 7c and 8d, cleared by their owners, are the tracker's to move.
+
+**Recorded — the refuting rounds (§8e.13).** Four rounds, each with five finders and two refuters per blocker or
+major.
+- **Round 1: findings, fixed** (`72fbff0`). Two blockers: a new `lane_e2e` line tripped Checkpoint 8d-ii guard (3)
+  (finding 18), and an untracked `.kb/` failed Checkpoint 7h guard (5) (finding 19, environmental, handled outside
+  the tree). Majors: `answer` presented the last token in token order (finding 20), S8E-M8 survived its named test
+  (finding 21), and S8E-M26 and S8E-M43 named kernel tests that cannot observe their `rk-cli` change (finding 22).
+  Walking the ac184 lane through a void measured defect (c), which the operator ruled by D21-96 (`8619113`).
+- **Round 2: no blocker** (`259f714`). Two majors fixed: Checkpoint 7c's `EventKind::ALL` guard (finding 24) and
+  Checkpoint 8d's unmarked edit (finding 25); five minors.
+- **Round 3: no blocker** (`60cf67b`). One major fixed: *"The empty first stage's `stage_empty` anchor was
+  untested"* (finding 27; S8E-M60 and S8E-M61 *"each SURVIVED the old test … and are KILLED by the new one"*); eight
+  minors, among them Checkpoint 8e's (10i).
+- **Round 4: dry** — *"DRY: no blocker and no major"*. Its three minors (item 29) were fixed in `7bec7cd`.
+
+**Recorded — the acceptance set (§8e.14).** Claimed: AC-160, AC-161, AC-162, AC-163, AC-184 (re-measured), AC-529,
+AC-174, AC-183, AC-364, AC-518 and AC-180. AC-160 to AC-163 are claimed *"over fixture repositories, as measured,
+and only once the supersessions in the records table are accepted"*; that condition is met by D21-98 and D21-100
+below, not by this entry. Contributed to, not claimed: AC-172. Excluded: AC-164, AC-444, AC-473, AC-521 and AC-245.
+
+**Recorded — open residuals, each named and not closed.**
+- **The shipped seal is inert** (D21-95 item 2; ADR-0186): *"On the shipped packs the entry check and the seal are
+  both inert: 0 shipped activities provide `Findings` first, so no shipped lane reaches either until `s8g`."*
+- **Defect (b)** (§8e.9): *"`run`'s gate binds the user checkout's tree (`prepare_inputs` hashes
+  `resolved.worktree`) while `answer` hashes the run-owned tree, so once the run tree moves every later answer is
+  void too"*; *"defect (b) is `s8f`'s"*. And *"`expired` is still not in the ac184 lane"*.
+- **ADR-0182's interim**: *"an item-less row of a `Carried` kind is read by every item"*; the `doctor` finding that
+  would name such a row, and a whole-store selector for `cost` and `status`, are owed with exclusion.
+- **ADR-0184**: *"A gate's `opened` row rebuilt from git has a null `run_id`"* (D21-48 X11's stated residual).
+  **ADR-0186**: *"A healed or rebuilt approved seal is scoped less exactly than a live one"*. **ADR-0185**:
+  *"`git_op.stdout` is not capped at this record, and the kinds' payloads are not typed"*, and *"The unbound seam
+  remains"*.
+- **Finding 11**: *"A content commit whose step row never reached the store is not covered by the tier-1 heal"*;
+  *"`s8f`'s landing record settles how that step is read"*.
+- **AC-161's pinned-corpus arm** *"is not built, because the corpus carries no stage-bearing mark"*.
+
+**Recorded — owed forward, each to its named owner.**
+- **`s8f`**: defect (b) (`s8f`'s *"The gate binds the wrong tree"*); finding 11's landing record; AC-518's
+  file-write and index-change halves (*"`s8f` claims them"*); Checkpoint 8d's whole re-run in Checkpoint 8f (9); the
+  `RK-D-UNREAD` pin where `run_of` widens.
+- **`s8g`**: the shipped `Findings` producer, decided by a record (D21-95 item 2, `s8g` §8g.1's receiver note), and
+  the move of 7c's `[Self; 41]` guard when `verify_completed` lands (§8g.1, move 2).
+- **`s8j`**: Checkpoint 7c's whole re-run; the fresh fix and story items, each carrying `slice`; the re-pointing of
+  Checkpoints 7h and 7i to fixture items; and every amendment to `s8-exit-criterion.md`.
+- The tracker's §1 rows for `s8e` and for the checkpoints above.
+
+**The floor.** Checkpoint 8e (8)'s FLOOR is **1119** (1034, Checkpoint 8d-ii's recorded count, + 85 by dated edit),
+at least 44 result lines. The next stage's floor is re-derived from the formal reading below.
+
+Checkpoint 8e: **passed whole at `492e516`**, the formal reading, extracted from
+`runbook/phase-1/s8e-tier-one-and-the-lane.md`'s own bytes (§8e.15's fenced block, 531 lines, sha256
+`d40bb9319c194dd07ec2f9d78b3f3c4432b8eccbb84d32db0255019f3233fd76`), run from the main checkout under D21-47's
+no-dispatch wrapper (`runbook/tools/nodispatch.sh`, which the block sources at (0w)) at `CARGO_BUILD_JOBS=2
+RUST_TEST_THREADS=2` on 2026-09-28, 18:32 to 19:23 local: rc 0, 0 `FAIL`, `CP8E-END-OF-BLOCK reached`. Its sections
+read ok, among them: (8) the whole suite **1119 passed / 0 failed / 9 ignored over 44 result lines** (FLOOR 1119);
+(10a) Checkpoint 8d-ii re-run whole as the entry gate, and (10b) 7a, (10c) 7h, (10d) 7f, (10h) 8a, (10e) `s8` (2),
+(10f) `s8` (3)'s asserted half and (10g) 7i, each re-run and passed (the block exits on any failure); (10e) the
+shipped store restored byte-for-byte around `s8` (2)'s rebuild (sha256 `09020ee9…` before and after); (10i)
+Checkpoint 5 re-run whole, *"crates/rk-types moved since 766854c"*, the advisory databases at `ef036051` before and
+after it; (11) `rk-run/rk-fix-doctor-test-count` unchanged at `73c087a` with its worktree. Checkpoint 8e is re-run
+after the flip commit (D21-64 ruling 9: *"Checkpoint 8c is re-run after the flip commit, as the stage requires"*,
+read for this stage).
+
+---
+
+## D21-98 · ADR-0181 flips to `accepted` — the tier-1 writer is one method on `EventStore`, `append_tier1`, written git-first by the kernel
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8e`, under D21-64 ruling 10.** ADR-0181 (`s8e`'s
+record) flips `proposed → accepted`, `date: 2026-09-28` unchanged. It was written `proposed` at `s8e`'s build (package
+S8E-P3) and revised in place during that stage while it bound nothing (D21-96, package D2196-8e; and dated notes from
+packages S8E-P7, R1FIX-8e and R2FIX-8e). The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8e.
+
+Both conditions hold. The formal Checkpoint 8e passed whole at `492e516` (D21-97, its last paragraph: rc 0, 0 `FAIL`,
+`CP8E-END-OF-BLOCK reached`, the extracted block 531 lines; (8)'s whole suite 1119 passed / 0 failed / 9 ignored over
+44 result lines). Refuting round 4 (`s8e` §8e.13, item 29) was dry: no blocker, no major.
+
+The text that flips is the one at `492e516`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. The supersession in part of ADR-0158 decision 3 (*"No document, record or checkpoint may state
+that AC-162 is met, that a tier-1 row is written, or that a failed git write leaves zero store rows"*) and its bullet
+*"Claiming AC-160, AC-161, AC-162 or AC-163 is met, on any axis"*, and of ADR-0155 decision 5(b) (*"No document may
+state that AC-162 is met for this axis, or for any."*) and its bullet *"Stating or implying that AC-162 is satisfied
+for stage changes 2..N of a lane"*, only for the criteria `s8e` measures (§8e.14), which are all four, measured over
+fixture repositories, is now in force; both stay `accepted`. **The flip commit writes the two `superseded_by`
+back-links**, `0181` appended to ADR-0155's and ADR-0158's lists, with their README status cells and two
+Supersessions-table rows. ADR-0003, ADR-0105 clauses 1, 2, 4, 5, 8 and 9, ADR-0158's `rk-cli` bullet (on D21-48 X10's
+reading), ADR-0109 decision 2 and ADR-0118 clause 4 are cited and not superseded. D21-96 is the ruling it carries
+(decision 3's dated bullet). **Checkpoint 8e is re-run after this flip commit.**
+
+---
+
+## D21-99 · ADR-0182 flips to `accepted` — the interim `item` key rides beside the event, outside `payload` and `canonical_events`, and `query` honours `ByItem`
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8e`, under D21-64 ruling 10.** ADR-0182 (`s8e`'s
+record) flips `proposed → accepted`, `date: 2026-09-28` unchanged. It was written `proposed` at `s8e`'s build (package
+S8E-P3) and revised in place during that stage while it bound nothing (D21-94's confirmation, package S8E-RULINGS; and
+package S8E-P6's note on which producers key). The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8e.
+
+Both conditions hold. The formal Checkpoint 8e passed whole at `492e516` (D21-97, its last paragraph: rc 0, 0 `FAIL`,
+`CP8E-END-OF-BLOCK reached`, the extracted block 531 lines; (8)'s whole suite 1119 passed / 0 failed / 9 ignored over
+44 result lines). Refuting round 4 (`s8e` §8e.13, item 29) was dry: no blocker, no major.
+
+The text that flips is the one at `492e516`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. It supersedes nothing, so no supersession comes into force. ADR-0131's first forbids bullet is
+honoured, not superseded, because the key rides outside `payload` (D21-46 R3; `s8e` §8e.13 finding 12), and ADR-0131
+decision 2's placement is followed. Its decision 4, the inclusive `ByItem` interim, is D21-94's confirmation 1; the
+`doctor` finding and the exclusion it names stay owed. **Checkpoint 8e is re-run after this flip commit.**
+
+---
+
+## D21-100 · ADR-0183 flips to `accepted` — the stage lives on the run ref: a stage-bearing `Story:` mark at every boundary, folded by `reconcile`, and the lane's end is a terminal `closed` mark
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8e`, under D21-64 ruling 10.** ADR-0183 (`s8e`'s
+record) flips `proposed → accepted`, `date: 2026-09-28` unchanged. It was written `proposed` at `s8e`'s build (package
+S8E-P4) and revised in place during that stage while it bound nothing (package S8E-P6's dated notes: the seed, the
+per-boundary mint and decision 10). The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8e.
+
+Both conditions hold. The formal Checkpoint 8e passed whole at `492e516` (D21-97, its last paragraph: rc 0, 0 `FAIL`,
+`CP8E-END-OF-BLOCK reached`, the extracted block 531 lines; (8)'s whole suite 1119 passed / 0 failed / 9 ignored over
+44 result lines). Refuting round 4 (`s8e` §8e.13, item 29) was dry: no blocker, no major.
+
+The text that flips is the one at `492e516`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. The supersession in part of ADR-0105 clause 3's delegation of the `Story:` value to design
+§5.4's row, of ADR-0155 decisions 1, 2 and 5(a) and its bullets *"A second `Story:` trailer for one `(project, slug)`,
+in one lane or across lanes."* and *"A `Story:` value carrying a stage, a boundary, or any third token, until the
+grammar is widened by a record that supersedes `0105` clause 3."*, of ADR-0157 decisions 4 and 5 and its bullets
+*"Describing a lane as resumable across processes, or a lane's completion as anything other than within-one-process."*
+and *"Reading a second invocation's exit 0 as progress, or as evidence that the lane finished."*, and of ADR-0161's
+bullet *"Describing the lane loop as covered by tests, or reading a green suite as evidence about it."*, whose
+condition, *"only once `s8e` §8e.11's `lane_e2e` tests pass"*, the formal reading's (2) and (8) meet, is now in force;
+all four stay `accepted`. **The flip commit writes the four `superseded_by` back-links**, `0183` appended to
+ADR-0105's, ADR-0155's, ADR-0157's and ADR-0161's lists, with their README status cells and four Supersessions-table
+rows. ADR-0109 decision 3 is **not** superseded (D21-42 8d); ADR-0109 decisions 1 and 4, ADR-0161 decision 1 and
+ADR-0159 are cited. It executes D21-41 a, D21-42 8d's two defaults and D21-43 N7 and N9. **Checkpoint 8e is re-run
+after this flip commit.**
+
+---
+
+## D21-101 · ADR-0184 flips to `accepted` — the `Gate:` value carries kind, reach and state, and its deadline is integer unix seconds
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8e`, under D21-64 ruling 10.** ADR-0184 (`s8e`'s
+record) flips `proposed → accepted`, `date: 2026-09-28` unchanged. It was written `proposed` at `s8e`'s build (package
+S8E-P4) and revised in place during that stage while it bound nothing (D21-94's confirmations, package S8E-RULINGS;
+and refuting round 2's quotation fix, R2FIX-8e). The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8e.
+
+Both conditions hold. The formal Checkpoint 8e passed whole at `492e516` (D21-97, its last paragraph: rc 0, 0 `FAIL`,
+`CP8E-END-OF-BLOCK reached`, the extracted block 531 lines; (8)'s whole suite 1119 passed / 0 failed / 9 ignored over
+44 result lines). Refuting round 4 (`s8e` §8e.13, item 29) was dry: no blocker, no major.
+
+The text that flips is the one at `492e516`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. The supersession in part of ADR-0105 clause 3's value delegation for `Gate:` (*"values follow
+the trailer grammar table in design §5.4"*; the legacy `Gate:` drift rule stands, applied to the widened count), and
+of design §5.4's `Gate:` row with its *"`deadline` RFC 3339"* spelling and design §5's `gate_answer_void` row's tier
+and producer, each amended by a dated line, is now in force; ADR-0105 stays `accepted`. **The flip commit writes the
+`superseded_by` back-link**, `0184` appended to ADR-0105's list after `0183`'s, with its README status cell and one
+Supersessions-table row. ADR-0109 decision 2's parenthetical is read as illustrative, not superseded (its decision 5;
+D21-94's confirmation 2); ADR-0105 clause 10, ADR-0109 decision 1, ADR-0131 decision 6 and ADR-0017 are cited.
+**Checkpoint 8e is re-run after this flip commit.**
+
+---
+
+## D21-102 · ADR-0185 flips to `accepted` — `worktree_assigned`, `stage_empty` and `git_op`, three tier-2 kinds, minted by ADR-0116's route
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8e`, under D21-64 ruling 10.** ADR-0185 (`s8e`'s
+record) flips `proposed → accepted`, `date: 2026-09-28` unchanged. It was written `proposed` at `s8e`'s build (package
+S8E-P5) and revised in place during that stage while it bound nothing (D21-94's confirmation, package S8E-RULINGS; and
+dated notes from packages S8E-P6, R1FIX-8e and R4FIX-8e). The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8e.
+
+Both conditions hold. The formal Checkpoint 8e passed whole at `492e516` (D21-97, its last paragraph: rc 0, 0 `FAIL`,
+`CP8E-END-OF-BLOCK reached`, the extracted block 531 lines; (8)'s whole suite 1119 passed / 0 failed / 9 ignored over
+44 result lines). Refuting round 4 (`s8e` §8e.13, item 29) was dry: no blocker, no major.
+
+The text that flips is the one at `492e516`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. It supersedes nothing, so no supersession comes into force. The three kinds are minted by
+ADR-0116's route (*"The table row and the `rk-types` variant land in the same change."*), and RT-47's pair on
+`reconcile_started` is kept as tier-2 context that no reader resolves ownership from. Its decision 3 is D21-94's
+confirmation 3. **Checkpoint 8e is re-run after this flip commit.**
+
+---
+
+## D21-103 · ADR-0186 flips to `accepted` — the slice is declared on the item record, and `Slice-Verdict:` is sealed on both review outcomes
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8e`, under D21-64 ruling 10.** ADR-0186 (`s8e`'s
+record) flips `proposed → accepted`, `date: 2026-09-28` unchanged. It was written `proposed` at `s8e`'s build (package
+S8E-P7, stating D21-93) and revised in place during that stage while it bound nothing (D21-94 and D21-95, package
+S8E-D2194-ENTRY; and refuting rounds 1, 2 and 3's record fixes). The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8e.
+
+Both conditions hold. The formal Checkpoint 8e passed whole at `492e516` (D21-97, its last paragraph: rc 0, 0 `FAIL`,
+`CP8E-END-OF-BLOCK reached`, the extracted block 531 lines; (8)'s whole suite 1119 passed / 0 failed / 9 ignored over
+44 result lines). Refuting round 4 (`s8e` §8e.13, item 29) was dry: no blocker, no major.
+
+The text that flips is the one at `492e516`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. It supersedes nothing, so no supersession comes into force. ADR-0160's first bullet is honoured
+in full, ADR-0160 decision 6's *"at the review stage's boundary"* is read as *"at the review stage's exit outcome"*,
+and ADR-0162 decision 2 is re-stated, not superseded. D21-93, D21-94 and D21-95 are the rulings it carries. On the
+shipped packs the entry check and the seal stay inert until `s8g` (D21-95 item 2). **Checkpoint 8e is re-run after
+this flip commit.**
+
+---
+
+## D21-104 · ADR-0187 flips to `accepted` — a routing `null` is journaled when its route continues the walk; a `null` routed to a refusal is not
+
+**Confirmed 2026-09-28 by the operator, in the session executing `s8e`, under D21-64 ruling 10.** ADR-0187 (`s8e`'s
+record) flips `proposed → accepted`, `date: 2026-09-28` unchanged. It was written `proposed` at `s8e`'s build (package
+S8E-RULINGS) under D21-92 and carries no dated amendment. The ruling reads:
+*"Standing authority for the rest of this session (`s8d` onward): each stage's own records flip at that stage's close
+under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's flip-stops
+for those records."* The two conditions are ruling 9's, *"if the formal Checkpoint 8c passes whole and a refuting
+round finds no blocker or major"*, read for this stage's Checkpoint 8e.
+
+Both conditions hold. The formal Checkpoint 8e passed whole at `492e516` (D21-97, its last paragraph: rc 0, 0 `FAIL`,
+`CP8E-END-OF-BLOCK reached`, the extracted block 531 lines; (8)'s whole suite 1119 passed / 0 failed / 9 ignored over
+44 result lines). Refuting round 4 (`s8e` §8e.13, item 29) was dry: no blocker, no major.
+
+The text that flips is the one at `492e516`; the flip commit changes only its `status` line. No Decision clause and no
+forbids bullet moves. The supersession in part of ADR-0174 decision 7, its null sentence only (the D2177-8d
+paragraph's `null` bullet, whose `check` sentence stands; the replay sentence's *"and it is not `null`"*; and *"or a
+`null`"* in its D21-77 forbids bullet), is now in force, and that bullet's named residual is discharged; ADR-0174
+stays `accepted`. **The flip commit writes the `superseded_by` back-link**, `0187` appended to ADR-0174's list, with
+its README status cell and one Supersessions-table row, as its decision 4 requires. D21-92 is the ruling it records,
+and D21-77 ruling 1 stands. **Checkpoint 8e is re-run after this flip commit.**

@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: references/2026-09-08-architecture-design.md §5.4 (line 693, the `Story:` grammar row; line 688, F12's two-axis warrant); crates/rk-git/src/trailer/grammar.rs (`parse_body` at 143-162, `classify`'s `Story` arm at 166-171, `split_qualified` at 224-228 — first slash, no token count); crates/rk-git/src/reconcile.rs (116-124, `stories_committed.insert` and `Drift::DuplicateStoryTrailer`); crates/rk-cli/src/doctor/rebuild.rs (165-202, one row per item, anchored on the LAST mark, `to` from `stages.get(slug)`; 205-224, `Slice-Verdict:` per HISTORY entry); references/2026-09-08-acceptance-criteria.md AC-162 (3012-3018); references/adr/0105 (decision 3, the trailer plumbing; clause 8, ownership); references/adr/0109 (decision 3, three axes; AC-183, drift is never coerced)
 supersedes: []
-superseded_by: []
+superseded_by: ["0181", "0183"]
 related: ["0105", "0109", "0152", "0156", "0158"]
 evidence: ["F12"]
 consumers: []

@@ -6,7 +6,7 @@ date: 2026-09-23
 legacy_id: none
 source: crates/rk-kernel/src/workflow/fsm.rs (`apply`'s `StageTransition` arm — `state.stages_entered.push(to.clone()); state.last_transition = …; state.stage = to;`; `RunState::stages_entered` and its accessor; `next_action`'s successor arm); crates/rk-cli/src/verbs/run.rs (the lane loop's `let Some(next) = advanced else { return Ok(last_exit) }`; `story_trailer`'s four refusal paths; `story_value`); crates/rk-git/src/trailer/grammar.rs (`split_qualified` — `v.split_once('/')?`, the FIRST slash); crates/rk-git/src/reconcile.rs (`stories_committed` keyed per project); crates/rk-kernel/tests/it/lane_order.rs (the two-hop test and mutant M10); references/adr/0157 (clause 1, superseded in part); references/adr/0152 and references/adr/0159 (extended, not superseded)
 supersedes: ["0157"]
-superseded_by: []
+superseded_by: ["0183"]
 related: ["0152", "0155", "0157", "0159"]
 evidence: []
 consumers: []
