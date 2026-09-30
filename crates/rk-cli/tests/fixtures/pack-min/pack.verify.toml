@@ -1,0 +1,52 @@
+# pack-min's VERIFY variant — the fixture of `s8g` §8g.2's verify pass (R1 = ADR-0191 decisions 1
+# and 2, proposed; D21-120). *(Added 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)*
+#
+# One live stage, `check`, whose baseline is `TestReport`. The variant's registry
+# (`verify/artifacts.toml`) makes `TestReport` pass-sourced, so the plan at `check` is EMPTY and the
+# stage is held by the kernel's pass-owed guard until `rk-cli`'s verify pass writes the report. The
+# stage is named `check`, NOT `verify`: the pass is selected by the required kind, and a stage-name
+# literal anywhere in `rk-cli/src` would select nothing here (M4; ADR-0162 decision 5).
+#
+# Regenerated from `pack.lane.toml` with the stage set replaced; the extras (`[role.implementer]`,
+# `[margins]`, `[cache]`, the gate-expiry row, the activity timeout) are kept because `run`'s
+# `PackExtras` reads them whether or not a stage dispatches.
+gate_deadline_secs = 900
+
+[pack]
+id = "pack-min"
+applies = "kind == bug or kind == story"
+appetite = { points = 50, tokens = 200000 }
+
+[retry]
+attempts_cap = 1
+
+[breaker]
+consecutive_platform_failures = 3
+expiry_secs = 600
+
+[policy]
+stages = { check = "mandatory" }
+stage_order = ["check"]
+
+[stage.check]
+baseline = ["TestReport"]
+
+[role.implementer]
+family = "claude"
+model = "sonnet"
+effort = "medium"
+
+[margins]
+five_hour = 10
+seven_day = 10
+
+[cache]
+prompt_ttl = "1h"
+subagent_prompt_ttl = "1h"
+
+[[gate_expiry]]
+class = "unknown_facet:has_repro"
+action = "fail"
+
+[activity.emit-report]
+timeout_secs = 900

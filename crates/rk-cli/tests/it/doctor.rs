@@ -3369,3 +3369,70 @@ fn a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_t
         "the rebuilt store holds the mark's anchored row"
     );
 }
+
+/// **AC-349's doctor row: `RK-D-TOOLCHAIN-CLAIM-TIE`** (R1 = ADR-0191 decision 10, proposed;
+/// `s8g` §8g.5). *(Added 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)*
+///
+/// Over its rejecting fixture — `rust` and `node` both claim `**/*.toml` — the rule fires with one
+/// finding that names BOTH rule ids and the path (AC-349's *"the error names both rules and the
+/// path"*), and names no finding for `Cargo.toml`, which rust claims alone at a greater
+/// specificity. Over `doctor/clean/` (no `registry.toml`) and over the shipped `.redkiln/registry.toml`
+/// (whose rust and node claims share no glob) it is silent.
+#[test]
+fn ac349_equal_specificity_claim_is_a_doctor_row() {
+    const ID: &str = "RK-D-TOOLCHAIN-CLAIM-TIE";
+    let rule = RULES
+        .iter()
+        .find(|r| r.id == ID)
+        .unwrap_or_else(|| panic!("{ID} is not a row of the doctor rule table (AC-349)"));
+    assert_eq!(
+        rule.severity,
+        rk_cli::doctor::Severity::Error,
+        "a tie is a configuration error"
+    );
+
+    let dir = materialise(ID);
+    let findings = (rule.check)(&ctx_for(dir.path()));
+    assert_eq!(findings.len(), 1, "one tie, one finding: {findings:?}");
+    let detail = &findings[0].detail;
+    for needle in ["node:**/*.toml", "rust:**/*.toml"] {
+        assert!(
+            detail.contains(needle),
+            "the finding names `{needle}`: {detail}"
+        );
+    }
+    assert!(
+        detail.contains(".toml`"),
+        "the finding names the tied path: {detail}"
+    );
+    assert!(
+        !detail.contains("Cargo.toml"),
+        "a more specific claim is no tie: {detail}"
+    );
+
+    let clean = materialise("clean");
+    assert!(
+        (rule.check)(&ctx_for(clean.path())).is_empty(),
+        "the rule fires over a tree that declares no claims"
+    );
+
+    // The shipped claims column binds without a tie: the shipped registry, with the two source
+    // trees its rows name (a registry whose sources are absent does not load).
+    let shipped = materialise("clean");
+    let redkiln = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.redkiln");
+    std::fs::copy(
+        redkiln.join("registry.toml"),
+        shipped.path().join(".redkiln").join("registry.toml"),
+    )
+    .expect("the shipped registry copies");
+    for sub in ["checklists", "kb"] {
+        let to = shipped.path().join(".redkiln").join(sub);
+        std::fs::create_dir_all(&to).expect("the source directory is created");
+        copy_tree(&redkiln.join(sub), &to);
+    }
+    let over_shipped = (rule.check)(&ctx_for(shipped.path()));
+    assert!(
+        over_shipped.is_empty(),
+        "the shipped claims tie: {over_shipped:?}"
+    );
+}

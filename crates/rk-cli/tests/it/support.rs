@@ -558,6 +558,11 @@ pub enum PackVariant {
     /// `lane/items/`'s three items (each with a `slice`) beside the shared ones. *(Added 2026-09-28,
     /// `s8e` build, package S8E-P2.)*
     Lane,
+    /// `pack.verify.toml` — `s8g` §8g.2's verify fixture: one live stage, `check`, whose baseline
+    /// `TestReport` is pass-sourced (`verify/artifacts.toml`), with `verify/facets.toml` (the `stage`
+    /// facet admits `check`) and `verify/items/`'s item. *(Added 2026-09-29, `s8g` build, package
+    /// S8G-P5-VERIFY-PASS.)*
+    Verify,
 }
 
 impl PackVariant {
@@ -570,6 +575,7 @@ impl PackVariant {
             Self::Review => "pack.review.toml",
             Self::StepGrain => "pack.step-grain.toml",
             Self::Lane => "pack.lane.toml",
+            Self::Verify => "pack.verify.toml",
         }
     }
 }
@@ -790,6 +796,18 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
 
     if variant == PackVariant::Review {
         install_review_toolchain(root);
+    }
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)* The verify variant's own
+    // registries and item, from their own subdirectory so no other variant sees them.
+    if variant == PackVariant::Verify {
+        let from = src.join("verify");
+        for name in ["artifacts.toml", "facets.toml"] {
+            std::fs::copy(from.join(name), rk.join(name)).expect("the verify registry installs");
+        }
+        let item = std::fs::read(from.join("items").join("verify-item.toml"))
+            .expect("the verify item record is readable");
+        std::fs::write(rk.join("items").join("verify-1.toml"), item)
+            .expect("the verify item record installs");
     }
 
     // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 2, proposed.)* A `run` over this

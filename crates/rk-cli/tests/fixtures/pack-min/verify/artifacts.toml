@@ -1,0 +1,25 @@
+# pack-min's VERIFY variant artifact registry (`s8g` §8g.2; R1 = ADR-0191 decision 1, proposed).
+# *(Added 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)*
+#
+# The shared registry's kinds, with ONE delta: `TestReport` is `source = "pass"` and keyed by
+# toolchain, as `.redkiln/artifacts.toml` ships it. So selection plans no catalog producer for it,
+# the kernel's pass-owed guard (D21-120) holds the `check` stage until the verify pass's
+# `artifact.write` is journalled, and `rk-cli`'s verify pass is what writes it. The fixture item
+# carries no `toolchain` set, so the keyed kind expands to one un-keyed instance (AC-049's own
+# rule: no default key is invented).
+[artifact.ImplReport]
+source = "activity"
+schema = "ImplReport"
+
+[artifact.ChangeSummary]
+source = "activity"
+schema = "ChangeSummary"
+
+[artifact.TestReport]
+source = "pass"
+schema = "TestReport"
+keyed_by = "toolchain"
+
+[artifact.Findings]
+source = "human"
+schema = "Findings"

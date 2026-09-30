@@ -1,0 +1,17 @@
+# `RK-D-TOOLCHAIN-CLAIM-TIE`'s rejecting fixture (AC-349; R1 = ADR-0191 decision 10, proposed).
+# *(Added 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)*
+#
+# Two toolchains claim `**/*.toml` — the same glob, so the same specificity (1 literal segment is 0
+# here, 5 literal characters each) — and every `.toml` path is bound to neither: a configuration
+# error, never a guess (AC-349). The rust table's second claim, `Cargo.toml`, is more specific than
+# any node claim and is no tie, so the rule must report the tie and not every overlap.
+[verb]
+build = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "port", side_effecting = false }
+
+[toolchain.rust]
+build_timeout = { secs = 120, measured = [60], rule = "r", pin = "0123456789abcdef0123456789abcdef01234567", command = "cargo build" }
+claims = { value = ["Cargo.toml", "**/*.toml"], source = "fixture: a claim the node table also makes" }
+
+[toolchain.node]
+build_timeout = { secs = 600, measured = [300], rule = "r", pin = "0123456789abcdef0123456789abcdef01234567", command = "tsc" }
+claims = { value = ["**/*.toml", "**/*.ts"], source = "fixture: a claim the rust table also makes" }

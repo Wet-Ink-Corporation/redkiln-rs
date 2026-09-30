@@ -645,3 +645,205 @@ fn adr0161_a_stage_the_lane_has_entered_is_not_entered_again() {
         "a backward transition is the specific row the old guard let through"
     );
 }
+
+// ---------------------------------------------------------------------------------------------
+// D21-120: a pass-sourced kind holds its stage's advance until the pass's `artifact.write` is
+// journalled (R1 = ADR-0191 decision 1, proposed: "stage completeness still requires its
+// `artifact.write`"). *(Added 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS.)*
+// ---------------------------------------------------------------------------------------------
+
+const PASS_OWED_PACK: &str = include_str!("../fixtures/packs/pass-owed.toml");
+const PASS_ITEM: &str = "INC-8G";
+
+/// The fixture registry with `TestReport` made `source = "pass"` (keyed by toolchain, as shipped).
+/// The one row is rewritten by exact text, asserted to hit once, so a moved fixture fails here.
+fn pass_artifacts() -> String {
+    let from = "[artifact.TestReport]\nsource = \"activity\"";
+    assert_eq!(
+        ARTIFACTS.matches(from).count(),
+        1,
+        "PREMISE: the fixture registry's TestReport row reads `source = \"activity\"` exactly once"
+    );
+    ARTIFACTS.replace(from, "[artifact.TestReport]\nsource = \"pass\"")
+}
+
+/// Inputs at `check` over a Rust item: `TestReport{rust}` is required and pass-sourced, so the plan
+/// is empty and the pass owes it.
+fn pass_inputs(successor: Option<&str>) -> RunInputs {
+    let mut runtime = RuntimeContext::supplied(ADV_TREE, ADV_DEADLINE).results_at(ADV_RESULTS_AT);
+    if let Some(to) = successor {
+        runtime = runtime.advances_to(to);
+    }
+    RunInputs::new("check")
+        .with_runtime(runtime)
+        .with_pack("pass-owed.toml", PASS_OWED_PACK)
+        .with_catalog(ADV_CATALOG)
+        .with_artifacts("artifacts.toml", &pass_artifacts())
+        .with_facets(&facets_src())
+        .with_item(&Item::new(PASS_ITEM, "incident").with_toolchain("rust", ["text"]))
+}
+
+fn pass_journal(store: &Arc<Mutex<dyn EventStore>>) -> Vec<Event> {
+    store
+        .lock()
+        .expect("the fake store is not poisoned")
+        .query(rk_kernel::runtime::journal_query(PASS_ITEM))
+        .expect("the fake store queries")
+}
+
+/// One `artifact.write` row in `rk-store`'s shape, keyed (the pass's write), appended to the store.
+fn journal_write(store: &Arc<Mutex<dyn EventStore>>, stage: &str, kind: &str, key: &str) {
+    let row = Event::new(
+        EventKind::ArtifactWrite,
+        serde_json::json!({
+            "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "item": PASS_ITEM,
+            "key": key,
+            "kind": kind,
+            "path": format!(".redkiln/artifacts/{PASS_ITEM}/{kind}.json"),
+            "run": format!("{stage}-0000000000000000"),
+            "schema_version": kind,
+            "stage": stage,
+        }),
+    )
+    .with_item(PASS_ITEM);
+    store
+        .lock()
+        .expect("the fake store is not poisoned")
+        .append(row)
+        .expect("the fake store appends");
+}
+
+fn refuse_supply(node: &str) -> Result<replay::RecordedSpec, replay::ReplayError> {
+    panic!("no node may be supplied: the plan at `check` is empty, yet {node:?} was requested")
+}
+
+/// **The advance is refused while `TestReport{rust}` has no journalled write** (D21-120 items 1-3):
+/// no step, no `stage_transition` advance row, the refusal names the class and the owed instance,
+/// and `pass_owed()` carries it typed.
+#[test]
+fn a_pass_owed_advance_is_refused_with_no_write() {
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let recorded = replay::resume(
+        &pass_inputs(Some("closeout")),
+        advance_ports(&store),
+        &[],
+        &mut refuse_supply,
+    )
+    .expect("resume over a pass-owed stage");
+
+    assert_eq!(
+        recorded.advanced_to(),
+        None,
+        "a stage whose pass-sourced TestReport has no artifact.write advanced (D21-120)"
+    );
+    assert_eq!(
+        recorded.advance_refused(),
+        Some("pass-owed: TestReport{rust}"),
+        "the refusal names its class and every owed instance"
+    );
+    let owed: Vec<String> = recorded
+        .pass_owed()
+        .iter()
+        .map(|i| format!("{}:{:?}", i.kind, i.key))
+        .collect();
+    assert_eq!(owed, vec!["TestReport:Some(\"rust\")".to_owned()]);
+    assert_eq!(
+        transitions(&pass_journal(&store)),
+        vec![(None, Some("check".to_owned()))],
+        "the entry row alone: a refused advance writes no advance row"
+    );
+    assert!(!recorded.lane_ended(), "a held stage is not a lane end");
+}
+
+/// **Once the pass's keyed write is journalled after the stage's entry, the advance proceeds** —
+/// and a write for another key, another stage, or before the entry, does not satisfy it (the
+/// journal filter, ADR-0073's keyed instance).
+#[test]
+fn a_pass_owed_advance_proceeds_once_the_write_is_journalled() {
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    // A matching row BEFORE the stage's entry does not count.
+    journal_write(&store, "check", "TestReport", "rust");
+    let first = replay::resume(
+        &pass_inputs(Some("closeout")),
+        advance_ports(&store),
+        &pass_journal(&store),
+        &mut refuse_supply,
+    )
+    .expect("the first resume");
+    assert_eq!(
+        first.advance_refused(),
+        Some("pass-owed: TestReport{rust}"),
+        "a write journalled before the stage's latest entry satisfied the guard"
+    );
+
+    // The wrong key, and the wrong stage, after the entry: still owed.
+    journal_write(&store, "check", "TestReport", "node");
+    journal_write(&store, "implement", "TestReport", "rust");
+    let second = replay::resume(
+        &pass_inputs(Some("closeout")),
+        advance_ports(&store),
+        &pass_journal(&store),
+        &mut refuse_supply,
+    )
+    .expect("the second resume");
+    assert_eq!(
+        (second.advanced_to(), second.advance_refused()),
+        (None, Some("pass-owed: TestReport{rust}")),
+        "a write for another key or another stage satisfied the guard"
+    );
+
+    // The pass's own write: the advance proceeds, once.
+    journal_write(&store, "check", "TestReport", "rust");
+    let third = replay::resume(
+        &pass_inputs(Some("closeout")),
+        advance_ports(&store),
+        &pass_journal(&store),
+        &mut refuse_supply,
+    )
+    .expect("the third resume");
+    assert_eq!(third.advance_refused(), None);
+    assert!(third.pass_owed().is_empty());
+    assert_eq!(
+        third.advanced_to(),
+        Some("closeout"),
+        "the journalled keyed write releases the advance"
+    );
+    assert_eq!(
+        transitions(&pass_journal(&store)),
+        vec![
+            (None, Some("check".to_owned())),
+            (Some("check".to_owned()), Some("closeout".to_owned())),
+        ]
+    );
+}
+
+/// **A held lane end is not an end** (D21-120 item 1): with no successor, `Done` over an owed
+/// instance refuses by name and reports no lane end; with the write, it ends.
+#[test]
+fn a_pass_owed_lane_end_is_held() {
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let held = replay::resume(
+        &pass_inputs(None),
+        advance_ports(&store),
+        &[],
+        &mut refuse_supply,
+    )
+    .expect("resume at the lane's last stage");
+    assert!(
+        !held.lane_ended(),
+        "the lane ended with its pass-sourced TestReport unwritten (D21-120 item 1)"
+    );
+    assert_eq!(held.advance_refused(), Some("pass-owed: TestReport{rust}"));
+
+    journal_write(&store, "check", "TestReport", "rust");
+    let ended = replay::resume(
+        &pass_inputs(None),
+        advance_ports(&store),
+        &pass_journal(&store),
+        &mut refuse_supply,
+    )
+    .expect("resume with the write journalled");
+    assert!(ended.lane_ended(), "with the write, the lane ends");
+    assert_eq!(ended.advance_refused(), None);
+}

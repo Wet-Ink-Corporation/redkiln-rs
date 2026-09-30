@@ -1,0 +1,14 @@
+# A doctor fixture's ConfigFile. The `[adapters]` / `[packs]` / `[doctor]` shape is `init`'s
+# scaffold (crates/rk-cli/tests/fixtures/init/config.toml.expected); `ConfigFile` is
+# `deny_unknown_fields`, so nothing may be added to it that the type does not declare.
+
+[adapters]
+harness = "rk-adapter-claude"
+store = "rk-adapter-sqlite"
+toolchains = ["rk-adapter-toolchain-node", "rk-adapter-toolchain-rust"]
+
+[packs]
+enabled = ["demo"]
+
+[doctor]
+unread_window_runs = 50

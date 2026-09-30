@@ -5,7 +5,7 @@ status: proposed
 date: 2026-09-29
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-41 (row c), D21-42 (rows 1a — *"**Widened to an outcome-bearing report**"*; 10b — *"**Mint `verify_completed`**: report digest, selection with `basis_reason`, counts and adapter identity"*; 10c — *"**Claimed whole**"*), D21-43 (N23 — *"**Re-homed to the implement stage** as test-authoring activities under ADR-0072. Verify only measures."*; N25), D21-46 (R3, R5), D21-47 (the review's findings 4, 8, 14 and cross-file 19; *"Records are located by the id recorded at write time"*), D21-48 (X9, X15); runbook/phase-1/s8g-verify-and-restored-demands.md §8g.2, §8g.4, §8g.5, §8g.8 (R1's row); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.5 (the cold measurement, cited)
-supersedes: ["0162"]
+supersedes: ["0162", "0132"]
 superseded_by: []
 related: ["0019", "0072", "0073", "0096", "0104", "0105", "0109", "0116", "0125", "0131", "0140", "0169", "0170", "0171", "0179", "0180", "0182", "0188", "0189"]
 evidence: []
@@ -93,6 +93,16 @@ and N23's precedent moves activities whole. X9 decided the whole-activity readin
    the selection and never off `resolved.stage`; `crates/rk-cli/src/` gains no stage-name literal. `KindSource` gains
    `Pass`, and `.redkiln/artifacts.toml`'s `[artifact.TestReport]` reads `source = "pass"` (keyed by toolchain, as
    ADR-0073 decides: one instance *"per element of the item's `toolchain` set"*).
+   *(dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; D21-120, TAKEN PROVISIONALLY under D21-105; an
+   in-record note before the flip.)* **Where this decision's completeness clause is enforced.** *"stage completeness
+   still requires its `artifact.write`"* (Considered options) is enforced in `rk_kernel::replay::resume`: its
+   `AdvanceStage` arm, before `rt.step`, and its `Done` arm when no successor is supplied compute the owed set,
+   `selection.pass_sourced()` less every instance with a journalled `artifact.write` for this item at this stage among
+   the rows after the stage's latest entry (a row matches on its `kind`, and a keyed instance on its `key` member too;
+   never on Classification alone). While the set is non-empty the arm refuses by name (`pass-owed: TestReport{rust}`),
+   takes no step and writes no row, and `RecordedRun::pass_owed()` carries the set typed. `rk-cli`'s `run` runs this
+   pass for each owed `TestReport` and re-enters the same stage once. `fsm::next_action`, `Runtime::step` and ADR-0152
+   decision 2 are unchanged: the arm still breaks.
 
 2. **The pass, in order.** (1) It meets a set-up tree: it runs in the run-owned worktree at `.redkiln/worktrees/<item>`
    (ADR-0180), where `setup` ran at creation (D21-43 N25: *"refused by name on failure"*), so `setup` precedes the
@@ -108,6 +118,14 @@ and N23's precedent moves activities whole. X9 decided the whole-activity readin
    ADR-0125) over the item's criteria as `rk_types::AcceptanceCriterion` values (R2, ADR-0192), including the
    mutation harness for every criterion with a declared `mutation` (decision 11). (7) It appends through the store and
    re-reads the journal (ADR-0162 decision 6's idiom).
+   *(dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; TAKEN PROVISIONALLY and returned for a ruling.)* **The
+   keyed write's carrier.** ADR-0189 (accepted) decision 8 lists the `artifact.write` row's members and has no key,
+   and its decision 3 keeps one sidecar per `(item, kind)`; D21-120 matches a keyed instance on its key element. The
+   build adds one member, `key`, to the row `rk-store`'s `ArtifactWriter::write_keyed` appends, and only that writer
+   writes it; the sidecar stays `<Kind>.json`, so an `artifact:TestReport` reader still finds it. An un-keyed instance
+   (every shipped lane today: `rk-cli` sets no item `toolchain` set, so a keyed kind expands un-keyed) is written by the
+   unchanged `write`, with no `key` member. Step (4)'s failed or unverifiable verify writes no `TestReport`: the
+   pass-owed guard then keeps holding the stage, and `run` exits by name.
 
 3. **The four displaced providers are re-homed (D21-43 N23).** `unit-tests`, `unit-tests-ue`, `equivalence-boundary`
    and `property-based-testing` each take `stage = "implement"` and list `AuthoredTests` first in `provides`, in
@@ -119,8 +137,19 @@ and N23's precedent moves activities whole. X9 decided the whole-activity readin
    record says so rather than hiding it.
 
 4. **`AuthoredTests` is minted.** `.redkiln/artifacts.toml` gains `[artifact.AuthoredTests]` with `source =
-   "activity"` and `schema = "AuthoredTests"`; it is not `keyed_by`. It names the tests an implement-stage activity
+   "activity"` and `schema = "AuthoredTests"`; ~~it is not `keyed_by`~~. It names the tests an implement-stage activity
    authored; it is not a verdict.
+   *(dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; D21-121, TAKEN PROVISIONALLY under D21-105; an in-record
+   amendment before the flip.)* **`AuthoredTests` is `keyed_by = "toolchain"`, on ADR-0073's mechanism**, and the struck
+   clause *"it is not `keyed_by`"* is withdrawn. Unkeyed, AC-047's load-time rank lint refuses every shipped selection
+   (`Load(RankTie { kind: "AuthoredTests", … activities: ["unit-tests", "unit-tests-ue"] })`): both are `method_rank`
+   20, and while they provided the keyed `TestReport` ADR-0073's per-instance expansion kept them from contending.
+   ADR-0132's own finding is the reason: *"The tie is a shadow of a kind that *is* keyed."* **This record therefore
+   supersedes ADR-0132 in part, at one site, its `## Decision` enumeration**: *"The toolchain-keyed set is **six**"*
+   and its pack half's *"moves 5 → 6 keyed kinds"*. With `AuthoredTests` the set is **seven** and the pack moves
+   **6 → 7**. Every other clause of ADR-0132 and of ADR-0073 stands verbatim, the `method_rank` forbids bullet
+   included; `spikes/p9/artifacts.toml` is not edited (ADR-0132). ADR-0132's `superseded_by` gains `0191` at this
+   record's flip, not before.
 
 5. **The test-design escalation moves with them.** Both packs' verify-stage row *"`when = "criticality >= high"`"* →
    `TestReport` at `rigor = "mandatory"` moves to `[stage.implement]` over `AuthoredTests`, keeping its `when` and its
@@ -191,6 +220,31 @@ and N23's precedent moves activities whole. X9 decided the whole-activity readin
       `.review-ref` (255 of 259 at `178868f`), and `s8d-ii`'s item-id validator refuses an id ending `.mut`.
     - The review pass's `ReproKind::Mutate` arm stays refused by name. ADR-0162 keeps `status: accepted` and gains
       this record's id in `superseded_by`.
+    - *(dated 2026-09-29, s8g build, package S8G-P6-MUTATION-RESUME-DRIFT; proposed, not flipped.)* **Built, and
+      what the build chose where this decision is silent, each reversible.** (a) The harness is
+      `rk_cli::verify_pass::mutate`: it creates `<item>.mut` detached at the run-owned tree's `HEAD` (the candidate
+      SHA), applies the declared patch through `rk_git::mutation::apply` (the one `GitOp::Apply` site, R3), runs the
+      declared `suite` through `rk_kernel::verify::runner::run_test` over a `Toolchain` rooted in that tree (its row's
+      `origin` is `mutation/<ac>`, never `pass`), re-reads every path the patch touches and compares that region's
+      content hash with the applied one (AC-338: a restore mid-run is `still_present = false`, so `Unverifiable`),
+      and removes the tree on every path. The sentence above, *"The kernel applies the patch; no `-p` child does"*,
+      is met in its contrast (no `-p` child applies anything) but not in its subject: the call is made from `rk-cli`'s
+      pass through `rk-git`'s journalled seam, which is the capability this decision moves ADR-0162's patch clause
+      for. Named for the flip, not edited. (b) The port reports counts, not which assertion failed, so the harness
+      records `assertion_flipped = None`: a red suite is `RedElsewhere` and `pinned` is unreachable through it (AC-334
+      stays ARMED, `rk_kernel::verify::flip`'s own note). (c) Decision 2's step (6) runs BEFORE step (5)'s write:
+      a refused stage exit writes no `TestReport`, so D21-120's guard keeps holding the stage and the next entry
+      re-runs the pass and the ledger. (d) The criteria are read off the committed `Spec` sidecar in the run-owned
+      tree (`acceptance_criteria`, each through `AcceptanceCriterion::ingest`); an absent sidecar is no criteria.
+      (e) The feasibility input is the pack's `[mutation]` table (AC-337: absent is a configuration error, raised only
+      when the item has criteria); ADR-0192 decision 2's shipped home (the Rust row of ADR-0170's table) is not yet
+      written, so a shipped lane whose `Spec` carries criteria refuses at verify by name until it is. (f) A refused
+      exit appends `stage_exit_refused` (keyed to the item) and the kernel mints AC-357's gate,
+      `verify.ac-discriminates` (`rk_kernel::verify::ac_gate`), for the first unpinned criterion, carrying `ac`,
+      `criterion`, `assertion` and `suite_result`; after a void answer it re-opens one reach on with `drift` (the
+      void row's two tree hashes and token) attached (AC-359). Only an applied `discriminates` answer naming its
+      answerer is a ledger answer; its `at` is the instant of the run that reads it, because the `gate_answered` row
+      carries no time.
 
 12. **The pass is whole-suite, and it is sized against the cold figure `s8c` measured, cited and not re-measured.**
     D21-42 10c: *"A cold `cargo test --workspace` wall time is measured first"*; `s8c` §8c.5: *"This is that

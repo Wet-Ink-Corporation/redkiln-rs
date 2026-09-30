@@ -648,6 +648,53 @@ impl ArtifactWriter {
         .with_item(self.at.item.clone())
     }
 
+    /// **The keyed write** (ADR-0073: one instance *"per element of the item's `toolchain` set"*):
+    /// [`Self::write`]'s sidecar, rendering and ONE `artifact.write`, whose row carries one member
+    /// more, `key`, the instance's key element. The sidecar path is decision 3's `<Kind>.json`,
+    /// unchanged, so every `artifact:<Kind>` reader still finds it.
+    ///
+    /// *(Added 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; TAKEN PROVISIONALLY and returned
+    /// for a ruling: ADR-0189 (accepted) decision 8 lists the row's members and has no `key`, and
+    /// decision 3 keeps one file per `(item, kind)`. D21-120 matches a pass-sourced instance on its
+    /// kind AND its toolchain key element, so the key must be readable off the row. The member is
+    /// additive and written only here, by the verify pass's `TestReport`; a two-toolchain item's
+    /// second key replaces the first's sidecar, as decision 3 reads, and both rows stand.)*
+    ///
+    /// # Errors
+    /// As [`Self::write`].
+    pub fn write_keyed(&self, kind: &str, key: &str, value: &Json) -> Result<Written, RenderError> {
+        let written = self.write_unjournalled(kind, value)?;
+        if written.replayed {
+            return Ok(written);
+        }
+        let mut row = self.row(kind, &written.path, &written.digest);
+        if let Some(members) = row.payload.as_object_mut() {
+            members.insert("key".to_owned(), Json::String(key.to_owned()));
+        }
+        self.journal.append(row)?;
+        Ok(written)
+    }
+
+    /// [`Self::write`]'s sidecar and rendering, with no row: the caller appends its own ONE row.
+    fn write_unjournalled(&self, kind: &str, value: &Json) -> Result<Written, RenderError> {
+        let sidecar = canon::canonical(value).map_err(|e| canon_err(kind, &e))?;
+        let rendering = template_of(kind).map(|t| render(t, value)).transpose()?;
+        let path = self.dir.rel(&sidecar_name(kind));
+        let digest = sha256(&sidecar);
+        if self.replay {
+            return self.served(kind, &path, &digest);
+        }
+        self.put(&sidecar_name(kind), &sidecar)?;
+        if let Some(md) = rendering {
+            self.put(&rendering_name(kind), &md)?;
+        }
+        Ok(Written {
+            path,
+            digest,
+            replayed: false,
+        })
+    }
+
     /// Replay: the recorded row of this stage run for `path`, or a refusal.
     fn served(&self, kind: &str, path: &str, derived: &Digest) -> Result<Written, RenderError> {
         let rows = self.journal.rows()?;

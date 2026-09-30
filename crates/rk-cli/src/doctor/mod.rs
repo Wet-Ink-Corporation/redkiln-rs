@@ -250,6 +250,12 @@ pub struct Ctx {
     /// and `run` cannot disagree about a key. Selected only when the tree declares a substitution;
     /// see [`TimeoutTable`].
     pub timeout_table: TimeoutTable,
+    /// *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; R1 = ADR-0191 decision 10,
+    /// proposed.)* The per-toolchain `claims` column of `.redkiln/registry.toml`, read once by
+    /// `rk_kernel::verify::claims::claims_from` for `RK-D-TOOLCHAIN-CLAIM-TIE`. `Ok(empty)` when the
+    /// tree has no registry; `Err` naming the file when it does not load or a `claims` row is
+    /// malformed.
+    pub claims: Result<Vec<rk_kernel::verify::claims::PathClaim>, String>,
 }
 
 /// The value table `RK-D-TIMEOUT` resolves `${toolchain.<key>}` through (s8c §8c.6).
@@ -391,6 +397,7 @@ impl Ctx {
         };
         let timeout_table =
             timeout_table(&worktree, &common_dir, &config, &env, &catalog, &pack_files);
+        let claims = declared_claims(&worktree);
 
         Self {
             config,
@@ -410,8 +417,21 @@ impl Ctx {
             now,
             journal,
             timeout_table,
+            claims,
         }
     }
+}
+
+/// The registry's `claims` column (R1 = ADR-0191 decision 10), for `RK-D-TOOLCHAIN-CLAIM-TIE`.
+fn declared_claims(worktree: &Path) -> Result<Vec<rk_kernel::verify::claims::PathClaim>, String> {
+    let path = crate::verbs::run::registry_path(worktree);
+    if !path.is_file() {
+        return Ok(Vec::new());
+    }
+    let registry = rk_kernel::workflow::memo::VerbRegistry::load_file(&path)
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    rk_kernel::verify::claims::claims_from(&registry)
+        .map_err(|e| format!("{}: {e}", path.display()))
 }
 
 /// Does the tree declare any `${toolchain.*}` substitution a `RK-D-TIMEOUT` arm resolves?

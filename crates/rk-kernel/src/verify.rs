@@ -10,6 +10,7 @@
 //! | [`comparator`] | the bootstrap comparator's reclassifier: `selection-ineffective` at the boundary, `probe-unverified` and the seed on an empty record, `selection-empty` per policy | AC-326, AC-322, AC-332, AC-352 |
 //! | [`eligible`] | the gate-eligible adapter list, as data with exactly one entry in Phase 1 | AC-239's list-is-data half (PROVISIONAL) |
 //! | [`admissibility`] | the policy, not the type, decides whether an AC at `verification: None` blocks a stage | AC-455 |
+//! | [`ac_gate`] | AC-357's gate, minted when the stage exit is refused (its three payload facts), the human answers the ledger reads, and AC-359's re-open with the drift attached *(dated 2026-09-29, s8g build, package S8G-P6-MUTATION-RESUME-DRIFT; R1 = ADR-0191 decision 10, proposed)* | AC-357's machine part, AC-359 |
 //!
 //! **What none of this reads, by construction and by lint** (`crate::module_boundary`, outside
 //! this module — `s7b-ii` §7b-ii.12's self-reference rule): the item's own suite verdict (AC-335),
@@ -25,6 +26,7 @@
 //!
 //! **ADR-0101 clause 5 bounds what any of this may be read as**: the gate exists and fails closed.
 
+pub mod ac_gate;
 pub mod admissibility;
 pub mod claims;
 pub mod comparator;

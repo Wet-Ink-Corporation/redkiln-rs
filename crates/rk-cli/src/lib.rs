@@ -44,6 +44,7 @@ pub mod review_pass;
 pub mod signal;
 pub mod store;
 pub mod verbs;
+pub mod verify_pass;
 
 use crate::exit::{Exit, Halt};
 

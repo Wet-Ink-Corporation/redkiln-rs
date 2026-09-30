@@ -59,6 +59,22 @@ use std::path::Path;
 /// test would agree with it by construction, and this one is meant to be able to disagree.
 const REFERENCE_SUFFIX: &str = ".review-ref";
 
+/// The committed file that makes a tree answer green (the verify fixture's, `s8g` §8g.2).
+const GREEN_MARKER: &str = "rk-fixture-green";
+
+/// The file, in the repository's common dir, that makes the NEXT run vector block (the AC-353
+/// fixture's, `s8g` §8g.5). *(dated 2026-09-29, `s8g` build, package S8G-P6-MUTATION-RESUME-DRIFT.)*
+/// It is consumed when the block starts, so the run a test resumes after killing this one answers
+/// as it would have: a third data condition, rigged as openly as the other two.
+const BLOCK_ONCE: &str = "rk-fixture-block-once";
+
+/// Written into the common dir when the block starts, so a test knows the suite is in progress.
+const BLOCKED: &str = "rk-fixture-blocked";
+
+/// The block's ceiling, in 100 ms parks: 300 s, then it exits non-zero rather than outlive a test
+/// that never killed it.
+const BLOCK_PARKS: u32 = 3000;
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
@@ -91,6 +107,31 @@ fn main() {
     });
     // ONE WHOLE §8c.1 BLOCK per arm (the module doc): header, record, the empty line that closes
     // the record region, and the full-grammar summary.
+    // *(dated 2026-09-29, `s8g` build, package S8G-P6-MUTATION-RESUME-DRIFT.)* The AC-353 arm: a
+    // committed-nowhere, one-shot file in the common dir blocks THIS run vector until the test
+    // kills the process tree; the file is removed first, so the resumed run is not blocked.
+    if let Some(common) = common_dir(&cwd) {
+        let once = common.join(BLOCK_ONCE);
+        if once.is_file() && std::fs::remove_file(&once).is_ok() {
+            let _ = std::fs::write(common.join(BLOCKED), b"blocked\n");
+            for _ in 0..BLOCK_PARKS {
+                std::thread::park_timeout(std::time::Duration::from_millis(100));
+            }
+            eprintln!("rk-fixture-toolchain: the block was never killed; giving up");
+            std::process::exit(1);
+        }
+    }
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)* The VERIFY fixture's green
+    // arm: a tree that carries the committed marker `rk-fixture-green` answers one passing test.
+    // The review fixture commits no such file, so its two arms are unchanged; this is a second data
+    // condition, rigged as openly as the first, and it is evidence about no real suite.
+    if cwd.join(GREEN_MARKER).is_file() {
+        println!("\nrunning 1 test\ntest rk_fixture::the_reviewed_case ... ok\n");
+        println!(
+            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
+        );
+        return;
+    }
     if is_reference(&cwd) {
         record_reference(&cwd);
         println!("\nrunning 1 test\ntest rk_fixture::the_reviewed_case ... ok\n");
@@ -122,6 +163,21 @@ fn is_reference(cwd: &Path) -> bool {
     cwd.file_name()
         .and_then(|n| n.to_str())
         .is_some_and(|n| n.ends_with(REFERENCE_SUFFIX))
+}
+
+/// The repository's common dir, read from `<cwd>/.git` (a linked worktree's `gitdir:` file) or,
+/// in a main worktree, `<cwd>/.git` itself.
+fn common_dir(cwd: &Path) -> Option<std::path::PathBuf> {
+    let dot = cwd.join(".git");
+    if dot.is_dir() {
+        return Some(dot);
+    }
+    let gitdir = std::fs::read_to_string(&dot).ok()?;
+    let gitdir = std::path::PathBuf::from(gitdir.trim().strip_prefix("gitdir:")?.trim());
+    gitdir
+        .parent()
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
 }
 
 /// The file, in the repository's common dir, where the reference arm records what it ran over.

@@ -20,6 +20,10 @@ schema = "ADR"
 # and are both admissible for a {node, unreal} / {text, binary} item (measured: Load(RankTie { kind:
 # "AuthoredTests", activities: ["unit-tests", "unit-tests-ue"] })). ADR-0073's keyed expansion is what kept
 # the pair from contending while they provided TestReport.
+# (dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; D21-121, TAKEN PROVISIONALLY under D21-105) ruled: the
+# keying stays, on ADR-0073's mechanism; ADR-0191 (proposed) strikes its decision 4's "it is not keyed_by" and supersedes
+# ADR-0132's keyed-set enumeration in part (six -> seven) by dated in-record amendment. The PROVISIONAL line above
+# stays until the operator rules.
 [artifact.AuthoredTests]
 source = "activity"
 schema = "AuthoredTests"

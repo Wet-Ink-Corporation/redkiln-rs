@@ -378,13 +378,21 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
     // W3's carry, at creation only (§8d-ii.4): a reused tree kept its ignored files. A FRESH tree
     // whose carry or setup failed is rolled back before the run refuses (D21-88 ruling 2), so the
     // next run creates it anew and re-carries.
-    if entered.created != rk_git::worktree::Creation::Reused
-        && let Err(exit) = carry_at_creation(&resolved, env, &entered)
-    {
-        roll_back_run_worktree(&release_exec, &release_start, &entered, &owner);
-        release_run_worktree(&release_exec, &release_start, &release_item, &owner);
-        return Ok(exit);
-    }
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; `s8g` §8g.2 step 1.)* The carry
+    // hands back the verify pass's set-up witness: `setup` ran on the created tree (or nothing was
+    // declared), and a re-entered tree was set up at its creation.
+    let set_up = if entered.created == rk_git::worktree::Creation::Reused {
+        crate::verify_pass::reused()
+    } else {
+        match carry_at_creation(&resolved, env, &entered) {
+            Ok(set_up) => set_up,
+            Err(exit) => {
+                roll_back_run_worktree(&release_exec, &release_start, &entered, &owner);
+                release_run_worktree(&release_exec, &release_start, &release_item, &owner);
+                return Ok(exit);
+            }
+        }
+    };
     let mut closed = false;
     let lane = run_lane(
         resolved,
@@ -394,6 +402,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         &entered,
         startup.harness,
         &mut closed,
+        &set_up,
     );
     release_run_worktree(&release_exec, &release_start, &release_item, &owner);
     // ---- THE REMOVAL TRIGGER (`s8e` §8e.6; D21-43 N9; ADR-0180's rule, ADR-0183 decision 2, both
@@ -508,6 +517,11 @@ fn remove_closed_tree(exec: &GitExec, start: &Path, item: &str) {
     reason = "the lane loop moved here whole from `run` (s8d-ii P6) so the lock is released on \
               every path; splitting it further would move no decision"
 )]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the eighth is the verify pass's set-up witness (s8g S8G-P5), made by `run`'s carry at \
+              creation and threaded to the stage that runs the pass; it has no other home"
+)]
 fn run_lane(
     resolved: Resolved,
     env: &Env,
@@ -521,6 +535,9 @@ fn run_lane(
     // minted the lane's terminal `closed` mark, so `run` fires the removal trigger once the lock
     // is released.
     closed: &mut bool,
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)* The verify pass's witness that
+    // the run-owned tree is set up (§8g.2 step 1).
+    set_up: &crate::verify_pass::SetUp,
 ) -> Result<Exit, Halt> {
     let owned = entered.tree.path.clone();
 
@@ -693,9 +710,16 @@ fn run_lane(
     let mut entry_drifts: Vec<serde_json::Value> = Vec::new();
     // *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114.)* Whether the entry pass wrote.
     let mut entry_wrote = false;
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; D21-120 item 4.)* Set when the
+    // verify pass served a stage the kernel held pass-owed: the loop re-enters `resume` ONCE for
+    // the same stage, and does not push it onto `visited` a second time.
+    let mut reenter_for_pass = false;
 
     loop {
-        visited.push(resolved.stage.clone());
+        let reentry = std::mem::take(&mut reenter_for_pass);
+        if !reentry {
+            visited.push(resolved.stage.clone());
+        }
         // ---- R6 decision 5 (`s8d` §8d.7; D21-43 N3). An abstaining derived facet whose
         // `unknown_facet` gate was answered binds the answer, folded from `gate_answered` —
         // BEFORE the inputs, so every stage's selection and record read the bound value.
@@ -826,6 +850,12 @@ fn run_lane(
                 return Ok(Exit::ConfigError);
             }
         };
+        // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; R1 = ADR-0191 decision 8,
+        // proposed; owed by S8G-P3.)* The identity every `verify_completed` row carries: the
+        // adapter `detect()` chose, by the NAME the selection loop returned, and the item's range.
+        let identity =
+            crate::verify_pass::identity(chosen.adapter.as_deref(), verify_range(&resolved));
+        let routing = routing.with_verify_identity(identity.clone());
         // *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 4, proposed.)*
         // `sca_scan`'s databases at the tools' default locations, which no shipped step declares.
         let routing = advisory_db_row_inputs(env, chosen.adapter.as_deref())
@@ -915,6 +945,7 @@ fn run_lane(
 
         let mut advanced: Option<String> = None;
         let mut lane_end = false;
+        let mut pass_served = false;
         last_exit = run_with_advance(
             &resolved,
             &inputs,
@@ -935,6 +966,14 @@ fn run_lane(
                 tier_one_boundary(&resolved, &owned, &ownership, &excluded)
                     .with_advisories(Arc::clone(&pending)),
             ),
+            // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; D21-120 item 4.)*
+            Some(PassSite {
+                set_up,
+                owned: &owned,
+                identity: &identity,
+                may_run: !reentry,
+                served: &mut pass_served,
+            }),
         )?;
 
         // 🛑 **A NON-ZERO EXIT ENDS THE LANE, EVEN WHEN THE STAGE ADVANCED.** Found by this stage's
@@ -950,6 +989,14 @@ fn run_lane(
         // invariant, not one stage's: a stage that failed has not earned a successor.
         if last_exit != Exit::Success {
             return Ok(last_exit);
+        }
+
+        // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; D21-120 item 4.)* The verify
+        // pass wrote what the stage owed: re-enter the SAME stage once, so `resume` re-reads the
+        // journal and its guard finds the write.
+        if pass_served {
+            reenter_for_pass = true;
+            continue;
         }
 
         // A stage that took no boundary ends the lane: a gate (exit 0, golden constraint 2), a
@@ -1129,6 +1176,9 @@ pub fn run_with(
         // callers are the machinery suites over a counting store, with no `worktree_assigned` row
         // and no run tree. The verb `run` always binds one (`run_lane`).
         None,
+        // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)* No verify pass on the
+        // machinery seam: it has no run-owned tree to set up.
+        None,
     )
 }
 
@@ -1171,6 +1221,9 @@ pub fn run_with_advance(
     // the lane's end (`RecordedRun::lane_ended`) and its review pass did not block.
     lane_end: &mut bool,
     boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; D21-120 item 4.)* Where the
+    // verify pass runs when the kernel holds the stage pass-owed; `None` on the machinery seam.
+    pass: Option<PassSite<'_>>,
 ) -> Result<Exit, Halt> {
     let store = Arc::clone(&ports.store);
     let store = &store;
@@ -1212,6 +1265,7 @@ pub fn run_with_advance(
         advanced,
         lane_end,
         boundary,
+        pass,
     )
 }
 
@@ -2235,6 +2289,7 @@ fn resume_and_read(
     advanced: &mut Option<String>,
     lane_end: &mut bool,
     mut boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
+    pass: Option<PassSite<'_>>,
 ) -> Result<Exit, Halt> {
     let item_id = resolved.item.id().to_owned();
     let store = Arc::clone(&ports.store);
@@ -2333,6 +2388,12 @@ fn resume_and_read(
     // *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; ADR-0188 decision 6.)* A
     // refused landing's gate is an act made after `resume` refused, so it too gets a sibling.
     let landing_boundary = boundary
+        .as_ref()
+        .map(rk_kernel::runtime::tier_one::Boundary::sibling);
+    // *(dated 2026-09-29, `s8g` build, package S8G-P6-MUTATION-RESUME-DRIFT; `s8g` §8g.2 step 6.)*
+    // The verify pass's AC-357 gate is an act made after `resume` held the stage, so it too gets a
+    // sibling.
+    let pass_boundary = boundary
         .as_ref()
         .map(rk_kernel::runtime::tier_one::Boundary::sibling);
     let recorded = match rk_kernel::replay::resume_routed(
@@ -2437,6 +2498,29 @@ fn resume_and_read(
 
     // ADR-0152: the boundary the kernel took, reported to the lane loop before the terminal read.
     *advanced = recorded.advanced_to().map(ToOwned::to_owned);
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; D21-120 item 4; R1 = ADR-0191
+    // decisions 1 and 2, proposed.)* **The kernel held the stage pass-owed**: the verify pass runs
+    // for each owed instance of its kind, selected off the owed set by kind and never by the
+    // stage's name, and the lane loop re-enters the stage once. A second hold after the pass ran,
+    // or an owed kind no pass here produces, falls through to the held read below, named.
+    if !recorded.pass_owed().is_empty()
+        && let Some(site) = pass
+        && site.may_run
+    {
+        let at = StepSixAt {
+            env,
+            now,
+            tree_hash,
+            boundary: pass_boundary,
+        };
+        match serve_pass(resolved, &store, &candidate_toolchain, &recorded, &site, at)? {
+            Ok(()) => {
+                *site.served = true;
+                return Ok(Exit::Success);
+            }
+            Err(exit) => return Ok(exit),
+        }
+    }
     // *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED; ADR-0189 decision 4.)*
     // The stage advance's drift check refused: named here, and the terminal read reports the gate.
     // The stage has NOT exited, so it has no exit outcome yet: the review pass (whose seal sits on
@@ -3283,6 +3367,527 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
     Exit::Success
 }
 
+// ------------------------------------------------------------------ the verify pass's site
+//
+// *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; `s8g` §8g.2; D21-120 item 4; R1 =
+// ADR-0191 decisions 1 and 2, proposed.)*
+
+/// Where the verify pass runs for one stage of the lane: the set-up witness, the run-owned tree
+/// its writer writes into, the identity its row carries, whether this is the stage's first entry
+/// (the pass runs once per stage; the re-entry only re-reads), and where it reports that it served
+/// the stage.
+pub struct PassSite<'a> {
+    set_up: &'a crate::verify_pass::SetUp,
+    owned: &'a Path,
+    identity: &'a rk_kernel::verify::runner::VerifyIdentity,
+    may_run: bool,
+    served: &'a mut bool,
+}
+
+/// **The item's range for `verify_completed`** (AC-321's endpoints): `HEAD` and the tip of
+/// `rk-run/<item>`, each as git resolves it; the tip reads `HEAD`'s sha when the branch is absent. A
+/// read that fails names itself in the value rather than guessing a sha.
+fn verify_range(resolved: &Resolved) -> rk_types::verify::VerifyRange {
+    let read = |rev: &str| {
+        resolved
+            .exec
+            .run(
+                rk_git::git_exec::GitOp::RevParse,
+                &resolved.worktree,
+                ["rev-parse", "--verify", "--quiet", rev],
+            )
+            .ok()
+            .map(|out| out.stdout_trimmed())
+            .filter(|sha| !sha.is_empty())
+    };
+    let base = read("HEAD").unwrap_or_else(|| "unresolved:HEAD".to_owned());
+    let head =
+        read(&format!("refs/heads/rk-run/{}", resolved.item.id())).unwrap_or_else(|| base.clone());
+    rk_types::verify::VerifyRange { base, head }
+}
+
+/// **Serve a pass-owed stage** (D21-120 item 4): for each owed instance of the verify pass's kind,
+/// run the pass through the stage's toolchain and write its `TestReport` through `rk-store`'s
+/// writer for this stage run. `Ok(Ok(()))` when every owed instance was written; `Ok(Err(exit))`
+/// when the pass did not complete, named on stderr: an owed kind no pass here produces (held), a
+/// failed verify (`NonZero`: a red suite is never a report of green), an unverifiable one (its
+/// `StepError`'s row), or a refusal (AC-320's, `Unsupported`).
+fn serve_pass(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    toolchain: &Arc<dyn rk_ports::toolchain::Toolchain>,
+    recorded: &rk_kernel::replay::RecordedRun,
+    site: &PassSite<'_>,
+    // *(dated 2026-09-29, `s8g` build, package S8G-P6-MUTATION-RESUME-DRIFT; `s8g` §8g.2 step 6.)*
+    at: StepSixAt<'_>,
+) -> Result<Result<(), Exit>, Halt> {
+    let mut at = at;
+    let item = resolved.item.id();
+    let owed = recorded.pass_owed();
+    let ours = crate::verify_pass::selected(owed);
+    if ours.len() != owed.len() {
+        eprintln!(
+            "redkiln: held: {}; no pass in this build produces {:?}",
+            recorded.advance_refused().unwrap_or_default(),
+            owed.iter()
+                .filter(|i| i.kind != crate::verify_pass::REQUIRED_KIND)
+                .map(|i| i.kind.as_str())
+                .collect::<Vec<_>>()
+        );
+        return Ok(Err(terminal_read(resolved, recorded)));
+    }
+    // AC-320's two inputs, resolved here. The changed-file set is R6's range read; an empty range
+    // is a resolved empty set, and a range that cannot be read is unresolved.
+    let changed =
+        match crate::change_deriver::changed_paths(&resolved.exec, &resolved.worktree, item) {
+            Ok(paths) => Some(paths.unwrap_or_default()),
+            Err(e) => {
+                eprintln!("redkiln: the verify pass cannot resolve the changed-file set: {e}");
+                None
+            }
+        };
+    // The selection policy resolves only for a toolchain some adapter claims: with none detected,
+    // no policy applies, and the pass refuses before any port call.
+    let policy = (site.identity.adapter != crate::verify_pass::UNDETECTED)
+        .then_some(crate::verify_pass::PASS_POLICY);
+    let schemas = match artifact_schemas(resolved) {
+        Ok(schemas) => schemas,
+        Err(exit) => return Ok(Err(exit)),
+    };
+    let writer = rk_store::render::ArtifactWriter::new(
+        site.owned,
+        rk_store::render::StageRun {
+            item: item.to_owned(),
+            stage: resolved.stage.clone(),
+            run: recorded.run_id().to_owned(),
+        },
+        schemas,
+        store_journal(store, item),
+    );
+    for instance in ours {
+        let mut halted: Option<Halt> = None;
+        // *(dated 2026-09-29, `s8g` build, package S8G-P6-MUTATION-RESUME-DRIFT; `s8g` §8g.2 step 6.)*
+        // Step 6 decides BEFORE the write: a refused exit writes no `TestReport`, so D21-120's
+        // guard keeps holding the stage, and the next entry re-runs the pass and the ledger.
+        let mut six_halt: Option<Halt> = None;
+        let mut six_exit: Option<Exit> = None;
+        let mut step_six = |outcome: &rk_ports::toolchain::TestOutcome| match verify_step_six(
+            resolved, store, site, recorded, &mut at, outcome,
+        ) {
+            Ok(Ok(())) => crate::verify_pass::StepSix::Permitted,
+            Ok(Err((why, exit))) => {
+                six_exit = Some(exit);
+                crate::verify_pass::StepSix::Held(why)
+            }
+            Err(halt) => {
+                six_halt = Some(halt);
+                crate::verify_pass::StepSix::Held("the store lock is poisoned".to_owned())
+            }
+        };
+        let verdict = crate::verify_pass::run_gated(
+            toolchain.as_ref(),
+            site.set_up,
+            &crate::verify_pass::PassInputs {
+                item,
+                stage: &resolved.stage,
+                instance,
+                changed: changed.as_deref(),
+                policy,
+                identity: site.identity,
+                bound: rk_ports::toolchain::StepBound::Undeclared,
+            },
+            &mut |row| match crate::store::acquire(store, "the verify pass") {
+                Ok(mut guard) => guard.append(row).map_err(|e| format!("{e:?}")),
+                Err(halt) => {
+                    halted = Some(halt);
+                    Err("the store lock is poisoned".to_owned())
+                }
+            },
+            &writer,
+            &mut step_six,
+        );
+        if let Some(halt) = halted.or(six_halt) {
+            return Err(halt);
+        }
+        match verdict {
+            Ok(crate::verify_pass::Verdict::Green { passed, path }) => {
+                println!("{item}: verify green ({passed} passed); TestReport written at {path}");
+            }
+            Ok(crate::verify_pass::Verdict::ExitHeld { passed, why }) => {
+                // `six_exit` is `Success` when AC-357's gate opened (a gate is exit 0, golden
+                // constraint 2), and the refusal's own row otherwise.
+                let exit = six_exit.unwrap_or(Exit::NonZero);
+                if exit == Exit::Success {
+                    println!("{item}: verify green ({passed} passed); held: {why}");
+                } else {
+                    eprintln!("redkiln: held: the verify stage exit was refused: {why}");
+                }
+                return Ok(Err(exit));
+            }
+            Ok(crate::verify_pass::Verdict::Failed { passed, failed }) => {
+                eprintln!(
+                    "redkiln: held: {}: the whole suite ran red ({passed} passed, {failed} \
+                     failed); a failed verify, never a report of green",
+                    recorded.advance_refused().unwrap_or_default()
+                );
+                return Ok(Err(Exit::NonZero));
+            }
+            Ok(crate::verify_pass::Verdict::Unverifiable { why, error }) => {
+                eprintln!(
+                    "redkiln: held: {}: the verify is unverifiable ({why:?}): {error:?} (AC-331, \
+                     AC-344)",
+                    recorded.advance_refused().unwrap_or_default()
+                );
+                return Ok(Err(Exit::from(&error)));
+            }
+            Err(refused) => {
+                eprintln!(
+                    "redkiln: held: {}: {refused}",
+                    recorded.advance_refused().unwrap_or_default()
+                );
+                return Ok(Err(Exit::from(&refused.step_error())));
+            }
+        }
+    }
+    Ok(Ok(()))
+}
+
+// ------------------------------------------------------------------ the verify pass's step 6
+//
+// *(dated 2026-09-29, `s8g` build, package S8G-P6-MUTATION-RESUME-DRIFT; `s8g` §8g.2 step 6 and
+// §8g.5; R1 = ADR-0191 decisions 10 and 11, proposed; AC-346, AC-357's machine part, AC-359.)*
+
+/// What step 6 reads beside the pass: the run's environment (the harness builds a `Toolchain` over
+/// its ephemeral tree from it), the journaled instant, the tree hash an AC-357 gate binds, and the
+/// tier-1 boundary that gate opens through.
+pub struct StepSixAt<'a> {
+    env: &'a Env,
+    now: i64,
+    tree_hash: &'a str,
+    boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
+}
+
+/// A held step 6: the refusal's text and the exit it takes.
+type SixHeld = (String, Exit);
+
+/// The item's journal as the store holds it now.
+fn journal_now(
+    store: &Arc<Mutex<dyn EventStore>>,
+    item: &str,
+) -> Result<Result<Vec<rk_types::event::Event>, SixHeld>, Halt> {
+    let guard = crate::store::acquire(store, "the verify pass")?;
+    let read = guard.query(rk_kernel::runtime::journal_query(item));
+    drop(guard);
+    Ok(read.map_err(|e| {
+        (
+            format!("the journal could not be read: {e:?}"),
+            Exit::ConfigError,
+        )
+    }))
+}
+
+/// **§8g.2 step 6, for a green whole suite, before the `TestReport` is written.**
+///
+/// 1. The item's criteria, off the committed `Spec` sidecar in the run-owned tree
+///    ([`crate::verify_pass::criteria_of`]); none is nothing to hold (the ledger is empty).
+/// 2. The pack's mutation feasibility (AC-337: an absent `[mutation]` declaration is a
+///    configuration error, raised here where the verify gate reads it).
+/// 3. The mutation harness ([`crate::verify_pass::mutate`]) for each criterion with a declared
+///    mutation, under a feasible declaration, in the ephemeral `<item>.mut` tree.
+/// 4. The human answers (`rk_kernel::verify::ac_gate::answers`: applied `discriminates` answers
+///    only, never a void one), the ledger (`compute_ledger`) and the stage-exit check
+///    (`stage_exit`, AC-346).
+/// 5. A refusal is an event (`stage_exit_refused`, keyed to the item), and the kernel mints AC-357's
+///    gate for the first unpinned criterion (`ac_gate::open`), re-opened with the drift attached
+///    after a void answer (AC-359). The gate is exit 0 (golden constraint 2).
+///
+/// `Ok(Ok(()))` permits the write; `Ok(Err((why, exit)))` holds the stage, named.
+fn verify_step_six(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    site: &PassSite<'_>,
+    recorded: &rk_kernel::replay::RecordedRun,
+    at: &mut StepSixAt<'_>,
+    outcome: &rk_ports::toolchain::TestOutcome,
+) -> Result<Result<(), SixHeld>, Halt> {
+    use rk_kernel::verify::ac_gate::{self, Opening};
+
+    let item = resolved.item.id();
+
+    // ---- (1) the criteria.
+    let criteria = match crate::verify_pass::criteria_of(site.owned, item) {
+        Ok(criteria) => criteria,
+        Err(e) => {
+            return Ok(Err((
+                format!("the item's Spec criteria do not read: {e}"),
+                Exit::ConfigError,
+            )));
+        }
+    };
+    if criteria.is_empty() {
+        return Ok(Ok(()));
+    }
+
+    // ---- (2) AC-337.
+    let feasibility = rk_kernel::select::Pack::from_toml(
+        &format!("{}.toml", resolved.pack_name),
+        &resolved.pack_src,
+    )
+    .map_err(|e| format!("{e:?}"))
+    .and_then(|pack| rk_kernel::verify::mutation_feasibility(&pack).map_err(|e| format!("{e:?}")));
+    let feasibility = match feasibility {
+        Ok(feasibility) => feasibility,
+        Err(e) => {
+            return Ok(Err((
+                format!(
+                    "the pack declares no usable mutation feasibility, and the item has criteria \
+                     (AC-337: an absent declaration is a configuration error): {e}"
+                ),
+                Exit::ConfigError,
+            )));
+        }
+    };
+
+    // ---- (3) the harness, one run per declared mutation.
+    let mut runs: BTreeMap<String, rk_kernel::verify::flip::FlipOutcome> = BTreeMap::new();
+    let mut evidence: BTreeMap<String, crate::verify_pass::MutationEvidence> = BTreeMap::new();
+    let declared = criteria.iter().any(|c| {
+        matches!(
+            c.mutation,
+            Some(rk_types::acceptance::MutationDeclaration::Declared { .. })
+        )
+    });
+    if declared && feasibility == rk_ports::toolchain::MutationFeasibility::Feasible {
+        let tree = match run_tree_of(resolved) {
+            Ok(tree) => tree,
+            Err(exit) => {
+                return Ok(Err((
+                    "the mutation tree cannot be derived".to_owned(),
+                    exit,
+                )));
+            }
+        };
+        let candidate = WorktreePath::new(site.owned)
+            .map_err(|e| format!("{e:?}"))
+            .and_then(|owned| {
+                resolved
+                    .exec
+                    .run(
+                        rk_git::git_exec::GitOp::RevParse,
+                        &owned,
+                        ["rev-parse", "--verify", "HEAD"],
+                    )
+                    .map(|out| out.stdout_trimmed())
+                    .map_err(|e| format!("{e:?}"))
+            });
+        let candidate = match candidate {
+            Ok(sha) => sha,
+            Err(e) => {
+                return Ok(Err((
+                    format!("the candidate sha cannot be read: {e}"),
+                    Exit::ConfigError,
+                )));
+            }
+        };
+        let env = at.env;
+        let toolchain_at = |p: &Path| {
+            real_toolchain(resolved, env, p)
+                .map_err(|exit| format!("no toolchain was chosen over {} ({exit:?})", p.display()))
+        };
+        for ac in &criteria {
+            let Some(rk_types::acceptance::MutationDeclaration::Declared { patch, suite }) =
+                &ac.mutation
+            else {
+                continue;
+            };
+            let mut halted: Option<Halt> = None;
+            let found = crate::verify_pass::mutate(
+                &crate::verify_pass::MutationSite {
+                    exec: &resolved.exec,
+                    repo: &resolved.worktree,
+                    tree: &tree,
+                    candidate: &candidate,
+                },
+                &ac.id,
+                patch,
+                suite,
+                &toolchain_at,
+                &crate::verify_pass::MutationCall {
+                    item,
+                    stage: &resolved.stage,
+                    identity: site.identity,
+                    bound: rk_ports::toolchain::StepBound::Undeclared,
+                },
+                &mut |row| match crate::store::acquire(store, "the mutation harness") {
+                    Ok(mut guard) => guard.append(row).map_err(|e| format!("{e:?}")),
+                    Err(halt) => {
+                        halted = Some(halt);
+                        Err("the store lock is poisoned".to_owned())
+                    }
+                },
+            );
+            if let Some(halt) = halted {
+                return Err(halt);
+            }
+            if let Some(note) = &found.note {
+                eprintln!("redkiln: {item}: {}'s mutation run: {note}", ac.id);
+            }
+            if let Some(flip) = found.outcome {
+                runs.insert(ac.id.clone(), flip);
+            }
+            evidence.insert(ac.id.clone(), found);
+        }
+    }
+
+    // ---- (4) the answers, the ledger, the exit check, over the journal the store holds now.
+    let journal = match journal_now(store, item)? {
+        Ok(journal) => journal,
+        Err(held) => return Ok(Err(held)),
+    };
+    let answers = ac_gate::answers(
+        &journal,
+        rk_types::time::Timestamp::from_unix_seconds(at.now),
+    );
+    let ledger = rk_kernel::verify::ledger::compute_ledger(
+        &criteria,
+        &runs,
+        &BTreeMap::new(),
+        &feasibility,
+        &answers,
+    );
+    let refused = match rk_kernel::verify::exit::stage_exit(item, &resolved.stage, &ledger) {
+        Ok(()) => return Ok(Ok(())),
+        Err(refused) => refused,
+    };
+
+    // ---- (5) the refusal is an event (AC-346), then AC-357's gate.
+    {
+        let row = refused.event.clone();
+        let row = if row.kind.item_key() == rk_types::event_kind::ItemKey::Carried {
+            row.with_item(item)
+        } else {
+            row
+        };
+        let mut guard = crate::store::acquire(store, "the verify pass")?;
+        let appended = guard.append(row);
+        drop(guard);
+        if let Err(e) = appended {
+            return Ok(Err((
+                format!("the stage_exit_refused row could not be written: {e:?}"),
+                Exit::ConfigError,
+            )));
+        }
+    }
+    let Some(ac) = refused
+        .unpinned
+        .first()
+        .and_then(|id| criteria.iter().find(|c| &c.id == id))
+    else {
+        return Ok(Err((refused.to_string(), Exit::NonZero)));
+    };
+    let journal = match journal_now(store, item)? {
+        Ok(journal) => journal,
+        Err(held) => return Ok(Err(held)),
+    };
+    let state = match rk_kernel::workflow::fsm::fold(item, &resolved.stage, &journal) {
+        Ok(state) => state,
+        Err(e) => {
+            return Ok(Err((
+                format!("the recorded journal did not fold: {e}"),
+                Exit::ConfigError,
+            )));
+        }
+    };
+    let mutation = evidence
+        .get(&ac.id)
+        .map_or(serde_json::Value::Null, |found| {
+            serde_json::json!({
+                "outcome": found.outcome.map(|o| format!("{o:?}")),
+                "note": found.note,
+            })
+        });
+    let facts = ac_gate::AcFacts {
+        ac: &ac.id,
+        criterion: ac.criterion.as_str(),
+        assertion: ac
+            .verification
+            .as_ref()
+            .map_or("no verification was authored for this criterion", |v| {
+                v.as_str()
+            }),
+        suite_result: serde_json::json!({
+            "passed": outcome.passed,
+            "failed": outcome.failed,
+            "status": outcome.status,
+            "ledger_status": ledger
+                .rows
+                .iter()
+                .find(|r| r.ac == ac.id)
+                .map(|r| r.status.as_str()),
+            "mutation": mutation,
+        }),
+    };
+    let deadline = rk_types::time::Timestamp::from_unix_seconds(
+        at.now.saturating_add(resolved.extras.gate_deadline_secs),
+    );
+    match ac_gate::open(&state, &journal, &facts, at.tree_hash, deadline) {
+        Ok(Opening::Open(row)) => {
+            let token = row
+                .payload
+                .get("token")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_owned();
+            if let Err(exit) = gate_rows_through(
+                store,
+                at.boundary.as_mut(),
+                &state,
+                vec![row.with_item(item)],
+                Some((resolved.stage.as_str(), recorded.run_id())),
+                Opens::Landed,
+            )? {
+                return Ok(Err((
+                    format!("{refused}; AC-357's gate could not be opened"),
+                    exit,
+                )));
+            }
+            Ok(Err((
+                format!(
+                    "{refused}; `{}` gate {token} is open for {} (redkiln answer {item} <option>)",
+                    ac_gate::AC_GATE_KIND,
+                    ac.id
+                ),
+                Exit::Success,
+            )))
+        }
+        Ok(Opening::Awaiting(token)) => Ok(Err((
+            format!("{refused}; gate {} awaits its answer", token.as_str()),
+            Exit::Success,
+        ))),
+        Ok(Opening::Held { token, verdict }) => Ok(Err((
+            format!(
+                "{refused}; {} was answered `{verdict}` at gate {}, which is not an answer the \
+                 ledger reads (only `{}` is)",
+                ac.id,
+                token.as_str(),
+                ac_gate::DISCRIMINATES
+            ),
+            Exit::NonZero,
+        ))),
+        Ok(Opening::Expired(token)) => Ok(Err((
+            format!(
+                "{refused}; gate {} expired, and its disposition is the expiry policy's",
+                token.as_str()
+            ),
+            Exit::NonZero,
+        ))),
+        Err(e) => Ok(Err((
+            format!("{refused}; AC-357's gate could not be minted: {e}"),
+            Exit::ConfigError,
+        ))),
+    }
+}
+
 // ------------------------------------------------------------------- step (8), the outer half
 //
 // Everything below runs ABOVE `run_with` and is what cycle 6 adds: the run-owned worktree, the
@@ -3784,7 +4389,13 @@ fn carry_at_creation(
     resolved: &Resolved,
     env: &Env,
     entered: &rk_git::worktree::Entered,
-) -> Result<(), Exit> {
+) -> Result<crate::verify_pass::SetUp, Exit> {
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)* Nothing declared: the
+    // witness with no `setup` call (`set_up` cannot refuse on this arm).
+    let refuse_nothing = |e: &rk_types::error::StepError| {
+        eprintln!("redkiln: setup at run-tree creation: {e:?}");
+        Exit::ConfigError
+    };
     let tree = &entered.tree.path;
     let main =
         rk_git::worktree::main_worktree(&resolved.exec, Path::new(resolved.worktree.as_str()))
@@ -3834,7 +4445,8 @@ fn carry_at_creation(
     // ---- (2) the setup verb.
     let registry_file = registry_path(Path::new(resolved.worktree.as_str()));
     if !registry_file.is_file() {
-        return Ok(());
+        return crate::verify_pass::set_up(crate::verify_pass::Tree::Created, None)
+            .map_err(|e| refuse_nothing(&e));
     }
     let registry =
         rk_kernel::workflow::memo::VerbRegistry::load_file(&registry_file).map_err(|e| {
@@ -3845,13 +4457,15 @@ fn carry_at_creation(
         eprintln!("redkiln: {line}");
     })?;
     let Some(toolchain) = chosen.adapter.as_deref().and_then(toolchain_of) else {
-        return Ok(());
+        return crate::verify_pass::set_up(crate::verify_pass::Tree::Created, None)
+            .map_err(|e| refuse_nothing(&e));
     };
     let Some(declared) = registry
         .table(toolchain)
         .and_then(|t| t.declarations().get("setup_projects"))
     else {
-        return Ok(());
+        return crate::verify_pass::set_up(crate::verify_pass::Tree::Created, None)
+            .map_err(|e| refuse_nothing(&e));
     };
     let refuse = |why: String| {
         eprintln!(
@@ -3880,7 +4494,8 @@ fn carry_at_creation(
         })
         .collect::<Result<_, _>>()?;
     if projects.is_empty() {
-        return Ok(());
+        return crate::verify_pass::set_up(crate::verify_pass::Tree::Created, None)
+            .map_err(|e| refuse_nothing(&e));
     }
     let entry = registry
         .entry("setup")
@@ -3891,16 +4506,16 @@ fn carry_at_creation(
         .resolve(&entry.timeout)
         .map(rk_ports::toolchain::StepBound::Secs)
         .map_err(|r| refuse(r.to_string()))?;
-    let inputs = BTreeMap::from([("projects".to_owned(), serde_json::Value::Array(projects))]);
-    chosen
-        .toolchain
-        .run_verb(&rk_ports::toolchain::VerbCall {
-            verb: "setup",
-            inputs: &inputs,
-            bound,
-        })
-        .map_err(|e| refuse(format!("{e:?}")))?;
-    Ok(())
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; `s8g` §8g.2 step 1.)* The call
+    // is the verify pass's `set_up`, so the witness the pass takes exists only once `setup` ran.
+    crate::verify_pass::set_up(
+        crate::verify_pass::Tree::Created,
+        Some((
+            chosen.toolchain.as_ref(),
+            &crate::verify_pass::SetupRequest { projects, bound },
+        )),
+    )
+    .map_err(|e| refuse(format!("{e:?}")))
 }
 
 /// **Roll back the FRESH run tree whose carry or `setup` failed** (D21-88 ruling 2; ADR-0180

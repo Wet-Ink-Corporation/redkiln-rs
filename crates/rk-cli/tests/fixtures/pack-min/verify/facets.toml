@@ -1,0 +1,36 @@
+# pack-min's VERIFY variant facet registry (`s8g` §8g.2; package S8G-P5-VERIFY-PASS, 2026-09-29):
+# the shared `facets.toml` with ONE delta, `check` added to the `stage` facet's values, because the
+# verify fixture names its one stage `check` (never `verify`: ADR-0162 decision 5).
+#
+# The smallest registry that declares every identifier any predicate in this fixture reads.
+#
+# `facet_from` REFUSES an entry with no `source`: ADR-0093 decision 1's five tokens are a closed set,
+# "and an absent one is not an empty one; both fail-closed lints are SCOPED by this key, so an entry
+# without it is read by neither".
+#
+# 🛑 NO `derived` AND NO `declared` FACET. A `declared` facet keying a require row is
+# `ProvenanceViolation::RequireKeyedOnDeclared`, and a lexical `derived` one is barred from keying a
+# row too — either would make this pack fail `lint --facet-provenance` for a reason having nothing to
+# do with what it is a fixture for.
+
+# `Item::new(id, kind)` binds `kind` AS A FACET — "that is where every pack's `applies` and every
+# activity's `kind:` tag reads it from" — so the registry must declare it.
+[facet.kind]
+values = ["bug", "story"]
+source = "human"
+
+[facet.stage]
+values = ["triage", "implement", "review", "check"]
+source = "kernel"
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
+source = "kernel"
+
+# THE ABSTENTION FACET. `gate-item.toml` omits it, so the item carries `with_facet_null` and the one
+# `require` row evaluates `Tri::Null` — which is what opens the gate.
+[facet.has_repro]
+values = [true, false]
+nullable = true
+source = "human"

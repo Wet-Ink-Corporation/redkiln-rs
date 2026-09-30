@@ -34,5 +34,6 @@ mod pack;
 mod registry;
 mod report;
 mod runner;
+mod selection;
 mod support;
 mod verbs;

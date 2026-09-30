@@ -1,0 +1,23 @@
+# `s8g`'s fixture pack for D21-120's pass-owed guard in `replay::resume` (R1 = ADR-0191 decision 1,
+# proposed: "stage completeness still requires its `artifact.write`"). *(Added 2026-09-29, s8g build,
+# package S8G-P5-VERIFY-PASS.)*
+#
+# `check` requires `TestReport`, which the test's registry makes `source = "pass"` and keyed by
+# toolchain, so the selector plans no catalog producer for it and the plan at `check` is EMPTY: the
+# first `next_action` is `AdvanceStage` (a successor supplied) or `Done` (none), the two arms the guard
+# sits in. The stage is named `check`, not `verify`, so nothing here can be satisfied by a stage literal
+# (ADR-0162 decision 5). `closeout` is the successor.
+[pack]
+id = "pass-owed-fixture"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { check = "mandatory", closeout = "optional" }
+stage_order = ["check", "closeout"]
+
+[stage.check]
+baseline = ["TestReport"]
+
+[retry]
+attempts_cap = 4

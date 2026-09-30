@@ -92,6 +92,7 @@ mod surface;
 mod toolchain;
 mod transcription;
 mod verb_rows;
+mod verify_pass;
 mod worktree_assigned;
 
 use std::path::{Path, PathBuf};

@@ -283,6 +283,14 @@ pub static RULES: &[Rule] = &[
         severity: Severity::Error,
         check: drift_kind,
     },
+    // *(dated 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS; `s8g` §8g.5's AC-349 row; R1 =
+    // ADR-0191 decision 10, proposed.)* 41 -> 42. `Error`: AC-349 names an equal-specificity tie
+    // *"a configuration error reported at plan time, never a silent choice"*.
+    Rule {
+        id: "RK-D-TOOLCHAIN-CLAIM-TIE",
+        severity: Severity::Error,
+        check: toolchain_claim_tie,
+    },
 ];
 
 /// Evaluate every rule in table order, into a [`super::Report`].
@@ -2323,6 +2331,51 @@ fn artifact_mutation(ctx: &Ctx) -> Vec<Finding> {
                     ),
                 )),
             }
+        }
+    }
+    out
+}
+
+/// A concrete path a glob matches: `**` spans no segment, `*` and `?` stand for `x`. The binder
+/// then decides the path exactly as the verify pass would.
+fn witness(pattern: &str) -> String {
+    pattern
+        .split('/')
+        .filter(|segment| *segment != "**")
+        .map(|segment| segment.replace(['*', '?'], "x"))
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// **`RK-D-TOOLCHAIN-CLAIM-TIE`** — AC-349's doctor row, an **error** (`s8g` §8g.5; R1 = ADR-0191
+/// decision 10, proposed): *"two toolchain claims matching the same changed path at equal
+/// specificity … is a configuration error reported at plan time … AND the error names both rules
+/// and the path"*. *(Added 2026-09-29, `s8g` build, package S8G-P5-VERIFY-PASS.)*
+///
+/// At configuration time there is no changed path, so every declared claim is instantiated as a
+/// witness path it matches, and each witness is bound by `rk_kernel::verify::claims::bind` — the
+/// verify pass's own binder — over the whole column. A tie is reported once per pair of rule ids,
+/// naming both and the witness path; a malformed column is one finding naming the file.
+fn toolchain_claim_tie(ctx: &Ctx) -> Vec<Finding> {
+    const ID: &str = "RK-D-TOOLCHAIN-CLAIM-TIE";
+    let claims = match &ctx.claims {
+        Ok(claims) => claims,
+        Err(e) => {
+            return vec![finding(
+                ID,
+                Severity::Error,
+                format!("the toolchain claims column does not load: {e}"),
+            )];
+        }
+    };
+    let mut seen: std::collections::BTreeSet<(String, String)> = std::collections::BTreeSet::new();
+    let mut out = Vec::new();
+    for claim in claims {
+        let path = witness(&claim.pattern);
+        if let Err(tie) = rk_kernel::verify::claims::bind(claims, &path)
+            && seen.insert((tie.first.rule_id(), tie.second.rule_id()))
+        {
+            out.push(finding(ID, Severity::Error, tie.to_string()));
         }
     }
     out

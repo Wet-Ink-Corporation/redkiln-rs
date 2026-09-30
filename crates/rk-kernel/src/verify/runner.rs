@@ -37,10 +37,16 @@ pub enum TestOrigin<'a> {
         activity_at_version: &'a str,
         step: &'a str,
     },
+    /// The verify pass's mutation harness, running one criterion's declared `suite` over its
+    /// declared patch in the ephemeral `<item>.mut` tree (`s8g` §8g.5; R1 = ADR-0191 decision 11,
+    /// proposed). *(dated 2026-09-29, s8g build, package S8G-P6-MUTATION-RESUME-DRIFT.)* Its row
+    /// is not the pass's whole-suite row, so AC-473's `origin = "pass"` reading never takes it.
+    Mutation { ac: &'a str },
 }
 
 impl TestOrigin<'_> {
-    /// The row's `origin` member: `"pass"`, or `"<activity>@<version>/<step>"`.
+    /// The row's `origin` member: `"pass"`, `"<activity>@<version>/<step>"`, or
+    /// `"mutation/<ac>"`.
     #[must_use]
     pub fn render(&self) -> String {
         match self {
@@ -49,6 +55,7 @@ impl TestOrigin<'_> {
                 activity_at_version,
                 step,
             } => format!("{activity_at_version}/{step}"),
+            Self::Mutation { ac } => format!("mutation/{ac}"),
         }
     }
 }

@@ -1,0 +1,9 @@
+# The verify fixture's item (`s8g` §8g.2). *(Added 2026-09-29, `s8g` build, package
+# S8G-P5-VERIFY-PASS.)* It enters the one-stage lane at `check`, whose required `TestReport` is
+# pass-sourced: the verify pass is the only thing that can let the lane end.
+id    = "verify-1"
+kind  = "bug"
+stage = "check"
+
+[facets]
+has_repro = true

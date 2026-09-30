@@ -1294,9 +1294,22 @@ pub struct RecordedRun {
     /// (the class, the token and the drifted artifact). `None` for every other terminal, `record`
     /// and `read_run` included — the explicit-carrier rule again.
     advance_refused: Option<String>,
+    /// *(dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; D21-120, TAKEN PROVISIONALLY
+    /// under D21-105; R1 = ADR-0191 decision 1, proposed.)* **The pass-sourced instances the
+    /// advance (or the lane's end) was refused over**: `selection.pass_sourced()` less every
+    /// instance with a journalled `artifact.write` for this item at this stage after the stage's
+    /// latest entry. Empty for every other terminal, `record` and `read_run` included.
+    pass_owed: Vec<crate::select::Instance>,
 }
 
 impl RecordedRun {
+    /// The pass-sourced instances this call's advance was refused over (D21-120): what `rk-cli`'s
+    /// pass for each kind still owes before the stage may advance or the lane may end.
+    #[must_use]
+    pub fn pass_owed(&self) -> &[crate::select::Instance] {
+        &self.pass_owed
+    }
+
     /// The drift check's named refusal, when [`resume`]'s advance was refused (`s8f` §8f.5).
     #[must_use]
     pub fn advance_refused(&self) -> Option<&str> {
@@ -1834,6 +1847,7 @@ pub fn record(inputs: &RunInputs, ports: Ports) -> Result<RecordedRun, ReplayErr
         advanced: None,
         lane_end: false,
         advance_refused: None,
+        pass_owed: Vec::new(),
     })
 }
 
@@ -2078,6 +2092,7 @@ pub fn resume_routed(
     let mut advanced: Option<String> = None;
     let mut lane_end = false;
     let mut advance_refused: Option<String> = None;
+    let mut pass_owed_out: Vec<crate::select::Instance> = Vec::new();
     loop {
         let state = fsm::fold(item.id(), &inputs.stage, &journal)?;
         let ctx = fsm_context(runtime, &item, &activations);
@@ -2134,6 +2149,17 @@ pub fn resume_routed(
             // The shape is `OpenGate`'s below, for its reason: the row is the boundary's, read back
             // off the journal rather than rebuilt here to agree with it.
             NextAction::AdvanceStage { to, .. } => {
+                // *(dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; D21-120, TAKEN
+                // PROVISIONALLY under D21-105; R1 = ADR-0191 decision 1, proposed.)* **A
+                // pass-sourced instance holds the advance** until its `artifact.write` is
+                // journalled: checked BEFORE `rt.step`, so a refusal takes no step, no commit, no
+                // mark and no row (ADR-0189 decision 4's refusal shape), and the loop breaks.
+                let owed = pass_owed(selection.pass_sourced(), item.id(), &inputs.stage, &journal);
+                if !owed.is_empty() {
+                    advance_refused = Some(pass_owed_refusal(&owed));
+                    pass_owed_out = owed;
+                    break;
+                }
                 let before = rt.journal(item.id())?.len();
                 let outcome = rt.step(&action, None, cap, now)?;
                 journal.extend(rt.journal(item.id())?.into_iter().skip(before));
@@ -2160,6 +2186,18 @@ pub fn resume_routed(
             // acted on here: the terminal `closed` mark follows the review pass the composition root
             // runs after this call (a blocking verdict is not an end).
             NextAction::Done => {
+                // *(dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; D21-120 item 1.)* A
+                // held lane end is not an end: with no successor, an owed pass-sourced instance
+                // refuses by name, exactly as the advance arm does.
+                if runtime.successor.is_none() {
+                    let owed =
+                        pass_owed(selection.pass_sourced(), item.id(), &inputs.stage, &journal);
+                    if !owed.is_empty() {
+                        advance_refused = Some(pass_owed_refusal(&owed));
+                        pass_owed_out = owed;
+                        break;
+                    }
+                }
                 lane_end = runtime.successor.is_none();
                 break;
             }
@@ -2178,7 +2216,67 @@ pub fn resume_routed(
         advanced,
         lane_end,
         advance_refused,
+        pass_owed: pass_owed_out,
     })
+}
+
+/// The class a pass-owed refusal is named by (D21-120 item 3).
+pub const PASS_OWED_CLASS: &str = "pass-owed";
+
+/// **What the pass still owes this stage** (D21-120 item 2): each `pass_sourced` instance with NO
+/// journalled `artifact.write` for `item` at `stage`, among the rows after the stage's latest entry
+/// (the last `stage_transition` whose `to` is `stage`). A row matches on its `kind` and, for a
+/// keyed instance, on its `key` member (ADR-0073's element). Classification is never read here:
+/// `rk-cli` seeds no `ArtifactState`, so a Classification-only guard would refuse for ever.
+fn pass_owed(
+    pass_sourced: &[crate::select::Instance],
+    item: &str,
+    stage: &str,
+    journal: &[Event],
+) -> Vec<crate::select::Instance> {
+    let str_of = |e: &Event, k: &str| {
+        e.payload
+            .get(k)
+            .and_then(serde_json::Value::as_str)
+            .map(ToOwned::to_owned)
+    };
+    let entry = journal
+        .iter()
+        .rposition(|e| {
+            e.kind == EventKind::StageTransition && str_of(e, "to").as_deref() == Some(stage)
+        })
+        .map_or(0, |at| at + 1);
+    let writes: Vec<&Event> = journal[entry..]
+        .iter()
+        .filter(|e| e.kind == EventKind::ArtifactWrite)
+        .filter(|e| str_of(e, "item").as_deref() == Some(item))
+        .filter(|e| str_of(e, "stage").as_deref() == Some(stage))
+        .collect();
+    pass_sourced
+        .iter()
+        .filter(|inst| {
+            !writes.iter().any(|e| {
+                str_of(e, "kind").as_deref() == Some(inst.kind.as_str())
+                    && inst
+                        .key
+                        .as_deref()
+                        .is_none_or(|key| str_of(e, "key").as_deref() == Some(key))
+            })
+        })
+        .cloned()
+        .collect()
+}
+
+/// The refusal's text: the class, then every owed instance as `<Kind>{<key>}` (D21-120 item 3).
+fn pass_owed_refusal(owed: &[crate::select::Instance]) -> String {
+    let named: Vec<String> = owed
+        .iter()
+        .map(|i| match &i.key {
+            Some(key) => format!("{}{{{key}}}", i.kind),
+            None => i.kind.clone(),
+        })
+        .collect();
+    format!("{PASS_OWED_CLASS}: {}", named.join(", "))
 }
 
 fn write_file(path: &Path, bytes: &[u8]) -> Result<(), ReplayError> {
@@ -2648,6 +2746,7 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         advanced: None,
         lane_end: false,
         advance_refused: None,
+        pass_owed: Vec::new(),
     })
 }
 

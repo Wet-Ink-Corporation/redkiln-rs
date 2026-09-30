@@ -54,3 +54,13 @@ options = ["close", "hold"]
 text = "No changeset exists yet, so the change deriver abstained. What kind of change is this item?"
 options = ["text", "binary", "generated"]
 binds = ["unknown_facet:change"]
+
+# (dated 2026-09-29, s8g build, package S8G-P6-MUTATION-RESUME-DRIFT; s8g section 8g.6; R1 = ADR-0191 decision 10,
+# proposed.) The eleventh: AC-357's question, declared once here in the file s8d's R5 fixes. No catalog step opens it:
+# the kernel mints the gate (rk_kernel::verify::ac_gate, kind = this id) when the verify pass's stage exit is refused,
+# for the first criterion neither pinned nor answered. Only `discriminates` is an answer the AC ledger reads
+# (human_answered); `does-not-discriminate` leaves the criterion unpinned and holds it by name. Its text is not taken
+# from spikes/p9, which declares no such question.
+[question."verify.ac-discriminates"]
+text = "No executable mutation pins this acceptance criterion. Does the named assertion discriminate it?"
+options = ["discriminates", "does-not-discriminate"]
