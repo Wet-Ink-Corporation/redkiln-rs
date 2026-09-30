@@ -870,10 +870,10 @@ unchanged across every `run` in this file (AC-518).
   step 2 — at the pin a gate is opened ONLY by iterating `selection.gates()`; a `StepKind::Gate` step inside an activity
   opens nothing, the loader maps it to `Evidence::HumanAnswer` and the runtime dispatches the whole activity to the
   harness [measured 2026-09-18, `crates/rk-kernel/src/workflow/fsm.rs`, `select/step2.rs`, `catalog.rs`]), under a
-  wall-clock bound of 30 s (Halt 5's alternative — the kill bound) **and an assertion that the binary exited within
+  wall-clock bound of 30 s (Halt 5's alternative — the kill bound) ~~**and an assertion that the binary exited within
   5 s** (the gate-only pack dispatches nothing, so a `sleep`, a channel wait or a socket poll of any human-visible
   length is red; the 30 s figure is the kill, the 5 s figure is the assertion — `ac404_…`'s 2 s bound is the same
-  shape) — the register's *fake clock* is not injectable into a spawned binary without a toggle AC-474 bars, so the
+  shape)~~ *(dated 2026-09-30, s8g build, package CI-AC403-8g.)* The 5 s figure failed on a loaded box with the binary unchanged: 6.2 s, 6.4 s and 9.4 s in Checkpoint 6's three whole runs at 4/4 threads (`s6`'s measurement note). The test alone took 5.03 s on 2026-09-30. The kill bound's expiry is now the assertion. The kill bound is `SPAWN_BOUND` (30 s), taken through `try_output_within`, under an asserted premise `10 × 30 s <= gate_deadline_secs` (900 s, read from the installed pack). So a run that waits for the answer, or waits out the deadline, is red. The `deadline` pin below, which the test had not carried, is now asserted. Stated loss: a BOUNDED wait under 30 s is no longer red at this test. A sleep is held by `clippy.toml`'s `disallowed-methods` rows. A timed channel or socket poll has no instrument (mutant M5, the test's doc comment). — the register's *fake clock* is not injectable into a spawned binary without a toggle AC-474 bars, so the
   bound replaces it and the deadline is asserted **structurally against the test's own clock reads around the spawn**:
   `t_before + gate_deadline_secs <= deadline <= t_after + gate_deadline_secs`, both reads test-side under the
   `#[expect(clippy::disallowed_methods, …)]` §7d.15 permits, so a `deadline` computed from anything but `now + the
@@ -2269,7 +2269,7 @@ test would accept.
 - `ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting` — AC-403, AC-240 (twin), D-01, H-5. Red by
   exit ≠ `0`, by no `Gate:` trailer on the run-owned branch's `HEAD`, by a `Gate:` trailer (or any commit) on the fixture
   checkout's `HEAD` (AC-518 — the breach `authorise_tier1_write` refuses), by no `gate_opened` row, by a wall clock over
-  the 5 s assertion (the 30 s figure is the kill), by a `deadline` outside `[t_before, t_after] + gate_deadline_secs`, or by a live descendant; a weaker red asserts the trailer without the exit code, or reads `HEAD` of the
+  ~~the 5 s assertion (the 30 s figure is the kill)~~ the 30 s kill bound, whose expiry is the assertion *(dated 2026-09-30, s8g build, package CI-AC403-8g; §7d.5's AC-403 bullet)*, by a `deadline` outside `[t_before, t_after] + gate_deadline_secs`, or by a live descendant; a weaker red asserts the trailer without the exit code, or reads `HEAD` of the
   checkout.
 - `ac404_rate_limited_writes_retry_mark_and_exits` — AC-404 (exit half). Red by exit ≠ `15`, by no mark, or by a wall
   clock over 2 s.

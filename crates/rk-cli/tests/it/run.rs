@@ -32,17 +32,30 @@ pub(crate) fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::pro
 /// `exit:0` is the default here because the lane cases are about **lane derivation**, not about
 /// what the child said: the child exits at once, the dispatch fails for want of a stream, and the
 /// worktree step (8) created — which is what those cases actually read — is already on disk.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS — golden constraint 4's 'a stub never replaced' is \
-              caught only by driving the real binary (s7d §7d.13's temp-repository rule)"
-)]
 pub(crate) fn spawn_run_in_mode(
     repo: &Path,
     item: &str,
     lane: Option<&str>,
     mode: &str,
 ) -> std::process::Output {
+    let mut cmd = run_command_in_mode(repo, item, lane, mode);
+    crate::support::output_bounded(&mut cmd)
+}
+
+/// The `Command` [`spawn_run_in_mode`] spawns, built and not yet spawned, so a test that must
+/// choose its own bound (`ac403_…`) spawns exactly the same invocation. *(dated 2026-09-30, s8g
+/// build, package CI-AC403-8g: split out of `spawn_run_in_mode`, whose body it was, unchanged.)*
+#[expect(
+    clippy::disallowed_types,
+    reason = "the verb is exercised AS A PROCESS — golden constraint 4's 'a stub never replaced' is \
+              caught only by driving the real binary (s7d §7d.13's temp-repository rule)"
+)]
+fn run_command_in_mode(
+    repo: &Path,
+    item: &str,
+    lane: Option<&str>,
+    mode: &str,
+) -> std::process::Command {
     let markers = repo.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
     let mut cmd = std::process::Command::new(crate::redkiln());
@@ -52,7 +65,7 @@ pub(crate) fn spawn_run_in_mode(
     }
     cmd.env("RK_FIXTURE_MODE", mode)
         .env("RK_FIXTURE_MARKER_DIR", &markers);
-    crate::support::output_bounded(&mut cmd)
+    cmd
 }
 
 /// **D18-8 — an empty `[packs] enabled` is a CONFIGURATION outcome, before any lane derivation.**
@@ -539,18 +552,97 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
 /// assertion here could not fail and is reported rather than written. `RK_FIXTURE_MODE` is still
 /// set on the spawn, because leaving it unset would make an UNEXPECTED dispatch hang for 600 s
 /// instead of failing fast (§7d.13).
+///
+/// # 🛑 THE BOUND IS A TENTH OF THE GATE'S OWN WAITING TIME, NOT A GUESS AT THE BOX'S SPEED
+///
+/// *(dated 2026-09-30, s8g build, package CI-AC403-8g.)* This asserted `elapsed < 5 s`. That figure
+/// was a guess at how fast the box is, and it failed on a loaded box with the binary unchanged:
+/// 6.2 s, 6.4 s and 9.4 s in Checkpoint 6's three whole runs at 4/4 threads, with the operator's IDE
+/// running. The same test alone took 1.57 s. The Checkpoint 8g formal run is at 2/2 threads.
+///
+/// What AC-403 rules out is waiting for an ANSWER, on a channel, prompt, socket or sleep. Nothing
+/// in this test ever answers. So a run that waits for the answer waits until the gate expires, and
+/// that is `gate_deadline_secs` (900 s in `pack.toml`), read from the pack this run reads.
+///
+/// The bound is now [`crate::support::SPAWN_BOUND`] (30 s), taken through `try_output_within`, and
+/// its expiry IS this assertion. The PREMISE `10 × bound <= gate_deadline_secs` is asserted, so a
+/// run that waits out the deadline cannot come in under it. The recorded `deadline` is also pinned
+/// to `[t_before, t_after] + gate_deadline_secs` (§7d.14's red, which this test had not carried).
+/// So the waiting time the bound is measured against is the one the run actually recorded.
+///
+/// What this gives up, stated: a BOUNDED wait shorter than 30 s is no longer red HERE. For a sleep,
+/// the instrument is `clippy.toml`'s `disallowed-methods` rows (`std::thread::sleep`,
+/// `tokio::time::sleep`). For a prompt, it is `ac403_no_blocking_stdin_read_in_rk_cli`. Stdin is
+/// `Stdio::null()` on this spawn, so a prompt never blocked here in the first place. A timed
+/// channel or socket poll (`recv_timeout`, a read timeout) of under 30 s has no instrument, and
+/// the 5 s figure had held that line only on an idle box.
 #[test]
 #[expect(
     clippy::disallowed_methods,
-    reason = "a test-side bound, not a decision (AC-001) — s7d §7d.15's form for §7d.14's bounds"
+    reason = "test-side clock reads, not a decision (AC-001) — s7d §7d.15's form for §7d.14's \
+              bounds: the elapsed time reported, and the two unix-second reads the recorded \
+              deadline is pinned between"
 )]
 fn ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting() {
     let repo = pack_min_repo(PackVariant::Base);
     let root = repo.path();
 
+    // (2a) THE WAITING TIME, from the pack this run reads (the installed copy's one root key).
+    let pack_src = std::fs::read_to_string(root.join(".redkiln").join("packs").join("story.toml"))
+        .expect("the installed pack is readable");
+    let deadline_lines: Vec<&str> = pack_src
+        .lines()
+        .filter(|l| l.trim_start().starts_with("gate_deadline_secs"))
+        .collect();
+    assert_eq!(
+        deadline_lines.len(),
+        1,
+        "the installed pack carries {} `gate_deadline_secs` lines, expected its one root key",
+        deadline_lines.len()
+    );
+    let gate_deadline_secs: i64 = deadline_lines[0]
+        .split_once('=')
+        .and_then(|(_, v)| v.trim().parse().ok())
+        .expect("`gate_deadline_secs = <integer>`");
+    let bound = crate::support::SPAWN_BOUND;
+    let bound_secs = i64::try_from(bound.as_secs()).expect("30 fits an i64");
+    assert!(
+        bound_secs.saturating_mul(10) <= gate_deadline_secs,
+        "PREMISE: the bound ({bound:?}) is not at most a tenth of the gate's waiting time          ({gate_deadline_secs} s), so a run that waits out the deadline could exit inside it.          `PackVariant::Base` must install `pack.toml` (900 s), not a short-deadline variant"
+    );
+    let unix_secs = || {
+        i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("the clock is after the unix epoch")
+                .as_secs(),
+        )
+        .expect("a unix second fits an i64")
+    };
+
+    let t_before = unix_secs();
     let started = std::time::Instant::now();
-    let out = spawn_run_in_mode(root, "gate-1", None, "exit:0");
+    // (2) IT DID NOT WAIT. Golden constraint 2: no channel, prompt, socket or sleep on any arm. The
+    //     bound's expiry is the assertion. See the doc comment's dated paragraph for why this is
+    //     not a fixed figure.
+    let out = crate::support::try_output_within(
+        &mut run_command_in_mode(root, "gate-1", None, "exit:0"),
+        bound,
+    )
+    .unwrap_or_else(|t| {
+        panic!(
+            "`run` was still running at {:?} and was killed. That is a tenth of the {} s the gate \
+             stays open for, and nothing in this test answers it. An open gate is an EXIT, not a \
+             wait (AC-403).\n--- stdout ---\n{}\n--- stderr ---\n{}",
+            t.after,
+            gate_deadline_secs,
+            String::from_utf8_lossy(&t.stdout),
+            String::from_utf8_lossy(&t.stderr)
+        )
+    });
     let elapsed = started.elapsed();
+    let t_after = unix_secs();
+    eprintln!("ac403: `run` exited in {elapsed:?} against a {bound:?} bound");
     let stderr = String::from_utf8_lossy(&out.stderr);
     let stdout = String::from_utf8_lossy(&out.stdout);
 
@@ -561,11 +653,8 @@ fn ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting() {
         "an open gate is exit 0. stderr:\n{stderr}\nstdout:\n{stdout}"
     );
 
-    // (2) IT DID NOT WAIT. Golden constraint 2: no channel, prompt, socket or sleep on any arm.
-    assert!(
-        elapsed < std::time::Duration::from_secs(5),
-        "the run took {elapsed:?}; an open gate is an EXIT, not a wait"
-    );
+    // ~~(2) the 5 s wall-clock assertion~~ *(dated 2026-09-30, s8g build, package CI-AC403-8g:
+    // moved to the spawn, where the bound's expiry is the assertion; see the doc comment.)*
 
     // (3) THE EVENT. Read from the store the run wrote, not from what it printed.
     let rows = crate::support::journal_rows(root, "gate-1");
@@ -604,6 +693,19 @@ fn ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting() {
         .get("token")
         .and_then(serde_json::Value::as_str)
         .expect("the gate row carries its token");
+    // (3a) THE DEADLINE IS `now + gate_deadline_secs`, so (2)'s bound was measured against the
+    //      waiting time the run actually recorded. *(dated 2026-09-30, s8g build, CI-AC403-8g.)*
+    let deadline = tokened[0]
+        .payload
+        .get("deadline")
+        .and_then(serde_json::Value::as_i64)
+        .expect("the runtime's gate row carries its deadline in unix seconds");
+    assert!(
+        t_before.saturating_add(gate_deadline_secs) <= deadline
+            && deadline <= t_after.saturating_add(gate_deadline_secs),
+        "the gate row's deadline ({deadline}) is not `now + gate_deadline_secs` for any `now` in \
+         [{t_before}, {t_after}] with gate_deadline_secs = {gate_deadline_secs} (s7d §7d.14)"
+    );
 
     // (4) THE TRAILER, on the RUN-OWNED worktree's HEAD — and it carries the row's own token, so
     //     the commit and the event are about the same gate rather than two coincidences.

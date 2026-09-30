@@ -469,8 +469,13 @@ jobs:
           # 2026-09-17 (Step 7c stage-open, s7c §7c.1 RT-13): the anchored lint-controls exclusion. The adapters'
           # committed positive controls (crates/<crate>/tests/fixtures/lint-controls/*.rs) carry banned tokens on
           # purpose -- they are the bans' instruments, not violations. Anchored on the path prefix grep prints.
+          # (dated 2026-09-30, s8g build, package CI-AC403-8g; D21-128; Weigh-In wi-b248cd, decision C.) The comment
+          # filter the paragraph above describes was NOT in this pipeline: at 89eb1fb it read 4, and all 4 were comment
+          # lines naming the token (D21-128's "Measured and not disposed of"). Restored as the last filter, the same
+          # regex as Checkpoint 6's git line (s6), byte for byte.
           bad=$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE "^${wrapper}:" \
-                | grep -vE '^crates/[^/]+/tests/fixtures/lint-controls/' || true)
+                | grep -vE '^crates/[^/]+/tests/fixtures/lint-controls/' \
+                | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)
           if [ -n "$bad" ]; then
             echo "FAIL: Command::new(\"git\") outside the wrapper:"
             printf '%s\n' "$bad"

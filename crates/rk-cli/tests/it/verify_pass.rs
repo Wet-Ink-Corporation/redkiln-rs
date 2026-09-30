@@ -2297,8 +2297,10 @@ fn ac353_killed_verify_resumes_to_the_same_decision() {
 
 /// The fixture's git, through `rk-git`'s one process-exec site (`git_exec::run`), as `s8d`'s
 /// `verb_rows` helper does. *(dated 2026-09-30, s8g build, package R1FIX-8g: this was a process
-/// `Command` for `git` of its own, which Checkpoint 6's workspace-wide `Command::new("git")` line reads;
-/// routed through the wrapper so `s8g` adds no site to it.)*
+/// `Command` for `git` of its own, which Checkpoint 6's workspace-wide git-spawn line reads;
+/// routed through the wrapper so `s8g` adds no site to it.)* *(dated 2026-09-30, s8g build, package
+/// CI-AC403-8g; Weigh-In wi-b248cd, decision C: reworded so this comment no longer quotes that line's
+/// token.)*
 fn git_out(cwd: &Path, args: &[&str]) -> String {
     rk_git::git_exec::run(cwd, args)
         .unwrap_or_else(|e| panic!("git {args:?} in {} failed: {e:?}", cwd.display()))
