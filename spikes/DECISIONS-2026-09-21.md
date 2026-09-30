@@ -1,4 +1,8 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-121), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-123), and what they license
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-122)"**; `D21-123` is appended with this move.)*
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-121)"**; `D21-122` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-120)"**; `D21-121` is appended with this move.)*
 
@@ -5197,3 +5201,84 @@ keyed `TestReport`, ADR-0073's per-instance expansion kept them from contending.
 - Not re-homing `unit-tests-ue` contradicts N23 and fails Checkpoint 8g (7d).
 
 **Reversal.** Remove the keying line, revert the record amendment, and take the tie-break.
+
+---
+
+## D21-122 · `s8g`: the keyed `TestReport` write carries a `key` member and refuses a second key by name; ADR-0191 supersedes ADR-0189 decision 8's member list in part
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-85edf4** (two-way door, judgment; defaulted to A). The ruling moves an accepted Decision, so a `proposed` record,
+ADR-0191, carries it. Under D21-105 AFK rule 4, that record flips at `s8g`'s close only if the operator has not
+objected in this ledger. The ruling is on the review packet's confirm list.
+
+**The blocker.** Package S8G-P5 raised it.
+- ADR-0189 (accepted) decision 8 lists the `artifact.write` row *"with these members"*: kind, item, stage, run,
+  schema_version, digest, path. None of them is a key.
+- D21-120 matches a keyed instance on its key.
+- P5 built `rk_store::render::ArtifactWriter::write_keyed` provisionally. It writes the same `<Kind>.json` sidecar and
+  one row with an added `key` member.
+
+The residual as built: on a two-toolchain item, the second keyed write replaces the first key's sidecar while both rows
+stand. D21-120's guard is then satisfied for a key whose bytes are gone, which is the silent stand-in ADR-0073
+forbids.
+
+**Ruled** (blocker panel, option 1′, unanimous):
+1. **Keep the carrier.** Only `write_keyed` writes the `key` member. `write` is unchanged, and an unkeyed row has no
+   `key`.
+2. **Refuse a second key.** `write_keyed` refuses, by name and before any write, when the stage run already holds a
+   keyed `artifact.write` of the same kind with a different `key`. The refusal is
+   `RenderError::KeyedSidecarCollision { kind, prior_key, key }`, for example *"keyed-sidecar-collision:
+   TestReport{node} after TestReport{rust}"*. Nothing is written and no row is appended.
+   - The verify pass maps it to `Refused::Write`, so a two-toolchain item holds its stage by name and the guard keeps
+     owing the second key.
+   - A later write with the same key still replaces the sidecar, as decision 3 reads.
+   - `served`'s key-blind replay match is unchanged. At most one key per kind per stage run can now exist, and its doc
+     comment says so.
+3. **Test it red first.** Two `write_keyed` calls with different keys: the second is refused, only one row exists, and
+   the first sidecar is intact. A mutant drops the check.
+4. **Records.** ADR-0191 (proposed) adds `0189` to its `supersedes`, in part, for decision 8's member list only (one
+   additive member on keyed rows). Decision 3 stands. ADR-0189's `superseded_by` gains `0191` at ADR-0191's flip.
+
+**Unreachable on shipped lanes today.** rk-cli sets no item toolchain set (0 `with_toolchain(` call sites), so
+`TestReport` expands unkeyed there.
+
+**Reversal.** Delete the collision check and `write_keyed`, and take option 4: refuse keyed owed instances until a
+record decides per-key sidecars.
+
+---
+
+## D21-123 · `s8g`: mutation feasibility ships as a `mutation` declaration row in `[toolchain.rust]`, read by step 6 beside the pack's `[mutation]`
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-d4a46f** (two-way door, judgment; defaulted to A).
+
+**The gap.** Package S8G-P6 reported it. ADR-0192 (proposed) decision 2 reads *"The mutation declaration's shipped home
+is the Rust row of ADR-0170's per-toolchain table, with `feasible = true`"*. Nothing ships that row, and neither shipped
+pack declares `[mutation]`. Step 6 reads the pack's `[mutation]` table. So on the shipped packs, a lane whose `Spec`
+carries criteria would be refused at verify by name (AC-337).
+
+**Ruled** (blocker panel, option 1 tightened, as all three judges agreed):
+1. **The registry row.** One declaration row goes in `[toolchain.rust]` of `.redkiln/registry.toml`, in the only shape
+   the loader admits (`{value, source}`):
+   `mutation = { value = { feasible = true }, source = "ADR-0104 decision 1 …; ADR-0192 decision 2; D21-42 4a" }`.
+   It carries no `reason`. A dated comment cites ADR-0192 decision 2 and ADR-0170 decision 9: *"Adding a row is a
+   record's act"*.
+2. **No Node row.** A declaration key cannot carry `unmeasured`, and a value would be a guess. A dated comment says the
+   row is owed with the first Node self-hosting run. Until then a Node lane with criteria stays refused by name.
+3. **Admission.** `memo::DECLARATION_ROWS` gains `"mutation"` (3 → 4). The `verb_registry` pin and Checkpoint 8c's
+   enumeration each admit it by a dated line.
+4. **The reader.** Step 6 reads the registry row through the adapter the pass ran under (`toolchain_of`), the same way
+   set-up reads `setup_projects`, so the kernel never sees `rust`. It keeps the pack's `[mutation]` table as a second
+   reader.
+   - Registry only, pack only, or both equal: that value is used.
+   - Both present but different: refused by name (`Exit::ConfigError`).
+5. **Tests.** Red-first tests cover:
+   - a shipped Rust lane with criteria, not refused for feasibility;
+   - the disagreement refusal;
+   - a Node lane with criteria, refused by name.
+
+   Mutants cover the registry read dropped and the disagreement check dropped.
+6. **Records.** No accepted Decision moves: ADR-0170 decision 9 admits new declaration rows by record. ADR-0192
+   (proposed) decision 2 is carried out as written.
+
+**Reversal.** Remove the row and the registry reader, and amend ADR-0192 decision 2 to name the pack's table (option 2).
