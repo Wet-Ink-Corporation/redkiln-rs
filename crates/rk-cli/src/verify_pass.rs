@@ -70,8 +70,12 @@ pub struct SetupRequest {
     pub bound: StepBound,
 }
 
-/// **The witness that the tree the pass runs in is set up** (§8g.2 step 1). Only [`set_up`] makes
-/// one, so the pass cannot be called on a created tree whose `setup` did not run or failed.
+/// **The witness that the tree the pass runs in is set up** (§8g.2 step 1). Two constructors make
+/// one. [`set_up`] runs `setup` on a CREATED tree, and returns no witness when it fails, so the pass
+/// cannot be called on a created tree whose `setup` failed. [`reused`] makes one with no `setup`
+/// call, and it is only for a tree the run-worktree entry reports as RE-ENTERED
+/// (`Creation::Reused`), whose `setup` ran at its creation (N25). *(Corrected 2026-09-30, `s8g`
+/// build, package R2FIX-8g: this doc read "Only [`set_up`] makes one".)*
 #[derive(Debug)]
 pub struct SetUp {
     _private: (),

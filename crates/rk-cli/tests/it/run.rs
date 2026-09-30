@@ -558,7 +558,9 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
 /// *(dated 2026-09-30, s8g build, package CI-AC403-8g.)* This asserted `elapsed < 5 s`. That figure
 /// was a guess at how fast the box is, and it failed on a loaded box with the binary unchanged:
 /// 6.2 s, 6.4 s and 9.4 s in Checkpoint 6's three whole runs at 4/4 threads, with the operator's IDE
-/// running. The same test alone took 1.57 s. The Checkpoint 8g formal run is at 2/2 threads.
+/// running. The same test alone took 1.57 s (package D21128-8g's reading) and 5.03 s (package
+/// CI-AC403-8g's, `s7d` §7d.5's dated note), both on 2026-09-30 on this box, so a solo timing
+/// varies about threefold. The Checkpoint 8g formal run is at 2/2 threads.
 ///
 /// What AC-403 rules out is waiting for an ANSWER, on a channel, prompt, socket or sleep. Nothing
 /// in this test ever answers. So a run that waits for the answer waits until the gate expires, and
@@ -608,7 +610,9 @@ fn ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting() {
     let bound_secs = i64::try_from(bound.as_secs()).expect("30 fits an i64");
     assert!(
         bound_secs.saturating_mul(10) <= gate_deadline_secs,
-        "PREMISE: the bound ({bound:?}) is not at most a tenth of the gate's waiting time          ({gate_deadline_secs} s), so a run that waits out the deadline could exit inside it.          `PackVariant::Base` must install `pack.toml` (900 s), not a short-deadline variant"
+        "PREMISE: the bound ({bound:?}) is not at most a tenth of the gate's waiting time \
+         ({gate_deadline_secs} s), so a run that waits out the deadline could exit inside it. \
+         `PackVariant::Base` must install `pack.toml` (900 s), not a short-deadline variant"
     );
     let unix_secs = || {
         i64::try_from(

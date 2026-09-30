@@ -5504,3 +5504,17 @@ also reads 0 with no ci.yml edit"*.
 - The step's own comment says *"The trailing `grep -vE` drops COMMENT lines"*, but its pipeline carries no such
   filter.
 - `ci.yml` is unedited here. The disposition goes to the panel.
+
+*(dated 2026-09-30, s8g build, package R2FIX-8g; refuting round 2's major.)* **(B)'s census function had put
+`git ls-files` LEFT of a pipe**, Halt 8's PIPE-STATUS shape. `python runbook/tools/check-checkpoints.py` printed
+`runbook/phase-1/s6-store-and-git.md:255  [PIPE-STATUS]  git ls-files 'crates/*/src/*.rs' ...` and `flagged 1`
+(it read `flagged 0` at `178868f`), which breaks INDEX check 4 (`# exit 0`) and Checkpoint 8j (9). The census
+is rewritten in Halt 8's own capture form, by a dated in-place edit in `s6` under D21-47:
+`cp6_prod_files=$(git ls-files ...); rc=$?`, with its rc and non-emptiness asserted at top level, and the
+function pipes the capture through `printf`. The regex, both exclusions, the admission table and the three
+planted controls are unchanged, and a fourth planted control (an empty listing) must refuse. The checker's
+allowlist is NOT widened (still 20 entries). Measured after the edit: `scanned 7006 executable lines in fenced
+bash blocks; flagged 0; allowlist 20 entries`, rc 0. The Checkpoint 6 Command-site lines, extracted from `s6`'s
+bytes and run read-only, exit 0. Three controls exit 1 on their own FAIL lines: an empty listing, a failed
+listing (`exited 128`), and a planted spawn in an unlisted file (the census inequality). The ruling itself does
+not move.

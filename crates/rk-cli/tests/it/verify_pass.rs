@@ -860,65 +860,60 @@ fn ac320_unresolved_inputs_refuse_before_any_port_call() {
     assert_eq!(tc.calls(), vec!["test"]);
 }
 
-/// A `Tracker` that counts every call.
-#[derive(Default)]
-struct CountingTracker {
-    calls: AtomicUsize,
+/// The body of the top-level `fn <name>(` in `src`: from its signature line to the first
+/// column-0 `}` after it. Panics if the function is absent or the slice is empty, so a renamed
+/// function cannot leave the sweep below reading nothing.
+fn fn_body<'a>(src: &'a str, name: &str) -> &'a str {
+    let head = format!("\nfn {name}(");
+    let start = src
+        .find(&head)
+        .unwrap_or_else(|| panic!("no top-level `fn {name}(` in the source"))
+        + 1;
+    let len = src[start..]
+        .find("\n}\n")
+        .unwrap_or_else(|| panic!("`fn {name}(` has no column-0 closing brace"));
+    let body = &src[start..start + len];
+    assert!(body.lines().count() > 3, "`fn {name}(` read as {body:?}");
+    body
 }
 
-impl rk_ports::tracker::Tracker for CountingTracker {
-    fn project(&self, _item: &str) -> Result<rk_ports::tracker::ExternalRef, StepError> {
-        self.calls.fetch_add(1, Ordering::SeqCst);
-        Err(StepError::Unsupported {
-            capability: "project".to_owned(),
-        })
-    }
-    fn inbox(&self) -> Result<Vec<rk_ports::tracker::TypedInput>, StepError> {
-        self.calls.fetch_add(1, Ordering::SeqCst);
-        Ok(Vec::new())
-    }
-}
+/// The pass's row sink, as `verify_pass::run` takes it.
+type Append<'a> = &'a mut dyn FnMut(Event) -> Result<(), String>;
+/// `verify_pass::run`'s signature, pinned: no `Tracker` among its parameters (AC-341).
+type PassEntry = fn(
+    &dyn Toolchain,
+    &verify_pass::SetUp,
+    &PassInputs<'_>,
+    Append<'_>,
+    &dyn ReportWriter,
+) -> PassResult;
+/// `verify_pass::run_gated`'s signature, pinned the same way.
+type GatedPassEntry = fn(
+    &dyn Toolchain,
+    &verify_pass::SetUp,
+    &PassInputs<'_>,
+    Append<'_>,
+    &dyn ReportWriter,
+    &mut dyn FnMut(&TestOutcome) -> verify_pass::StepSix,
+) -> PassResult;
+/// What both entries return.
+type PassResult = Result<Verdict, Refused>;
 
-/// **The pass calls no `Tracker` method** (AC-341's port-call half): run with a counting `Tracker`
-/// in the `Ports` value beside the toolchain, green and red, and the count stays zero. The pass
-/// takes no `Tracker` at all, and its code lines name none (the static floor, with a control).
+/// **The pass names no `Tracker`** (AC-341's port-call half, STRUCTURAL). *(Restated 2026-09-30,
+/// `s8g` build, package R2FIX-8g; refuting round 2: the counting `Tracker` this test used to build
+/// never reached the pass, so its zero count held by construction and is dropped.)* The claim is
+/// what can be observed on the tree. (a) The pass's two entries, `verify_pass::run` and
+/// `verify_pass::run_gated`, take no `Tracker`: the coercions below pin both signatures, so a new
+/// parameter fails to compile. (b) No CODE line of the pass names one. The sweep covers all of
+/// `verify_pass.rs` and the lane's half of the pass in `verbs/run.rs`, `serve_pass` and
+/// `verify_step_six`. A `Tracker` call needs a `Tracker` value, and naming one needs a code line
+/// that says `tracker` or `Tracker`. Phase 1's `Tracker` port has no status-check surface at all
+/// (`project` and `inbox`). The CI-green integration half is Phase 3's (AC-508).
 #[test]
 fn ac341_the_pass_calls_no_tracker_method() {
-    let tracker = Arc::new(CountingTracker::default());
-    for script in [
-        Script::Ran {
-            passed: 2,
-            failed: 0,
-        },
-        Script::Ran {
-            passed: 1,
-            failed: 1,
-        },
-    ] {
-        let ports = rk_ports::root::Ports {
-            store: Arc::new(Mutex::new(rk_ports::fakes::VecStore::default())),
-            harness: Arc::new(rk_ports::fakes::FakeHarness::scripted(Vec::new())),
-            tracker: Arc::clone(&tracker) as Arc<dyn rk_ports::tracker::Tracker>,
-            docs: Arc::new(rk_ports::fakes::RecordingDocs::default()),
-            toolchain: Arc::new(Counting::new(script)),
-        };
-        let (verdict, _) = pass_over(
-            ports.toolchain.as_ref(),
-            &Instance::of("TestReport"),
-            Some(&[]),
-            Some(verify_pass::PASS_POLICY),
-            &Recording::default(),
-        );
-        assert!(verdict.is_ok(), "{verdict:?}");
-    }
-    assert_eq!(
-        tracker.calls.load(Ordering::SeqCst),
-        0,
-        "the pass called the Tracker"
-    );
+    let _run: PassEntry = verify_pass::run;
+    let _run_gated: GatedPassEntry = verify_pass::run_gated;
 
-    let src = std::fs::read_to_string(crate::src_dir().join("verify_pass.rs"))
-        .expect("verify_pass.rs reads");
     let hits = |text: &str| {
         text.lines()
             .map(str::trim_start)
@@ -926,20 +921,52 @@ fn ac341_the_pass_calls_no_tracker_method() {
             .filter(|l| l.contains("Tracker") || l.contains("tracker"))
             .count()
     };
+    // CONTROL: a planted code-line hit counts, and the same words in prose do not.
     assert_eq!(
         hits("// the Tracker is named in prose\nlet t = ports.tracker;\n"),
         1,
         "CONTROL"
     );
+    let pass = std::fs::read_to_string(crate::src_dir().join("verify_pass.rs"))
+        .expect("verify_pass.rs reads");
+    let run_rs = std::fs::read_to_string(crate::src_dir().join("verbs").join("run.rs"))
+        .expect("verbs/run.rs reads");
+    // CONTROL: the extractor finds a planted hit inside a function body, and stops at its brace.
+    let planted = "fn a() {}\nfn serve_pass(\n    x: u8,\n) {\n    let _ = tracker.inbox();\n}\nfn b() { tracker }\n";
     assert_eq!(
-        hits(&src),
-        0,
-        "verify_pass.rs names a Tracker on a code line"
+        hits(fn_body(planted, "serve_pass")),
+        1,
+        "CONTROL: extractor"
     );
+    let serve = fn_body(&run_rs, "serve_pass");
+    let six = fn_body(&run_rs, "verify_step_six");
+    // The slices are the real functions: each carries a line the pass cannot lose.
+    assert!(
+        serve.contains("recorded.pass_owed()"),
+        "serve_pass slice: {serve}"
+    );
+    assert!(
+        six.contains("verify_pass::criteria_of("),
+        "verify_step_six slice"
+    );
+    for (what, text) in [
+        ("verify_pass.rs", pass.as_str()),
+        ("run.rs serve_pass", serve),
+        ("run.rs verify_step_six", six),
+    ] {
+        assert_eq!(hits(text), 0, "{what} names a Tracker on a code line");
+    }
 }
 
-/// **AC-348: the selection is recomputed from `verify_completed` alone** — the row's recorded
-/// selection, reason and path list rebuild the `Selection` the port was handed, byte for byte.
+/// **AC-348: the selection is recomputed from `verify_completed` alone, on its WholeSuite arm.**
+/// The row's recorded selection and `basis_reason` rebuild the `Selection` the port was handed, byte
+/// for byte, and the row's path list reads back verbatim. *(Narrowed 2026-09-30, `s8g` build,
+/// package R2FIX-8g; refuting round 2.)* This doc used to say the path list also rebuilds the
+/// selection. It does not: the WholeSuite recompute is a function of the reason alone. Under
+/// `PASS_POLICY` the Phase-1 pass always requests the whole suite, so no Affected-basis row exists
+/// to recompute from its paths, and that arm is not claimed here. The Affected selection's
+/// determinism is pinned in `rk-adapter-toolchain-rust`, by
+/// `selection::ac348_selection_is_byte_identical_over_200_change_sets`.
 #[test]
 fn ac348_selection_is_recomputed_from_verify_completed() {
     let tc = Counting::new(Script::Ran {
@@ -1087,8 +1114,14 @@ fn the_lane_reaches_the_pass_through_verbs_run_run() {
     assert_eq!(landed, Some(0), "the TestReport is landed on rk-run/{ITEM}");
 }
 
-/// **`setup` precedes the pass's one `test` call on a fresh tree, and a failed `setup` leaves
-/// zero** (§8g.2 step 1; D21-43 N25; M17).
+/// **`setup` precedes the pass's one `test` call on a created tree, and a failed `setup` makes no
+/// witness** (§8g.2 step 1; D21-43 N25; M17). This test runs no lane and creates no run worktree.
+/// It checks the WITNESS ordering over `verify_pass::set_up` and `verify_pass::run`: the pass
+/// takes a `&SetUp`, and a failed `setup` returns none, so no `test` call can follow it.
+/// *(Reworded 2026-09-30, `s8g` build, package R2FIX-8g.)* The fresh-run half (`setup` at creation, a
+/// failed `setup` refusing the run by name) is `s8d-ii`'s
+/// `run_worktree::creation_carries_worktreeinclude_files_and_runs_setup` and
+/// `run_worktree::a_failed_setup_refuses_by_name`.
 #[test]
 fn setup_precedes_the_whole_suite_in_a_fresh_run_worktree() {
     let request = SetupRequest {
@@ -1257,8 +1290,9 @@ fn admissibility_repo(with_row: bool) -> tempfile::TempDir {
 /// **N24's row is read on the lane** (D21-43 N24; R2 = ADR-0192 decision 5; `s8g` §8g.3's "the pass
 /// runs the ledger and the admissibility check (§8g.2, step 6)"). Through `verbs::run::run`, a
 /// committed `Spec` whose criterion has no `verification`, under a pack whose policy requires one at
-/// the stage, is HELD before the ledger: a named non-zero exit, no `TestReport`, no stage-exit
-/// refusal, no AC-357 gate. The CONTROL, the same spec with the row absent, is not refused by the
+/// the stage, is HELD before the ledger: a non-zero exit, no `TestReport`, no stage-exit
+/// refusal, no AC-357 gate. The hold is NAMED: the binary, over a fresh copy of the fixture, prints
+/// a refusal naming AC-901 and the policy on stderr. The CONTROL, the same spec with the row absent, is not refused by the
 /// policy and reaches the ledger. *(Added 2026-09-30, `s8g` build, package R1FIX-8g: round 1's
 /// finding that `verify_step_six` never called `admissibility::admissible`.)*
 #[test]
@@ -1279,6 +1313,42 @@ fn n24_a_verification_less_criterion_is_held_at_verify_through_the_lane() {
         "the ledger was reached: the admissibility check runs before it"
     );
     assert!(ac_gates(root).is_empty(), "AC-357's gate was opened");
+
+    // NAMED. *(Added 2026-09-30, `s8g` build, package R2FIX-8g; refuting round 2: the held arm
+    // asserted a bare non-zero exit, and nothing read the refusal's text.)* An in-process run's
+    // stderr cannot be captured, so the binary runs (`redkiln_run`, AC-353's spawn) over a FRESH
+    // copy of the same fixture, and its stderr must name the criterion and the policy.
+    let named = |with_row: bool| {
+        let repo = admissibility_repo(with_row);
+        let out = support::output_bounded(&mut redkiln_run(repo.path()));
+        (
+            out.status.code(),
+            String::from_utf8_lossy(&out.stderr).into_owned(),
+        )
+    };
+    let (code, err) = named(true);
+    assert_eq!(
+        code,
+        Some(Exit::NonZero.code()),
+        "the binary holds too:\n{err}"
+    );
+    assert!(
+        err.contains("redkiln: held: the verify stage exit was refused:")
+            && err.contains("AC-901")
+            && err.contains("requires a verification"),
+        "the hold names AC-901 and the pack's verification_required policy:\n{err}"
+    );
+    // CONTROL: without the row, the binary's stderr carries no such refusal.
+    let (code, err) = named(false);
+    assert_eq!(
+        code,
+        Some(0),
+        "CONTROL: the binary reaches AC-357's gate:\n{err}"
+    );
+    assert!(
+        !err.contains("requires a verification"),
+        "CONTROL: the refusal text appears without the policy row:\n{err}"
+    );
 
     // CONTROL: the row absent — the same spec is not refused by the policy and reaches the ledger.
     let bare = admissibility_repo(false);

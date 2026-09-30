@@ -201,6 +201,12 @@ and N23's precedent moves activities whole. X9 decided the whole-activity readin
      *(dated 2026-09-30, `s8g` build, package R1FIX-8g, refuting round 1; this record `proposed`.)* **Two readings, stated.** (1) The review pass's two re-execution arms (`review_pass::ToolchainReExecutor`, ADR-0162 decision 4's four-cell confirmation at the candidate and at an ephemeral merge-base reference tree) call `Toolchain::test` directly and journal no row: their record is the sealed `ReExecutionRecord`, and a row for the reference arm would carry a `range` and `paths` that do not describe the tree it ran in. *"Whatever activity or pass made it"* is read as the verify pass, the mutation harness and a catalog step's `toolchain:test`. Reversal: route both arms through `run_test` with `origin` `review/<arm>`. (2) *"Its refusal is the `StepError` row"* is the catalog executor's row (`runtime::activity::error_row`, stamped for the breaker's fold); the verify pass's unverifiable call writes no row, and its refusal is the named exit (`serve_pass`). An error row of the pass's own is owed to whichever record wants one. `s8g` §8g.4 carries the same note.
    - **`origin`** is `"pass"` for the pass's call and `"<activity>@<version>/<step>"` for a catalog step's call;
      **`stage`** is the node's stage name, carried as data and never compared (this is not selection).
+     *(dated 2026-09-30, `s8g` build, package R2FIX-8g, refuting round 2; this record `proposed`.)* **A third value:
+     `"mutation/<ac>"`** for the mutation harness's call (decision 11; `rk_kernel::verify::runner::TestOrigin::Mutation`,
+     written by `crate::verify_pass::mutate`). This list had named two values while the built harness writes a third,
+     and decision 11's build note (*"its row's `origin` is `mutation/<ac>`, never `pass`"*) was its only record.
+     No reading moves. AC-473's and AC-485's identity readings filter on `origin = "pass"` (decision 9), so a
+     mutation row is never read as the pass's.
    - **`adapter`** is the name `real_toolchain`'s `detect()` loop chose, supplied by `rk-cli` as an opaque value; the
      kernel never compares it (AC-487).
    - **It is item-scoped.** Its interim `item` key rides beside the event on ADR-0182's carrier (the `t2_event.item`

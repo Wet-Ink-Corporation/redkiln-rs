@@ -233,8 +233,10 @@ where
 /// key, which rides BESIDE the payload on ADR-0182's carrier (D21-46 R3), cannot be put in it, and
 /// neither can a `runner` (D21-48 X15: the runner rides on the report, through `report_digest`).
 ///
-/// - `origin` is `"pass"` for the verify pass's call and `"<activity>@<version>/<step>"` for a
-///   catalog step's call; `stage` is the node's stage name, carried as data and never compared.
+/// - `origin` is `"pass"` for the verify pass's call, `"<activity>@<version>/<step>"` for a
+///   catalog step's call, and `"mutation/<ac>"` for the mutation harness's call (ADR-0191
+///   decisions 8 and 11; added 2026-09-30, `s8g` build, package R2FIX-8g); `stage` is the node's
+///   stage name, carried as data and never compared.
 /// - `adapter` is the name `detect()` chose, opaque to the kernel (AC-487).
 ///
 /// *(Added 2026-09-29, `s8g` build, package S8G-P2-RKTYPES.)*

@@ -251,8 +251,25 @@ test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exe
 # (std::process::Command, tokio::process::Command) under Cargo.toml's [workspace.lints.clippy] all = deny: every site
 # answers it with its own #[expect(clippy::disallowed_types, reason = ...)], as ci.yml has said since 7c. A record
 # that moves ADR-0127's API amends this table in the same commit. Reversal (D21-128's): restore the struck line.
+# ~~cp6_prod_census() {~~
+# ~~  git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \~~
+# ~~  | xargs grep -nE 'std::process::Command|tokio::process::Command' \~~
+# ~~  | grep -vE '^crates/rk-git/src/git_exec\.rs:' \~~
+# ~~  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | cut -d: -f1 | sort | uniq -c | awk '{ print $2" "$1 }' | sort~~
+# ~~}~~
+# (dated 2026-09-30, s8g build, package R2FIX-8g; refuting round 2's major: the struck function put
+# `git ls-files` LEFT of a pipe, Halt 8's PIPE-STATUS shape, and runbook/tools/check-checkpoints.py went from
+# flagged 0 to flagged 1, which breaks INDEX check 4 and Checkpoint 8j (9).) The listing is now captured in
+# Halt 8's own form, `out=$(cmd); rc=$?`, and its rc and non-emptiness are asserted at top level, so a failed
+# or empty listing halts the checkpoint rather than reaching the census; the function pipes the capture. The
+# regex, both exclusions, the table and the three planted controls below are unchanged. A fourth planted control
+# feeds the same guard an empty listing and requires it to refuse.
+cp6_prod_files=$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs'); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$cp6_prod_files" ] || { echo "FAIL: git ls-files over crates/*/src exited $rc or listed nothing; the census would be vacuous"; exit 1; }
+cp6_ctl_files=$(git ls-files 'crates/*/src/cp6_no_such_dir/*.rs'); rc=$?
+! { [ "$rc" -eq 0 ] && [ -n "$cp6_ctl_files" ]; } || { echo "FAIL: PLANTED CONTROL: the listing guard admitted an empty listing"; exit 1; }
 cp6_prod_census() {
-  git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
+  printf '%s\n' "$cp6_prod_files" \
   | xargs grep -nE 'std::process::Command|tokio::process::Command' \
   | grep -vE '^crates/rk-git/src/git_exec\.rs:' \
   | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | cut -d: -f1 | sort | uniq -c | awk '{ print $2" "$1 }' | sort
@@ -445,6 +462,8 @@ n=$(grep -c '^      - name:' .github/workflows/ci.yml); test "${n:-0}" -ge 11 ||
 >
 > Before the routing, the amended lines over the unrouted `66c9c6c` tree read 16 and FAILED (rc 1), which is the red.
 > The whole block: three formal runs through the no-dispatch wrapper at 4/4, extracted from this file's bytes (no line of it runs a redkiln binary or mutates git, so none was skipped), each exited 1 at a whole-suite cargo test line on ONE test, the 5 s-bound `run::ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting` (6.2 s, 6.4 s and 9.4 s, each 309 passed / 1 failed), with the operator's IDE running; re-run alone it passes (1 passed, 1.57 s). A DIAGNOSTIC copy skipping only that test in the two whole-suite runs exited 0 and reached its end marker, S-GIX line printed, so every other line, both Command-site lines included, passes. NOT a formal pass: Checkpoint 8g (12)'s replay owns that. *(dated 2026-09-30, s8g build, package CI-AC403-8g.)* That test's 5 s wall-clock assertion is replaced by the 30 s kill bound, premised on `10 × 30 s <= gate_deadline_secs`. See `s7d` §7d.5's AC-403 bullet.
+>
+> *(dated 2026-09-30, `s8g` build, package R2FIX-8g; refuting round 2's major.)* The census function first put `git ls-files` LEFT of a pipe, Halt 8's PIPE-STATUS shape, and `runbook/tools/check-checkpoints.py` read `flagged 1` (INDEX check 4 and Checkpoint 8j (9) require `flagged 0`). The listing is now captured as `cp6_prod_files=$(git ls-files ...); rc=$?`, and its rc and non-emptiness are asserted at top level; the function pipes the capture. The struck function stays in the block. A fourth planted control feeds the guard an empty listing. The checker's allowlist is not widened. It reads `flagged 0; allowlist 20 entries`, rc 0. The lines, run read-only from this file's bytes, exit 0. The empty-listing, failed-listing and planted-unlisted-spawn controls each exit 1 on their own FAIL line.
 
 The verdict and floor lines make "a **written S-GIX result**" checkable instead of aspirational, and the
 `hooksPath`/`ifexists` greps make two of ADR-0105's rules a build-time fact rather than a sentence. "We built the hybrid so we
