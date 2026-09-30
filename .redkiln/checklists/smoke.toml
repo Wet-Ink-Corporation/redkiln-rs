@@ -1,0 +1,101 @@
+# checklist:smoke — read by smoke-test/smoke through the `smoke` verb (s8g §8g.6; R4 = ADR-0194 decision 2, proposed;
+# the item form is record V's, ADR-0170 decision 4: id, argv, cwd, expect_exit, stdout_contains).
+# Authored 2026-09-29 (s8g build, package S8G-P7-DEMANDS). EVERY expectation below was measured on the binaries built in
+# a private worktree of this repository (target/wt-s8g-p7 at b5b7305, `cargo build -p rk-cli -p redkiln-migrate --bins`),
+# each row run with its cwd an empty scratch directory OUTSIDE every repository, and again at record V's placement
+# (`<git-common-dir>/redkiln/tmp/smoke-1` of a throwaway repository): the same exit and stdout at both.
+# No item dispatches (no `run`), none reaches the network, and every cwd is `scratch`, the handler's own directory
+# outside `.redkiln/worktrees/<item>` (D21-44). argv[0] is a binary of the declared release set (`package_binaries`).
+# NOT HERE, and why (measured): `redkiln init` and `redkiln status` exit 3 in the handler's scratch ("git is not usable
+# here": the scratch is an empty directory, not a repository, and record V's handler runs no git), so §8g.6's
+# "`redkiln -C <scratch> init`, then `status`" rows are owed to a ruling (package S8G-P7-DEMANDS's blocker), not
+# written with an inverted expectation.
+
+source = "runbook/phase-1/s8g-verify-and-restored-demands.md section 8g.6, 'The first cut': redkiln --version; redkiln-migrate --version; redkiln --help, naming the nine verbs (cli.rs: 'The nine verbs, and no others'); redkiln-migrate with no arguments, exiting clap's 2 (RT-53). Each expectation measured on the built binary before it was written."
+
+[[item]]
+id              = "redkiln-version"
+argv            = ["redkiln", "--version"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "redkiln 0.0.0\n"
+
+[[item]]
+id              = "redkiln-migrate-version"
+argv            = ["redkiln-migrate", "--version"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "redkiln-migrate 0.0.0\n"
+
+# `redkiln --help` names the nine verbs: one item per verb, each predicate the verb's own line prefix under `Commands:`.
+[[item]]
+id              = "redkiln-help-names-run"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  run      "
+
+[[item]]
+id              = "redkiln-help-names-answer"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  answer   "
+
+[[item]]
+id              = "redkiln-help-names-status"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  status   "
+
+[[item]]
+id              = "redkiln-help-names-explain"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  explain  "
+
+[[item]]
+id              = "redkiln-help-names-cost"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  cost     "
+
+[[item]]
+id              = "redkiln-help-names-doctor"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  doctor   "
+
+[[item]]
+id              = "redkiln-help-names-init"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  init     "
+
+[[item]]
+id              = "redkiln-help-names-catalog"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  catalog  "
+
+[[item]]
+id              = "redkiln-help-names-lint"
+argv            = ["redkiln", "--help"]
+cwd             = "scratch"
+expect_exit     = 0
+stdout_contains = "\n  lint     "
+
+# clap writes the usage error to stderr (measured: stdout empty), so this row's assertion is its exit, 2 (RT-53); its
+# one stdout predicate is the empty string, which every stdout contains.
+[[item]]
+id              = "redkiln-migrate-no-args-exits-2"
+argv            = ["redkiln-migrate"]
+cwd             = "scratch"
+expect_exit     = 2
+stdout_contains = ""

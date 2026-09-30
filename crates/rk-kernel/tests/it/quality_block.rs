@@ -596,6 +596,10 @@ fn d2_severity_only_predicates_load() {
 /// refused=0 indeterminate=0`, from `checks=93 refused=0 indeterminate=39` before the edit]:
 /// `migration-dry-run`'s `policy` check step is deleted (class B), as §8d.3a (b) predicted, and no
 /// shipped `expr` reads `findings` any more (`reads_findings` 39 → 0), so no step is indeterminate.
+/// *(dated 2026-09-29, `s8g` build, package S8G-P7-DEMANDS; D21-46 R6; R4 = ADR-0194 decision 1,
+/// proposed.)* Now **93** [measured 2026-09-29 from inside this binary: `check_steps_walked: 93`,
+/// `refused: 0`, `indeterminate: 0`]: `smoke-test@2` gains its `passing` check (`smoke.status ==
+/// 'passing'`), which reads no `findings`. Was 92.
 #[test]
 fn ac527_empty_set_terminal_condition() {
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
@@ -607,7 +611,7 @@ fn ac527_empty_set_terminal_condition() {
         "the count walked comes first: a rule over zero check steps refuses nothing — {report:?}"
     );
     assert_eq!(
-        report.check_steps_walked, 92,
+        report.check_steps_walked, 93,
         "every check step carrying an `expr` in `.redkiln/catalog` is walked: {report:?}"
     );
     assert_eq!(

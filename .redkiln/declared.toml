@@ -1,0 +1,8 @@
+# This repository's declaration of its `source = "declared"` facets (.redkiln/facets.toml), read by `redkiln run`
+# into every item's context vector (R5 = ADR-0195 decision 5, proposed; added 2026-09-29, s8g build, package
+# S8G-P8-TAG-RELEASE-AND-MOVES). One `<facet> = "<value>"` per declared, single-valued facet; a facet not named here
+# is `null` on the item. `surfaces` keeps ADR-0089's own declaration map and is not declared here.
+#
+# `release_form`: this repository is a CLI. It has no production to deploy to, and its release is a local annotated
+# tag `rk-release/<item>` on the landed commit (D21-42 6b), made by `tag-release` (.redkiln/catalog-extended/).
+release_form = "tag"

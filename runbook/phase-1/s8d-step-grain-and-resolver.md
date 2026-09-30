@@ -1803,6 +1803,49 @@ false`. Measured through the no-dispatch helper: **`LANE_WALK fix walked=11 refu
 moved in the same change. Checkpoint 8d (6a)'s floors, 10 and 8, still hold. `smoke-test`'s flip to **walks** and
 `tag-release` replacing `rolling-deploy` are the rest of move 1, and are the `s8g` packages' that build them (R4, R5).
 
+*(dated 2026-09-29, `s8g` build, package S8G-P7-DEMANDS; `s8g` §8g.1 move 1 and §8g.6; D21-46 R6; D21-73 item 4; R4 =
+ADR-0194 decisions 1-3, proposed.)* **`s8g`'s second row move, made: `smoke-test` walks on both lanes, and the fix
+lane's `confirmation-test` walks.** `.redkiln/checklists/smoke.toml` is authored and `[checklist.smoke]` names it, so
+`checklist:smoke` resolves and the step reaches the port (the rig's `LaneToolchain` now answers `smoke` passing, as it
+answers `sca_scan` clean); `smoke-test@2`'s `passing` check reads the status. `confirmation-test@2`'s composing emit
+reads `artifact:ReproCase.command` and `artifact:Changeset.sha`, the sources its `before` step's inputs read, in place of
+`${before.outputs.selection}` and `${before.outputs.sha}` (D21-73 item 4, settled by the catalog edit). Measured through
+the no-dispatch helper: **`LANE_WALK fix walked=13 refused=1`** (`rolling-deploy`) and **`LANE_WALK story walked=10
+refused=3`** (`bdd-scenarios`, `docs-update`, `rolling-deploy`); the claims read **13 of 14** and **10 of 13**. The two
+`lane_walk` tests' `verify` rows moved in the same change. Checkpoint 8d (6a)'s floors, 10 and 8, still hold. Still
+owed: `tag-release` replacing `rolling-deploy` (R5's package), and the story lane's `bdd-scenarios` and `docs-update`,
+which refuse on the `lint` port's missing output (D21-73 item 4's second half), returned to the orchestrator unruled by
+package S8G-P7-DEMANDS.
+
+*(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; `s8g` §8g.1 move 1 and §8g.7; R5 = ADR-0195
+decisions 1-5, proposed.)* **`s8g`'s third row move, made: `tag-release` replaces `rolling-deploy` on both lanes'
+`release` rows, and walks.** Each lane item now carries `[trial] activity = "tag-release"`, as `s8j`'s lane items do, so
+the rig's catalog is the shipped one plus the ONE extended activity the kernel's `catalog::admit_trial` admits from
+`.redkiln/catalog-extended/` (as `rk-cli`'s `catalog_sources` composes it); the repository's `.redkiln/declared.toml`
+declares `release_form = "tag"`, which `tag-release`'s `applicable_if` reads, so step 4 chooses it (rank 5) over
+`rolling-deploy` (rank 10). No shipped deploy activity is edited. The rig binds the `git` route to a tag-free double
+(`LaneGit`); `rk-cli`'s real handler is proved by `rk-cli`'s `tag_release::` tests. Measured through the no-dispatch
+helper, both tests `ok`: **`LANE_WALK fix walked=14 refused=0`** and **`LANE_WALK story walked=11 refused=2`**
+(`bdd-scenarios`, `docs-update`). The rows as measured, stage by stage:
+- fix: `analysis` `minimal-repro`, `root-cause`; `specification` `fix-spec`; `implement` `tdd-red-green-refactor`,
+  `change-summary`; `verify` `confirmation-test`, `sca-scan`, `smoke-test`; `review` `adversarial-review`; `release`
+  `build-package`, `tag-release`; `closeout` `debt-logging`, `lightweight-retro`, `closure-record` — fourteen rows, all
+  walking.
+- story: `specification` `bdd-scenarios` (refuses: `policy` cannot resolve `${gherkin-lint.outputs}`); `planning`
+  `t-shirt-sizing`; `implement` `docs-update` (refuses: `policy` cannot resolve `${lint.outputs}`),
+  `tdd-red-green-refactor`, `change-summary`; `verify` `sca-scan`, `smoke-test`; `review` `adversarial-review`; `release`
+  `build-package`, `tag-release`; `closeout` `debt-logging`, `lightweight-retro`, `closure-record` — thirteen rows,
+  eleven walking.
+
+**The claims, restated from those rows:** **14 of 14** (fix lane) and **11 of 13** (story lane), not the drafted
+*"14 of 14 / 12 of 12"*: the story lane keeps thirteen rows (`docs-update` at `implement` since F3-D2174), and its two
+refusals are D21-73 item 4's `lint` output, returned unruled by package S8G-P7-DEMANDS. `equivalence-boundary` is
+selected at no stage of either lane; the `implement` rows are unchanged, because the re-homed escalation is keyed on
+`criticality >= high` and both lanes carry `criticality = low`; `integration-tests` is in neither table, its only demand
+being `story.toml`'s `external_dep` row and both lanes reading `external_dep = false`. Checkpoint 8d (6a)'s floors, 10
+and 8, still hold (14 and 11). With this line, move 1's three row changes are all made; Checkpoint 8d stays provisional
+until Checkpoint 8g (12) re-runs it whole.
+
 ### 8d.10 Tests, red first, and the mutants that must die
 
 Every test below is authored, run, and **watched fail for the right reason** before the code it pins

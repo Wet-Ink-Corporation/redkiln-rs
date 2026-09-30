@@ -354,6 +354,20 @@ line in the earlier stage's file, in that commit:
      not 13 of 15 and 11 of 13. The fix lane's `confirmation-test` and the story lane's `bdd-scenarios` and `docs-update`
      refuse on D21-73 item 4, which this stage owns, beside `smoke-test` and `rolling-deploy`. The claims after this
      stage are recomputed from those rows, as this move's own rule says.
+   - *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195 decisions 1-5, proposed.)*
+     **Move 1, made whole, and the claims recomputed from the measured rows.** Package S8G-P4-PACK-REHOME took
+     `equivalence-boundary` out of both `verify` rows; package S8G-P7-DEMANDS flipped `smoke-test` (both lanes) and the
+     fix lane's `confirmation-test` to **walks**; this package replaced `rolling-deploy` with `tag-release` on both
+     `release` rows (each lane item's `[trial] activity = "tag-release"` admits it from `.redkiln/catalog-extended/`, and
+     `.redkiln/declared.toml`'s `release_form = "tag"` makes its `applicable_if` hold, so step 4 chooses it at rank 5).
+     `build-package` and `tag-release` both **walk**. Measured through the no-dispatch helper, both `lane_walk` tests
+     `ok`: **`LANE_WALK fix walked=14 refused=0`** and **`LANE_WALK story walked=11 refused=2`**. The claims therefore
+     read **14 of 14** (fix lane) and **11 of 13** (story lane); the drafted *"12 of 12"* does not follow from the rows:
+     the story lane keeps `docs-update` at `implement` (thirteen rows since F3-D2174), and `bdd-scenarios` and
+     `docs-update` still refuse on D21-73 item 4's `lint` output, which package S8G-P7-DEMANDS returned unruled.
+     `implement` is unchanged (the escalation is keyed on `criticality >= high`, both lanes `low`), `equivalence-boundary`
+     is selected at no stage, and `integration-tests` is in neither table (`external_dep = false` on both). Checkpoint
+     8d (6a)'s floors of 10 and 8 hold. `s8d` §8d.9 carries the dated line with every measured row.
 2. **`s8e`'s interim-key list.** `fsm::every_item_scoped_kind_carries_the_interim_item_key` *"iterates
    `EventKind::ALL` against that list, so a kind added later without a decision fails it"*. `verify_completed` is such
    a kind, so this stage's variant turns the test red until the list names it. R1 names the kind item-scoped, with its
@@ -410,6 +424,28 @@ their stage files fit (each by a dated receiver note), and `bisect`'s registry r
   over the run branch's diff). Checkpoint 8d (6a)'s floors are 10 and 8 (D21-75). The remaining refusals and their
   owners are D21-75's: `confirmation-test`, `bdd-scenarios`, `docs-update`, `smoke-test` and `rolling-deploy` here, and
   `debt-logging` and `closure-record` at `s8f`.
+
+*(dated 2026-09-29, `s8g` build, package S8G-P7-DEMANDS; the receiver note above, D21-73 items 4 and 5.)* **The
+disposition of the four hand-offs.**
+- **`confirmation-test`'s emit fields: settled here, by the catalog edit.** `confirmation-test@2`'s composing emit
+  reads `command = "artifact:ReproCase.command"` and `sha = "artifact:Changeset.sha"` (the sources its `before` step's
+  inputs read) in place of `${before.outputs.selection}` and `${before.outputs.sha}`; R4 = ADR-0194 decision 3's dated
+  note records the choice and the rejected route (widening `TestOutcome`). The fix lane's `lane_walk` row flipped to
+  walks in the same change (`s8d` §8d.9's S8G-P7-DEMANDS line).
+- **The `lint` port's output: NOT settled; returned to the orchestrator with options, unruled.** Measured:
+  `Toolchain::lint` returns `Result<(), StepError>` (`crates/rk-ports/src/toolchain.rs`), with **17** implementations
+  across the workspace (`grep -rn "fn lint(" crates` → 17); the shipped `lint` row declares `outputs = "LintReport"`,
+  route `port`; `rk-types` has no `LintReport`; `bdd-scenarios` (`gherkin-lint`) and `docs-update` (`lint`) read
+  `lint.errors.len() == 0`, and neither adapter's `lint` lints Gherkin or docs. The widening is a port and type decision
+  that neither this file nor R4 carries, so the story lane stays **10 of 13** (both refuse by name), not 13 of 13.
+- **`bisect`'s registry row: NOT written; returned with options, unruled.** `spikes/p9/registry.toml` gives
+  `bisect = { outputs = "BisectReport", live = false, timeout = "test_timeout" }`; ADR-0170 decision 1's row also needs
+  `inputs`, `route` and `side_effecting`, and no handler exists to fix the inputs (a `toolchain` row's inputs are *"the
+  names its Rust handler reads"*). It moves no lane count: `bisect` is selected on neither lane, and a verb with no row
+  and a `toolchain` row no adapter implements both refuse by the bare name `bisect`. Adding the row also moves
+  `rk-kernel`'s `verb_registry::SHIPPED_ROWS` (13 → 14).
+- **`package_binaries`: cited, unchanged** (`[toolchain.rust]`'s `["redkiln", "redkiln-migrate"]`, ADR-0179 decision 4).
+  `demands::build_artifact_carries_release_digests` asserts `package` is handed exactly that set; M9 killed.
 
 *(dated 2026-09-28, `s8e` build, package S8E-D2194-ENTRY; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-95
 item 2.)* **The shipped catalog's missing `Findings` producer is owed here.** D21-95 item 2: *"the shipped review
@@ -1058,6 +1094,40 @@ running it at creation is `s8d-ii`'s. This stage asserts that the pass's whole s
 
 *(dated 2026-09-29, s8g build, package S8G-P6-MUTATION-RESUME-DRIFT; R1 = ADR-0191 decision 10, proposed.)* **Declared, and move 4 measured.** `.redkiln/processes/questions.toml` gains `[question."verify.ac-discriminates"]` once (its eleventh entry, under a dated comment), with `options = ["discriminates", "does-not-discriminate"]`; `spikes/p9` declares no such question, so its text is this stage's. Only `discriminates` is an answer the ledger reads. **`s8d`'s loader test does not pin the total**: `processes::the_lanes_nine_gate_questions_and_the_change_question_load_from_redkiln_processes` reads *"The total is NOT pinned at ten"* and prints the count rather than asserting it, and Checkpoint 8d (9) asserts each of its ten ids once, which an eleventh leaves true; so move 4 takes no dated edit of that test. `verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry` loads the shipped registry (the question, its two options, `question_for` binding its own id), copies the SHIPPED file into a verify fixture, opens the gate through the lane and answers `discriminates` through the `redkiln answer` binary (exit 0, one `gate_answered` reading `discriminates`, no void); its CONTROL, the same fixture without the file, refuses the option (exit 2, no answer row). Red: *"`verify.ac-discriminates` is not declared under .redkiln/processes/"*. **The gate class's spelling, handed to `s8h` by name** (§8g.11): `rk_kernel::verify::ac_gate::AC_GATE_KIND` = `verify.ac-discriminates`, the one `MINTED_CLASSES` names; its expiry row in both packs stays `s8h` §8h.10's.
 
+*(dated 2026-09-29, `s8g` build, package S8G-P7-DEMANDS; R4 = ADR-0194 decisions 1-6 and their dated notes, proposed;
+D21-46 R6; D21-73 item 4.)* **The four demands, built.** Each is walked from the SHIPPED activity under `s8d`'s resolver,
+through `rk-cli`'s own `tool_routing` over this repository's `.redkiln/registry.toml` and `rk-store`'s writer, over a
+recording `Toolchain` double (the handlers are record V's, cited): `crates/rk-cli/tests/it/demands.rs`, nine tests, all
+green, each one of `T_CLI`'s thirty-nine (Checkpoint 8g (5)), so the `NEW` count (70) and the floor (1313) do not move.
+- **SmokeResult.** `.redkiln/checklists/smoke.toml` is authored in record V's item form, twelve items, each expectation
+  measured on binaries built in the private worktree `target/wt-s8g-p7` (at `b5b7305`), each row run in an empty
+  directory outside every repository and again at record V's `<git-common-dir>/redkiln/tmp/smoke-1` placement of a
+  throwaway repository, the same exit and stdout at both: `redkiln --version` (`redkiln 0.0.0\n`), `redkiln-migrate
+  --version`, nine `redkiln --help` items (one per verb), `redkiln-migrate` with no arguments (exit 2; stdout empty,
+  so its one predicate is the empty string). **Not written, measured:** `redkiln init` and `redkiln status` both exit
+  **3** in the handler's scratch (*"git is not usable here"*), because record V's scratch is an empty directory, its
+  handler runs no git, and `argv[0]` must be a binary the build produced; the first cut's *"`redkiln -C <scratch>
+  init`, then `status`"* rows are returned to the orchestrator with options. `[checklist.smoke]` flipped to `path =
+  "checklists/smoke.toml"` (the replaced `unauthored` line kept in a dated comment). `smoke-test` 1 → 2 with its
+  `passing` check (step ids `build smoke passing emit`) and a `smoke-test@2` row in `.redkiln/CHANGELOG.md`.
+  **A shape gap, measured:** the resolver hands `checklist:smoke` to the port as `{ key, path, content, digest }`
+  (ADR-0173) and record V's Rust `smoke` handler reads `checklist` as a list of items; the real handler, handed the
+  shipped checklist's envelope in a private-worktree probe, answers *"smoke refused (input-malformed): the `checklist`
+  input: invalid type: map, expected a sequence"*. The double parses the envelope's `content`; the bridge is returned to
+  the orchestrator with options, unruled.
+- **ConfirmationResult.** Settled by `confirmation-test@2` (§8g.1's dated disposition above).
+- **ScanReport.** The walk over `s8b`'s `sca-scan@2` opens `scan.accept-findings` on a high finding and on an unrated
+  advisory alone (the `clean` check journalled `false`), and emits without a gate on a clean scan (`clean` `true`).
+- **BuildArtifact.** `package` is handed `binaries = ["redkiln", "redkiln-migrate"]` (the shipped `package_binaries`
+  row through `rk-cli`'s `row_inputs_for`) and the reviewed `Changeset`'s sha; one `BuildArtifact` write with exactly
+  that set.
+- **The same change moves:** `rk-kernel`'s `lane_walk` rows (move 1: `smoke-test` walks on both lanes, the fix lane's
+  `confirmation-test` walks; `LANE_WALK fix walked=13 refused=1`, `story walked=10 refused=3`, `s8d` §8d.9's dated line);
+  `source_registry::the_catalog_source_census_is_fifty_with_fourteen_declared` (`smoke` resolves to its path; its items
+  asserted in record V's five-key form), two `reference_resolver::` assertions that used the shipped `checklist:smoke`
+  as their `unauthored` example, and `quality_block::ac527_empty_set_terminal_condition` (check steps 92 → 93), each by
+  dated edit.
+
 ### 8g.7 `tag-release` — a CLI's release, entered by ADR-0114's trial (D21-42 6b)
 
 **What ReleaseRecord is.** 6b: *"a release tag on the landed commit, plus the BuildArtifact digest and the rollback
@@ -1151,6 +1221,16 @@ absent at Checkpoint 8f's close, stop**: this stage does not choose a second pat
 its row there too.
 
 *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R3 = ADR-0193 decisions 1 and 2, proposed.)* **`GitOp::Tag` and `GitOp::Apply` built, red first.** Both are writes on the enumerated set (`GitOp::ALL` 27 → 29), read back by name (`tag`, `apply`); `Tag` runs under clause 2's empty `core.hooksPath` (a tag moves a ref, which runs `reference-transaction`). `rk_git::release::tag_release` makes one annotated, unsigned, local `rk-release/<item>` on a commit of `rk-run/<item>` (`merge-base --is-ancestor`, a read), idempotent at the same commit, and refuses by name (`GitError::ReleaseRefused { OffRunBranch | TaggedElsewhere }`) before `git tag` runs; it re-reads the tag. `rk_git::mutation::apply` applies a patch on stdin (`GitOps::run_with_stdin`, journalled without its input) in `RunTree::mutation` only, the `<item>.mut` path `derive` gives. No push variant. Reds: `gitops::tag_is_on_the_enumerated_write_set` and `gitops::apply_is_on_the_enumerated_write_set` *"left: None right: Some(Tag)"* / *"… Some(Apply)"*, `gitops::tag_refuses_a_target_off_the_run_owned_branch` *"… not refused by name: Err(Spawn { detail: "unbuilt" })"*; `gitops::the_write_set_has_no_push` was green on arrival and is kept as a pin with its planted control. The rollback-target read and the `ReleaseRecord` composition stay the `release_tag` handler's (`rk-cli`).
+
+*(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195 decisions 1-6, proposed, with its dated note.)* **`tag-release` built end to end under the fixture harness, red first.** What landed:
+- **The `git` route's seam** (`rk-kernel`): `runtime::step::GitRoute`, bound by `ToolRouting::with_git_route`; the unbound default `UnboundGitRoute` refuses by name (*"`release_tag` takes the `git` route, and no git-route handler is bound for this run"*), never empty. The executor's `Route::Git` arm, ~~refused naming the route until `s8g`~~, now serves the step's resolved inputs through the seam and types the output through the closed decode table (`ReleaseTag`). `tool_verb_routing::a_row_whose_route_has_no_executor_refuses_naming_the_route`'s `git` needle moved `s8g` → `no git-route handler is bound` by dated edit.
+- **The handler** (`rk-cli`, `src/release_tag.rs`, bound in `run`'s composition root over the checkout): reads the rollback target first through `GitOp::Log` (`--decorate-refs=refs/tags/rk-release/ --simplify-by-decoration`; the landed commit itself skipped; a first release names `none`), then tags through `rk_git::release::tag_release` (`GitOp::Tag`), which is idempotent at the same commit and refuses `tagged-elsewhere` / `off-run-branch` by name. No push anywhere.
+- **The activity**, `.redkiln/catalog-extended/tag-release.toml` (`tag-release@1`): `tag` (`toolchain:release_tag`, inputs `build = "artifact:BuildArtifact"`, `sha = "artifact:Changeset.sha"`), `named` (check, *"`release.tag != '' and release.rollback_target != ''`"*, `on_false = "fail"`), and a composing `emit` of `ReleaseRecord = { tag, target, rollback_target, binaries = "artifact:BuildArtifact.binaries" }` (the BuildArtifact's per-binary `sha256` digests; ADR-0195's dated note gives the reading). `applicable_if = "release_form != null and release_form == 'tag'"`, `family = "deploy-pattern"`, `method_rank = 5`; no shipped deploy activity edited.
+- **The trial**: `ItemRecord` gains `[trial] activity` (`TrialDecl`, `deny_unknown_fields`) and `Resolved` its `trial`; the kernel's `catalog::admit_trial` returns the ONE extended source it names (refusing by name one that names no extended activity, or a shipped one), and `rk-cli`'s `catalog_sources(root, trial)`, now `pub`, appends it, so `base_inputs`' recorded catalog is the one selected over. **AC-110**: `through_step_seven` refuses an enabled pack whose `[activity.<id>]` names an extended activity, exit 3, through `run::extended_references`.
+- **The facet**: `[facet.release_form]` (`["deploy", "tag"]`, `source = "declared"`) in `.redkiln/facets.toml`; this repository's `.redkiln/declared.toml` declares `release_form = "tag"`, read by `Registry::declared_values` and carried by `build_item` (a facet the file does not name stays `null`).
+- **The goals** (7b) and **the changelog rows** `tag-release@1`, `bug-standard (pack)`, `story (pack)` (7c).
+- **Red, each for its own reason** (`--test it`, through the no-dispatch helper, before the code): six walk tests on the admission stub *"the trial admits tag-release"* (`release_record_tags_the_landed_commit_locally`, `rollback_target_is_the_previous_release_tag`, `first_release_names_its_rollback_target_as_none`, `release_record_carries_the_build_artifact_digest`, `the_tag_is_never_pushed`; `trial_runs_one_activity_with_zero_dispatches` *"the declaring item's run admits tag-release"*); `a_lane_run_admits_the_trial_activity_only_on_the_declaring_item` *"`rel-1`'s catalog carries [], not tag-release alone … selected ["build-package", "rolling-deploy"]"*; `an_enabled_pack_referencing_the_extended_activity_is_refused` *"a pack referencing the extended tag-release was not refused with exit 3 (AC-110)"*; `selection_picks_tag_release_over_the_deploy_patterns` *"the repository's declared.toml does not reach the item's context — left: Some(Null)"*; the two `lane_walk` tests *"`release` selected ["build-package", "rolling-deploy"], and §8d.9's table says ["build-package", "tag-release"]"*. **Green**: `tag_release::` `9 passed; 0 failed`, `lane_walk::` `2 passed; 0 failed`.
+- **What the tests are not**: an in-process composition (`run`'s steps (1)-(7), `run`'s catalog composition, the kernel's selection, `rk-cli`'s routing and git route, `rk-store`'s writer, a recording toolchain double and a counting harness over an empty script) in temporary repositories whose bare `origin` receives nothing; not `verbs::run::run` over a whole lane. The real trial is `s8j`'s. `git tag -l 'rk-release/*'` in this repository read empty before and after.
 
 ### 8g.8 The records this stage writes
 
@@ -1250,6 +1330,10 @@ and each must turn its named test red. A survivor blocks the close.
 *(dated 2026-09-29, s8g build, package S8G-P6-MUTATION-RESUME-DRIFT.)* **M11 and M12 killed, with five demonstration reds**, from `D:/repos/redkiln-sev/afk-tools/sp/s8g/s8g-p6-S8G-P6-mutants.py` in the private worktree `target/wt-s8g-p6` (built with `cargo build --workspace` first, since `ac353_…` spawns the binaries; removed afterwards, the worktree path set equal to the one read before and `git worktree prune --dry-run -v` empty). A green baseline ran first, one test per selection; each kill was the named test's own `FAILED` line with `0 passed; 1 failed`, and each file's sha256 was restored. Kill lines: M11 (the post-run hash compare replaced by `true`) *"a mutation restored mid-run must be Unverifiable (AC-338; F17), never survived or pinned"* (`left: Some(MutationSurvived)`); M12 (`rk_git::mutation::apply` run in `tree.path`) *"the patch was not applied in the tree the suite ran in"* (`left: "original\n"`); the demonstration reds K353 (the resumed pass's changed set not re-derived from the world, `ac353_…`'s red, since it is green on entry by construction) *"the resumed verify did not re-derive the changed-file set from the world: []"*; S6A (a void answer counted by `ac_gate::answers`) *"the void gate did not re-open"* (`left: 1, right: 2`); S6B (step 6 always permits) *"the verify pass opened no `verify.ac-discriminates` gate for the unpinned criterion"*; D359 (the drift not attached) *"the re-opened gate carries no drift"*; Q1 (the question removed from `.redkiln/processes/questions.toml`) *"`verify.ac-discriminates` is not declared under .redkiln/processes/"*.
 
 *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME.)* **RB1–RB5 and M18–M22: all ten killed**, from `D:/repos/redkiln-sev/afk-tools/sp/s8g/s8g-p4-S8G-P4-mutants.py` in the private worktree `target/wt-s8g-p4`. A green baseline ran first, one test per selection. Each kill was the named test's own `FAILED` line with `0 passed; 1 failed`, and each file's sha256 was restored. Kill lines: RB1–RB5 *"the report-branches fixture's unsat lines are not the hand-derived bytes"*; M18 *"for a rust text change the rank-20 test-authoring member is not an implement candidate"*; M19 *"left: {\"migration-dry-run\", \"smoke-test\"}"*; M20 *"left: {\"integration-tests\", \"migration-dry-run\"}"*; M21 the verify-gates-`IntegrationReport` assertion (`selection.rs`, *"the require row did not move (D21-46 R5)"*); M22 *"story selects migration-dry-run in some cell with data_migration forced true"*.
+
+*(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS.)* **M7, M9, M15, M23 and M26: all five killed, with four demonstration reds**, from `D:/repos/redkiln-sev/afk-tools/sp/s8g/s8g-p7-S8G-P7-mutants.py` in the private worktree `target/wt-s8g-p7` (removed afterwards). A green baseline ran first, one test per selection; each kill was the named test's own `FAILED` line with `0 passed; 1 failed`, and each file's sha256 was restored. Kill lines: M7 (`clean`'s `expr` restored to v1, `report.critical == 0 and report.high == 0`; the `exception` gate's `when` still reads `unrated`, so the gate alone could not see it) *"the `clean` check passed with an unrated advisory (sca-scan's v1 expression)"* (`left: Some(Bool(true))`); M7F (both v1 lines) the same line; M9 *"`package` was handed a set other than the declared release set"* (`left: [… "rk-fixture-toolchain"]`); M15 *"PASSING arm: the `passing` check is not journalled holding: None"* and *"FAILING arm is not refused naming the `passing` check: … NonZero"*; M23 *"PASSING arm refuses: … the `check` step `passing` did not hold"*; M26 *"`checklist:smoke` is mandatory and declared `unauthored`"*. **M15's failing arm, read:** with the check deleted a failing `SmokeResult` is still not written, because the kernel's decode table reads its interim verdict (`Failing | Empty` → `NonZero`) when no later `check` reads the output (`s8d` P4's `read_by_a_later_check`); M15 is killed on the passing arm's journalled decision and on the failing arm's refusal channel, not on a write. The demonstration reds, for the tests green on entry by construction: DNF (`not-fixed` guarded on a passing result) *"a failing repro at the fix sha opens confirmation.not-fixed"* (`left: None`); DSH (`exception` no longer reads `high`) *"a high finding did not open the gate"*; DSC (`exception` opens on a clean scan) *"a clean scan refuses"*. Red on entry, each for its own reason: `smoke_result_is_produced_through_the_registry_verb` and `every_restored_demand_writes_one_artifact_write` (*"`checklist:smoke` is mandatory and declared `unauthored`"*, and for the second also *"`before`'s output has no field `.selection`"*), `a_failing_smoke_result_fails_the_stage` (after the flip, before the check: `left: None`), `confirmation_result_passes_at_the_fix_sha` (*"`before`'s output has no field `.selection`"*).
+
+*(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.)* **M10 and M25: both killed, with five demonstration reds**, from `D:/repos/redkiln-sev/afk-tools/sp/s8g/s8g-p8-S8G-P8-mutants.py` in the private worktree `target/wt-s8g-p8` (the main checkout's uncommitted work copied in; removed afterwards, the worktree path set equal to the one read before and `git worktree prune --dry-run -v` empty). A green baseline ran first, one test per selection; each kill was the named test's own `FAILED` line with `0 passed; 1 failed`, and each file's sha256 was restored. Kill lines: M10 (`rk-cli`'s handler returns the landed sha as the rollback target) *"the rollback target is not the nearest earlier release tag on an ancestor"* (`left: Some("47a899be…")`, the landed sha), and M10F, the same mutant under `first_release_names_its_rollback_target_as_none`, *"a first release does not name `none`"*; M25 (`catalog_sources` admits `tag-release` whatever the item declares) *"`rel-2` declares no trial and its run admits ["tag-release"] (AC-110; M25)"*, *"`rel-2` selected ["build-package", "tag-release"], not rolling-deploy"*, *"`rel-2` made a release tag"*. Demonstration reds: D110 (the AC-110 refusal in `through_step_seven` disabled) `an_enabled_pack_referencing_the_extended_activity_is_refused` *"… was not refused with exit 3 (AC-110)"*; DDECL (`build_item` drops the declared value) `selection_picks_tag_release_over_the_deploy_patterns` *"left: Some(Null)"*; DKADMIT (the kernel's `admit_trial` matches no id) `lane_walk::the_fix_lane_walk_table_holds_for_a_rust_text_bug` *"… names no activity of `.redkiln/catalog-extended/`"*; DGIT (the executor's `git` arm calls the unbound default) `trial_runs_one_activity_with_zero_dispatches` *"… no git-route handler is bound for this run"*.
 
 ### 8g.10 Checkpoint 8g
 
@@ -1640,6 +1724,18 @@ ctl=$(printf '[checklist.smoke]\nunauthored = "s8g"\n' | python -c "$sm"); rc=$?
 got=$(python -c "$sm" < .redkiln/registry.toml); rc=$?
 [ "$rc" -eq 0 ] && [ "$got" = 'path=checklists/smoke.toml' ] || { echo "FAIL: .redkiln/registry.toml's [checklist.smoke] reads '$got' (rc=$rc), not path = \"checklists/smoke.toml\" alone — checklist:smoke would still refuse by name (s8c §8c.12; s8g §8g.6)"; exit 1; }
 test -s .redkiln/checklists/smoke.toml || { echo "FAIL: .redkiln/checklists/smoke.toml is empty — the entry would name no content"; exit 1; }
+# (dated 2026-09-29, s8g build, package S8G-P7-DEMANDS.) Read, extracted from this file's bytes (never retyped):
+# (7)'s checklist line, (7c)'s <id>@<version> loop, (7e), (7g)'s smoke-test half and (7h) all pass on the tree. Seven
+# synthetic controls, each over a scratch copy of .redkiln/ with ONE file put back or broken, each FAIL naming its
+# guard: no checklist file; smoke-test at HEAD (v1); registry at HEAD ([checklist.smoke] unauthored); CHANGELOG at HEAD
+# (no smoke-test@2); smoke-test v2 with its passing step renamed (the order guard); sca-scan without unrated == 0 (7e);
+# the registry without the Node fixture project (7e). (7c)'s first loop names tag-release, R5's package's, not read here.
+# (dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.) Read, extracted from this file's bytes (never
+# retyped): (7)'s two extended-directory lines, (7b) whole and (7c) whole (both loops) pass on the tree. Seven synthetic
+# controls, each over a scratch copy of .redkiln/ with ONE thing broken, each FAIL naming its guard: tag-release absent
+# from catalog-extended/; tag-release copied into catalog/; bug-standard's goal at HEAD; story's goal at HEAD; the
+# CHANGELOG without its tag-release lines; the CHANGELOG without its 'tagged for release' lines; a production goal
+# beside the amended one.
 
 # ---- (8) THE COLD SLOWEST-CHILD FIGURE IS IN THE VERIFY RECORD, cited from s8c, and under ADR-0140's bound.
 secs=$(sed -n 's/.*cold cargo test --workspace slowest child: \([0-9][0-9]*\) s.*/\1/p' "$vf" | head -1)
@@ -1677,6 +1773,9 @@ nd_check "(10)'s clippy" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo clippy rc=$rc"; printf '%s\n' "$out" | grep -E '^error' | head -20; exit 1; }
 
 # ---- (11) NO RELEASE TAG WAS MADE IN THIS REPOSITORY BY THE BLOCK — the tag tests run in temporary repositories.
+# (dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.) Read around this package's runs (the nine
+# tag_release:: tests, both lane_walk:: tests, the rk-kernel and rk-cli suites, the mutant cycles and the whole
+# workspace suite): `git tag -l 'rk-release/*'` printed nothing before and after, so the two sets are equal (empty).
 tags_after=$(git tag -l 'rk-release/*'); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: git tag -l could not run after the suite (rc=$rc)"; exit 1; }
 [ "$tags_before" = "$tags_after" ] || { echo "FAIL: the block created or removed an rk-release tag in the operator's repository:"; diff <(printf '%s\n' "$tags_before") <(printf '%s\n' "$tags_after"); exit 1; }

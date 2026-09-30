@@ -3,7 +3,7 @@
 #   smoke provides SmokeResult, mutation provides MutationSummary — family spans kinds (F34 ambiguity B3)
 [activity]
 id           = "smoke-test"
-version      = 1
+version      = 2   # bumped 2026-09-29 (s8g, ADR-0072; D21-46 R6; .redkiln/CHANGELOG.md)
 stage        = "verify"
 provides     = ["SmokeResult"]
 requires     = ["Changeset"]
@@ -35,6 +35,13 @@ inputs  = { sha = "artifact:Changeset.sha", checklist = "checklist:smoke" }
 outputs = "value:SmokeResult"
 timeout_secs = 600
 retry   = { max = 1 }
+
+[[step]]
+id      = "passing"
+kind    = "check"
+inputs  = { smoke = "${smoke.outputs}" }
+expr    = "smoke.status == 'passing'"
+on_false = "fail"
 
 [[step]]
 id      = "emit"

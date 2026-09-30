@@ -333,8 +333,19 @@ fn every_input_source_form_resolves_or_refuses_by_name() {
     let kb = r("kb:spec-conventions").unwrap();
     assert_eq!(kb["path"], serde_json::json!("kb/spec-conventions.md"));
     refused(r("kb:no-such-atom?"), "me", "kb:no-such-atom?");
-    assert_eq!(r("checklist:smoke?").unwrap(), Json::Null);
-    refused(r("checklist:smoke"), "me", "checklist:smoke");
+    // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS; `s8g` §8g.6; R4 = ADR-0194 decision 2,
+    // proposed.)* `[checklist.smoke]` flipped from `unauthored` to its path, so `checklist:smoke`
+    // resolves (mandatory and `?`). Were: `r("checklist:smoke?")` → `null`, and
+    // `refused(r("checklist:smoke"), …)`. The shipped registry declares no `unauthored` checklist
+    // now; the unauthored rule stays asserted over `source_registry`'s declared fixture, and the
+    // resolver's declared-with-no-content arm by the `unprovided` feed pair below.
+    for key in ["checklist:smoke", "checklist:smoke?"] {
+        assert_eq!(
+            r(key).unwrap()["path"],
+            serde_json::json!("checklists/smoke.toml"),
+            "{key}"
+        );
+    }
     assert_eq!(r("toolchain:logs?").unwrap(), Json::Null);
     refused(r("toolchain:backlog"), "me", "toolchain:backlog");
     // The RESOLVING outcome of `toolchain:<feed>` (R3FIX-8d, refuting round 3's minor): every shipped
@@ -1059,12 +1070,17 @@ fn kb_checklist_and_feed_keys_resolve_through_the_declared_tables_and_an_undecla
         assert!(e.contains("not declared"), "{key}: {e}");
     }
     // A DECLARED key with no content: `?` makes it `null`; mandatory refuses by name.
+    // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS; `s8g` §8g.6; R4 = ADR-0194 decision 2,
+    // proposed.)* ~~`checklist:smoke?` → `null` ("an `unauthored` optional is null") and
+    // `checklist:smoke` refused naming `unauthored`~~: `[checklist.smoke]` now declares its path, and
+    // no shipped checklist or atom is `unauthored`. The declared-with-no-content arm is the
+    // `unprovided` `toolchain:sbom` pair below; the `unauthored` form's rule is `source_registry`'s,
+    // over its declared fixture.
     assert_eq!(
-        r("checklist:smoke?").unwrap(),
-        Json::Null,
-        "an `unauthored` optional is null"
+        r("checklist:smoke").unwrap()["path"],
+        serde_json::json!("checklists/smoke.toml"),
+        "the flipped entry resolves to its file"
     );
-    assert!(refused(r("checklist:smoke"), "draft", "checklist:smoke").contains("unauthored"));
     // *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106 ruling
     // 5.)* ~~`toolchain:backlog`~~ is no longer `unprovided`: it is produced by the `backlog` verb.
     // The `unprovided` pair moves to `toolchain:sbom`, which stays `unprovided` (§8f.7's list), and

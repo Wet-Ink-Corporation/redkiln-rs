@@ -414,6 +414,53 @@ impl Registry {
         self.facets.values()
     }
 
+    /// **A repository's checked-in declaration of its `source = "declared"` facets** (R5 =
+    /// ADR-0195 decision 5, proposed; the file is `.redkiln/declared.toml`, named by that record's
+    /// dated note): one top-level `<facet> = "<value>"` per declared, single-valued facet, each
+    /// value a member of the facet's declared domain. A facet the file does not name stays
+    /// `null` on the item (the abstention); the file never supplies a `human`, `derived` or
+    /// `kernel` facet, and a set-valued declared facet (`surfaces`) keeps ADR-0089's own
+    /// declaration map and is not read here. *(dated 2026-09-29, s8g build, package
+    /// S8G-P8-TAG-RELEASE-AND-MOVES.)*
+    ///
+    /// # Errors
+    /// A message naming the key that is not a declared single-valued facet, or the value outside
+    /// its domain, or the file outside the TOML subset.
+    pub fn declared_values(&self, src: &str) -> Result<BTreeMap<String, String>, String> {
+        let doc = toml_subset::parse(src).map_err(|e| format!("{e:?}"))?;
+        let mut out = BTreeMap::new();
+        for (key, value) in &doc {
+            let Some(facet) = self.facets.get(key) else {
+                return Err(format!(
+                    "`{key}` is not a facet `facets.toml` declares, so it cannot be declared"
+                ));
+            };
+            if facet.source != Source::Declared || facet.set {
+                return Err(format!(
+                    "`{key}` is not a single-valued `source = \"declared\"` facet (it is `{}`{}), \
+                     so the repository's declaration may not supply it (ADR-0093 decision 1)",
+                    facet.source.as_str(),
+                    if facet.set { ", set-valued" } else { "" }
+                ));
+            }
+            let Some(text) = value.as_str() else {
+                return Err(format!("`{key}` is not a string"));
+            };
+            if !facet.values.iter().any(|v| v.as_str() == Some(text)) {
+                return Err(format!(
+                    "`{key} = \"{text}\"` is outside the facet's declared domain {:?}",
+                    facet
+                        .values
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .collect::<Vec<_>>()
+                ));
+            }
+            out.insert(key.clone(), text.to_owned());
+        }
+        Ok(out)
+    }
+
     /// One entry by name.
     #[must_use]
     pub fn facet(&self, name: &str) -> Option<&Facet> {

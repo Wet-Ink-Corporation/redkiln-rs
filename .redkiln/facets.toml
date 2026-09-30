@@ -167,6 +167,16 @@ deriver = "R-recent-deploy-feed-absent"
 deriver_class = "structural"        # it reads a registered feed, not free text — so NOT barred as lexical
 deriver_record = "results/p1-arm-d-panel-scored.json"   # NOT MEASURABLE at 47faec9f: the toolchain:deploy_log feed does not exist at this pin, so it emits `null` on every item and F39 could not score it. It may key NO require row — on the no-positive-instance clause, which is a DIFFERENT bar from the lexical one and is doing its own work here. The ABSTENTION PRECEDENT the seven booleans generalise (ADR-0067; ADR-0089 decision 3)
 
+# ---- 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES (R5 = ADR-0195 decision 5, proposed) ----
+# How this repository releases: `tag` (a local annotated `rk-release/<item>` tag, `tag-release`) or `deploy` (the
+# four `deploy-pattern` activities' `toolchain:deploy`). DECLARED, `surfaces`'s form (ADR-0089): read from the
+# repository's checked-in `.redkiln/declared.toml`, never computed and never asked; absent there, it is `null`.
+# UNSCORED, so it may key NO `require` row (ADR-0093 decision 1; R5's forbids). Its one reader is
+# `tag-release`'s `applicable_if` (in `.redkiln/catalog-extended/`), which R5 option (a) chose over verb admissibility.
+[facet.release_form]
+values = ["deploy", "tag"]
+source = "declared"
+
 # ---- AC-520's scored record: [WILL EXIST], and owed to Step 7b (recorded 2026-09-13) ----
 # Every `deriver_record` above names `results/p1-arm-d-panel-scored.json` in the pinned corpus, and
 # THAT FILE DOES NOT EXIST YET. Measured 2026-09-13: `spikes/p1/score-arm-d-panel.py` reads its five

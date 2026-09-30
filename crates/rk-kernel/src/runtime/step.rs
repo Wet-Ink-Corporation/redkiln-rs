@@ -236,6 +236,10 @@ pub struct ToolRouting {
     /// the step-grain `Route::Store` arm (`item_create`) and `call_feed`'s `store` arm (`backlog`).
     /// Unbound: every `store`-route call refuses by name ([`UnboundStoreRoute`]), never `Ok`-empty.
     store_route: StoreRouteSlot,
+    /// *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+    /// decision 2, proposed.)* **The `git` route's seam** (`release_tag`). Unbound: every
+    /// `git`-route call refuses by name ([`UnboundGitRoute`]).
+    git_route: GitRouteSlot,
     /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 8,
     /// proposed.)* The adapter `rk-cli`'s `detect()` loop chose and the range the run's calls are
     /// made over, bound by the composition root and carried onto every `verify_completed` row
@@ -284,7 +288,26 @@ impl ToolRouting {
             run_branch: RunBranchSlot(None),
             artifact_seams: ArtifactSeamSlot(None),
             store_route: StoreRouteSlot(None),
+            git_route: GitRouteSlot(None),
             verify_identity: None,
+        }
+    }
+
+    /// Bind the `git` route's handler (R5 = ADR-0195 decision 2, proposed): the composition
+    /// root's seam over `rk-git`. *(dated 2026-09-29, s8g build, package
+    /// S8G-P8-TAG-RELEASE-AND-MOVES.)*
+    #[must_use]
+    pub fn with_git_route(mut self, route: std::sync::Arc<dyn GitRoute>) -> Self {
+        self.git_route = GitRouteSlot(Some(route));
+        self
+    }
+
+    /// The `git` route's handler: the bound one, or [`UnboundGitRoute`], which refuses by name.
+    #[must_use]
+    pub fn git_route(&self) -> &dyn GitRoute {
+        match self.git_route.0.as_deref() {
+            Some(route) => route,
+            None => &UnboundGitRoute,
         }
     }
 
@@ -509,6 +532,67 @@ impl StoreRoute for UnboundStoreRoute {
     }
 }
 
+/// **The `git` route's handler.**
+///
+/// R5 = ADR-0195 decision 2, proposed; R3 = ADR-0193 decision 1, proposed; `s8g` §8g.7.
+/// `rk-kernel` performs no git write, so the composition root binds this
+/// over `rk-git`'s journalled seam, as it binds the `store` route: `release_tag` tags the landed
+/// commit through `GitOp::Tag` and reads its rollback target through `GitOp::Log`. The call carries
+/// the same members a `store`-route call does ([`StoreCall`]). Its output is typed at the boundary
+/// through the closed decode table against the row's `outputs`, as every route's is. *(dated
+/// 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.)*
+pub trait GitRoute: Send + Sync {
+    /// Serve one call.
+    ///
+    /// # Errors
+    /// A [`StepError`] naming what the route could not do.
+    fn serve(&self, call: &StoreCall<'_>) -> Result<VerbOutput, StepError>;
+}
+
+/// **The kernel's default: REFUSES BY NAME**, never `Ok`-empty, as [`UnboundStoreRoute`] does.
+/// *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.)*
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UnboundGitRoute;
+
+impl GitRoute for UnboundGitRoute {
+    fn serve(&self, call: &StoreCall<'_>) -> Result<VerbOutput, StepError> {
+        Err(StepError::Unsupported {
+            capability: format!(
+                "`{}` takes the `git` route, and no git-route handler is bound for this run: the \
+                 composition root binds `rk-git`'s (R5 = ADR-0195 decision 2), and an unbound \
+                 route is refused by name, never served empty",
+                call.verb
+            ),
+        })
+    }
+}
+
+/// The bound [`GitRoute`], compared by identity as [`StoreRouteSlot`] is.
+#[derive(Clone, Default)]
+struct GitRouteSlot(Option<std::sync::Arc<dyn GitRoute>>);
+
+impl std::fmt::Debug for GitRouteSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(if self.0.is_some() {
+            "GitRouteSlot(bound)"
+        } else {
+            "GitRouteSlot(unbound)"
+        })
+    }
+}
+
+impl PartialEq for GitRouteSlot {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (None, None) => true,
+            (Some(a), Some(b)) => {
+                std::ptr::addr_eq(std::sync::Arc::as_ptr(a), std::sync::Arc::as_ptr(b))
+            }
+            _ => false,
+        }
+    }
+}
+
 /// The bound [`StoreRoute`], compared by identity as [`ReviewSlot`] is.
 #[derive(Clone, Default)]
 struct StoreRouteSlot(Option<std::sync::Arc<dyn StoreRoute>>);
@@ -636,6 +720,9 @@ enum ToolCall {
     /// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-106.)* The `store`
     /// route, through [`StoreRoute::serve`].
     Store,
+    /// *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195.)* The
+    /// `git` route, through [`GitRoute::serve`].
+    Git,
 }
 
 /// *(2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decisions 9 and 11, proposed.)* ADR-0148's
@@ -1209,14 +1296,12 @@ impl super::Runtime {
             // decision 11, proposed.)* ~~Refused naming the route until `s8f`~~: the route is served
             // through the composition root's store-route seam, whose unbound default refuses by name.
             Route::Store => ToolCall::Store,
-            Route::Git => {
-                return Err(StepError::Unsupported {
-                    capability: format!(
-                        "`{verb}` takes the `git` route, which is not executed until `s8g` builds \
-                         it (ADR-0170 decision 1)"
-                    ),
-                });
-            }
+            // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+            // decision 2, proposed.)* ~~Refused naming the route until `s8g`~~ (*"`{verb}` takes the
+            // `git` route, which is not executed until `s8g` builds it (ADR-0170 decision 1)"*): the
+            // route is served through the composition root's git-route seam, whose unbound default
+            // refuses by name.
+            Route::Git => ToolCall::Git,
             // *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decisions 1-5, proposed.)* The
             // two routes R5 adds by record. Each needs the composition root's review routes, and
             // each row's declared inputs, resolved; either missing refuses by name before the call.
@@ -1405,6 +1490,23 @@ impl super::Runtime {
                 let _ = bound;
                 *reached = true;
                 let output = routing.store_route().serve(&StoreCall {
+                    verb,
+                    inputs,
+                    item: env.item,
+                    stage: env.stage,
+                    activity_id_at_version: env.activity,
+                    run_id: self.run_id(),
+                })?;
+                decode_verb_value(&entry.outputs, &output, verdict)?;
+                Ok(Some((entry.outputs.clone(), output.value)))
+            }
+            // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+            // decision 2, proposed.)* The `git` route: the step's resolved inputs to the ONE
+            // git-route seam, and its output typed at the boundary through the closed decode table.
+            ToolCall::Git => {
+                let _ = bound;
+                *reached = true;
+                let output = routing.git_route().serve(&StoreCall {
                     verb,
                     inputs,
                     item: env.item,

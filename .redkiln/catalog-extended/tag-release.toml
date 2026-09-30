@@ -1,0 +1,48 @@
+# reach: (bug|story, release, optional) where the repository declares release_form = "tag" -> ReleaseRecord
+# EXTENDED, NOT SHIPPED (ADR-0114 decision 3; AC-110): this directory contributes no entry to a resolved catalog. `run`
+# admits this activity only on an item whose record declares `[trial] activity = "tag-release"`, for that item's run,
+# until AC-114's promotion cites a trial run (R5 = ADR-0195 decisions 3, 4 and 7, proposed; `s8g` section 8g.7).
+# deploy pattern family: tag-release(5) < rolling-deploy(10) < blue-green-deploy(20) < canary-release(30) <
+#   flag-progressive-rollout(40). Selection reaches it through the declared facet `release_form` in `applicable_if`
+#   (R5 option (a)); no shipped deploy activity is edited.
+# Added 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES (.redkiln/CHANGELOG.md).
+[activity]
+id           = "tag-release"
+version      = 1
+stage        = "release"
+provides     = ["ReleaseRecord"]
+requires     = ["BuildArtifact", "Changeset"]
+derived_from = ["BuildArtifact"]
+tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project", "kind:incident"]
+applicable_if = "release_form != null and release_form == 'tag'"
+method_rank  = 5
+family       = "deploy-pattern"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 2, tokens = 20_000, wall_clock_secs = 1200 }
+deviation_ok = []
+keywords     = ["release tag", "tag release", "local release"]
+rationale    = "A CLI's release: an annotated local tag rk-release/<item> on the landed commit, the build's binary digests and the rollback target (the previous release tag, or none), never pushed by the run (D21-42 6b). Agent-free, so its trial cannot dispatch."
+
+[[step]]
+id      = "tag"
+kind    = "tool"
+run     = "toolchain:release_tag"
+inputs  = { build = "artifact:BuildArtifact", sha = "artifact:Changeset.sha" }
+outputs = "value:ReleaseTag"
+timeout_secs = "${toolchain.build_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "named"
+kind    = "check"
+inputs  = { release = "${tag.outputs}" }
+expr    = "release.tag != '' and release.rollback_target != ''"
+on_false = "fail"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReleaseRecord = { tag = "${tag.outputs.tag}", target = "${tag.outputs.target}", rollback_target = "${tag.outputs.rollback_target}", binaries = "artifact:BuildArtifact.binaries" } }   # composing emit (§9c.34)
+evidence  = ["${tag}"]

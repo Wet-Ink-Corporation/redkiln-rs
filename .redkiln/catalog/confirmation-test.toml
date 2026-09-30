@@ -1,7 +1,7 @@
 # reach: (bug, verify, optional) — require row "kind in [bug, security-vuln, incident]" → ConfirmationResult
 [activity]
 id           = "confirmation-test"
-version      = 1
+version      = 2   # bumped 2026-09-29 (s8g, ADR-0072; D21-73 item 4; .redkiln/CHANGELOG.md)
 stage        = "verify"
 provides     = ["ConfirmationResult"]
 requires     = ["ReproCase", "Changeset"]
@@ -42,5 +42,5 @@ inputs  = { result = "${before.outputs}" }
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { ConfirmationResult = { status = "${before.outputs.status}", passes_after = "${before.outputs.passed}", command = "${before.outputs.selection}", sha = "${before.outputs.sha}" } }   # composing emit (§9c.34)
+artifacts = { ConfirmationResult = { status = "${before.outputs.status}", passes_after = "${before.outputs.passed}", command = "artifact:ReproCase.command", sha = "artifact:Changeset.sha" } }   # composing emit (§9c.34)
 evidence  = ["${before}", "${not-fixed?}"]

@@ -111,6 +111,37 @@ them, and a dedicated item would be a third run of the activity.
    and built here it would fail all 102 shipped activities or ship with an unrecorded grandfather rule. The backfill
    for the 102 is a decision owed upward.
 
+*(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; this record `proposed`.)* **Built, red first,
+and the four things this record left to the build, fixed here** (the Evidence section's *"the build may refine by dated
+note while `proposed`"*):
+- **The declaration file (decision 5)** is **`.redkiln/declared.toml`**: one top-level `<facet> = "<value>"` per
+  declared, single-valued facet, read through the facet registry (`rk_kernel::registry::Registry::declared_values`),
+  which refuses a key that is not a `source = "declared"`, single-valued facet and a value outside its domain. `run`'s
+  `build_item` carries the value; a facet the file does not name stays `null`. `surfaces` keeps ADR-0089's own map and
+  is not read there. This repository's file declares `release_form = "tag"`.
+- **"The BuildArtifact digest" (decision 1)** is carried as the record's `binaries` member, the `BuildArtifact`'s own
+  `binaries` list (each released binary's `name`, `path` and `sha256`), composed by the emit from
+  `artifact:BuildArtifact.binaries`. ADR-0040's grammar has no digest-of-an-artifact source, and `ReleaseTag` (record
+  V's type, `deny_unknown_fields`) has no member for one, so the build's own per-binary digests are the digest carried.
+  The `ReleaseRecord` reads `{ tag, target, rollback_target, binaries }`.
+- **The activity (decision 3)**: `requires = ["BuildArtifact", "Changeset"]`, `method_rank = 5`, one `tool` step `tag`
+  (`toolchain:release_tag`, inputs `build` and `sha`), one `check` step `named` (*"`release.tag != '' and
+  release.rollback_target != ''`"*, `on_false = "fail"`), and the composing `emit`. The `git` route is served through a
+  kernel seam the composition root binds (`runtime::step::GitRoute`, whose unbound default refuses by name, as the
+  `store` route's does) by `rk-cli`'s `release_tag` handler, which reads the rollback target BEFORE the write (the landed
+  commit itself excluded; of two release tags on the nearest commit, the first by name) and then calls
+  `rk_git::release::tag_release`.
+- **The trial admission (decision 4)**: the kernel's `catalog::admit_trial` returns the ONE extended source the item's
+  `[trial] activity` names (refusing by name one that names no extended activity, or a shipped one), and `rk-cli`'s
+  `catalog_sources` appends it to the shipped catalog, so the run's recorded input set carries exactly the catalog it
+  selected over. An enabled pack whose `[activity.<id>]` names an extended activity is refused at `run`'s step (7) with
+  exit 3 (AC-110). **"The declaring item's one run" is read as that item's lane**: the admission is bound to the
+  declaring item, and a lane runs once, its `closed` mark ending it (`s8e` §8e.6); no separate one-run counter is
+  built. **"At the release stage"** holds by the activity's own `stage`, which is the only stage selection reaches it
+  at.
+- Tests (`rk-cli`, `--test it`): the nine `tag_release::` tests `s8g` §8g.9 names, each red first; mutants M10 and M25
+  killed (§8g.9's dated note).
+
 ## Consequences
 
 **Positive**

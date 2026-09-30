@@ -752,6 +752,98 @@ impl Catalog {
     }
 }
 
+// ---- ADR-0114 decision 3's trial route, in its Phase-1 form (R5 = ADR-0195 decision 4, proposed).
+// *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; `s8g` §8g.7.)*
+
+/// **The extended directory**, under `.redkiln/`.
+///
+/// Activities authored but not promoted (ADR-0114 decision 3). It contributes **zero** entries to
+/// a resolved catalog (AC-110), except the one activity an item's `[trial]` declaration names, for
+/// that item's run.
+pub const EXTENDED_DIR: &str = "catalog-extended";
+
+/// Why an item's `[trial]` declaration was refused, by name. Nothing was admitted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TrialRefusal {
+    /// The declaration names no activity of the extended directory.
+    NotExtended { activity: String },
+    /// The declaration names an activity the shipped catalog already carries: a promoted
+    /// activity is not trialled (ADR-0114 decision 3).
+    Shipped { activity: String },
+    /// An extended source, or the shipped set, does not load.
+    Load(CatalogError),
+}
+
+impl fmt::Display for TrialRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotExtended { activity } => write!(
+                f,
+                "the item's `[trial] activity = \"{activity}\"` names no activity of \
+                 `.redkiln/{EXTENDED_DIR}/`, so nothing is admitted (ADR-0114 decision 3; R5 = \
+                 ADR-0195 decision 4)"
+            ),
+            Self::Shipped { activity } => write!(
+                f,
+                "the item's `[trial] activity = \"{activity}\"` names an activity the shipped \
+                 catalog already carries; a trial admits an unpromoted extended activity only \
+                 (ADR-0114 decision 3)"
+            ),
+            Self::Load(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+impl std::error::Error for TrialRefusal {}
+
+/// The activity ids the extended sources declare, in order. An empty set of sources is an empty
+/// set of ids: the extended directory may be absent or empty.
+///
+/// # Errors
+/// [`CatalogError`] for a source that does not load.
+pub fn extended_ids(extended: &[(&str, &str)]) -> Result<BTreeSet<String>, CatalogError> {
+    let mut ids = BTreeSet::new();
+    for (name, src) in extended {
+        ids.insert(activity_from(name, src)?.id);
+    }
+    Ok(ids)
+}
+
+/// **The trial admission** (ADR-0114 decision 3; R5 = ADR-0195 decision 4, proposed).
+///
+/// The ONE extended source an item's `[trial] activity` declaration names, or none when the item
+/// declares no trial. A run on an item without the declaration never admits an extended activity
+/// (AC-110).
+///
+/// # Errors
+/// [`TrialRefusal`] naming the declaration that names no extended activity, or one the shipped
+/// catalog already carries.
+pub fn admit_trial(
+    shipped: &[(&str, &str)],
+    extended: &[(&str, &str)],
+    trial: Option<&str>,
+) -> Result<Option<(String, String)>, TrialRefusal> {
+    let Some(activity) = trial else {
+        return Ok(None);
+    };
+    if extended_ids(shipped)
+        .map_err(TrialRefusal::Load)?
+        .contains(activity)
+    {
+        return Err(TrialRefusal::Shipped {
+            activity: activity.to_owned(),
+        });
+    }
+    for (name, src) in extended {
+        if activity_from(name, src).map_err(TrialRefusal::Load)?.id == activity {
+            return Ok(Some(((*name).to_owned(), (*src).to_owned())));
+        }
+    }
+    Err(TrialRefusal::NotExtended {
+        activity: activity.to_owned(),
+    })
+}
+
 /// **The loader's diagnostic mode** — every load defect typed, instead of the first (RT-54,
 /// `s7d` §7d.1 edit (4), §7d.8). `doctor` is its only caller.
 ///

@@ -401,7 +401,10 @@ fn the_catalog_source_census_is_fifty_with_fourteen_declared() {
         }
     }
     // The authored files resolve to their paths; `smoke` is `unauthored`, naming s8g §8g.6.
-    for id in DECLARED_CHECKLISTS.iter().filter(|k| **k != "smoke") {
+    // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS; `s8g` §8g.6; R4 = ADR-0194 decision 2,
+    // proposed.)* `smoke` is authored now: all seven resolve to their paths. Was: the six others
+    // here, and `smoke` asserted `unauthored` naming s8g §8g.6 (the struck arm below).
+    for id in DECLARED_CHECKLISTS {
         assert_eq!(
             reg.resolve_source("rust", &format!("checklist:{id}")),
             Ok(SourceValue::Path(format!("checklists/{id}.toml")))
@@ -413,13 +416,11 @@ fn the_catalog_source_census_is_fifty_with_fourteen_declared() {
             Ok(SourceValue::Path(format!("kb/{atom}.md")))
         );
     }
-    match reg.resolve_source("rust", "checklist:smoke") {
-        Err(SourceRefusal::Unauthored { reason, .. }) => assert!(
-            reason.contains("s8g") && reason.contains("8g.6"),
-            "`checklist:smoke` is unauthored naming s8g §8g.6: {reason}"
-        ),
-        other => panic!("`checklist:smoke` must be unauthored at s8c: {other:?}"),
-    }
+    // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS.)* ~~`checklist:smoke` must be
+    // `Err(SourceRefusal::Unauthored { reason })` with `reason` naming s8g §8g.6~~: it resolves to
+    // `checklists/smoke.toml` (the loop above). Its items are record V's form (`id`, `argv`, `cwd`,
+    // `expect_exit`, `stdout_contains`; ADR-0170 decision 4), not `(id, text)`, so the `text` read
+    // below still skips it; its own provenance and item form are asserted after that loop.
     // Every authored file names its provenance: a checklist's top-level `source`, an atom's
     // `source:` line.
     for id in DECLARED_CHECKLISTS.iter().filter(|k| **k != "smoke") {
@@ -451,6 +452,34 @@ fn the_catalog_source_census_is_fifty_with_fourteen_declared() {
             })
             .collect();
         assert!(!items.is_empty(), "checklists/{id}.toml holds no item");
+    }
+    // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS.)* `smoke`'s provenance, and its items in
+    // record V's form: exactly `id`, `argv`, `cwd`, `expect_exit`, `stdout_contains`, `cwd = "scratch"`.
+    {
+        let text =
+            std::fs::read_to_string(root.join(".redkiln").join("checklists").join("smoke.toml"))
+                .expect("the smoke checklist");
+        let doc = rk_kernel::toml_subset::parse(&text).expect("the smoke checklist parses");
+        let source = doc.get("source").and_then(TomlValue::as_str).unwrap_or("");
+        assert!(
+            !source.trim().is_empty(),
+            "checklists/smoke.toml names no source"
+        );
+        let items = doc
+            .get("item")
+            .and_then(TomlValue::as_array)
+            .unwrap_or_default();
+        assert!(!items.is_empty(), "checklists/smoke.toml holds no item");
+        for item in items {
+            let t = item.as_table().expect("an item table");
+            let keys: Vec<&str> = t.keys().map(String::as_str).collect();
+            assert_eq!(
+                keys,
+                ["argv", "cwd", "expect_exit", "id", "stdout_contains"],
+                "a smoke item carries record V's five keys and no other"
+            );
+            assert_eq!(t.get("cwd").and_then(TomlValue::as_str), Some("scratch"));
+        }
     }
     for atom in DECLARED_ATOMS {
         let text =

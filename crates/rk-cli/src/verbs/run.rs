@@ -164,6 +164,22 @@ pub struct ItemRecord {
     /// validator (`tier_one::validate_slice`); the mint's refusal stays as the backstop.
     #[serde(default)]
     pub slice: Option<String>,
+    /// *(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; `s8g` §8g.7; R5 =
+    /// ADR-0195 decision 4, proposed.)* **`[trial] activity = "<id>"`**: ADR-0114 decision 3's
+    /// one-run, one-activity trial, as data on the item record and never a CLI flag. `run` admits
+    /// exactly that one activity of `.redkiln/catalog-extended/` for this item's run; an item
+    /// without the declaration never admits one (AC-110).
+    #[serde(default)]
+    pub trial: Option<TrialDecl>,
+}
+
+/// An item record's `[trial]` table (R5 = ADR-0195 decision 4, proposed). *(dated 2026-09-29,
+/// `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES.)*
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrialDecl {
+    /// The one extended activity the trial admits.
+    pub activity: String,
 }
 
 /// Everything steps (1)–(7) resolve, handed to step (8).
@@ -232,6 +248,10 @@ pub struct Resolved {
     /// computes (`change`, by `R-change-extension-and-numstat-marker`): the axes whose abstention
     /// opens the lane's first-stage gate and whose answer the run binds (§8d.7; D21-43 N3).
     pub derived_facets: Vec<String>,
+    /// *(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+    /// decision 4, proposed.)* The item record's `[trial] activity`, read verbatim: the one
+    /// extended activity [`catalog_sources`] admits for this item's run, or `None`.
+    pub trial: Option<String>,
 }
 
 /// **ADR-0140, superseding ADR-0137 clause 5 in part.** The default for the construction bound on
@@ -257,6 +277,12 @@ pub struct Resolved {
 /// child doing work the pack declares it expects to take that long**, and 3600 is the best
 /// available proxy for that expectation. Nothing sits underneath it.
 pub const DEFAULT_TOOLCHAIN_TIMEOUT_SECS: u64 = 3600;
+
+/// **The repository's declaration of its `declared` facets**, under `.redkiln/` (R5 = ADR-0195
+/// decision 5, proposed, which names `release_form`'s declaration and leaves its file to the
+/// build: named here and in that record's dated note). *(dated 2026-09-29, `s8g` build, package
+/// S8G-P8-TAG-RELEASE-AND-MOVES.)*
+pub const DECLARED_FILE: &str = "declared.toml";
 
 /// The outer verb.
 ///
@@ -447,7 +473,11 @@ fn findings_stage_reached(resolved: &Resolved) -> Option<FindingsStage> {
         &resolved.pack_src,
     )
     .ok()?;
-    let sources = catalog_sources(Path::new(resolved.worktree.as_str())).ok()?;
+    let sources = catalog_sources(
+        Path::new(resolved.worktree.as_str()),
+        resolved.trial.as_deref(),
+    )
+    .ok()?;
     let borrowed: Vec<(&str, &str)> = sources
         .iter()
         .map(|(n, s)| (n.as_str(), s.as_str()))
@@ -890,6 +920,14 @@ fn run_lane(
             Ok(route) => routing.with_store_route(route),
             Err(exit) => return Ok(exit),
         };
+        // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+        // decisions 1 and 2, proposed.)* The `git` route's ONE seam: `release_tag` through
+        // `rk-git`, over this checkout (a tag is repository-wide). Unbound, the kernel refuses it
+        // by name.
+        let routing = routing.with_git_route(crate::release_tag::release_tag_route(
+            resolved.exec.clone(),
+            resolved.worktree.clone(),
+        ));
 
         let inputs = match bind_nodes(
             &resolved,
@@ -1487,6 +1525,33 @@ pub fn through_step_seven(
         )
     })?;
 
+    // *(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; AC-110, unchanged by
+    // ADR-0114 decision 3; R5 = ADR-0195 decision 4, proposed.)* **An enabled pack referencing an
+    // unpromoted extended activity is a load-time configuration error**, refused here, before any
+    // selection: a trial is declared on an item record, never by a pack reference.
+    let referenced = extended_references(&root, &pack_src)
+        .map_err(|exit| refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, exit))?;
+    if !referenced.is_empty() {
+        eprintln!(
+            "redkiln: {} references {} of `.redkiln/{}/`, which is not promoted: an enabled pack \
+             referencing an unpromoted extended activity is a configuration error (AC-110; \
+             ADR-0114 decision 3), and a trial is declared on an item record (`[trial] activity`)",
+            pack_path.display(),
+            referenced
+                .iter()
+                .map(|id| format!("`{id}`"))
+                .collect::<Vec<_>>()
+                .join(", "),
+            rk_kernel::catalog::EXTENDED_DIR
+        );
+        return Err(refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        ));
+    }
+
     // §7d.5 step (7) names `.redkiln/facets.toml` among the registries this step reads. It is read
     // HERE and not only in `base_inputs`, because the item's context vector is built from it: a
     // facet the registry declares and the record omits is an abstention, and `build_item` cannot
@@ -1538,7 +1603,34 @@ pub fn through_step_seven(
             }
         }
     }
-    let item = build_item(&record, &registry, &derived).map_err(|refusal| {
+    // *(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+    // decision 5, proposed.)* The repository's checked-in declaration of its `declared` facets
+    // (`.redkiln/declared.toml`): absent, it declares nothing; present, each key is read through
+    // the facet registry and a key or value outside it is refused by name.
+    let declared_path = root.join(".redkiln").join(DECLARED_FILE);
+    let declared = if declared_path.is_file() {
+        let src = std::fs::read_to_string(&declared_path).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", declared_path.display());
+            refuse_after_reconcile(
+                &repo.exec,
+                &repo.worktree,
+                &kernel_config,
+                Exit::ConfigError,
+            )
+        })?;
+        registry.declared_values(&src).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", declared_path.display());
+            refuse_after_reconcile(
+                &repo.exec,
+                &repo.worktree,
+                &kernel_config,
+                Exit::ConfigError,
+            )
+        })?
+    } else {
+        BTreeMap::new()
+    };
+    let item = build_item(&record, &registry, &derived, &declared).map_err(|refusal| {
         eprintln!("redkiln: {}: {refusal}", record_path.display());
         refuse_after_reconcile(
             &repo.exec,
@@ -1561,6 +1653,7 @@ pub fn through_step_seven(
         lane_closed,
         project,
         slice: record.slice,
+        trial: record.trial.map(|t| t.activity),
         // A lane's FIRST stage has no predecessor; the loop sets this for every stage after it.
         entered_from: None,
         config: kernel_config,
@@ -2045,6 +2138,7 @@ fn build_item(
     record: &ItemRecord,
     registry: &rk_kernel::registry::Registry,
     derived: &BTreeMap<String, Vec<String>>,
+    declared: &BTreeMap<String, String>,
 ) -> Result<Item, String> {
     for facet in registry.facets() {
         if facet.source == rk_kernel::registry::Source::Derived
@@ -2082,9 +2176,13 @@ fn build_item(
         if facet.name == "kind" || kernel_supplied || record.facets.contains_key(&facet.name) {
             continue;
         }
-        item = match derived.get(&facet.name) {
-            Some(values) => item.with_facet_set(&facet.name, values.iter().cloned()),
-            None => item.with_facet_null(&facet.name),
+        // *(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+        // decision 5, proposed.)* A `declared` facet the repository's declaration names carries
+        // that value (`release_form`); one it does not name stays the abstention.
+        item = match (derived.get(&facet.name), declared.get(&facet.name)) {
+            (Some(values), _) => item.with_facet_set(&facet.name, values.iter().cloned()),
+            (None, Some(value)) => item.with_facet_str(&facet.name, value),
+            (None, None) => item.with_facet_null(&facet.name),
         };
     }
 
@@ -2152,12 +2250,73 @@ pub fn prepare_inputs(
 }
 
 /// Every `.redkiln/catalog/*.toml`, by name, in sorted order so two runs read one order.
-fn catalog_sources(root: &Path) -> Result<Vec<(String, String)>, Exit> {
-    let dir = root.join(".redkiln").join("catalog");
+///
+/// *(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; `s8g` §8g.7; R5 =
+/// ADR-0195 decision 4, proposed; ADR-0114 decision 3; AC-110.)* **Plus the one extended activity
+/// the item's `[trial]` declaration admits**, and nothing else of `.redkiln/catalog-extended/`: the
+/// kernel's `catalog::admit_trial` chooses it, so the recorded input set carries exactly the
+/// catalog the run selects over. `trial = None` admits nothing. `pub` so the trial's tests read
+/// the run's own composition.
+///
+/// # Errors
+/// [`Exit::ConfigError`] for an unreadable source, or a trial the kernel refuses by name.
+pub fn catalog_sources(root: &Path, trial: Option<&str>) -> Result<Vec<(String, String)>, Exit> {
+    let mut out = toml_sources(&root.join(".redkiln").join("catalog"))?;
+    let extended = toml_sources(&root.join(".redkiln").join(rk_kernel::catalog::EXTENDED_DIR))?;
+    let shipped: Vec<(&str, &str)> = out.iter().map(|(n, s)| (n.as_str(), s.as_str())).collect();
+    let ext: Vec<(&str, &str)> = extended
+        .iter()
+        .map(|(n, s)| (n.as_str(), s.as_str()))
+        .collect();
+    match rk_kernel::catalog::admit_trial(&shipped, &ext, trial) {
+        Ok(Some(admitted)) => out.push(admitted),
+        Ok(None) => {}
+        Err(refusal) => {
+            eprintln!("redkiln: {refusal}");
+            return Err(Exit::ConfigError);
+        }
+    }
+    Ok(out)
+}
+
+/// **AC-110, unchanged by ADR-0114 decision 3.**
+///
+/// The extended activities `pack_src` references (an `[activity.<id>]` table naming an id of
+/// `.redkiln/catalog-extended/`). A non-empty answer
+/// is a load-time configuration error for an enabled pack; a trial is declared on an item record,
+/// never by a pack reference (R5 = ADR-0195 decision 4, proposed). *(dated 2026-09-29, `s8g`
+/// build, package S8G-P8-TAG-RELEASE-AND-MOVES.)*
+///
+/// # Errors
+/// [`Exit::ConfigError`] for an unreadable or malformed source.
+pub fn extended_references(root: &Path, pack_src: &str) -> Result<Vec<String>, Exit> {
+    let extended = toml_sources(&root.join(".redkiln").join(rk_kernel::catalog::EXTENDED_DIR))?;
+    let borrowed: Vec<(&str, &str)> = extended
+        .iter()
+        .map(|(n, s)| (n.as_str(), s.as_str()))
+        .collect();
+    let ids = rk_kernel::catalog::extended_ids(&borrowed).map_err(|e| {
+        eprintln!("redkiln: {e}");
+        Exit::ConfigError
+    })?;
+    let extras: PackExtras = toml::from_str(pack_src).map_err(|e| {
+        eprintln!("redkiln: the pack does not carry the adapter-facing pack values: {e}");
+        Exit::ConfigError
+    })?;
+    Ok(extras
+        .activity
+        .keys()
+        .filter(|id| ids.contains(*id))
+        .cloned()
+        .collect())
+}
+
+/// Every `*.toml` of `dir`, by name, sorted; an absent directory is none.
+fn toml_sources(dir: &Path) -> Result<Vec<(String, String)>, Exit> {
     if !dir.is_dir() {
         return Ok(Vec::new());
     }
-    let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
         .map_err(|e| {
             eprintln!("redkiln: {}: {e}", dir.display());
             Exit::ConfigError
@@ -2204,7 +2363,7 @@ fn base_inputs(
     now: i64,
 ) -> Result<rk_kernel::replay::RunInputs, Exit> {
     let root = Path::new(resolved.worktree.as_str()).to_path_buf();
-    let sources = catalog_sources(&root)?;
+    let sources = catalog_sources(&root, resolved.trial.as_deref())?;
     let artifacts_src = std::fs::read_to_string(root.join(".redkiln").join("artifacts.toml"))
         .map_err(|e| {
             eprintln!("redkiln: .redkiln/artifacts.toml: {e}");

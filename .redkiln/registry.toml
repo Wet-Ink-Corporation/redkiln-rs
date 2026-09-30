@@ -70,8 +70,11 @@ path = "checklists/retro.toml"
 [checklist.risk-register]
 path = "checklists/risk-register.toml"
 
+# (dated 2026-09-29, s8g build, package S8G-P7-DEMANDS; s8g §8g.6; R4 = ADR-0194 decision 2, proposed) The
+# entry flips with its file, .redkiln/checklists/smoke.toml, in record V's item form. Was:
+# unauthored = "s8g §8g.6 authors .redkiln/checklists/smoke.toml in the smoke handler's item form (id, argv, cwd, expect_exit, stdout_contains) and replaces this entry with its path"
 [checklist.smoke]
-unauthored = "s8g §8g.6 authors .redkiln/checklists/smoke.toml in the smoke handler's item form (id, argv, cwd, expect_exit, stdout_contains) and replaces this entry with its path"
+path = "checklists/smoke.toml"
 
 [kb.spec-conventions]
 path = "kb/spec-conventions.md"

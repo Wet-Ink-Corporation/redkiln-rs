@@ -622,6 +622,11 @@ fn a_registry_verb_whose_input_the_resolver_refuses_is_refused_before_the_port()
 /// as here, the kernel's default refuses by name, naming the route and the unbound handler, so the
 /// `store` row's needle moves from ~~`s8f`~~ to `no store-route handler is bound`. The `git` row is
 /// unchanged (`s8g`'s).
+///
+/// *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195 decision 2,
+/// proposed.)* The `git` route has an executor now too: the composition-root-bound git-route seam
+/// (`rk-cli`'s `release_tag` handler). With none bound, as here, the kernel's default refuses by
+/// name, so the `git` row's needle moves from ~~`s8g`~~ to `no git-route handler is bound`.
 #[test]
 fn a_row_whose_route_has_no_executor_refuses_naming_the_route() {
     let ctx = Context::new();
@@ -630,7 +635,7 @@ fn a_row_whose_route_has_no_executor_refuses_naming_the_route() {
                 false, timeout = \"build_timeout\", inputs = [], route = \"git\", side_effecting = false }";
     for (verb, route, stage) in [
         ("item_create", "store", "no store-route handler is bound"),
-        ("release_tag", "git", "s8g"),
+        ("release_tag", "git", "no git-route handler is bound"),
     ] {
         let (rt, tc) = rt_routed(
             "route",

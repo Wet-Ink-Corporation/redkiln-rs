@@ -89,7 +89,9 @@ when = "blast_radius >= high"
 artifacts = ["ChangeRecord"]
 
 [stage.release]
-goal = "The fix is in production reversibly"
+# s8g (2026-09-29, R5 = ADR-0195 decision 6, proposed; D21-42 6b): AMENDED, not read. A run that makes a local tag
+# and pushes nothing puts nothing in production. It read: goal = "The fix is in production reversibly".
+goal = "The fix is tagged for release, reversibly"
 baseline = ["BuildArtifact", "ReleaseRecord"]
 # Step 7e (2026-09-21) -- DROPPED: [[stage.release.require]] when = 'data_migration', artifacts = ["MigrationLog"]. `data_migration` may key no require row (AC-520, ADR-0093 d2).
 

@@ -38,7 +38,19 @@
 //!   summary; `run_verb` answers `sca_scan` clean and `package` a built artifact, and refuses every
 //!   other verb by its bare name. The two review routes (`shallow_clone`, `verdict_record`) are bound
 //!   to [`LaneReview`], which clones nothing and re-executes nothing (the scripted review returns no
-//!   finding, so `review::confirm` has nothing to re-run).
+//!   finding, so `review::confirm` has nothing to re-run). *(dated 2026-09-29, `s8g` build, package
+//!   S8G-P7-DEMANDS.)* `run_verb` also answers `smoke` passing, now that `checklist:smoke` resolves.
+//!   *(dated 2026-09-29, `s8g` build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195, proposed.)*
+//!   The `git` route (`release_tag`) is bound to [`LaneGit`], which answers a `ReleaseTag` for the
+//!   `sha` it is handed and tags nothing: `rk-cli`'s real handler, through `rk-git`, is proved by
+//!   `tag_release::` in `rk-cli`, which this crate cannot depend on.
+//! - **The trial and the declaration** *(dated 2026-09-29, `s8g` build, package
+//!   S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195 decisions 4 and 5, proposed)*. Each lane's item
+//!   carries `[trial] activity = "tag-release"`, as `s8j`'s lane items do (`s8g` §8g.7), so the
+//!   catalog is the shipped one plus the ONE extended activity the kernel's `catalog::admit_trial`
+//!   admits, as `rk-cli`'s `catalog_sources` composes it. The item carries the repository's
+//!   `.redkiln/declared.toml` values (`release_form = "tag"`), read through the facet registry as
+//!   `rk-cli`'s `build_item` reads them.
 //! - **Seeding.** Before each activity walks, every MANDATORY `requires` kind of that activity with no
 //!   committed `emit` binding in the item's journal is seeded with a fixture completion row
 //!   (`lane-walk-seed-<Kind>@1`), which is where `artifact:<Kind>` reads from (R2 = ADR-0173,
@@ -65,7 +77,7 @@ use rk_kernel::registry::Registry;
 use rk_kernel::runtime::Runtime;
 use rk_kernel::runtime::reference::RunBranch;
 use rk_kernel::runtime::step::{
-    Activation, GateSite, ReviewRoutes, StoreCall, StoreRoute, ToolRouting,
+    Activation, GateSite, GitRoute, ReviewRoutes, StoreCall, StoreRoute, ToolRouting,
 };
 use rk_kernel::select::{ArtifactRegistry, Catalog, Item, Pack, select};
 use rk_kernel::workflow::envelope::AttemptCap;
@@ -131,6 +143,9 @@ struct Lane {
     rows: &'static [Row],
     /// `(stage, needle)`: a stage whose SELECTION refuses, naming `needle`, so nothing there walks.
     selection_refusals: &'static [(&'static str, &'static str)],
+    /// *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195 decision
+    /// 4, proposed.)* The item record's `[trial] activity`, as `s8j`'s lane items carry it.
+    trial: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -163,13 +178,60 @@ struct Shipped {
     /// Question id → its first option, from `.redkiln/processes/questions.toml`.
     first_option: BTreeMap<String, String>,
     redkiln: PathBuf,
+    /// *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.)* The repository's
+    /// `.redkiln/declared.toml` values, read through the facet registry (R5 = ADR-0195 decision 5).
+    declared: BTreeMap<String, String>,
 }
 
-fn shipped(pack_file: &str) -> Shipped {
+/// Every `*.toml` of `dir`, by name, sorted, as `rk-cli`'s `catalog_sources` reads them.
+fn toml_sources(dir: &Path) -> Vec<(String, String)> {
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("{} reads: {e}", dir.display()))
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+        .collect();
+    paths.sort();
+    paths
+        .iter()
+        .map(|p| {
+            (
+                p.file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                read(p),
+            )
+        })
+        .collect()
+}
+
+fn shipped(pack_file: &str, trial: Option<&str>) -> Shipped {
     let redkiln = root().join(".redkiln");
     let pack = Pack::from_toml(pack_file, &read(&redkiln.join("packs").join(pack_file)))
         .unwrap_or_else(|e| panic!("the shipped pack {pack_file} loads: {e}"));
-    let catalog = Catalog::from_dir(&redkiln.join("catalog"))
+    // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195 decision
+    // 4, proposed.)* The shipped catalog plus the one extended activity the lane item's `[trial]`
+    // admits, through the kernel's `catalog::admit_trial`, as `rk-cli`'s `catalog_sources`
+    // composes it. Was `Catalog::from_dir(&redkiln.join("catalog"))`.
+    let mut sources = toml_sources(&redkiln.join("catalog"));
+    let extended = toml_sources(&redkiln.join(rk_kernel::catalog::EXTENDED_DIR));
+    let admitted = {
+        let s: Vec<(&str, &str)> = sources
+            .iter()
+            .map(|(n, s)| (n.as_str(), s.as_str()))
+            .collect();
+        let x: Vec<(&str, &str)> = extended
+            .iter()
+            .map(|(n, s)| (n.as_str(), s.as_str()))
+            .collect();
+        rk_kernel::catalog::admit_trial(&s, &x, trial)
+            .unwrap_or_else(|e| panic!("the lane item's trial is admitted: {e}"))
+    };
+    sources.extend(admitted);
+    let borrowed: Vec<(&str, &str)> = sources
+        .iter()
+        .map(|(n, s)| (n.as_str(), s.as_str()))
+        .collect();
+    let catalog = Catalog::from_sources(&borrowed)
         .unwrap_or_else(|e| panic!("the shipped catalog loads: {e:?}"));
     let artifacts =
         ArtifactRegistry::from_toml("artifacts.toml", &read(&redkiln.join("artifacts.toml")))
@@ -185,6 +247,9 @@ fn shipped(pack_file: &str) -> Shipped {
          gates below would be answered from nothing",
         first_option.len()
     );
+    let declared = facets
+        .declared_values(&read(&redkiln.join("declared.toml")))
+        .unwrap_or_else(|e| panic!("the shipped declared.toml reads: {e}"));
     Shipped {
         pack,
         catalog,
@@ -193,6 +258,7 @@ fn shipped(pack_file: &str) -> Shipped {
         verbs,
         first_option,
         redkiln,
+        declared,
     }
 }
 
@@ -227,7 +293,12 @@ fn item(shipped: &Shipped, lane: &Lane, change: Option<&str>) -> Item {
         if facet.name == "kind" || facet.source == rk_kernel::registry::Source::Kernel {
             continue;
         }
-        item = item.with_facet_null(&facet.name);
+        // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.)* A `declared`
+        // facet the repository's declaration names carries that value, as `build_item` binds it.
+        item = match shipped.declared.get(&facet.name) {
+            Some(value) => item.with_facet_str(&facet.name, value),
+            None => item.with_facet_null(&facet.name),
+        };
     }
     for (name, value) in lane.facets {
         item = match value {
@@ -388,6 +459,23 @@ impl Toolchain for LaneToolchain {
                     "advisories": [], "tools": [],
                 }),
             }),
+            // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS; `s8g` §8g.1 move 1, §8g.6; R4 =
+            // ADR-0194 decisions 1 and 2, proposed.)* `smoke` answers a passing `SmokeResult`, as
+            // `sca_scan` answers clean: `[checklist.smoke]` now names its file, so the step reaches
+            // the port, and `smoke-test@2`'s `passing` check reads the status. Before, the verb
+            // was never reached (`checklist:smoke` refused as `unauthored`), and it was refused by
+            // its bare name with every other verb.
+            "smoke" => Ok(VerbOutput {
+                kind: "SmokeResult".to_owned(),
+                value: serde_json::json!({
+                    "rows": [{
+                        "id": "lane", "argv": ["redkiln", "--version"], "cwd": "lane-scratch",
+                        "expect_exit": 0, "exit": 0, "predicate": "stdout contains \"redkiln\"",
+                        "predicate_held": true, "passed": true,
+                    }],
+                    "passed": 1, "failed": 0, "status": "passing",
+                }),
+            }),
             "package" => Ok(VerbOutput {
                 kind: "BuildArtifact".to_owned(),
                 value: serde_json::json!({
@@ -431,6 +519,30 @@ impl ReviewRoutes for LaneReview {
         _workspace: &Json,
     ) -> Result<Box<dyn rk_kernel::review::reexec::ReExecutor + '_>, StepError> {
         Ok(Box::new(NoReExecution))
+    }
+}
+
+/// **The `git` route, clone-free and tag-free** (R5 = ADR-0195 decisions 1 and 2, proposed): a
+/// `ReleaseTag` for the `sha` it is handed, a first release naming `none`. `rk-cli`'s handler,
+/// which tags through `rk-git`, is proved by `rk-cli`'s `tag_release::` tests. *(dated
+/// 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES.)*
+struct LaneGit;
+
+impl GitRoute for LaneGit {
+    fn serve(&self, call: &StoreCall<'_>) -> Result<VerbOutput, StepError> {
+        match call.verb {
+            "release_tag" => Ok(VerbOutput {
+                kind: "ReleaseTag".to_owned(),
+                value: serde_json::json!({
+                    "tag": format!("rk-release/{}", call.item),
+                    "target": call.inputs.get("sha").cloned().unwrap_or(Json::Null),
+                    "rollback_target": "none",
+                }),
+            }),
+            other => Err(StepError::Unsupported {
+                capability: format!("LANE-WALK RIG: no git verb `{other}`"),
+            }),
+        }
     }
 }
 
@@ -843,6 +955,9 @@ impl Rig<'_> {
             // render record ADR-0189 decisions 11 and 12, proposed.)* The `store` route, as
             // `rk-cli`'s composition root binds `rk-store`'s writer and reader.
             .with_store_route(Arc::clone(&self.store) as Arc<dyn StoreRoute>)
+            // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+            // decision 2, proposed.)* The `git` route, as `rk-cli`'s composition root binds one.
+            .with_git_route(Arc::new(LaneGit) as Arc<dyn GitRoute>)
     }
 
     /// Walk one activity to its end, answering each gate it opens with its first option.
@@ -964,7 +1079,7 @@ fn gate_question(events: &[Event], token: &Digest) -> String {
 
 /// Walk `lane` over the shipped pack and assert its table exactly.
 fn walk_lane(lane: &Lane) {
-    let shipped = shipped(lane.pack);
+    let shipped = shipped(lane.pack, lane.trial);
     let (q, a) = counters();
     let db = store(&q, &a);
     let lane_store = Arc::new(LaneStore {
@@ -1310,17 +1425,17 @@ const FIX: Lane = Lane {
         // R1 = ADR-0191 decisions 1 and 3, proposed.)* `equivalence-boundary` left this row: `TestReport`
         // is pass-sourced and the N23 providers sit at `implement`, where `criticality = low` selects
         // none of them. Was `("equivalence-boundary", Verdict::Walks)` first in this list.
+        // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS; `s8g` §8g.1 move 1, §8g.6; D21-73
+        // item 4; D21-46 R6; R4 = ADR-0194 decisions 1-3, proposed.)* `confirmation-test` and
+        // `smoke-test` flip to walks: `confirmation-test@2`'s emit reads `artifact:ReproCase.command`
+        // and `artifact:Changeset.sha`, and `[checklist.smoke]` names its file. Were
+        // `Refuses("`before`'s output has no field `.selection`")` and
+        // `Refuses("`checklist:smoke` is mandatory")`.
         Row {
             stage: "verify",
             selected: &[
-                (
-                    "confirmation-test",
-                    Verdict::Refuses("`before`'s output has no field `.selection`"),
-                ),
-                (
-                    "smoke-test",
-                    Verdict::Refuses("`checklist:smoke` is mandatory"),
-                ),
+                ("confirmation-test", Verdict::Walks),
+                ("smoke-test", Verdict::Walks),
                 ("sca-scan", Verdict::Walks),
             ],
         },
@@ -1328,11 +1443,17 @@ const FIX: Lane = Lane {
             stage: "review",
             selected: &[("adversarial-review", Verdict::Walks)],
         },
+        // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; `s8g` §8g.1 move 1,
+        // §8g.7; R5 = ADR-0195 decisions 4 and 5, proposed.)* `tag-release` replaces
+        // `rolling-deploy`: the lane item's `[trial]` admits it from `.redkiln/catalog-extended/`,
+        // and the repository's `release_form = "tag"` makes its `applicable_if` hold, so step 4
+        // chooses it (rank 5) over `rolling-deploy` (rank 10). Was `("rolling-deploy",
+        // Verdict::Refuses("capability: \"deploy\""))`.
         Row {
             stage: "release",
             selected: &[
                 ("build-package", Verdict::Walks),
-                ("rolling-deploy", Verdict::Refuses("capability: \"deploy\"")),
+                ("tag-release", Verdict::Walks),
             ],
         },
         Row {
@@ -1350,6 +1471,9 @@ const FIX: Lane = Lane {
         },
     ],
     selection_refusals: &[],
+    // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+    // decision 4, proposed.)* The fix-lane item's trial declaration, as `s8j`'s carries it.
+    trial: Some("tag-release"),
 };
 
 /// §8d.9's story lane, as measured.
@@ -1394,25 +1518,28 @@ const STORY: Lane = Lane {
         // *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; `s8g` §8g.1 move 1; D21-43 N23;
         // R1 = ADR-0191 decisions 1 and 3, proposed.)* `equivalence-boundary` left this row, as on the
         // fix lane. Was `("equivalence-boundary", Verdict::Walks)` first in this list.
+        // *(dated 2026-09-29, s8g build, package S8G-P7-DEMANDS; `s8g` §8g.1 move 1, §8g.6; R4 =
+        // ADR-0194 decisions 1 and 2, proposed.)* `smoke-test` flips to walks, as on the fix lane.
+        // Was `Refuses("`checklist:smoke` is mandatory")`.
         Row {
             stage: "verify",
-            selected: &[
-                (
-                    "smoke-test",
-                    Verdict::Refuses("`checklist:smoke` is mandatory"),
-                ),
-                ("sca-scan", Verdict::Walks),
-            ],
+            selected: &[("smoke-test", Verdict::Walks), ("sca-scan", Verdict::Walks)],
         },
         Row {
             stage: "review",
             selected: &[("adversarial-review", Verdict::Walks)],
         },
+        // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; `s8g` §8g.1 move 1,
+        // §8g.7; R5 = ADR-0195 decisions 4 and 5, proposed.)* `tag-release` replaces
+        // `rolling-deploy`: the lane item's `[trial]` admits it from `.redkiln/catalog-extended/`,
+        // and the repository's `release_form = "tag"` makes its `applicable_if` hold, so step 4
+        // chooses it (rank 5) over `rolling-deploy` (rank 10). Was `("rolling-deploy",
+        // Verdict::Refuses("capability: \"deploy\""))`.
         Row {
             stage: "release",
             selected: &[
                 ("build-package", Verdict::Walks),
-                ("rolling-deploy", Verdict::Refuses("capability: \"deploy\"")),
+                ("tag-release", Verdict::Walks),
             ],
         },
         Row {
@@ -1432,6 +1559,9 @@ const STORY: Lane = Lane {
     // *(dated 2026-09-27, F3-D2174; D21-74 ruling 1.)* Was `&[("implement", "the assembled DAG is
     // not acyclic")]`.
     selection_refusals: &[],
+    // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
+    // decision 4, proposed.)* The story-lane item's trial declaration, as `s8j`'s carries it.
+    trial: Some("tag-release"),
 };
 
 #[test]
