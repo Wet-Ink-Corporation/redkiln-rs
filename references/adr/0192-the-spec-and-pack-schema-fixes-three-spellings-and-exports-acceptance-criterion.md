@@ -73,6 +73,21 @@ constant would turn a human decision into code.
 2. **The mutation declaration's shipped home is the Rust row of ADR-0170's per-toolchain table**, with `feasible =
    true` and ADR-0104 decision 1's warrant (D21-42 4a: *"Each value carries its measurement as its warrant"*), so the
    ledger's feasibility input exists on this tree.
+   *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; ruled D21-123, TAKEN PROVISIONALLY under D21-105; an
+   in-record note before the flip.)* **Carried out as written.** The row is `.redkiln/registry.toml`'s
+   `[toolchain.rust]` `mutation = { value = { feasible = true }, source = "ADR-0104 decision 1 (…); ADR-0192 decision
+   2; D21-42 4a" }`, in the only shape the loader admits for a declaration key (`{value, source}`), with no `reason`;
+   `rk_kernel::workflow::memo::DECLARATION_ROWS` admits `mutation` (3 → 4), as ADR-0170 decision 9 allows (*"Adding a
+   row is a record's act"*). **The reader** is `rk_cli::verbs::run::mutation_feasibility_at`, called at ADR-0191
+   decision 2's step (6): it reads the row of the toolchain the pass's adapter serves (`toolchain_of`, as set-up reads
+   `setup_projects`, so the kernel never sees the name), and keeps the pack's `[mutation]` table as a second reader.
+   Registry only, pack only, or both and equal: that value; **both and different: refused by name**
+   (`Exit::ConfigError`, *"mutation feasibility is declared twice and disagrees"*), with no precedence winner;
+   neither: AC-337's refusal. **No Node row:** a declaration key cannot carry `unmeasured`, and a Node value would be
+   a guess, so `[toolchain.node]` carries a dated comment instead; the row is owed with the first Node self-hosting
+   run, and until then a Node lane with criteria refuses by name. **Stated limit:** the row turns a configuration
+   refusal into a harness run; with `assertion_flipped = None`, `pinned` is unreachable (AC-334 ARMED), so the stage
+   exit still refuses and mints AC-357's gate. AC-337's doctor rule-table row for the missing declaration stays owed.
 
 3. **`rk_types::AcceptanceCriterion`** (AC-137's GIVEN/THEN; ADR-0104 decision 1's field): `id`, `criterion: Text`,
    `gwt: Option<Gwt>` with `Gwt { given, when, then, and: Vec<Text> }`, `verification: Option<Text>`, and `mutation:

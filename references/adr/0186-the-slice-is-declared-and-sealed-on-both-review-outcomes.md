@@ -6,7 +6,7 @@ date: 2026-09-28
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-41 (row e — *"Slice-Verdict: a declared `slice` key on the item record, refused by name when absent, never equal to the item id, one per fix-lane item, and sealed on both review outcomes including the `FindingsBlock` path."* *(dated 2026-09-28, s8e build, package R2FIX-8e: the ledger's exact row e text; this line quoted a paraphrase that no file carries)*) and D21-93 (*"The fold records the stage a seal was made in, and `terminal()` returns `Sealed` only until a later `stage_transition`"*), D21-94 (*"The refusal moves to the lane's entry, before any dispatch"*) and D21-95 (item 1, the entry check read from declared `provides`; item 2, the stated gap); runbook/phase-1/s8e-tier-one-and-the-lane.md (the records table's fourth row, §8e.0 item 8, §8e.8, §8e.12, §8e.13); references/adr/0159, 0160, 0161, 0162; crates/rk-cli/src/verbs/run.rs, crates/rk-kernel/src/runtime/tier_one.rs, crates/rk-kernel/src/workflow/fsm.rs, crates/rk-git/src/trailer/grammar.rs and crates/rk-kernel/tests/it/conformance.rs, as built 2026-09-28 on `d80609b`
 supersedes: []
-superseded_by: []
+superseded_by: ["0196"]
 related: ["0101", "0109", "0159", "0160", "0161", "0162", "0181", "0183"]
 evidence: []
 consumers: []
@@ -253,3 +253,19 @@ named value. Mutants **S8E-M53** (the entry check dropped), **S8E-M54** (the wal
 `slice_verdict::an_absent_slice_is_refused_by_name` stays green, and green under S8E-M53, because the mint's backstop
 refuses the same absence. **Not measured, and named:** no shipped lane reaches the check (D21-95's census, 0 of the
 shipped activities).
+
+*(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119, TAKEN PROVISIONALLY under D21-105 items 3 and 4.)*
+**Reading note: this record is superseded in part by ADR-0196 (`proposed`).** This note does not edit the
+Decision above. Every sentence ADR-0196 moves still reads as written here until ADR-0196 flips on its own dated ledger
+line. ADR-0196 moves three things:
+- **The key.** *"whose `provides` first is `Findings`"* (decision 2 as amended, the title's parenthetical, and the
+  Consequences and forbids bullets that say *"provides `Findings` first"*) and *"The key is the one `review_pass`
+  selects its committed activation by (`review_pass::FINDINGS_SCHEMA`)"*. They are read as *a review activity*:
+  `review_pass::is_review_activity`, `provides` first `ReviewVerdict` by exact element equality. The entry check and
+  the seal both call that one predicate.
+- **The gap statement.** *"So on the shipped packs **both the entry check and the seal are inert** until `s8g` …"* is
+  withdrawn. It was measured false on its seal half: `review_pass::findings_in` took the last `Findings`-schema row
+  from any activation, and 40 of the 49 shipped `value:Findings` steps sit outside the review stage.
+- **What stays.** The validator, the two sitings, the mint's backstop, the seal on both outcomes and the stage scoping
+  of `terminal()` all stand.
+ADR-0162's decisions 3 and 5 stand whole, and decision 5 is now enforced.

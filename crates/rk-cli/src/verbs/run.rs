@@ -339,6 +339,10 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
     // undeclared slice is a certain failure and must not be paid for: it is refused HERE, before
     // any tree, commit or dispatch, through the validator the mint calls too. A lane that reaches
     // no such stage is not refused for a key it never needs; the mint's refusal stays the backstop.
+    // *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119 item 3; ADR-0196, proposed.)*
+    // ~~provides `Findings` first~~ — a stage whose catalog activity is a review activity
+    // (`review_pass::is_review_activity`), the one predicate the seal selects its row by. Live on
+    // the shipped packs: every lane reaching the review stage declares its slice or is refused here.
     if let Some(reached) = findings_stage_reached(&resolved)
         && let Err(e) = rk_kernel::runtime::tier_one::validate_slice(
             resolved.slice.as_deref(),
@@ -348,13 +352,13 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         )
     {
         eprintln!(
-            "redkiln: the lane of `{}` will reach `{}`, whose activity `{}` provides `{}` and is \
-             sealed under the item's declared slice, so the slice is checked at entry, before any \
-             dispatch, and refused: {e} (D21-94, D21-95)",
+            "redkiln: the lane of `{}` will reach `{}`, whose activity `{}` provides `{}` first and \
+             is sealed under the item's declared slice, so the slice is checked at entry, before \
+             any dispatch, and refused: {e} (D21-94, D21-95, D21-119)",
             resolved.item.id(),
             reached.stage,
             reached.activity,
-            crate::review_pass::FINDINGS_SCHEMA
+            crate::review_pass::REVIEW_VERDICT_KIND
         );
         return Ok(refuse_after_reconcile(
             &resolved.exec,
@@ -442,18 +446,27 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
     lane
 }
 
-/// The first stage the lane will reach whose catalog activity provides `Findings` first, for the
-/// entry check above (D21-95 item 1).
-struct FindingsStage {
+/// The first stage the lane will reach whose catalog activity provides `Findings` first.
+///
+/// For the entry check above (D21-95 item 1). *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119
+/// item 3.)* ~~provides `Findings` first~~ -- is a review activity
+/// (`review_pass::is_review_activity`: `provides` first is the review verdict kind).
+///
+/// *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119 item 3.)* Public, with its
+/// reader, so the shipped-pack test reads what the entry refuses over; nothing else calls it.
+pub struct FindingsStage {
     /// The stage the walk reached.
-    stage: String,
-    /// The activity for that stage whose `provides` first is `Findings`.
-    activity: String,
+    pub stage: String,
+    /// The review activity for that stage (~~whose `provides` first is `Findings`~~ *(dated
+    /// 2026-09-29, D21-119)* whose `provides` first is the review verdict kind).
+    pub activity: String,
     /// The pack's `stage_order`, which the validator refuses a slice against.
-    stage_order: Vec<String>,
+    pub stage_order: Vec<String>,
 }
 
-/// **Will the lane reach a stage that seals a slice?** *(dated 2026-09-28, `s8e` build, package
+/// **Will the lane reach a stage that seals a slice?**
+///
+/// *(dated 2026-09-28, `s8e` build, package
 /// S8E-D2194-ENTRY; D21-95 item 1: "At entry it walks the stage order from the current stage
 /// through `Pack::successor`, skipping forbidden stages, and refuses by name … when any stage
 /// reached has a catalog activity for that stage whose `provides` first is `Findings`.")*
@@ -461,13 +474,16 @@ struct FindingsStage {
 /// The walk starts at the CURRENT stage (seeded from git) and follows `Pack::successor`, which
 /// skips every `forbidden` entry; a current stage that is itself `forbidden` is skipped too. A
 /// stage is read by its catalog activities' declared `provides`, never by its name: the key is
-/// `review_pass::FINDINGS_SCHEMA`, the one the review pass selects its committed activation by, and
-/// no stage is compared to a string literal (ADR-0162's forbids). The walk is bounded by the
-/// declared order's length.
+/// ~~`review_pass::FINDINGS_SCHEMA`, the one the review pass selects its committed activation by~~
+/// *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119 items 1 and 3; ADR-0196,
+/// proposed)* `review_pass::is_review_activity`, the one predicate the review pass selects its
+/// committed activation by, and no stage is compared to a string literal (ADR-0162's forbids).
+/// The walk is bounded by the declared order's length.
 ///
 /// `None` also when the pack or the catalog does not load: this check decides nothing it cannot
 /// read, the path that loads them refuses by name later, and the mint's refusal is the backstop.
-fn findings_stage_reached(resolved: &Resolved) -> Option<FindingsStage> {
+#[must_use]
+pub fn findings_stage_reached(resolved: &Resolved) -> Option<FindingsStage> {
     let pack = rk_kernel::select::Pack::from_toml(
         &format!("{}.toml", resolved.pack_name),
         &resolved.pack_src,
@@ -497,13 +513,15 @@ fn findings_stage_reached(resolved: &Resolved) -> Option<FindingsStage> {
         // review verdict kind first (the seal's key) and `Findings` second, and this keeps the entry
         // exactly as live as before on every catalog (0 shipped activities name `Findings` in
         // `provides`). D21-119's second commit replaces it with `review_pass::is_review_activity`.
+        // *(dated 2026-09-29, `s8g` build, package R-D2119-8g, D21-119's SECOND commit: the entry
+        // check live; ADR-0196, proposed.)* ~~the interim key~~ — the ONE predicate the seal reads
+        // too, so the entry refuses exactly where a seal can be made. On the shipped packs the
+        // walk now reaches the review stage's verdict producers (`provides` first `ReviewVerdict`).
         if pack.rigor(stage) != Some(rk_kernel::rigor::Rigor::Forbidden)
-            && let Some(activity) = catalog.activities().iter().find(|a| {
-                a.stage == stage
-                    && a.provides
-                        .iter()
-                        .any(|p| p == crate::review_pass::FINDINGS_SCHEMA)
-            })
+            && let Some(activity) = catalog
+                .activities()
+                .iter()
+                .find(|a| a.stage == stage && crate::review_pass::is_review_activity(a))
         {
             return Some(FindingsStage {
                 stage: stage.to_owned(),
@@ -3794,24 +3812,16 @@ fn verify_step_six(
         return Ok(Ok(()));
     }
 
-    // ---- (2) AC-337.
-    let feasibility = rk_kernel::select::Pack::from_toml(
+    // ---- (2) AC-337. *(dated 2026-09-29, `s8g` build, package R-D2122-D2123-8g; D21-123 item 4.)*
+    // The read is [`mutation_feasibility_at`], over the adapter the pass ran under.
+    let feasibility = match mutation_feasibility_at(
+        Path::new(resolved.worktree.as_str()),
+        &site.identity.adapter,
         &format!("{}.toml", resolved.pack_name),
         &resolved.pack_src,
-    )
-    .map_err(|e| format!("{e:?}"))
-    .and_then(|pack| rk_kernel::verify::mutation_feasibility(&pack).map_err(|e| format!("{e:?}")));
-    let feasibility = match feasibility {
+    ) {
         Ok(feasibility) => feasibility,
-        Err(e) => {
-            return Ok(Err((
-                format!(
-                    "the pack declares no usable mutation feasibility, and the item has criteria \
-                     (AC-337: an absent declaration is a configuration error): {e}"
-                ),
-                Exit::ConfigError,
-            )));
-        }
+        Err(why) => return Ok(Err((why, Exit::ConfigError))),
     };
 
     // ---- (3) the harness, one run per declared mutation.
@@ -5124,6 +5134,89 @@ pub fn toolchain_of(adapter: &str) -> Option<&'static str> {
         "rk-adapter-toolchain-rust" => Some("rust"),
         "rk-adapter-toolchain-node" => Some("node"),
         _ => None,
+    }
+}
+
+/// **AC-337's feasibility read for §8g.2 step 6.**
+///
+/// D21-123 item 4, TAKEN PROVISIONALLY under D21-105; R2 = ADR-0192 decision 2, proposed. *(Added
+/// 2026-09-29, `s8g` build, package R-D2122-D2123-8g.)* Two readers:
+///
+/// - **the registry row**: `<worktree>/.redkiln/registry.toml`'s `[toolchain.<tc>]` `mutation`
+///   declaration, where `<tc>` is [`toolchain_of`] the adapter the pass ran under (the path
+///   set-up takes for `setup_projects`, so the kernel never sees the toolchain's name, AC-487);
+/// - **the pack's `[mutation]` table** (`pack_name`, `pack_src`), kept as a second reader.
+///
+/// Registry only, pack only, or both and equal: that value. Both and different: refused by name,
+/// with no precedence winner. Neither (no registry file, an adapter with no table, a table with
+/// no row, and no pack table): AC-337's refusal by name. Never a default to feasible.
+///
+/// # Errors
+/// The refusal's text, for [`Exit::ConfigError`].
+pub fn mutation_feasibility_at(
+    worktree: &Path,
+    adapter: &str,
+    pack_name: &str,
+    pack_src: &str,
+) -> Result<rk_ports::toolchain::MutationFeasibility, String> {
+    use rk_ports::toolchain::MutationFeasibility;
+
+    let absent = |e: &dyn std::fmt::Debug| {
+        format!(
+            "the pack declares no usable mutation feasibility, and the item has criteria \
+             (AC-337: an absent declaration is a configuration error): {e:?}"
+        )
+    };
+    // ---- the registry row, through the pass's adapter.
+    let toolchain = toolchain_of(adapter);
+    let registry_file = registry_path(worktree);
+    let from_registry: Option<MutationFeasibility> = match toolchain {
+        Some(tc) if registry_file.is_file() => {
+            let registry = rk_kernel::workflow::memo::VerbRegistry::load_file(&registry_file)
+                .map_err(|e| format!("{}: {e}", registry_file.display()))?;
+            match registry
+                .table(tc)
+                .and_then(|t| t.declarations().get("mutation"))
+            {
+                None => None,
+                Some(row) => {
+                    let table = row.value.as_table().ok_or_else(|| {
+                        format!("`toolchain.{tc}.mutation`'s value is not a table (AC-337)")
+                    })?;
+                    let feasible = table
+                        .get("feasible")
+                        .and_then(rk_kernel::toml_subset::Value::as_bool);
+                    let reason = table
+                        .get("reason")
+                        .and_then(rk_kernel::toml_subset::Value::as_str);
+                    Some(
+                        MutationFeasibility::declared(feasible, reason).map_err(|e| {
+                            format!(
+                                "`toolchain.{tc}.mutation` in {}: {e}",
+                                registry_file.display()
+                            )
+                        })?,
+                    )
+                }
+            }
+        }
+        _ => None,
+    };
+    // ---- the pack's `[mutation]` table, the second reader.
+    let pack = rk_kernel::select::Pack::from_toml(pack_name, pack_src).map_err(|e| absent(&e))?;
+    let from_pack: Option<MutationFeasibility> = match pack.mutation_declaration() {
+        None => None,
+        Some(_) => Some(rk_kernel::verify::mutation_feasibility(&pack).map_err(|e| absent(&e))?),
+    };
+    match (from_registry, from_pack) {
+        (Some(registry), Some(pack)) if registry != pack => Err(format!(
+            "mutation feasibility is declared twice and disagrees (registry \
+             [toolchain.{}].mutation vs pack [mutation]): the registry reads {registry:?} and the \
+             pack {pack:?}; neither is chosen (D21-123)",
+            toolchain.unwrap_or_default()
+        )),
+        (Some(one), _) | (None, Some(one)) => Ok(one),
+        (None, None) => Err(absent(&rk_ports::toolchain::FeasibilityError::Undeclared)),
     }
 }
 

@@ -1329,6 +1329,10 @@ that is not a duration, so it carries a `source` rather than a `measured` list. 
   reading as its `source`.
 - `package_binaries`, the declared shipped set §8c.4's `package` reads. `s8g` writes this repository's set.
 - `s8g`'s `claims` column (AC-349).
+- *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-123, TAKEN PROVISIONALLY under D21-105.)* A fourth,
+  `mutation`, AC-337's feasibility declaration: `s8g` writes the Rust row, `{ feasible = true }`, by record
+  (ADR-0192 decision 2, proposed). `[toolchain.node]` carries none; its row is owed with the first Node
+  self-hosting run. Checkpoint 8c (11)'s declaration-row set `D` moves by the dated line beside it.
 
 Adding a row is a record's act, like every other change to the table.
 
@@ -2857,7 +2861,11 @@ exp=$(tr -d '[:space:]' < crates/rk-cli/tests/fixtures/exit/findings-block/expec
 # ---- named set only. Every warrant's pin is a commit in this repository's object store. Everything is read with
 # ---- tomllib, because a grep misses the inline-table spelling. The control comes first.
 test -f .redkiln/registry.toml || { echo "FAIL: .redkiln/registry.toml is not shipped — design §4.5's verb table is still D21-10's gap"; exit 1; }
-km='import sys,tomllib,re; t=tomllib.load(open(sys.argv[1],"rb")).get("toolchain",{}).get("rust",{}); M={"test_timeout","build_timeout","scan_timeout","setup_timeout"}; C={"implement_timeout","review_timeout","repro_timeout"}; U={"deploy_timeout","migration_timeout","cook_timeout","ue_test_timeout","mutation_timeout"}; D={"setup_projects","package_binaries","claims"}; w=lambda v,last: isinstance(v,dict) and set(v)=={"secs","measured","rule","pin",last} and type(v["secs"]) is int and v["secs"]>0 and isinstance(v["measured"],list) and len(v["measured"])>0 and re.fullmatch("[0-9a-f]{40}",str(v["pin"])) is not None; bad=[k for k in sorted(M) if not w(t.get(k),"command")]+[k for k in sorted(C) if not w(t.get(k),"source")]+[k for k in sorted(U) if not (isinstance(t.get(k),dict) and set(t[k])=={"unmeasured"})]+[k for k in sorted(t) if k not in M|C|U|D]+([] if "setup_projects" in t else ["setup_projects"]); print(","+",".join(bad)+","); print(" ".join(sorted({v["pin"] for v in t.values() if isinstance(v,dict) and "pin" in v})))'
+# (dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-123 item 3, TAKEN PROVISIONALLY under D21-105; R2 =
+# ADR-0192 decision 2, proposed.) D gains "mutation", the fourth declaration row (rk_kernel::workflow::memo::
+# DECLARATION_ROWS 3 -> 4; ADR-0170 decision 9: "Adding a row is a record's act"). Was:
+# D={"setup_projects","package_binaries","claims"}.
+km='import sys,tomllib,re; t=tomllib.load(open(sys.argv[1],"rb")).get("toolchain",{}).get("rust",{}); M={"test_timeout","build_timeout","scan_timeout","setup_timeout"}; C={"implement_timeout","review_timeout","repro_timeout"}; U={"deploy_timeout","migration_timeout","cook_timeout","ue_test_timeout","mutation_timeout"}; D={"setup_projects","package_binaries","claims","mutation"}; w=lambda v,last: isinstance(v,dict) and set(v)=={"secs","measured","rule","pin",last} and type(v["secs"]) is int and v["secs"]>0 and isinstance(v["measured"],list) and len(v["measured"])>0 and re.fullmatch("[0-9a-f]{40}",str(v["pin"])) is not None; bad=[k for k in sorted(M) if not w(t.get(k),"command")]+[k for k in sorted(C) if not w(t.get(k),"source")]+[k for k in sorted(U) if not (isinstance(t.get(k),dict) and set(t[k])=={"unmeasured"})]+[k for k in sorted(t) if k not in M|C|U|D]+([] if "setup_projects" in t else ["setup_projects"]); print(","+",".join(bad)+","); print(" ".join(sorted({v["pin"] for v in t.values() if isinstance(v,dict) and "pin" in v})))'
 a40=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 printf '[toolchain.rust]\ntest_timeout = { secs = 60, measured = [30], rule = "r", pin = "%s", command = "c" }\nbuild_timeout = { unmeasured = "x" }\n' "$a40" > "$scratch/ctl-values.toml" || { echo "FAIL: could not write the control"; exit 1; }
 ctl=$(python -c "$km" "$scratch/ctl-values.toml"); rc=$?

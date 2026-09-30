@@ -486,6 +486,25 @@ fn the_shipped_rust_value_table_is_exactly_the_declared_key_map() {
     // proposed; AC-349.)* `claims`, the third of decision 9's three declaration rows (`s8c` §8c.5:
     // *"`s8g`'s `claims` column (AC-349)"*), is written by `s8g`'s verify record.
     declared.insert("claims");
+    // *(dated 2026-09-29, `s8g` build, package R-D2122-D2123-8g; D21-123 item 3, TAKEN PROVISIONALLY
+    // under D21-105; R2 = ADR-0192 decision 2, proposed.)* `mutation`, the fourth declaration row
+    // (`DECLARATION_ROWS` 3 -> 4): AC-337's feasibility, `{ feasible = true }`, with no `reason`.
+    declared.insert("mutation");
+    let mutation = table
+        .get("mutation")
+        .and_then(TomlValue::as_table)
+        .expect("[toolchain.rust] declares the `mutation` row (D21-123 item 1)");
+    assert_eq!(
+        mutation
+            .get("value")
+            .and_then(TomlValue::as_table)
+            .map(|v| (
+                v.keys().cloned().collect::<Vec<_>>(),
+                v.get("feasible").and_then(TomlValue::as_bool)
+            )),
+        Some((vec!["feasible".to_owned()], Some(true))),
+        "`mutation`'s value is exactly `{{ feasible = true }}`, with no `reason`"
+    );
     let extra: Vec<&String> = table
         .keys()
         .filter(|k| !declared.contains(k.as_str()))

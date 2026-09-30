@@ -475,6 +475,103 @@ fn writes_one_keyed_test_report_with_one_artifact_write() {
     assert_eq!(completed(&pass_rows).len(), 1, "one verify_completed row");
 }
 
+/// **A two-toolchain item holds on the second key** (D21-122 item 2, TAKEN PROVISIONALLY under
+/// D21-105): the pass writes `TestReport{rust}`, then the same stage run's `TestReport{node}` is
+/// refused by the writer by name and reaches [`Refused::Write`]; no row is written for `node`, so
+/// D21-120's guard (which matches a keyed instance on its `key` member) still owes it, and rust's
+/// sidecar is intact. *(Added 2026-09-29, s8g build, package R-D2122-D2123-8g.)*
+#[test]
+fn a_two_toolchain_item_holds_on_the_second_key() {
+    let tree = tempfile::tempdir().expect("a run-owned tree stands in");
+    let rows: Arc<Mutex<Vec<Event>>> = Arc::default();
+    let (a, r) = (Arc::clone(&rows), Arc::clone(&rows));
+    let writer = rk_store::render::ArtifactWriter::new(
+        tree.path(),
+        rk_store::render::StageRun {
+            item: ITEM.to_owned(),
+            stage: "check".to_owned(),
+            run: "check-0123456789abcdef".to_owned(),
+        },
+        BTreeMap::from([("TestReport".to_owned(), "TestReport".to_owned())]),
+        rk_store::render::Journal::new(
+            move |e| {
+                a.lock().expect("unpoisoned").push(e);
+                Ok(())
+            },
+            move || Ok(r.lock().expect("unpoisoned").clone()),
+        ),
+    );
+    let changed = vec!["src/lib.rs".to_owned()];
+    let keyed_writes = || -> Vec<Option<String>> {
+        rows.lock()
+            .expect("unpoisoned")
+            .iter()
+            .filter(|e| e.kind == EventKind::ArtifactWrite)
+            .map(|e| {
+                e.payload
+                    .get("key")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned)
+            })
+            .collect()
+    };
+
+    let rust = Counting::new(Script::Ran {
+        passed: 7,
+        failed: 0,
+    });
+    let (first, _) = pass_over(
+        &rust,
+        &Instance::keyed("TestReport", "rust"),
+        Some(&changed),
+        Some(verify_pass::PASS_POLICY),
+        &writer,
+    );
+    assert!(
+        matches!(first, Ok(Verdict::Green { passed: 7, .. })),
+        "PREMISE: the first key's green suite is written: {first:?}"
+    );
+    let sidecar = tree
+        .path()
+        .join(".redkiln/artifacts")
+        .join(ITEM)
+        .join("TestReport.json");
+    let rust_bytes = std::fs::read(&sidecar).expect("the first key's sidecar is written");
+
+    let node = Counting::new(Script::Ran {
+        passed: 3,
+        failed: 0,
+    });
+    let (second, _) = pass_over(
+        &node,
+        &Instance::keyed("TestReport", "node"),
+        Some(&changed),
+        Some(verify_pass::PASS_POLICY),
+        &writer,
+    );
+    match &second {
+        Err(Refused::Write(why)) => assert!(
+            why.contains("KeyedSidecarCollision")
+                && why.contains("\"rust\"")
+                && why.contains("\"node\""),
+            "the write refusal does not name the collision: {why}"
+        ),
+        other => panic!(
+            "a second key for `TestReport` in one stage run was not refused as a write: {other:?}"
+        ),
+    }
+    assert_eq!(
+        keyed_writes(),
+        vec![Some("rust".to_owned())],
+        "a row was journalled for the refused key, so D21-120's guard would not owe it"
+    );
+    assert_eq!(
+        std::fs::read(&sidecar).expect("the sidecar is still there"),
+        rust_bytes,
+        "the refused key replaced the first key's report"
+    );
+}
+
 /// **`verify_completed` names the adapter `detect()` chose** (AC-487's carrier; M1): the fixture
 /// lists Node FIRST, Node's configuration is refused by the clean environment, and the Rust
 /// adapter over the stub detects. The row names Rust.
@@ -1689,6 +1786,282 @@ fn verify_ac_discriminates_answers_through_the_loaded_processes_registry() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert!(rows_of(broot, EventKind::GateAnswered).is_empty());
+}
+
+// ------------------------------------------------------------------------------------------------
+// D21-123 (TAKEN PROVISIONALLY under D21-105; R2 = ADR-0192 decision 2, proposed): mutation
+// feasibility ships as a `mutation` declaration row in `.redkiln/registry.toml`'s `[toolchain.rust]`,
+// read at step 6 through the adapter the pass ran under, beside the pack's `[mutation]` table; a
+// disagreement between the two is refused by name. *(Added 2026-09-29, `s8g` build, package
+// R-D2122-D2123-8g.)*
+// ------------------------------------------------------------------------------------------------
+
+/// This workspace's root, whose `.redkiln/` is the shipped tree.
+fn workspace() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
+}
+
+/// A shipped pack's source, read off disk.
+fn shipped_pack(name: &str) -> String {
+    std::fs::read_to_string(workspace().join(".redkiln").join("packs").join(name))
+        .unwrap_or_else(|e| panic!("the shipped pack {name} reads: {e}"))
+}
+
+/// The shipped registry's one `[toolchain.rust]` `mutation` row, as a line.
+fn shipped_mutation_row(registry: &str) -> &str {
+    let rows: Vec<&str> = registry
+        .lines()
+        .filter(|l| l.starts_with("mutation = "))
+        .collect();
+    assert_eq!(
+        rows.len(),
+        1,
+        "PREMISE: the shipped registry declares exactly one `mutation` row: {rows:?}"
+    );
+    rows[0]
+}
+
+/// The source tables' files the registry loader reads (`[checklist.*]` and `[kb.*]` paths), copied
+/// from the shipped `.redkiln/` under `root`.
+fn copy_source_tables(root: &Path) {
+    for sub in ["checklists", "kb"] {
+        let from = workspace().join(".redkiln").join(sub);
+        let to = root.join(".redkiln").join(sub);
+        std::fs::create_dir_all(&to).expect("the source directory");
+        let mut n = 0_usize;
+        for entry in std::fs::read_dir(&from).expect("the shipped source directory reads") {
+            let path = entry.expect("an entry").path();
+            if path.is_file() {
+                std::fs::copy(&path, to.join(path.file_name().expect("a name")))
+                    .expect("the source file copies");
+                n += 1;
+            }
+        }
+        assert!(n > 0, "PREMISE: the shipped .redkiln/{sub} has files");
+    }
+}
+
+/// A tree whose `.redkiln/registry.toml` holds `registry`, with the files its source tables name.
+fn registry_tree(registry: &str) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    std::fs::create_dir_all(dir.path().join(".redkiln")).expect("mkdir .redkiln");
+    std::fs::write(rk_cli::verbs::run::registry_path(dir.path()), registry)
+        .expect("the registry writes");
+    copy_source_tables(dir.path());
+    dir
+}
+
+/// **The shipped Rust row is read through the pass's adapter** (D21-123 items 1 and 4): over this
+/// workspace's own `.redkiln/`, unmodified, both shipped packs (which declare no `[mutation]`) read
+/// `feasible` for the Rust adapter.
+#[test]
+fn ac337_the_shipped_rust_row_is_read_through_the_pass_adapter() {
+    for name in ["bug-standard.toml", "story.toml"] {
+        let src = shipped_pack(name);
+        let pack = rk_kernel::select::Pack::from_toml(name, &src).expect("the shipped pack loads");
+        assert_eq!(
+            pack.mutation_declaration(),
+            None,
+            "PREMISE: the shipped {name} declares no `[mutation]`, so the registry row is the only \
+             declaration on the shipped tree"
+        );
+        assert_eq!(
+            rk_cli::verbs::run::mutation_feasibility_at(&workspace(), RUST, name, &src),
+            Ok(rk_ports::toolchain::MutationFeasibility::Feasible),
+            "{name}: the shipped Rust lane's feasibility does not read from the registry row"
+        );
+    }
+}
+
+/// **A Node lane with criteria is refused by name** (D21-123 item 2): `[toolchain.node]` carries no
+/// `mutation` row, so over the shipped tree the Node adapter reads nothing and AC-337 refuses.
+#[test]
+fn ac337_a_node_lane_with_criteria_is_refused_by_name() {
+    let registry = std::fs::read_to_string(rk_cli::verbs::run::registry_path(&workspace()))
+        .expect("the shipped registry reads");
+    let row = shipped_mutation_row(&registry);
+    let node_at = registry
+        .find("[toolchain.node]")
+        .expect("PREMISE: the shipped registry has a [toolchain.node] table");
+    assert!(
+        registry.find(row).is_some_and(|at| at < node_at),
+        "PREMISE: the one `mutation` row is in [toolchain.rust], above [toolchain.node]"
+    );
+    for name in ["bug-standard.toml", "story.toml"] {
+        let refused = rk_cli::verbs::run::mutation_feasibility_at(
+            &workspace(),
+            NODE,
+            name,
+            &shipped_pack(name),
+        );
+        match &refused {
+            Err(why) => assert!(
+                why.contains("AC-337"),
+                "{name}: the Node refusal does not name AC-337: {why}"
+            ),
+            Ok(f) => {
+                panic!("{name}: a Node lane read a mutation feasibility it does not have: {f:?}")
+            }
+        }
+    }
+    // CONTROL: the same read for the Rust adapter over the same tree is not refused.
+    assert!(
+        rk_cli::verbs::run::mutation_feasibility_at(
+            &workspace(),
+            RUST,
+            "story.toml",
+            &shipped_pack("story.toml")
+        )
+        .is_ok(),
+        "CONTROL: the Rust adapter reads the row"
+    );
+}
+
+/// **Declared twice and disagreeing is refused by name** (D21-123 item 4's table): the registry row
+/// and the pack's `[mutation]` table disagree, and no precedence picks a winner. Agreeing, or either
+/// alone, is read.
+#[test]
+fn ac337_a_registry_and_pack_disagreement_is_refused_by_name() {
+    let registry = std::fs::read_to_string(rk_cli::verbs::run::registry_path(&workspace()))
+        .expect("the shipped registry reads");
+    let tree = registry_tree(&registry);
+    let story = shipped_pack("story.toml");
+    let infeasible = format!("{story}\n[mutation]\nfeasible = false\nreason = \"the fixture\"\n");
+    let feasible = format!("{story}\n[mutation]\nfeasible = true\n");
+    let read = |root: &Path, src: &str| {
+        rk_cli::verbs::run::mutation_feasibility_at(root, RUST, "story.toml", src)
+    };
+
+    match read(tree.path(), &infeasible) {
+        Err(why) => assert!(
+            why.contains("declared twice and disagrees")
+                && why.contains("[toolchain.rust].mutation")
+                && why.contains("[mutation]"),
+            "the disagreement is not refused by name: {why}"
+        ),
+        Ok(f) => panic!("a disagreement between the registry and the pack was resolved to {f:?}"),
+    }
+    assert_eq!(
+        read(tree.path(), &feasible),
+        Ok(rk_ports::toolchain::MutationFeasibility::Feasible),
+        "both present and equal: that value"
+    );
+    let bare = tempfile::tempdir().expect("a tree with no registry");
+    assert_eq!(
+        read(bare.path(), &infeasible),
+        Ok(rk_ports::toolchain::MutationFeasibility::NotFeasible {
+            reason: "the fixture".to_owned()
+        }),
+        "the pack alone: its value"
+    );
+    assert_eq!(
+        read(tree.path(), &story),
+        Ok(rk_ports::toolchain::MutationFeasibility::Feasible),
+        "the registry alone: its value"
+    );
+}
+
+/// The AC-357 fixture's criterion (declared `not_feasible`, so the ledger holds the exit) over the
+/// verify fixture, with NO `[mutation]` added to its packs, and `.redkiln/registry.toml` copied from
+/// the shipped one. One row is removed from the copy, asserted to hit once: `[toolchain.rust]`'s
+/// `setup_projects`, which would install a project this fixture does not have at tree creation.
+/// When `with_row` is false the `mutation` row is removed too (the CONTROL).
+fn shipped_registry_repo(with_row: bool) -> tempfile::TempDir {
+    let repo = verify_repo(&[RUST], true);
+    let root = repo.path();
+    let spec = serde_json::json!({
+        "acceptance_criteria": [{
+            "id": "AC-1",
+            "criterion": "the fixture's one criterion holds",
+            "verification": "rk_fixture::the_reviewed_case asserts it",
+            "mutation": { "kind": "not_feasible", "reason": "the fixture declares no executable mutation" },
+        }],
+    });
+    let dir = root.join(".redkiln").join("artifacts").join(ITEM);
+    std::fs::create_dir_all(&dir).expect("the managed directory");
+    std::fs::write(
+        dir.join("Spec.json"),
+        serde_json::to_vec_pretty(&spec).expect("the spec serialises"),
+    )
+    .expect("the spec writes");
+    let shipped = std::fs::read_to_string(rk_cli::verbs::run::registry_path(&workspace()))
+        .expect("the shipped registry reads");
+    let mut drop = vec!["setup_projects = "];
+    if !with_row {
+        drop.push("mutation = ");
+    }
+    let mut copy = shipped.clone();
+    for prefix in drop {
+        let hits: Vec<&str> = shipped.lines().filter(|l| l.starts_with(prefix)).collect();
+        assert_eq!(
+            hits.len(),
+            1,
+            "PREMISE: the shipped registry has one `{prefix}` row: {hits:?}"
+        );
+        copy = copy.replacen(&format!("{}\n", hits[0]), "", 1);
+    }
+    std::fs::write(rk_cli::verbs::run::registry_path(root), copy).expect("the registry copies");
+    copy_source_tables(root);
+    crate::git(
+        root,
+        &[
+            "add",
+            ".redkiln/artifacts",
+            ".redkiln/registry.toml",
+            ".redkiln/checklists",
+            ".redkiln/kb",
+        ],
+    );
+    crate::git(
+        root,
+        &[
+            "commit",
+            "--quiet",
+            "-m",
+            "the D21-123 fixture's spec and registry",
+        ],
+    );
+    repo
+}
+
+/// **A shipped Rust lane with criteria is not refused for feasibility** (D21-123 item 5): the
+/// verify fixture's packs declare no `[mutation]`, the registry carries the shipped Rust row, and
+/// the pass reaches the AC ledger and the stage-exit check (AC-346), which refuses the unpinned
+/// criterion and opens AC-357's gate. Without the row (the CONTROL) the same lane is AC-337's
+/// configuration error, and neither the ledger nor the gate is reached.
+#[test]
+fn ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger() {
+    let repo = shipped_registry_repo(true);
+    let root = repo.path();
+    let factory = ScriptedFactory::new(Vec::new());
+    assert_eq!(
+        run_verify(root, &factory),
+        Exit::Success,
+        "the lane was refused before the ledger (AC-337's configuration error)"
+    );
+    let refusals = rows_of(root, EventKind::StageExitRefused);
+    assert_eq!(
+        refusals.len(),
+        1,
+        "the ledger was not reached: no stage-exit refusal (AC-346)"
+    );
+    assert_eq!(refusals[0]["unpinned"], serde_json::json!(["AC-1"]));
+    assert_eq!(ac_gates(root).len(), 1, "AC-357's gate was not opened");
+    assert!(
+        test_report_writes(root).is_empty(),
+        "the row read as the criteria lane passing: a TestReport was written"
+    );
+
+    // CONTROL: the row removed from the copy.
+    let bare = shipped_registry_repo(false);
+    let broot = bare.path();
+    assert_eq!(
+        run_verify(broot, &ScriptedFactory::new(Vec::new())),
+        Exit::ConfigError,
+        "CONTROL: without the row the lane must be AC-337's configuration error"
+    );
+    assert!(rows_of(broot, EventKind::StageExitRefused).is_empty());
+    assert!(ac_gates(broot).is_empty());
 }
 
 // ---------------------------------------------------------------- AC-353: kill and resume

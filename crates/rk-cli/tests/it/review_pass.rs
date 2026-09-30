@@ -885,3 +885,227 @@ fn formal_inspections_second_reader_row_is_the_verdict() {
         "formal-inspection's verdict row is the second reader's, the last committed"
     );
 }
+
+// ---------------------------------------------------------------- D21-119 (a): the entry, shipped
+
+/// The shipped `.redkiln/` tree, copied into a temporary repository with one fix-lane item at
+/// `triage`, as this repository's own fix-lane item reads (`slice` declared only when asked).
+/// `harness_binary` is pinned to the fixture child, so no arm of the test can reach a real harness.
+fn shipped_repo(item: &str, slice: Option<&str>) -> tempfile::TempDir {
+    let repo = crate::temp_repo();
+    let root = repo.path();
+    let shipped = workspace().join(".redkiln");
+    let rk = root.join(".redkiln");
+    for sub in [
+        "packs",
+        "catalog",
+        "catalog-extended",
+        "processes",
+        "checklists",
+        "cards",
+    ] {
+        std::fs::create_dir_all(rk.join(sub)).expect("mkdir");
+        for entry in std::fs::read_dir(shipped.join(sub)).expect("the shipped directory reads") {
+            let path = entry.expect("an entry").path();
+            if path.is_file() {
+                std::fs::copy(&path, rk.join(sub).join(path.file_name().expect("a name")))
+                    .expect("copy");
+            }
+        }
+    }
+    for file in [
+        "artifacts.toml",
+        "facets.toml",
+        "registry.toml",
+        "declared.toml",
+        "roles.toml",
+    ] {
+        std::fs::copy(shipped.join(file), rk.join(file)).expect("the registry copies");
+    }
+    let config = std::fs::read_to_string(shipped.join("config.toml")).expect("config reads");
+    let child = crate::support::fixture_child()
+        .display()
+        .to_string()
+        .replace('\\', "\\\\");
+    assert_eq!(
+        config.matches("[adapters]\n").count(),
+        1,
+        "PREMISE: the shipped config has one [adapters] table"
+    );
+    std::fs::write(
+        rk.join("config.toml"),
+        config.replace(
+            "[adapters]\n",
+            &format!("[adapters]\nharness_binary = \"{child}\"\n"),
+        ),
+    )
+    .expect("the config writes");
+    let mut record = [
+        format!("id    = \"{item}\""),
+        "kind  = \"bug\"".to_owned(),
+        "stage = \"triage\"".to_owned(),
+    ]
+    .join("\n");
+    record.push('\n');
+    if let Some(slice) = slice {
+        record.push_str(&format!("slice = \"{slice}\"\n"));
+    }
+    record.push_str(
+        "\n[facets]\ncos          = \"standard\"\nhas_repro    = true\ncriticality  = \"low\"\n\
+         blast_radius = \"low\"\nsize         = \"low\"\n",
+    );
+    std::fs::create_dir_all(rk.join("items")).expect("mkdir items");
+    std::fs::write(rk.join("items").join(format!("{item}.toml")), record).expect("the item writes");
+    crate::git(root, &["add", ".redkiln"]);
+    crate::git(root, &["commit", "--quiet", "-m", "the shipped .redkiln"]);
+    repo
+}
+
+fn resolved_in(root: &std::path::Path, item: &str) -> rk_cli::verbs::run::Resolved {
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let args = rk_cli::cli::RunArgs {
+        item: item.to_owned(),
+        lane: None,
+    };
+    rk_cli::verbs::run::through_step_seven(
+        &cli,
+        &args,
+        &crate::support::clean_env(),
+        rk_cli::verbs::Startup::real(),
+        rk_git::reconciled::Entry::Run,
+    )
+    .unwrap_or_else(|e| panic!("`{item}` resolves over the shipped tree: {e:?}"))
+}
+
+/// **(a) A shipped lane that reaches review without a `slice` is refused at entry, by name**
+/// (D21-119 item 3; D21-95 item 1; D21-94).
+///
+/// A fix-lane item at `triage` over a copy of the shipped `.redkiln/`: the entry walk (`triage`,
+/// the forbidden `discovery` skipped, … `review`) reaches the shipped review stage, where a review
+/// activity sits (`provides` first `ReviewVerdict`). Before D21-119 the walk keyed on `Findings`
+/// first, which no shipped activity provides, so the check was inert on every shipped lane. Read in
+/// three layers, each only once the one before has held: the entry's own reader
+/// (`findings_stage_reached`) and the shared validator's named refusal; the in-process `run` (exit
+/// `3`, zero dispatches, no run tree, no `rk-run/<item>`); and the binary's stderr, which names the
+/// undeclared slice. CONTROL: the same item with a declared `slice` passes the validator.
+#[test]
+fn a_shipped_lane_reaching_review_without_a_slice_is_refused_at_entry() {
+    use rk_kernel::runtime::tier_one::{SliceRefusal, TierOneError, validate_slice};
+    const ITEM: &str = "shipped-fix-1";
+    let repo = shipped_repo(ITEM, None);
+    let root = repo.path();
+    let resolved = resolved_in(root, ITEM);
+    assert_eq!(
+        resolved.stage, "triage",
+        "PREMISE: the item sits at `triage`"
+    );
+    assert_eq!(
+        resolved.slice, None,
+        "PREMISE: the item declares no `slice`"
+    );
+
+    let reached = rk_cli::verbs::run::findings_stage_reached(&resolved).unwrap_or_else(|| {
+        panic!(
+            "the shipped fix lane reaches no review stage at entry: the check is inert on the \
+             shipped packs (D21-119 item 3)"
+        )
+    });
+    assert_eq!(
+        reached.stage, REVIEW,
+        "the entry walk stops at the shipped review stage"
+    );
+    assert!(
+        is_review_activity(shipped_activity(&reached.activity)),
+        "the entry named `{}`, which is not a review activity",
+        reached.activity
+    );
+    match validate_slice(
+        resolved.slice.as_deref(),
+        ITEM,
+        resolved.project.as_deref(),
+        &reached.stage_order,
+    ) {
+        Err(TierOneError::SliceRefused { reason, .. }) => {
+            assert_eq!(reason, SliceRefusal::Absent, "refused for the wrong reason");
+        }
+        other => panic!("the undeclared slice was not refused by name: {other:?}"),
+    }
+
+    let factory = crate::lane_e2e::ScriptedFactory::new(Vec::new());
+    let exit = crate::lane_e2e::ran(
+        rk_cli::verbs::run::run(
+            &crate::lane_e2e::cli(root, ITEM),
+            &crate::lane_e2e::args(ITEM),
+            &crate::support::clean_env(),
+            crate::lane_e2e::seam(&factory),
+        ),
+        ITEM,
+    );
+    assert_eq!(
+        factory.dispatches(),
+        0,
+        "the shipped lane dispatched before refusing"
+    );
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::ConfigError,
+        "the entry refusal is exit 3"
+    );
+    assert!(
+        !crate::run_tree(root, ITEM).path.exists(),
+        "the refused run entered a run tree"
+    );
+    assert_eq!(
+        crate::lane_e2e::ref_sha(root, ITEM),
+        None,
+        "the refused run committed on rk-run/{ITEM}"
+    );
+
+    let out = spawn_run(root, ITEM);
+    let err = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert_eq!(out.status.code(), Some(3), "the binary refuses too:\n{err}");
+    assert!(
+        err.contains(&format!("`{ITEM}` declares no `slice`"))
+            && err.contains("before any dispatch")
+            && err.contains(&format!("`{}`", reached.activity)),
+        "the refusal names the undeclared slice, the entry siting and the review activity:\n{err}"
+    );
+
+    let declared = shipped_repo(ITEM, Some("shipped-fix-1-slice"));
+    let resolved = resolved_in(declared.path(), ITEM);
+    let reached = rk_cli::verbs::run::findings_stage_reached(&resolved)
+        .expect("CONTROL: the declared lane reaches the same review stage");
+    assert!(
+        validate_slice(
+            resolved.slice.as_deref(),
+            ITEM,
+            resolved.project.as_deref(),
+            &reached.stage_order
+        )
+        .is_ok(),
+        "CONTROL: a declared slice passes the entry's validator"
+    );
+}
+
+#[expect(
+    clippy::disallowed_types,
+    reason = "the refusal's NAME is on stderr, which an in-process run cannot capture"
+)]
+fn spawn_run(root: &std::path::Path, item: &str) -> std::process::Output {
+    let frames = crate::support::pack_min_dir()
+        .join("lane")
+        .join("implement-frames.jsonl");
+    let markers = root.join(".rk-markers");
+    std::fs::create_dir_all(&markers).expect("the marker directory is created");
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.arg("-C")
+        .arg(root)
+        .arg("run")
+        .arg(item)
+        .env("RK_FIXTURE_MODE", format!("replay:{}", frames.display()))
+        .env("RK_FIXTURE_MARKER_DIR", &markers);
+    crate::support::output_bounded(&mut cmd)
+}

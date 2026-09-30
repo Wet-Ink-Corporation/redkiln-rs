@@ -1086,7 +1086,13 @@ pub struct Declaration {
 }
 
 /// The declaration rows a per-toolchain table admits (§8c.5; Checkpoint 8c (11)'s `D`).
-pub const DECLARATION_ROWS: [&str; 3] = ["setup_projects", "package_binaries", "claims"];
+///
+/// *(dated 2026-09-29, `s8g` build, package R-D2122-D2123-8g; D21-123 item 3, TAKEN PROVISIONALLY
+/// under D21-105.)* `mutation` is the fourth (3 -> 4): AC-337's feasibility declaration, whose
+/// shipped home is the Rust row of this table (R2 = ADR-0192 decision 2, proposed; ADR-0170
+/// decision 9: *"Adding a row is a record's act"*). `rk-cli` reads it at §8g.2 step 6.
+pub const DECLARATION_ROWS: [&str; 4] =
+    ["setup_projects", "package_binaries", "claims", "mutation"];
 
 /// **Which declaration row supplies which registry row's input**: `(declaration row, verb, input)`.
 ///

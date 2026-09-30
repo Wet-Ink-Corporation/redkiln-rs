@@ -5,7 +5,7 @@ status: proposed
 date: 2026-09-29
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-41 (row c), D21-42 (rows 1a — *"**Widened to an outcome-bearing report**"*; 10b — *"**Mint `verify_completed`**: report digest, selection with `basis_reason`, counts and adapter identity"*; 10c — *"**Claimed whole**"*), D21-43 (N23 — *"**Re-homed to the implement stage** as test-authoring activities under ADR-0072. Verify only measures."*; N25), D21-46 (R3, R5), D21-47 (the review's findings 4, 8, 14 and cross-file 19; *"Records are located by the id recorded at write time"*), D21-48 (X9, X15); runbook/phase-1/s8g-verify-and-restored-demands.md §8g.2, §8g.4, §8g.5, §8g.8 (R1's row); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.5 (the cold measurement, cited)
-supersedes: ["0162", "0132"]
+supersedes: ["0162", "0132", "0189"]
 superseded_by: []
 related: ["0019", "0072", "0073", "0096", "0104", "0105", "0109", "0116", "0125", "0131", "0140", "0169", "0170", "0171", "0179", "0180", "0182", "0188", "0189"]
 evidence: []
@@ -126,6 +126,21 @@ and N23's precedent moves activities whole. X9 decided the whole-activity readin
    (every shipped lane today: `rk-cli` sets no item `toolchain` set, so a keyed kind expands un-keyed) is written by the
    unchanged `write`, with no `key` member. Step (4)'s failed or unverifiable verify writes no `TestReport`: the
    pass-owed guard then keeps holding the stage, and `run` exits by name.
+   *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; ruled D21-122, TAKEN PROVISIONALLY under D21-105; an
+   in-record amendment before the flip.)* **The carrier is kept, and this record supersedes ADR-0189 in part, for
+   decision 8's member list only** (an additive `key` member on the keyed writer's row): ADR-0189's decision 8 lists
+   the row *"with these members"* and names no key, so `"0189"` enters this record's `supersedes`. ADR-0189 decision
+   3 (*"One file per `(item, kind)`"*) does not move, and ADR-0189 is not edited now: its back-link (*"superseded in
+   part by 0191, decision 8's member list"*) is written at this record's flip, and only if the operator has not
+   objected in the ledger. **A second key is refused by name.** `write_keyed` refuses, before any write, when its
+   stage run already holds a keyed `artifact.write` of the same kind with a different `key`:
+   `RenderError::KeyedSidecarCollision { kind, prior_key, key }` (*"keyed-sidecar-collision: TestReport{node} after
+   TestReport{rust}"*), with no sidecar, no rendering and no row. The pass maps it to `Refused::Write`, so a
+   two-toolchain item holds its stage by name and D21-120's guard keeps owing the second key; a later write with
+   the same key still replaces the sidecar. `served`'s key-blind replay match is unchanged, because at most one key
+   per kind per stage run can now exist. **Residual, left to a later record:** per-key sidecars (D21-122's option
+   2), to be written if a multi-toolchain lane ever ships (it would supersede ADR-0189 decision 3). No shipped lane
+   reaches this code: `rk-cli` sets no item `toolchain` set.
 
 3. **The four displaced providers are re-homed (D21-43 N23).** `unit-tests`, `unit-tests-ue`, `equivalence-boundary`
    and `property-based-testing` each take `stage = "implement"` and list `AuthoredTests` first in `provides`, in
@@ -237,8 +252,14 @@ and N23's precedent moves activities whole. X9 decided the whole-activity readin
       re-runs the pass and the ledger. (d) The criteria are read off the committed `Spec` sidecar in the run-owned
       tree (`acceptance_criteria`, each through `AcceptanceCriterion::ingest`); an absent sidecar is no criteria.
       (e) The feasibility input is the pack's `[mutation]` table (AC-337: absent is a configuration error, raised only
-      when the item has criteria); ADR-0192 decision 2's shipped home (the Rust row of ADR-0170's table) is not yet
-      written, so a shipped lane whose `Spec` carries criteria refuses at verify by name until it is. (f) A refused
+      when the item has criteria); ADR-0192 decision 2's shipped home (the Rust row of ADR-0170's table) ~~is not yet
+      written, so a shipped lane whose `Spec` carries criteria refuses at verify by name until it is~~.
+      *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; ruled D21-123, TAKEN PROVISIONALLY under D21-105.)*
+      The shipped home is written; the pack table remains a second reader and a disagreement is a configuration
+      error. The row is `[toolchain.rust] mutation = { value = { feasible = true }, source = "…" }`, read at step 6
+      through the adapter the pass ran under (`toolchain_of`); `[toolchain.node]` has no row, so a Node lane with
+      criteria still refuses by name. The row turns the configuration refusal into a harness run whose stage exit
+      still refuses (`pinned` is unreachable, (b)), never into a pass. (f) A refused
       exit appends `stage_exit_refused` (keyed to the item) and the kernel mints AC-357's gate,
       `verify.ac-discriminates` (`rk_kernel::verify::ac_gate`), for the first unpinned criterion, carrying `ac`,
       `criterion`, `assertion` and `suite_result`; after a void answer it re-opens one reach on with `drift` (the

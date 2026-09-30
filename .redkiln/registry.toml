@@ -152,6 +152,15 @@ package_binaries = { value = ["redkiln", "redkiln-migrate"], source = "the works
 # claims column: the paths this toolchain claims, read by rk_kernel::verify::claims, where two claims of different
 # toolchains matching one path at equal specificity are a configuration error naming both (AC-349).
 claims = { value = ["Cargo.toml", "Cargo.lock", "**/Cargo.toml", "**/*.rs", "rust-toolchain*", ".cargo/**"], source = "the files the Rust adapter reads as its own: detect() requires <root>/Cargo.toml (crates/rk-adapter-toolchain-rust/src/lib.rs), and the affected-set rule 3 names Cargo.toml, Cargo.lock, rust-toolchain* and .cargo/ (crates/rk-adapter-toolchain-rust/src/affected.rs); every crate source is a .rs file under a Cargo.toml" }
+# (dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-123 item 1, TAKEN PROVISIONALLY under D21-105; R2 =
+# ADR-0192 decision 2, proposed: "The mutation declaration's shipped home is the Rust row of ADR-0170's
+# per-toolchain table, with `feasible = true` and ADR-0104 decision 1's warrant".) AC-337's feasibility
+# declaration, read by rk-cli at s8g section 8g.2 step 6 through the adapter the pass ran under, beside the pack's
+# [mutation] table (a disagreement between the two is a configuration error). ADR-0170 decision 9 admits it:
+# "Adding a row is a record's act". No `reason`: a reason on `feasible = true` is refused. `mutation_timeout`'s
+# unmeasured reason above ("no Phase-1 Rust verb mutates") concerns the timeout key only; nothing about the timeout
+# is measured or changed here.
+mutation = { value = { feasible = true }, source = "ADR-0104 decision 1 (the harness: rk_git::mutation::apply in <item>.mut, verify_pass::mutate; AC-338/AC-339 built in s8g); ADR-0192 decision 2; D21-42 4a" }
 
 [toolchain.node]
 test_timeout = { unmeasured = "the self-hosting run is Rust, and a Node value would be a guess (s8c §8c.5); owed with the first Node self-hosting run" }
@@ -166,6 +175,10 @@ migration_timeout = { unmeasured = "the self-hosting run is Rust, and a Node val
 cook_timeout = { unmeasured = "the self-hosting run is Rust, and a Node value would be a guess (s8c §8c.5); owed with the first Node self-hosting run" }
 ue_test_timeout = { unmeasured = "the self-hosting run is Rust, and a Node value would be a guess (s8c §8c.5); owed with the first Node self-hosting run" }
 mutation_timeout = { unmeasured = "the self-hosting run is Rust, and a Node value would be a guess (s8c §8c.5); owed with the first Node self-hosting run" }
+# (dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-123 item 2, TAKEN PROVISIONALLY under D21-105.) No
+# `mutation` declaration row here: a declaration key cannot carry `unmeasured`, and a Node value would be a guess.
+# The row is owed with the first Node self-hosting run; until then a Node-chosen lane whose Spec carries criteria
+# is refused at verify by name (AC-337).
 # (dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 10, proposed; AC-349.) The
 # claims column, as [toolchain.rust] carries it. No glob here matches a path a Rust claim matches.
 claims = { value = ["**/package.json", "**/pnpm-lock.yaml", "**/*.ts", "**/*.js", "**/*.mjs", "**/*.cjs"], source = "the files the Node adapter reads as its own: detect() requires <root>/package.json (crates/rk-adapter-toolchain-node/src/lib.rs), the one tracked lockfile is pnpm-lock.yaml (setup_projects), and the fixture project's sources are .ts/.js modules" }

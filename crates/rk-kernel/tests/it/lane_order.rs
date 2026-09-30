@@ -847,3 +847,94 @@ fn a_pass_owed_lane_end_is_held() {
     assert!(ended.lane_ended(), "with the write, the lane ends");
     assert_eq!(ended.advance_refused(), None);
 }
+
+// D21-122 (TAKEN PROVISIONALLY under D21-105; ADR-0191, proposed): on a two-toolchain item, rk-store's
+// keyed writer refuses the second key by name, so no row is journalled for it and this guard keeps
+// owing it. *(Added 2026-09-29, s8g build, package R-D2122-D2123-8g.)*
+
+/// **A two-toolchain item owes the key the writer refused** (D21-122 item 2; D21-120 item 2): the
+/// real `rk_store::render::ArtifactWriter`, journalling into the same store, writes
+/// `TestReport{rust}` and refuses `TestReport{node}` with `KeyedSidecarCollision`; the next resume
+/// holds the stage by name on `TestReport{node}` alone.
+#[test]
+fn a_two_toolchain_item_owes_the_refused_second_key() {
+    use rk_store::render::{ArtifactWriter, Journal, RenderError, StageRun};
+
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let two = || {
+        pass_inputs(Some("closeout")).with_item(
+            &Item::new(PASS_ITEM, "incident")
+                .with_toolchain("rust", ["text"])
+                .with_toolchain("node", ["text"]),
+        )
+    };
+    let owed_of = |r: &replay::RecordedRun| -> Vec<String> {
+        let mut owed: Vec<String> = r
+            .pass_owed()
+            .iter()
+            .map(|i| format!("{}{{{}}}", i.kind, i.key.as_deref().unwrap_or("")))
+            .collect();
+        owed.sort();
+        owed
+    };
+
+    // The entry: both keys owed.
+    let entered = replay::resume(&two(), advance_ports(&store), &[], &mut refuse_supply)
+        .expect("resume over a two-toolchain pass-owed stage");
+    assert_eq!(
+        owed_of(&entered),
+        vec!["TestReport{node}".to_owned(), "TestReport{rust}".to_owned()],
+        "PREMISE: a two-toolchain item owes one keyed TestReport per element"
+    );
+
+    // The writer, over the same store.
+    let tree = tempfile::tempdir().expect("a run-owned tree stands in");
+    let (s1, s2) = (Arc::clone(&store), Arc::clone(&store));
+    let writer = ArtifactWriter::new(
+        tree.path(),
+        StageRun {
+            item: PASS_ITEM.to_owned(),
+            stage: "check".to_owned(),
+            run: "check-0123456789abcdef".to_owned(),
+        },
+        std::collections::BTreeMap::from([("TestReport".to_owned(), "TestReport".to_owned())]),
+        Journal::new(
+            move |e| {
+                s1.lock()
+                    .map_err(|_| "poisoned".to_owned())?
+                    .append(e)
+                    .map(|_| ())
+                    .map_err(|e| format!("{e:?}"))
+            },
+            move || Ok(pass_journal(&s2)),
+        ),
+    );
+    writer
+        .write_keyed("TestReport", "rust", &serde_json::json!({ "passed": 7 }))
+        .expect("the first key writes");
+    let refused = writer.write_keyed("TestReport", "node", &serde_json::json!({ "passed": 3 }));
+    assert!(
+        matches!(
+            &refused,
+            Err(RenderError::KeyedSidecarCollision { prior_key, key, .. })
+                if prior_key == "rust" && key == "node"
+        ),
+        "the second key was not refused by name: {refused:?}"
+    );
+
+    // The next resume owes the refused key, by name, and nothing else.
+    let held = replay::resume(
+        &two(),
+        advance_ports(&store),
+        &pass_journal(&store),
+        &mut refuse_supply,
+    )
+    .expect("the second resume");
+    assert_eq!(
+        held.advanced_to(),
+        None,
+        "the stage advanced over an unwritten key"
+    );
+    assert_eq!(held.advance_refused(), Some("pass-owed: TestReport{node}"));
+    assert_eq!(owed_of(&held), vec!["TestReport{node}".to_owned()]);
+}

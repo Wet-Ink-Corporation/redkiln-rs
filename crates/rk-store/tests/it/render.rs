@@ -2381,3 +2381,118 @@ fn a_reconciled_is_built_only_by_the_entry_pass() {
         "a Reconciled can be built, returned, defaulted, exposed or held outside the entry pass"
     );
 }
+
+// ------------------------------------------------------------------------------- the keyed write
+
+// D21-122 (TAKEN PROVISIONALLY under D21-105; ADR-0191, proposed, supersedes ADR-0189 decision 8's
+// member list in part): the keyed write carries a `key` member, and a second DISTINCT key for one
+// kind in one stage run is refused by name before any write. *(Added 2026-09-29, s8g build,
+// package R-D2122-D2123-8g.)*
+
+/// The `artifact.write` rows of `kind`, as `(key, digest)`.
+fn keyed_rows(rows: &Rows, kind: &str) -> Vec<(Option<String>, String)> {
+    rows_of(rows, EventKind::ArtifactWrite)
+        .into_iter()
+        .filter(|e| e.payload["kind"] == json!(kind))
+        .map(|e| {
+            (
+                e.payload["key"].as_str().map(str::to_owned),
+                e.payload["digest"].as_str().unwrap_or_default().to_owned(),
+            )
+        })
+        .collect()
+}
+
+/// **A second key is refused by name** (D21-122 item 2): after `TestReport{rust}`, a write of
+/// `TestReport{node}` in the same stage run is `KeyedSidecarCollision`, before any write: the
+/// journal still holds exactly one row, and the sidecar's bytes are still rust's.
+#[test]
+fn write_keyed_refuses_a_second_distinct_key_by_name() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    let w = writer(dir.path(), &rows);
+    let rust = json!({ "passed": 7, "toolchain": "rust" });
+    let node = json!({ "passed": 3, "toolchain": "node" });
+
+    let first = w
+        .write_keyed("TestReport", "rust", &rust)
+        .expect("the first key writes");
+    let sidecar = dir.path().join(&first.path);
+    let before = std::fs::read(&sidecar).expect("the first sidecar is written");
+
+    let refused = w.write_keyed("TestReport", "node", &node);
+    assert_eq!(
+        refused,
+        Err(RenderError::KeyedSidecarCollision {
+            kind: "TestReport".to_owned(),
+            prior_key: "rust".to_owned(),
+            key: "node".to_owned(),
+        }),
+        "a second distinct key for one kind in one stage run was not refused by name"
+    );
+    let named = refused.expect_err("refused").to_string();
+    assert!(
+        named.starts_with(concat!(
+            "keyed-sidecar-collision: TestReport",
+            "{node} after TestReport",
+            "{rust}"
+        )),
+        "the refusal names the case: {named}"
+    );
+    assert_eq!(
+        keyed_rows(&rows, "TestReport"),
+        vec![(Some("rust".to_owned()), first.digest.as_str().to_owned())],
+        "the refused write appended a row"
+    );
+    assert_eq!(
+        std::fs::read(&sidecar).expect("the sidecar is still there"),
+        before,
+        "the refused write replaced the first key's sidecar"
+    );
+
+    // CONTROL: another stage run of the same item holds no prior key, so the same write is taken.
+    let other = ArtifactWriter::new(
+        dir.path(),
+        StageRun {
+            item: ITEM.to_owned(),
+            stage: STAGE.to_owned(),
+            run: "implement-fedcba9876543210".to_owned(),
+        },
+        schemas(),
+        journal_over(&rows),
+    );
+    other
+        .write_keyed("TestReport", "node", &node)
+        .expect("CONTROL: another stage run's write is not a collision");
+    assert_eq!(keyed_rows(&rows, "TestReport").len(), 2);
+}
+
+/// **The same key replaces** (D21-122 item 2; ADR-0189 decision 3 stands): two writes of
+/// `TestReport{rust}` append two rows, and the sidecar and the last row carry the last digest.
+#[test]
+fn write_keyed_same_key_replaces() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let (_, rows) = journal();
+    let w = writer(dir.path(), &rows);
+    let one = w
+        .write_keyed("TestReport", "rust", &json!({ "passed": 1 }))
+        .expect("the first write");
+    let two = w
+        .write_keyed("TestReport", "rust", &json!({ "passed": 2 }))
+        .expect("the same key writes again");
+    assert_ne!(one.digest, two.digest, "PREMISE: the two values differ");
+    let rows_now = keyed_rows(&rows, "TestReport");
+    assert_eq!(
+        rows_now,
+        vec![
+            (Some("rust".to_owned()), one.digest.as_str().to_owned()),
+            (Some("rust".to_owned()), two.digest.as_str().to_owned()),
+        ]
+    );
+    let bytes = std::fs::read(dir.path().join(&two.path)).expect("the sidecar");
+    assert_eq!(
+        sha256(&bytes).as_str(),
+        two.digest.as_str(),
+        "the last write's bytes are the sidecar's"
+    );
+}

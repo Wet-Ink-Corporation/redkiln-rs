@@ -159,6 +159,16 @@ pub enum RenderError {
         vouched: String,
         observed: String,
     },
+    /// **A second key for one keyed kind in one stage run** (D21-122, TAKEN PROVISIONALLY under
+    /// D21-105; ADR-0191, proposed, supersedes ADR-0189 decision 8's member list in part): the
+    /// stage run already holds a keyed `artifact.write` of `kind` whose `key` is `prior_key`, and
+    /// the sidecar `<Kind>.json` is one file per `(item, kind)` (decision 3). Nothing is written and
+    /// no row is appended. *(Added 2026-09-29, s8g build, package R-D2122-D2123-8g.)*
+    KeyedSidecarCollision {
+        kind: String,
+        prior_key: String,
+        key: String,
+    },
 }
 
 impl std::fmt::Display for RenderError {
@@ -239,6 +249,16 @@ impl std::fmt::Display for RenderError {
                 "the vouched root `{kind}` was not stored: its attached file `{path}` digests to \
                  {observed}, but the attach vouched {vouched}; nothing is stored, and only a new \
                  attach through `redkiln answer` moves the vouched digest (AC-127)"
+            ),
+            Self::KeyedSidecarCollision {
+                kind,
+                prior_key,
+                key,
+            } => write!(
+                f,
+                "keyed-sidecar-collision: {kind}{{{key}}} after {kind}{{{prior_key}}}; this stage \
+                 run already wrote `{kind}` under another key, and its sidecar is one file per \
+                 (item, kind), so nothing is written (D21-122)"
             ),
         }
     }
@@ -657,12 +677,41 @@ impl ArtifactWriter {
     /// for a ruling: ADR-0189 (accepted) decision 8 lists the row's members and has no `key`, and
     /// decision 3 keeps one file per `(item, kind)`. D21-120 matches a pass-sourced instance on its
     /// kind AND its toolchain key element, so the key must be readable off the row. The member is
-    /// additive and written only here, by the verify pass's `TestReport`; a two-toolchain item's
-    /// second key replaces the first's sidecar, as decision 3 reads, and both rows stand.)*
+    /// additive and written only here, by the verify pass's `TestReport`.)*
+    /// ~~a two-toolchain item's second key replaces the first's sidecar, as decision 3 reads, and
+    /// both rows stand.~~
+    ///
+    /// *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; ruled D21-122, TAKEN PROVISIONALLY
+    /// under D21-105; ADR-0191, proposed, supersedes ADR-0189 decision 8's member list in part.)*
+    /// **A second key is refused by name, before any write.** When this stage run (the writer's own
+    /// `(item, stage, run)`, the filter [`Self::served`] uses) already holds a keyed
+    /// `artifact.write` of `kind` whose `key` is not `key`, the call is
+    /// [`RenderError::KeyedSidecarCollision`]: no sidecar, no rendering, no row. The verify pass
+    /// maps it to its write refusal, so a two-toolchain item holds its stage by name and D21-120's
+    /// guard keeps owing the second key. A later write with the SAME key still replaces the
+    /// sidecar and appends its own row (decision 3). At most one key per kind per stage run can
+    /// therefore exist, which is why [`Self::served`]'s replay match reads `kind` and `path` and
+    /// never `key`. Per-key sidecars are left to a later record (D21-122's option 2).
     ///
     /// # Errors
-    /// As [`Self::write`].
+    /// As [`Self::write`], and [`RenderError::KeyedSidecarCollision`].
     pub fn write_keyed(&self, kind: &str, key: &str, value: &Json) -> Result<Written, RenderError> {
+        if !self.replay {
+            let rows = self.journal.rows()?;
+            if let Some(prior_key) = rows
+                .iter()
+                .filter(|e| is_row_of(e, EventKind::ArtifactWrite, &self.at))
+                .filter(|e| str_of(e, "kind") == Some(kind))
+                .filter_map(|e| str_of(e, "key"))
+                .find(|prior| *prior != key)
+            {
+                return Err(RenderError::KeyedSidecarCollision {
+                    kind: kind.to_owned(),
+                    prior_key: prior_key.to_owned(),
+                    key: key.to_owned(),
+                });
+            }
+        }
         let written = self.write_unjournalled(kind, value)?;
         if written.replayed {
             return Ok(written);
