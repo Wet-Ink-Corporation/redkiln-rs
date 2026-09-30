@@ -516,6 +516,16 @@ junction, with a test."*
   - it has no `.review-ref` suffix, case-folded. That rule was found here: `reference_worktree` names its tree
     `<item>.review-ref` in the same directory, so an item id ending that way would collide with another item's
     reference tree.
+  - *(dated 2026-09-29, `s8g` build, package S8G-P3-KERNEL-GIT; `s8g` §8g.1 move 3; R1 = ADR-0191 decision 11,
+    proposed.)* it has no `.mut` suffix, case-folded. `s8g`'s verify pass names its ephemeral mutation tree
+    `<item>.mut` beside the run tree and the reference tree (`s8g` §8g.5), so an item id ending that way would collide
+    with another item's mutation tree. `rk_git::worktree::derive` gives the tree as `RunTree::mutation` and the
+    validator refuses it as `ItemIdRefusal::MutSuffix` (`mut-suffix`); the table-driven test
+    `worktree::an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused` gains the rows `x.mut` and `x.MUT`,
+    and the controls `x.muts` and `mut`. The 4-character suffix fits inside the 11 characters the worst-case path sum
+    reserves for `.review-ref` (a `const` assertion in `worktree.rs` holds `MUT_SUFFIX.len() <= REVIEW_REF_SUFFIX.len()`),
+    so §8d-ii.6's bound and Checkpoint 8d-ii (0b) are unchanged; Checkpoint 8g (0a) recomputes the sum (255 of 259,
+    measured 2026-09-29).
 
   One table-driven test asserts each row's own refusal reason. The adversarial review (D21-47) added `a..b`, the
   trailing `.` and the device names. It also added one rule the table cannot hold, because it reads the registry: an
@@ -1142,7 +1152,9 @@ with its reason written down, or a **missing fixture branch**. Both are recorded
 §8d-ii.6's read variants and length rule, and the ignore refusal are built in `rk_git::worktree`; ten of the table's
 rows are green, each seen red first.** What exists for the later packages to call: `ItemId::parse` (the validator;
 `ItemIdRefusal` names each rule), `derive(main, &item)` returning `RunTree { item, path, reference, branch }` (the ONE
-derivation: `<main>/.redkiln/worktrees/<item>`, `<item>.review-ref` beside it, `rk-run/<item>`), `main_worktree`
+derivation: `<main>/.redkiln/worktrees/<item>`, `<item>.review-ref` beside it, `rk-run/<item>`) *(dated 2026-09-29,
+`s8g` build, package S8G-P3-KERNEL-GIT: `RunTree` gains `mutation`, `<item>.mut` beside the reference tree, and
+`ItemIdRefusal` gains `MutSuffix`, `s8g` §8g.1 move 3)*, `main_worktree`
 (the first `worktree list --porcelain` record; `bare` refused by name), `registered_worktrees`,
 `refuse_linked_segments`, `refuse_case_fold_collision`, `refuse_unignored_root`, `path_bound` and `refuse_past_limit`,
 `verify_created` (compares canonical paths only; nothing canonical reaches git), and `prepare_creation(exec, start,

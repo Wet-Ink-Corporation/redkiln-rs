@@ -236,9 +236,40 @@ pub struct ToolRouting {
     /// the step-grain `Route::Store` arm (`item_create`) and `call_feed`'s `store` arm (`backlog`).
     /// Unbound: every `store`-route call refuses by name ([`UnboundStoreRoute`]), never `Ok`-empty.
     store_route: StoreRouteSlot,
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 8,
+    /// proposed.)* The adapter `rk-cli`'s `detect()` loop chose and the range the run's calls are
+    /// made over, bound by the composition root and carried onto every `verify_completed` row
+    /// the `toolchain:test` arm journals, opaque (AC-487). Unbound: the row reads
+    /// [`UNBOUND_IDENTITY`] for each, which names the absence rather than guessing an adapter.
+    verify_identity: Option<crate::verify::runner::VerifyIdentity>,
 }
 
+/// What a `verify_completed` row's `adapter`, `range.base` and `range.head` read when no
+/// composition root bound an identity (a lone kernel walk): the absence, named.
+pub const UNBOUND_IDENTITY: &str = "unbound";
+
 impl ToolRouting {
+    /// Bind the identity carried onto every `verify_completed` row (R1 = ADR-0191 decision 8).
+    #[must_use]
+    pub fn with_verify_identity(mut self, identity: crate::verify::runner::VerifyIdentity) -> Self {
+        self.verify_identity = Some(identity);
+        self
+    }
+
+    /// The bound identity, or the named absence.
+    #[must_use]
+    pub fn verify_identity(&self) -> crate::verify::runner::VerifyIdentity {
+        self.verify_identity
+            .clone()
+            .unwrap_or_else(|| crate::verify::runner::VerifyIdentity {
+                adapter: UNBOUND_IDENTITY.to_owned(),
+                range: rk_types::verify::VerifyRange {
+                    base: UNBOUND_IDENTITY.to_owned(),
+                    head: UNBOUND_IDENTITY.to_owned(),
+                },
+            })
+    }
+
     /// Bind a loaded registry and the value table `rk-cli` selected for the chosen adapter. The
     /// table carries no adapter name (AC-487).
     #[must_use]
@@ -253,6 +284,7 @@ impl ToolRouting {
             run_branch: RunBranchSlot(None),
             artifact_seams: ArtifactSeamSlot(None),
             store_route: StoreRouteSlot(None),
+            verify_identity: None,
         }
     }
 
@@ -631,6 +663,11 @@ fn selection_refusal(step: &Step, e: &super::reference::RefError) -> StepError {
 struct ReviewSite<'a> {
     ctx: &'a predicate::Context,
     scope: &'a super::reference::Scope,
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)* The item and the
+    /// `activity_id@version` the step runs in: the `verify_completed` row's item key and the
+    /// first half of its `origin` (R1 = ADR-0191 decision 8, proposed). Empty for a lone step.
+    item: &'a str,
+    activity: &'a str,
 }
 
 /// The refusal a review route gives when no routes are bound. Checked at (3) before the call, so at
@@ -1258,7 +1295,35 @@ impl super::Runtime {
                     ));
                 };
                 *reached = true;
-                let outcome = toolchain.test(&selection, bound)?;
+                // *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191
+                // decision 8, proposed; `s8g` section 8g.4.)* ~~`toolchain.test(&selection,
+                // bound)?`~~ -- **the one site**: the port call goes through
+                // `verify::runner::run_test`, which journals `verify_completed` for a COMPLETED
+                // call only, with this step's `origin` and stage, the item key beside it, and the
+                // identity the composition root bound (opaque, AC-487).
+                let identity = routing.verify_identity();
+                let paths: Vec<String> = match &selection {
+                    Selection::Affected { changed, .. } => changed.clone(),
+                    Selection::WholeSuite { .. } | Selection::Filter(_) | Selection::Named(_) => {
+                        Vec::new()
+                    }
+                };
+                let outcome = crate::verify::runner::run_test(
+                    toolchain.as_ref(),
+                    &crate::verify::runner::TestCall {
+                        item: review.item,
+                        selection: &selection,
+                        bound,
+                        origin: crate::verify::runner::TestOrigin::Step {
+                            activity_at_version: review.activity,
+                            step: &step.id,
+                        },
+                        stage: self.stage(),
+                        identity: &identity,
+                        paths: &paths,
+                    },
+                    &mut |row| self.append(row).map_err(|e| format!("{e:?}")),
+                )?;
                 typed(
                     PortMethod::Test.output_kind(),
                     serde_json::to_value(&outcome),
@@ -2700,7 +2765,12 @@ impl super::Runtime {
                     &resolved,
                     env,
                     site.verdict,
-                    ReviewSite { ctx, scope },
+                    ReviewSite {
+                        ctx,
+                        scope,
+                        item: site.item,
+                        activity: site.activity,
+                    },
                     &mut dispatched,
                 ) {
                     Ok(value) => {

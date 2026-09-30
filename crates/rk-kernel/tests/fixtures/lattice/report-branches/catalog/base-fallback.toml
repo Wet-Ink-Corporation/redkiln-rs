@@ -1,0 +1,8 @@
+# report-branches: Base everywhere base-maker is not admissible, so Base itself is never unsat.
+[activity]
+id          = "base-fallback"
+version     = 1
+stage       = "design"
+provides    = ["Base"]
+method_rank = 20
+cost_class  = "S"

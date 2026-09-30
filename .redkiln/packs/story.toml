@@ -18,6 +18,9 @@ stages = { triage = "mandatory", discovery = "forbidden", analysis = "optional",
 # keeps it. This transcribes the order `stages` is written in; the two key sets must match
 # exactly or the pack refuses to load.
 stage_order = ["triage", "discovery", "analysis", "specification", "design", "planning", "implement", "verify", "review", "release", "operate", "closeout"]
+# s8g (2026-09-29): AC-139's shipped default, block (fail-closed), recorded as the human decision (D21-43 N24; R2 =
+# ADR-0192 decision 5, proposed). AC-455's row: an AC with no `verification` refuses the verify stage.
+verification_required = ["verify"]
 
 [stage.specification]
 goal = "Enumerated, testable acceptance criteria"
@@ -60,23 +63,30 @@ artifacts = ["FlagRecord"]
 [[stage.implement.require]]
 when = "rigor >= recommended"
 artifacts = ["Docs"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+# s8g (2026-09-29, D21-43 N23; R1 = ADR-0191 decision 5, proposed): MOVED from [stage.verify], where it was over
+# TestReport, with its when and rigor. TestReport is pass-sourced, and a rigor floor on it selects nothing.
+[[stage.implement.require]]
+when = "criticality >= high"
+artifacts = ["AuthoredTests"]
+rigor = "mandatory"
+# s8g (2026-09-29, D21-46 R5; R1 = ADR-0191 decision 6, proposed): MOVED from [stage.verify] with integration-tests,
+# its only producer, which is re-homed whole to implement; a verify row over it would select nothing.
+[[stage.implement.require]]
+when = "external_dep"
+artifacts = ["IntegrationReport"]
 
 [stage.verify]
 
 goal = "AC demonstrated, nothing regressed"
 baseline = ["TestReport", "SmokeResult"]
-# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
-[[stage.verify.require]]
-when = "criticality >= high"
-artifacts = ["TestReport"]
-rigor = "mandatory"
+# s8g (2026-09-29, D21-43 N23): the criticality >= high test-design escalation MOVED to [stage.implement] over
+# AuthoredTests (it read: when = "criticality >= high", artifacts TestReport, rigor = "mandatory").
 [[stage.verify.require]]
 when = "'text' in change"
 artifacts = ["ScanReport"]
 # Step 7e (2026-09-21) -- DROPPED: [[stage.verify.require]] when = 'data_migration', artifacts = ["MigrationTestReport"]. `data_migration` may key no require row (AC-520, ADR-0093 d2).
-[[stage.verify.require]]
-when = "external_dep"
-artifacts = ["IntegrationReport"]
+# s8g (2026-09-29, D21-46 R5): the external_dep row over IntegrationReport MOVED to [stage.implement].
 [[stage.verify.require]]
 when = "criticality >= high and rigor >= mandatory"
 artifacts = ["MutationSummary"]

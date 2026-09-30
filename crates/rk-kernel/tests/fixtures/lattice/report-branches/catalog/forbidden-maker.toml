@@ -1,0 +1,8 @@
+# report-branches: ForbiddenOnly's one producer, at the forbidden operate stage.
+[activity]
+id          = "forbidden-maker"
+version     = 1
+stage       = "operate"
+provides    = ["ForbiddenOnly"]
+method_rank = 10
+cost_class  = "S"

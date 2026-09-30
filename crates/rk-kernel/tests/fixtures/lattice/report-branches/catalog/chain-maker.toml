@@ -1,0 +1,10 @@
+# report-branches: the keyed Chain, admitted for node only; its own Missing has no producer anywhere.
+[activity]
+id          = "chain-maker"
+version     = 1
+stage       = "design"
+provides    = ["Chain"]
+requires    = ["Missing"]
+tags        = ["toolchain:node"]
+method_rank = 10
+cost_class  = "S"

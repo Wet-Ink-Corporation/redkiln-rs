@@ -384,7 +384,7 @@ pub fn cost_points(cost_class: Option<&str>) -> Option<i64> {
 /// [`Step5Outcome::AppetiteExceeded`].
 #[expect(
     clippy::too_many_arguments,
-    reason = "these nine ARE steps 1-4's outputs, one parameter each, and the design's row 5 is               written over exactly them. Bundling them behind a constructor would put a type               between the criterion and the call and would give a caller a way to assemble a DAG               from values no earlier step produced — which is the hole `RequiredSet`'s               `pub(in crate::select)` constructor exists to close"
+    reason = "these ten ARE steps 1-4's outputs (the tenth, R1 = ADR-0191's pass-owed list, dated 2026-09-29), one parameter each, and the design's row 5 is               written over exactly them. Bundling them behind a constructor would put a type               between the criterion and the call and would give a caller a way to assemble a DAG               from values no earlier step produced — which is the hole `RequiredSet`'s               `pub(in crate::select)` constructor exists to close"
 )]
 pub fn step5(
     pack: &Pack,
@@ -396,6 +396,9 @@ pub fn step5(
     skipped: &[SkipRow],
     rows_fired: usize,
     inputs_digest: &Digest,
+    // *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 1,
+    // proposed.)* Step 4's tenth output: the required instances a composition-root pass owes.
+    owed_by_pass: &[Instance],
 ) -> Result<Step5Outcome, Step5Error> {
     // ---- nodes --------------------------------------------------------------------------------
     //
@@ -531,6 +534,10 @@ pub fn step5(
     // it `Present` (so nothing need produce it), or it is GATED (so the gate names it and it stayed
     // in `R`). Anything else is a member of `R` the graph silently lost, which is the failure
     // AC-054 and AC-058 both exist to refuse.
+    // *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 1,
+    // proposed.)* **A fourth, by record**: the instance is pass-sourced, so a composition-root
+    // pass produces it and the selection names it as owed (`Selection::pass_sourced`). It stays
+    // in `R`; it is not lost.
     for instance in required.kinds() {
         // **Identity is `(kind, key)` here too, and this was a real defect rather than a
         // precaution.** `Instance` carries `required_by` — provenance recording which activity's
@@ -546,7 +553,10 @@ pub fn step5(
         });
         let present = classifications.get(instance) == Some(&super::Classification::Present);
         let is_gated = gated.iter().any(|g| g.kind == instance.kind);
-        if !produced && !present && !is_gated {
+        let owed = owed_by_pass
+            .iter()
+            .any(|i| i.kind == instance.kind && i.key == instance.key);
+        if !produced && !present && !is_gated && !owed {
             return Err(Step5Error::UnreachableRequirement {
                 instance: instance.clone(),
             });

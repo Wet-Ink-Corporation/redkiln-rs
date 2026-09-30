@@ -1,0 +1,37 @@
+{
+  "_comment": "AC-345 / AC-346 -- the two-AC fixture spec, in rk_types::AcceptanceCriterion's serde form (dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R2 = ADR-0192 decision 4 retires the TOML reader). One AC whose declared mutation flips its named assertion (pinned), one whose mutant survives the suite (mutation-survived). The runs are scripted by the test; `assertions` is the harness's evidence, the assertion each pin names (AC-333).",
+  "acceptance_criteria": [
+    {
+      "id": "AC-346-A",
+      "criterion": "the plan steps are ordered plan, implement, record-links",
+      "verification": "test/implement-contract.test.ts::orders the plan steps",
+      "mutation": {
+        "kind": "declared",
+        "patch": "--- a/workflows/forge-implement.js\n+++ b/workflows/forge-implement.js\n@@ -1 +1 @@\n-const ORDER = ['plan', 'implement', 'record-links'];\n+const ORDER = ['record-links', 'plan', 'implement'];\n",
+        "suite": "npx vitest run test/implement-contract.test.ts"
+      }
+    },
+    {
+      "id": "AC-346-B",
+      "criterion": "record-links runs after the commit",
+      "verification": "test/implement-contract.test.ts::AC-015 record-links after the commit",
+      "mutation": {
+        "kind": "declared",
+        "patch": "--- a/workflows/forge-implement.js\n+++ b/workflows/forge-implement.js\n@@ -1800 +1800 @@\n-immediately AFTER the commit exists\n+as the FIRST thing you do, before you make the checkpoint at all\n",
+        "suite": "npx vitest run test/implement-contract.test.ts"
+      }
+    }
+  ],
+  "assertions": {
+    "AC-346-A": {
+      "file": "test/implement-contract.test.ts",
+      "test": "orders the plan steps",
+      "assertion": "expect(order).toEqual(['plan', 'implement', 'record-links'])"
+    },
+    "AC-346-B": {
+      "file": "test/implement-contract.test.ts",
+      "test": "AC-015 record-links after the commit",
+      "assertion": "expect(commitStep.toLowerCase()).toMatch(/after[^.]{0,40}commit/)"
+    }
+  }
+}

@@ -57,13 +57,12 @@ use rk_kernel::verify::comparator::{Claim, SelectionPolicy, reclassify};
 use rk_kernel::verify::eligible::{EligibleError, GateEligible};
 use rk_kernel::verify::exit::stage_exit;
 use rk_kernel::verify::flip::{FlipOutcome, FlipUnverifiable, MutationRun, flip_predicate};
-use rk_kernel::verify::ledger::{
-    HumanAnswer, MutationDeclaration, SpecAc, ac_status, compute_ledger,
-};
+use rk_kernel::verify::ledger::{HumanAnswer, ac_status, compute_ledger};
 use rk_kernel::verify::verify_activity_has_no_agent_step;
 use rk_kernel::workflow::memo::{CardOrTool, StepContext};
 use rk_ports::toolchain::MutationFeasibility;
 use rk_store::artifacts::verify_report::{WholeSuiteRecord, latest_whole_suite};
+use rk_types::acceptance::{AcceptanceCriterion, MutationDeclaration};
 use rk_types::artifact::findings::{EvidenceLabel, Finding, Findings};
 use rk_types::artifact::ledger::{AcLedger, AssertionLocator, LedgerStatus};
 use rk_types::digest::{Digest, sha256};
@@ -82,8 +81,11 @@ const NODE_PIN: &str = "node 22.4.1 / vitest 2.1.0";
 
 const AC015_RECORD: &str = include_str!("../fixtures/findings/ac015_inversion/record.json");
 const AC015_PATCH: &str = include_str!("../fixtures/findings/ac015_inversion/inversion.patch");
-const TWO_AC_SPEC: &str = include_str!("../fixtures/ledger/ac346_two_ac_spec.toml");
-const AC455_SPEC: &str = include_str!("../fixtures/ledger/ac455_spec.toml");
+// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R2 = ADR-0192 decision 4.)* The two
+// fixture specs moved from the retired TOML reader's form to `AcceptanceCriterion`'s serde form,
+// each criterion through `AcceptanceCriterion::ingest`, with the assertions its pins name beside.
+const TWO_AC_SPEC: &str = include_str!("../fixtures/ledger/ac346_two_ac_spec.json");
+const AC455_SPEC: &str = include_str!("../fixtures/ledger/ac455_spec.json");
 const AC455_REQUIRES: &str = include_str!("../fixtures/packs/ac455-requires-verification.toml");
 const AC455_PERMITS: &str = include_str!("../fixtures/packs/ac455-permits-unverified.toml");
 const AC337_INFEASIBLE: &str = include_str!("../fixtures/packs/ac337-mutation-infeasible.toml");
@@ -119,22 +121,37 @@ fn locator(test: &str) -> AssertionLocator {
     }
 }
 
-fn declared(patch: &str) -> MutationDeclaration {
-    MutationDeclaration::Declared(Mutation {
+fn declared(patch: &str) -> Option<MutationDeclaration> {
+    Some(MutationDeclaration::Declared {
         patch: patch.to_owned(),
         suite: "npx vitest run".to_owned(),
     })
 }
 
-fn spec_ac(id: &str, mutation: MutationDeclaration, assertion: Option<AssertionLocator>) -> SpecAc {
-    SpecAc {
+/// One criterion, built as a value (the ledger reads the exported type however it was made; the
+/// one door is exercised by the fixture specs and `the_ledger_reads_rk_types_acceptance_criterion`).
+fn spec_ac(id: &str, mutation: Option<MutationDeclaration>) -> AcceptanceCriterion {
+    AcceptanceCriterion {
         id: id.to_owned(),
-        verification: assertion
-            .as_ref()
-            .map(|l| format!("{}::{}", l.file, l.test)),
+        criterion: Text::new(format!("{id}'s criterion")),
+        gwt: None,
+        verification: Some(Text::new(format!("{id}::pins it"))),
         mutation,
-        assertion,
     }
+}
+
+/// A fixture spec in `AcceptanceCriterion`'s serde form: `{ "acceptance_criteria": [...],
+/// "assertions": { "<id>": <locator> } }`, each criterion through the one door.
+fn load_spec(src: &str) -> (Vec<AcceptanceCriterion>, BTreeMap<String, AssertionLocator>) {
+    let doc: Value = serde_json::from_str(src).expect("the fixture spec is JSON");
+    let spec = doc["acceptance_criteria"]
+        .as_array()
+        .expect("an acceptance_criteria array")
+        .iter()
+        .map(|v| AcceptanceCriterion::ingest(v.clone()).expect("each criterion ingests"))
+        .collect();
+    let pins = serde_json::from_value(doc["assertions"].clone()).expect("the assertions map");
+    (spec, pins)
 }
 
 fn at(secs: i64) -> Timestamp {
@@ -290,18 +307,21 @@ fn ac334_flip_predicate() {
     // a survivor is `mutation-survived` and blocks exit, quarantined or not: the predicate and the
     // status function have no quarantine input at all (the signature is the assertion)
     let _predicate: fn(&MutationRun) -> FlipOutcome = flip_predicate;
-    let ac = spec_ac(
-        "AC-1",
-        declared("--- a\n+++ b\n-fix\n"),
-        Some(locator("pins it")),
+    let ac = spec_ac("AC-1", declared("--- a\n+++ b\n-fix\n"));
+    let pin = locator("pins it");
+    let status = ac_status(
+        &ac,
+        Some(&FlipOutcome::MutationSurvived),
+        Some(&pin),
+        &feasible(),
+        None,
     );
-    let status = ac_status(&ac, Some(&FlipOutcome::MutationSurvived), &feasible(), None);
     assert_eq!(status, LedgerStatus::MutationSurvived);
     let ledger = AcLedger {
         rows: vec![rk_types::artifact::ledger::AcLedgerRow {
             ac: "AC-1".to_owned(),
             status,
-            evidence: ac.assertion.clone(),
+            evidence: Some(pin.clone()),
         }],
     };
     assert!(
@@ -309,9 +329,15 @@ fn ac334_flip_predicate() {
         "a survivor blocks exit"
     );
     // pinned requires the declared assertion locator — a flip with no named assertion pins nothing
-    let no_locator = spec_ac("AC-2", declared("--- a\n+++ b\n-fix\n"), None);
+    let no_locator = spec_ac("AC-2", declared("--- a\n+++ b\n-fix\n"));
     assert_eq!(
-        ac_status(&no_locator, Some(&FlipOutcome::Pinned), &feasible(), None),
+        ac_status(
+            &no_locator,
+            Some(&FlipOutcome::Pinned),
+            None,
+            &feasible(),
+            None
+        ),
         LedgerStatus::Unpinned
     );
 }
@@ -351,9 +377,15 @@ fn ac015_inversion_regression() {
     assert_ne!(outcome, FlipOutcome::Pinned);
     // through the ledger, with the assertion the record names
     let test_name = record["expected"]["assertion"]["test"].as_str().unwrap();
-    let ac = spec_ac("AC-015", declared(AC015_PATCH), Some(locator(test_name)));
+    let ac = spec_ac("AC-015", declared(AC015_PATCH));
     assert_eq!(
-        ac_status(&ac, Some(&outcome), &feasible(), None),
+        ac_status(
+            &ac,
+            Some(&outcome),
+            Some(&locator(test_name)),
+            &feasible(),
+            None
+        ),
         LedgerStatus::MutationSurvived
     );
 }
@@ -373,13 +405,15 @@ fn ac338_restored_mutation_is_unverifiable() {
         FlipOutcome::Unverifiable(FlipUnverifiable::NotPresentAtCompletion),
         "even a flip does not pin when the mutant was gone"
     );
-    let ac = spec_ac(
-        "AC-F17",
-        declared("--- a\n+++ b\n-fix\n"),
-        Some(locator("pins it")),
-    );
+    let ac = spec_ac("AC-F17", declared("--- a\n+++ b\n-fix\n"));
     assert_eq!(
-        ac_status(&ac, Some(&flip_predicate(&restored)), &feasible(), None),
+        ac_status(
+            &ac,
+            Some(&flip_predicate(&restored)),
+            Some(&locator("pins it")),
+            &feasible(),
+            None
+        ),
         LedgerStatus::Unpinned,
         "unverifiable is no evidence"
     );
@@ -390,21 +424,21 @@ fn ac338_restored_mutation_is_unverifiable() {
 /// **AC-335 — the item's green suite changes nothing about a survivor.**
 #[test]
 fn ac335_green_suite_does_not_promote_a_survivor() {
-    let ac = spec_ac(
-        "AC-1",
-        declared("--- a\n+++ b\n-fix\n"),
-        Some(locator("pins it")),
-    );
+    let ac = spec_ac("AC-1", declared("--- a\n+++ b\n-fix\n"));
+    let pin = locator("pins it");
     // the static check: the status function's signature has NO suite-verdict parameter — adding one
     // stops this line compiling (AC-283's pattern)
-    let _status: fn(
-        &SpecAc,
-        Option<&FlipOutcome>,
-        &MutationFeasibility,
-        Option<&HumanAnswer>,
-    ) -> LedgerStatus = ac_status;
+    // *(dated 2026-09-29, s8g build: the criterion is the exported type, and the assertion a pin
+    // names travels beside the flip outcome; still no suite-verdict parameter.)*
+    let _status: StatusFn = ac_status;
     // the fixture: a green suite and a surviving mutation — the suite verdict is not even an input
-    let status = ac_status(&ac, Some(&FlipOutcome::MutationSurvived), &feasible(), None);
+    let status = ac_status(
+        &ac,
+        Some(&FlipOutcome::MutationSurvived),
+        Some(&pin),
+        &feasible(),
+        None,
+    );
     assert_eq!(
         status,
         LedgerStatus::MutationSurvived,
@@ -444,19 +478,19 @@ fn ac342_review_findings_are_not_a_ledger_input() {
     assert!(verify_reads_no_suite_verdict_rule(&files).is_ok());
     let hit = verify_reads_no_suite_verdict_rule(&control(
         "crates/rk-kernel/src/verify/ledger.rs",
-        "fn status(ac: &SpecAc, review: &Findings) -> LedgerStatus { LedgerStatus::Pinned }\n",
+        "fn status(ac: &AcceptanceCriterion, review: &Findings) -> LedgerStatus { LedgerStatus::Pinned }\n",
     ));
     assert!(
         hit.is_err(),
         "a status function taking Findings is reported"
     );
     // the fixture: the reviewer reports "all criteria met" over an unpinned AC — it still blocks exit
-    let ac = spec_ac("AC-7", MutationDeclaration::None, Some(locator("pins it")));
-    let status = ac_status(&ac, None, &feasible(), None);
+    let ac = spec_ac("AC-7", None);
+    let status = ac_status(&ac, None, Some(&locator("pins it")), &feasible(), None);
     assert_eq!(status, LedgerStatus::Unpinned);
     let all_met = Findings { items: vec![] }; // an approving reviewer raises nothing
     assert!(all_met.items.is_empty());
-    let ledger = compute_ledger(&[ac], &BTreeMap::new(), &feasible(), &[]);
+    let ledger = compute_ledger(&[ac], &BTreeMap::new(), &BTreeMap::new(), &feasible(), &[]);
     let refused = stage_exit("item", "implement", &ledger)
         .expect_err("an unpinned AC refuses exit whatever the reviewer said");
     assert_eq!(refused_ids(&refused), vec!["AC-7".to_owned()]);
@@ -464,22 +498,49 @@ fn ac342_review_findings_are_not_a_ledger_input() {
 
 // ------------------------------------------------------------------ AC-345 / AC-346
 
-fn two_ac_fixture() -> (Vec<SpecAc>, BTreeMap<String, FlipOutcome>) {
-    let spec = SpecAc::from_toml("ac346_two_ac_spec", TWO_AC_SPEC).expect("the two-AC spec parses");
+type Pins = BTreeMap<String, AssertionLocator>;
+
+/// AC-335's static check, as a type: the status function over the exported criterion, the flip
+/// outcome and the assertion its pin names, the feasibility and the answer, and NO suite verdict.
+/// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+type StatusFn = fn(
+    &AcceptanceCriterion,
+    Option<&FlipOutcome>,
+    Option<&AssertionLocator>,
+    &MutationFeasibility,
+    Option<&HumanAnswer>,
+) -> LedgerStatus;
+
+/// The ledger over the exported criterion (R2 = ADR-0192 decision 4).
+type LedgerFn = fn(
+    &[AcceptanceCriterion],
+    &BTreeMap<String, FlipOutcome>,
+    &Pins,
+    &MutationFeasibility,
+    &[HumanAnswer],
+) -> AcLedger;
+
+fn two_ac_fixture() -> (
+    Vec<AcceptanceCriterion>,
+    BTreeMap<String, FlipOutcome>,
+    Pins,
+) {
+    let (spec, pins) = load_spec(TWO_AC_SPEC);
     assert_eq!(spec.len(), 2, "PREMISE: two ACs");
+    assert_eq!(pins.len(), 2, "PREMISE: each AC names its assertion");
     let mut runs = BTreeMap::new();
     runs.insert(spec[0].id.clone(), FlipOutcome::Pinned);
     runs.insert(spec[1].id.clone(), FlipOutcome::MutationSurvived);
-    (spec, runs)
+    (spec, runs, pins)
 }
 
 /// **AC-345 — a quarantine is a review-gate state: it stops the finding blocking review and does
 /// not change the AC's ledger status; stage exit is still refused for that AC.**
 #[test]
 fn ac345_quarantine_changes_no_ledger_status() {
-    let (spec, runs) = two_ac_fixture();
+    let (spec, runs, pins) = two_ac_fixture();
     let survivor = spec[1].id.clone();
-    let before = compute_ledger(&spec, &runs, &feasible(), &[]);
+    let before = compute_ledger(&spec, &runs, &pins, &feasible(), &[]);
     assert_eq!(before.rows[1].status, LedgerStatus::MutationSurvived);
 
     // the survivor's finding, blocking review
@@ -531,7 +592,7 @@ fn ac345_quarantine_changes_no_ledger_status() {
     );
 
     // the ledger is untouched: the AC remains `mutation-survived` — the ledger has no quarantine input
-    let after = compute_ledger(&spec, &runs, &feasible(), &[]);
+    let after = compute_ledger(&spec, &runs, &pins, &feasible(), &[]);
     assert_eq!(after, before, "quarantine changes no ledger status");
     assert_eq!(after.rows[1].status, LedgerStatus::MutationSurvived);
     // and stage exit is STILL refused for that AC (AC-346; ADR-0104 decision 4)
@@ -542,8 +603,8 @@ fn ac345_quarantine_changes_no_ledger_status() {
 /// **AC-346 — exit refused, the unpinned ids named, the refusal is an event (ADR-0125).**
 #[test]
 fn ac346_quarantined_survivor_still_refuses_exit() {
-    let (spec, runs) = two_ac_fixture();
-    let ledger = compute_ledger(&spec, &runs, &feasible(), &[]);
+    let (spec, runs, pins) = two_ac_fixture();
+    let ledger = compute_ledger(&spec, &runs, &pins, &feasible(), &[]);
     assert_eq!(
         ledger.rows[0].status,
         LedgerStatus::Pinned,
@@ -580,7 +641,7 @@ fn ac346_quarantined_survivor_still_refuses_exit() {
         at: at(1),
         reason: Text::new("meaning judged"),
     };
-    let still = compute_ledger(&spec, &runs, &feasible(), &[answer_other]);
+    let still = compute_ledger(&spec, &runs, &pins, &feasible(), &[answer_other]);
     assert!(
         stage_exit("item-46", "implement", &still).is_err(),
         "an answer for a different AC is not an answer"
@@ -591,7 +652,7 @@ fn ac346_quarantined_survivor_still_refuses_exit() {
         at: at(2),
         reason: Text::new("the assertion discriminates by inspection"),
     };
-    let lifted = compute_ledger(&spec, &runs, &feasible(), &[answer]);
+    let lifted = compute_ledger(&spec, &runs, &pins, &feasible(), &[answer]);
     assert!(matches!(
         lifted.rows[1].status,
         LedgerStatus::HumanAnswered { .. }
@@ -604,7 +665,7 @@ fn ac346_quarantined_survivor_still_refuses_exit() {
     stage_exit(
         "item-46",
         "implement",
-        &compute_ledger(&spec, &all_pinned, &feasible(), &[]),
+        &compute_ledger(&spec, &all_pinned, &pins, &feasible(), &[]),
     )
     .expect("permitted");
 }
@@ -1023,11 +1084,11 @@ fn ac340_survivor_finding_blocks_under_default_weight() {
 #[test]
 fn ac347_verify_dispatches_nothing() {
     // a full fixture run of the verify path: comparator, ledger, exit — collect every event it writes
-    let (spec, runs) = two_ac_fixture();
+    let (spec, runs, pins) = two_ac_fixture();
     let mut events: Vec<Event> = Vec::new();
     let out = reclassify(&affected_claim(241, &["pnpm", "test"]), None);
     events.extend(out.events);
-    let ledger = compute_ledger(&spec, &runs, &feasible(), &[]);
+    let ledger = compute_ledger(&spec, &runs, &pins, &feasible(), &[]);
     if let Err(refused) = stage_exit("item", "implement", &ledger) {
         events.push(refused.event);
     }
@@ -1131,7 +1192,7 @@ fn ac239_gate_eligible_list_is_data() {
 /// **AC-455 — the policy, not the type, decides whether a missing verification blocks a stage.**
 #[test]
 fn ac455_policy_decides_not_the_type() {
-    let spec = SpecAc::from_toml("ac455_spec", AC455_SPEC).expect("the fixture spec parses");
+    let (spec, _pins) = load_spec(AC455_SPEC);
     let unverified: Vec<&str> = spec
         .iter()
         .filter(|a| a.verification.is_none())
@@ -1164,8 +1225,8 @@ fn ac455_policy_decides_not_the_type() {
     let infeasible = Pack::from_toml("ac337", AC337_INFEASIBLE).unwrap();
     let feas = rk_kernel::verify::mutation_feasibility(&infeasible).expect("declared");
     assert!(matches!(feas, MutationFeasibility::NotFeasible { .. }));
-    let (two, runs) = two_ac_fixture();
-    let ledger = compute_ledger(&two, &runs, &feas, &[]);
+    let (two, runs, pins) = two_ac_fixture();
+    let ledger = compute_ledger(&two, &runs, &pins, &feas, &[]);
     assert!(
         ledger
             .rows
@@ -1180,5 +1241,770 @@ fn ac455_policy_decides_not_the_type() {
     assert!(
         rk_kernel::verify::mutation_feasibility(&permits).is_err(),
         "a pack declaring nothing is a configuration error when read"
+    );
+}
+
+// ================================================================================================
+// `s8g` section 8g.4 / 8g.5: the one `Toolchain::test` port-call site and its `verify_completed`
+// row (R1 = ADR-0191 decisions 2 and 8, proposed), AC-321's replay, and AC-349's claims binder.
+// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+// ================================================================================================
+
+use std::collections::VecDeque;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
+
+use rk_kernel::catalog::StepKind;
+use rk_kernel::runtime::Runtime;
+use rk_kernel::runtime::step::{Activation, ToolRouting};
+use rk_kernel::verify::claims::{self, PathClaim};
+use rk_kernel::verify::runner::{self, TestCall, TestOrigin, VerifyIdentity};
+use rk_kernel::workflow::memo::{ToolchainValues, VerbRegistry};
+use rk_ports::harness::Harness;
+use rk_ports::toolchain::{
+    Selection, StepBound, TestOutcome, TestRunner, Toolchain, VerbCall, VerbOutput,
+};
+use rk_types::error::{StepError, TransportKind};
+use rk_types::verify::{VerifyCompleted, VerifyRange};
+
+use crate::reference_resolver::{step, with_inputs};
+use crate::runtime::{
+    CAP, CountingHarness, ITEM, STAGE, at as journaled_at, counters, empty_state, gate_site,
+    journal, ports_with_toolchain, store,
+};
+
+/// An outcome of `passed` + `failed` tests at `version`.
+fn s8g_outcome(passed: u32, failed: u32, version: &str) -> TestOutcome {
+    TestOutcome::new(
+        VerifyReport {
+            basis: Basis::WholeSuite,
+            argv: vec!["cargo".to_owned(), "nextest".to_owned(), "run".to_owned()],
+            selected_test_count: passed + failed,
+            total_test_count: passed + failed,
+            total_test_count_source: TotalTestCountSource::OwnExecutedCount,
+            wall_secs: 3,
+            toolchain_version: version.to_owned(),
+            suite_sha: "suite-sha".to_owned(),
+            basis_reason: Some(BasisReason::ProbeUnverified),
+        },
+        passed,
+        failed,
+        TestRunner::named("fixture", "0"),
+    )
+    .expect("the counts agree with the report")
+}
+
+/// A `Toolchain` whose `test` answers a script, in order, and counts every call.
+#[derive(Default)]
+struct ScriptedTests {
+    answers: Mutex<VecDeque<Result<TestOutcome, StepError>>>,
+    tests: AtomicU32,
+    others: AtomicU32,
+}
+
+impl ScriptedTests {
+    fn new(answers: Vec<Result<TestOutcome, StepError>>) -> Self {
+        Self {
+            answers: Mutex::new(answers.into()),
+            ..Self::default()
+        }
+    }
+    fn tests(&self) -> u32 {
+        self.tests.load(Ordering::SeqCst)
+    }
+    fn others(&self) -> u32 {
+        self.others.load(Ordering::SeqCst)
+    }
+}
+
+impl Toolchain for ScriptedTests {
+    fn detect(&self) -> Result<bool, StepError> {
+        Ok(true)
+    }
+    fn build(&self, _b: StepBound) -> Result<rk_types::verb_output::BuildReport, StepError> {
+        self.others.fetch_add(1, Ordering::SeqCst);
+        Err(StepError::Unsupported {
+            capability: "build".to_owned(),
+        })
+    }
+    fn test(&self, _s: &Selection, _b: StepBound) -> Result<TestOutcome, StepError> {
+        self.tests.fetch_add(1, Ordering::SeqCst);
+        self.answers
+            .lock()
+            .expect("not poisoned")
+            .pop_front()
+            .unwrap_or_else(|| Ok(s8g_outcome(1, 0, "fixture 1")))
+    }
+    fn lint(&self, _b: StepBound) -> Result<(), StepError> {
+        self.others.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+    fn classify(&self, _p: &str) -> Result<rk_ports::toolchain::Classification, StepError> {
+        Ok(rk_ports::toolchain::Classification::Text)
+    }
+    fn change_summary(
+        &self,
+        _r: &str,
+        _b: StepBound,
+    ) -> Result<rk_ports::toolchain::ChangeSummary, StepError> {
+        self.others.fetch_add(1, Ordering::SeqCst);
+        Err(StepError::Unsupported {
+            capability: "change_summary".to_owned(),
+        })
+    }
+    fn run_verb(&self, call: &VerbCall<'_>) -> Result<VerbOutput, StepError> {
+        self.others.fetch_add(1, Ordering::SeqCst);
+        Err(StepError::Unsupported {
+            capability: call.verb.to_owned(),
+        })
+    }
+}
+
+fn s8g_identity(adapter: &str, base: &str, head: &str) -> VerifyIdentity {
+    VerifyIdentity {
+        adapter: adapter.to_owned(),
+        range: VerifyRange {
+            base: base.to_owned(),
+            head: head.to_owned(),
+        },
+    }
+}
+
+/// One runner call over `tc`, the rows it appended collected.
+fn s8g_call(
+    tc: &ScriptedTests,
+    origin: TestOrigin<'_>,
+    stage: &str,
+    id: &VerifyIdentity,
+    selection: &Selection,
+    paths: &[String],
+) -> (Result<TestOutcome, StepError>, Vec<Event>) {
+    let mut rows: Vec<Event> = Vec::new();
+    let result = runner::run_test(
+        tc,
+        &TestCall {
+            item: ITEM,
+            selection,
+            bound: StepBound::Undeclared,
+            origin,
+            stage,
+            identity: id,
+            paths,
+        },
+        &mut |e| {
+            rows.push(e);
+            Ok(())
+        },
+    );
+    (result, rows)
+}
+
+fn s8g_whole() -> Selection {
+    Selection::WholeSuite {
+        reason: BasisReason::ProbeUnverified,
+    }
+}
+
+fn s8g_rows(events: &[Event]) -> Vec<VerifyCompleted> {
+    events
+        .iter()
+        .filter(|e| e.kind == EventKind::VerifyCompleted)
+        .map(|e| VerifyCompleted::from_payload(&e.payload).expect("the row reads back"))
+        .collect()
+}
+
+/// A `toolchain:test` step named `id` whose selection is the declared `e2e`.
+fn s8g_test_step(id: &str) -> rk_kernel::catalog::Step {
+    let mut s = with_inputs(step(id, StepKind::Tool), &[("selection", "e2e")]);
+    s.run = Some("toolchain:test".to_owned());
+    s
+}
+
+fn s8g_lint_step(id: &str) -> rk_kernel::catalog::Step {
+    let mut s = step(id, StepKind::Tool);
+    s.run = Some("toolchain:lint".to_owned());
+    s
+}
+
+/// Walk `steps` as the activation `aid` over `tc`, with `id` bound on the routing when given.
+fn s8g_walk(
+    aid: &str,
+    steps: &[rk_kernel::catalog::Step],
+    tc: Arc<ScriptedTests>,
+    id: Option<VerifyIdentity>,
+) -> (rk_kernel::runtime::activity::ActivityReport, Vec<Event>) {
+    let (q, a) = counters();
+    let db = store(&q, &a);
+    let mut routing = ToolRouting::new(
+        crate::tool_verb_routing::registry("", ""),
+        ToolchainValues::default(),
+    );
+    if let Some(id) = id {
+        routing = routing.with_verify_identity(id);
+    }
+    let rt = Runtime::new(
+        ports_with_toolchain(
+            Arc::new(CountingHarness::scripted(Vec::new())) as Arc<dyn Harness>,
+            &db,
+            tc as Arc<dyn Toolchain>,
+        ),
+        "run-s8g-verify",
+        STAGE,
+    )
+    .with_tool_routing(routing);
+    let activation = Activation {
+        item: ITEM,
+        activity_id_at_version: aid,
+        step_id: aid,
+        spec: None,
+        step_specs: None,
+        rigor: rk_kernel::rigor::Rigor::Optional,
+    };
+    let report = rt
+        .run_activity_steps(
+            activation,
+            Some(steps),
+            &rk_kernel::predicate::Context::new(),
+            gate_site(&empty_state()),
+            rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
+            journaled_at(100),
+        )
+        .expect("a value");
+    (report, journal(&db))
+}
+
+/// **R1 decision 8, *One site*:** one `verify_completed` row per COMPLETED `Toolchain::test`
+/// port call, whatever made it — the runner called directly (the pass's route), and the
+/// executor's `toolchain:test` arm in a walk. A red suite is a completed call and journals its
+/// row; a `lint` call journals none.
+#[test]
+fn verify_completed_is_journalled_once_per_completed_test_port_call() {
+    // (a) The runner directly: green, red, green -- three completed calls, three rows.
+    let tc = ScriptedTests::new(vec![
+        Ok(s8g_outcome(5, 0, "fixture 1")),
+        Ok(s8g_outcome(3, 2, "fixture 1")),
+        Ok(s8g_outcome(7, 0, "fixture 1")),
+    ]);
+    let id = s8g_identity("adapter-under-test", "b0", "h1");
+    let mut all = Vec::new();
+    for _ in 0..3 {
+        let (result, rows) = s8g_call(&tc, TestOrigin::Pass, "check", &id, &s8g_whole(), &[]);
+        result.expect("a completed call is Ok, green or red");
+        assert_eq!(rows.len(), 1, "one row per completed call");
+        all.extend(rows);
+    }
+    assert_eq!(tc.tests(), 3, "PREMISE: three port calls");
+    let rows = s8g_rows(&all);
+    assert_eq!(rows.len(), 3);
+    let counts: Vec<(u32, u32)> = rows.iter().map(|r| (r.passed, r.failed)).collect();
+    assert_eq!(
+        counts,
+        vec![(5, 0), (3, 2), (7, 0)],
+        "each row carries its own call's counts, the red one included"
+    );
+    assert!(
+        rows.iter()
+            .all(|r| r.selected_test_count == r.passed + r.failed)
+    );
+    assert!(
+        all.iter().all(|e| e.item() == Some(ITEM)),
+        "scoped by the item key"
+    );
+
+    // (b) Through the executor: `lint` then two `toolchain:test` steps -- two rows, not three.
+    let tc = Arc::new(ScriptedTests::default());
+    let (report, events) = s8g_walk(
+        "suite-run@1",
+        &[
+            s8g_lint_step("lint-it"),
+            s8g_test_step("run-a"),
+            s8g_test_step("run-b"),
+        ],
+        Arc::clone(&tc),
+        Some(s8g_identity("adapter-under-test", "b0", "h1")),
+    );
+    assert_eq!(tc.tests(), 2, "PREMISE: two test port calls: {report:?}");
+    assert_eq!(tc.others(), 1, "PREMISE: one lint call");
+    let rows = s8g_rows(&events);
+    assert_eq!(
+        rows.len(),
+        2,
+        "the executor's `toolchain:test` arm does not reach the port through the one \
+         journalling site: {} rows for 2 completed calls",
+        rows.len()
+    );
+}
+
+/// **R1 decision 8, *Completed only*:** a timed-out, killed, unspawnable or unreadable call
+/// writes NO `verify_completed`, and its `StepError` comes back unchanged. The control: a
+/// completed call over the same function writes one.
+#[test]
+fn no_verify_completed_for_a_run_that_did_not_complete() {
+    let failures = vec![
+        StepError::Timeout { after_secs: 360 },
+        StepError::Transport {
+            kind: TransportKind::Spawn,
+            detail: "cannot run: no such binary".to_owned(),
+        },
+        StepError::Transport {
+            kind: TransportKind::Io,
+            detail: "os-killed: signal 9".to_owned(),
+        },
+        StepError::Transport {
+            kind: TransportKind::Decode,
+            detail: "unreadable".to_owned(),
+        },
+    ];
+    let tc = ScriptedTests::new(failures.iter().cloned().map(Err).collect());
+    let id = s8g_identity("adapter-under-test", "b0", "h1");
+    for want in &failures {
+        let (result, rows) = s8g_call(&tc, TestOrigin::Pass, "check", &id, &s8g_whole(), &[]);
+        assert_eq!(
+            result.as_ref().err(),
+            Some(want),
+            "the refusal travels back unchanged"
+        );
+        assert!(
+            rows.is_empty(),
+            "a call that did not complete ({want:?}) journalled {rows:?}"
+        );
+    }
+    assert_eq!(tc.tests(), 4, "PREMISE: every failure reached the port");
+    // CONTROL: the same function over a completed call writes its row.
+    let (ok, rows) = s8g_call(&tc, TestOrigin::Pass, "check", &id, &s8g_whole(), &[]);
+    ok.expect("completed");
+    assert_eq!(rows.len(), 1, "CONTROL: a completed call writes one row");
+
+    // And through the executor: a timed-out test step writes no row.
+    let tc = Arc::new(ScriptedTests::new(vec![Err(StepError::Timeout {
+        after_secs: 360,
+    })]));
+    let (report, events) = s8g_walk(
+        "suite-run@1",
+        &[s8g_test_step("run-a")],
+        Arc::clone(&tc),
+        Some(s8g_identity("adapter-under-test", "b0", "h1")),
+    );
+    assert_eq!(tc.tests(), 1, "PREMISE: the port was reached: {report:?}");
+    assert!(
+        s8g_rows(&events).is_empty(),
+        "a killed walk step journalled a verify_completed row"
+    );
+}
+
+/// **AC-321:** *"the range endpoints, the resolved path list and the toolchain version are read
+/// back from the run event verbatim AND the replay reproduces the identical path list without
+/// re-reading the working tree."* The paths name files that exist nowhere; `replay` takes the
+/// rows and nothing else; a row whose `paths` member is gone does not read back at all.
+#[test]
+fn ac321_replay_reads_the_path_list_from_verify_completed_alone() {
+    let _replay_takes_rows_only: fn(&[Event]) -> Result<Vec<VerifyCompleted>, runner::ReplayError> =
+        runner::replay;
+    let paths: Vec<String> = vec![
+        "crates/nowhere/src/lib.rs".to_owned(),
+        "docs/a file with spaces.md".to_owned(),
+        "Cargo.lock".to_owned(),
+    ];
+    let base = "1111111111111111111111111111111111111111";
+    let head = "2222222222222222222222222222222222222222";
+    let tc = ScriptedTests::new(vec![Ok(s8g_outcome(
+        4,
+        0,
+        "rustc 1.95.0 / nextest 0.9.146",
+    ))]);
+    let id = s8g_identity("adapter-under-test", base, head);
+    let selection = Selection::Affected {
+        changed: paths.clone(),
+        recorded: None,
+    };
+    let (result, rows) = s8g_call(&tc, TestOrigin::Pass, "check", &id, &selection, &paths);
+    result.expect("completed");
+    // Other kinds around it are skipped, not read.
+    let mut journal = vec![Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({}),
+    )];
+    journal.extend(rows);
+    let replayed = runner::replay(&journal).expect("the rows read back");
+    assert_eq!(replayed.len(), 1);
+    let row = &replayed[0];
+    assert_eq!(
+        serde_json::to_vec(&row.paths).expect("paths serialise"),
+        serde_json::to_vec(&paths).expect("paths serialise"),
+        "the path list is not byte-identical to the one the call was made over"
+    );
+    assert_eq!(row.range.base, base);
+    assert_eq!(row.range.head, head);
+    assert_eq!(row.toolchain_version, "rustc 1.95.0 / nextest 0.9.146");
+    // The row is the only source: without its `paths` member it does not read back.
+    let mut stripped = journal.clone();
+    let payload = stripped[1]
+        .payload
+        .as_object_mut()
+        .expect("the payload is an object");
+    payload.remove("paths");
+    assert!(
+        runner::replay(&stripped).is_err(),
+        "a row with no `paths` read back, so the list came from somewhere else"
+    );
+}
+
+/// **AC-321's property half:** *"a property test over 100 synthetic ranges"*. One hundred
+/// deterministic (base, head, path list, version) cases, each through the one site and back
+/// through `replay`, each reproduced verbatim.
+#[test]
+fn ac321_replay_property_over_100_synthetic_ranges() {
+    let mut state: u64 = 0x5eed_0000_0000_0321;
+    let mut next = move || {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        state >> 33
+    };
+    let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyz0123456789-_. /é"
+        .chars()
+        .collect();
+    let mut checked = 0u32;
+    for case in 0..100u32 {
+        let hex = |n: u64| format!("{n:040x}");
+        let base = hex(next());
+        let head = hex(next());
+        let count = usize::try_from(next() % 7).expect("small");
+        let paths: Vec<String> = (0..count)
+            .map(|i| {
+                let len = 1 + usize::try_from(next() % 24).expect("small");
+                let name: String = (0..len)
+                    .map(|_| alphabet[usize::try_from(next()).expect("small") % alphabet.len()])
+                    .collect();
+                format!("d{case}/{i}/{name}")
+            })
+            .collect();
+        let version = format!("toolchain {}.{}", next() % 3, next() % 100);
+        let tc = ScriptedTests::new(vec![Ok(s8g_outcome(1 + case, 0, &version))]);
+        let id = s8g_identity("adapter-under-test", &base, &head);
+        let selection = Selection::Affected {
+            changed: paths.clone(),
+            recorded: None,
+        };
+        let (result, rows) = s8g_call(&tc, TestOrigin::Pass, "check", &id, &selection, &paths);
+        result.expect("completed");
+        let replayed = runner::replay(&rows).expect("reads back");
+        assert_eq!(replayed.len(), 1, "case {case}");
+        assert_eq!(replayed[0].paths, paths, "case {case}: the path list moved");
+        assert_eq!(replayed[0].range.base, base, "case {case}");
+        assert_eq!(replayed[0].range.head, head, "case {case}");
+        assert_eq!(replayed[0].toolchain_version, version, "case {case}");
+        checked += 1;
+    }
+    assert_eq!(
+        checked, 100,
+        "the property ran over exactly 100 synthetic ranges"
+    );
+}
+
+fn s8g_claim(toolchain: &str, pattern: &str) -> PathClaim {
+    PathClaim {
+        toolchain: toolchain.to_owned(),
+        pattern: pattern.to_owned(),
+    }
+}
+
+/// **AC-349:** *"GIVEN two … toolchain claims matching the same changed path at equal
+/// specificity WHEN the binder resolves selection THEN it is a configuration error … AND the
+/// error names both rules and the path."* Its *Verified by*: *"binder unit test with two
+/// equal-specificity fixtures; … an assertion that the error message contains both rule ids."*
+#[test]
+fn ac349_equal_specificity_claims_are_a_configuration_error_naming_both() {
+    // Two different toolchains, two different patterns, one literal directory and three literal
+    // characters each: equal specificity, both matching `tools/gen.rs`.
+    let tied = vec![
+        s8g_claim("rust", "tools/*.rs"),
+        s8g_claim("node", "tools/gen*"),
+    ];
+    assert!(claims::matches("tools/*.rs", "tools/gen.rs"));
+    assert!(claims::matches("tools/gen*", "tools/gen.rs"));
+    let err = claims::bind(&tied, "tools/gen.rs")
+        .expect_err("an equal-specificity tie is a configuration error, never a guess");
+    let msg = err.to_string();
+    for needle in ["rust:tools/*.rs", "node:tools/gen*", "tools/gen.rs"] {
+        assert!(
+            msg.contains(needle),
+            "the error does not name `{needle}`: {msg}"
+        );
+    }
+    // Declaration order does not decide it: the reversed list refuses the same way.
+    let reversed: Vec<PathClaim> = tied.iter().rev().cloned().collect();
+    assert!(
+        claims::bind(&reversed, "tools/gen.rs").is_err(),
+        "the reversed list resolved: a tie was broken by order"
+    );
+    // CONTROLS: a strictly more specific claim wins; a path only one claim matches binds to it;
+    // a path none matches binds to nothing; two claims of ONE toolchain are no tie.
+    let ranked = vec![
+        s8g_claim("node", "tools/*"),
+        s8g_claim("rust", "tools/gen.rs"),
+    ];
+    assert_eq!(
+        claims::bind(&ranked, "tools/gen.rs")
+            .expect("no tie")
+            .map(|c| c.toolchain.as_str()),
+        Some("rust")
+    );
+    assert_eq!(
+        claims::bind(&tied, "tools/other.rs")
+            .expect("no tie")
+            .map(|c| c.toolchain.as_str()),
+        Some("rust")
+    );
+    assert_eq!(claims::bind(&tied, "README.md").expect("no tie"), None);
+    let same = vec![
+        s8g_claim("rust", "tools/*.rs"),
+        s8g_claim("rust", "tools/gen*"),
+    ];
+    assert_eq!(
+        claims::bind(&same, "tools/gen.rs")
+            .expect("one toolchain's claims never tie with each other")
+            .map(|c| c.toolchain.as_str()),
+        Some("rust")
+    );
+    // The shipped claims column (`.redkiln/registry.toml`, R1 decision 10): both tables carry
+    // one, and this repository's own paths bind without a tie.
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let registry = VerbRegistry::load_file(&root.join(".redkiln/registry.toml"))
+        .expect("the shipped registry loads");
+    let shipped = claims::claims_from(&registry).expect("the claims rows read");
+    let toolchains: std::collections::BTreeSet<&str> =
+        shipped.iter().map(|c| c.toolchain.as_str()).collect();
+    assert_eq!(
+        toolchains,
+        ["node", "rust"].into_iter().collect(),
+        "the shipped claims column is not on both per-toolchain tables: {shipped:?}"
+    );
+    for (path, want) in [
+        ("crates/rk-kernel/src/lib.rs", "rust"),
+        ("Cargo.lock", "rust"),
+        ("crates/rk-cli/Cargo.toml", "rust"),
+        (
+            "crates/rk-adapter-toolchain-node/tests/fixtures/project/package.json",
+            "node",
+        ),
+        (
+            "crates/rk-adapter-toolchain-node/tests/fixtures/project/pnpm-lock.yaml",
+            "node",
+        ),
+    ] {
+        let bound = claims::bind(&shipped, path)
+            .unwrap_or_else(|e| panic!("the shipped claims tie on `{path}`: {e}"));
+        assert_eq!(bound.map(|c| c.toolchain.as_str()), Some(want), "{path}");
+    }
+}
+
+/// **R1 decision 8** (D21-47 review, finding 4): *"`origin` is `\"pass\"` for the verify pass's
+/// call, and `\"<activity>@<version>/<step>\"` for a catalog step's call"*; `stage` is the node's
+/// stage name, as data. A pass call and a `tdd-red-green-refactor` `red-verify` call each
+/// journal one row with their own `origin` and `stage`, and the executor's row carries the
+/// adapter the composition root bound, opaque.
+#[test]
+fn verify_completed_carries_its_origin_and_stage() {
+    // The pass's arm: the runner called with `TestOrigin::Pass`, at a stage NOT named verify.
+    let tc = ScriptedTests::new(vec![Ok(s8g_outcome(2, 0, "fixture 1"))]);
+    let id = s8g_identity("adapter-under-test", "b0", "h1");
+    let (result, rows) = s8g_call(&tc, TestOrigin::Pass, "check", &id, &s8g_whole(), &[]);
+    result.expect("completed");
+    let pass = s8g_rows(&rows);
+    assert_eq!(pass.len(), 1);
+    assert_eq!(pass[0].origin, "pass");
+    assert_eq!(pass[0].stage, "check");
+    assert_eq!(pass[0].adapter, "adapter-under-test");
+
+    // The catalog step's arm: `red-verify` in `tdd-red-green-refactor@2`, through the executor.
+    let tc = Arc::new(ScriptedTests::default());
+    let (report, events) = s8g_walk(
+        "tdd-red-green-refactor@2",
+        &[s8g_test_step("red-verify")],
+        Arc::clone(&tc),
+        Some(s8g_identity("adapter-from-the-root", "b0", "h1")),
+    );
+    assert_eq!(tc.tests(), 1, "PREMISE: one port call: {report:?}");
+    let step_rows = s8g_rows(&events);
+    assert_eq!(
+        step_rows.len(),
+        1,
+        "the red-verify call journalled {step_rows:?}"
+    );
+    assert_eq!(
+        step_rows[0].origin, "tdd-red-green-refactor@2/red-verify",
+        "a catalog step's row is not told apart from the pass's (M24's shape)"
+    );
+    assert_eq!(step_rows[0].stage, STAGE);
+    assert_eq!(step_rows[0].adapter, "adapter-from-the-root");
+    let row_event = events
+        .iter()
+        .find(|e| e.kind == EventKind::VerifyCompleted)
+        .expect("the row");
+    assert_eq!(
+        row_event.item(),
+        Some(ITEM),
+        "the interim item key rides beside the payload"
+    );
+    assert!(
+        row_event.payload.get("item").is_none(),
+        "the item key is in the payload"
+    );
+}
+
+/// **R2 = ADR-0192 decision 4** (`s8g` section 8g.3): *"`SpecAc` is retired. It and its TOML reader
+/// leave `rk-kernel`; the ledger, the exit check and `admissibility::admissible` read
+/// `&[rk_types::AcceptanceCriterion]`."* The signatures are the static half (a fn-pointer coercion
+/// stops compiling if either moves off the exported type); the behavioural half runs three criteria
+/// through the ONE door, `AcceptanceCriterion::ingest`, one per declaration arm, into the ledger,
+/// the exit check and the admissibility row.
+///
+/// The assertion a pin names (AC-333) is not a member of the exported type (decision 3's field
+/// list has none): it is the harness's evidence, handed to the ledger beside the flip outcomes,
+/// keyed by criterion id. *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+#[test]
+fn the_ledger_reads_rk_types_acceptance_criterion() {
+    use rk_types::acceptance::MutationDeclaration as Declared;
+    let _ledger: LedgerFn = compute_ledger;
+    let _status: StatusFn = ac_status;
+    let _admit: fn(&str, &[AcceptanceCriterion], &Pack) -> Result<(), Refused> = admissible;
+
+    let spec: Vec<AcceptanceCriterion> = [
+        json!({
+            "id": "AC-A",
+            "criterion": "the plan steps are ordered",
+            "verification": "test/implement-contract.test.ts::orders the plan steps",
+            "mutation": {
+                "kind": "declared",
+                "patch": "--- a/w.js\n+++ b/w.js\n@@ -1 +1 @@\n-const A = 1;\n+const A = 2;\n",
+                "suite": "npx vitest run test/implement-contract.test.ts"
+            }
+        }),
+        json!({
+            "id": "AC-B",
+            "criterion": "the render is legible",
+            "verification": "judged at review",
+            "mutation": { "kind": "not_feasible", "reason": "no seam to mutate a judgement" }
+        }),
+        json!({ "id": "AC-C", "criterion": "declares nothing" }),
+    ]
+    .into_iter()
+    .map(|v| AcceptanceCriterion::ingest(v).expect("each criterion comes through the one door"))
+    .collect();
+    assert!(matches!(spec[0].mutation, Some(Declared::Declared { .. })));
+    assert!(matches!(
+        spec[1].mutation,
+        Some(Declared::NotFeasible { .. })
+    ));
+    assert!(spec[2].mutation.is_none() && spec[2].verification.is_none());
+
+    let mut runs = BTreeMap::new();
+    runs.insert("AC-A".to_owned(), FlipOutcome::Pinned);
+    runs.insert("AC-B".to_owned(), FlipOutcome::Pinned);
+    let mut assertions = BTreeMap::new();
+    assertions.insert("AC-A".to_owned(), locator("orders the plan steps"));
+    let ledger = compute_ledger(&spec, &runs, &assertions, &feasible(), &[]);
+    let statuses: Vec<(&str, &LedgerStatus)> = ledger
+        .rows
+        .iter()
+        .map(|r| (r.ac.as_str(), &r.status))
+        .collect();
+    assert_eq!(
+        statuses,
+        vec![
+            ("AC-A", &LedgerStatus::Pinned),
+            (
+                "AC-B",
+                &LedgerStatus::NotFeasible {
+                    reason: Text::new("no seam to mutate a judgement")
+                }
+            ),
+            ("AC-C", &LedgerStatus::Unpinned),
+        ],
+        "each declaration arm of the exported type is read"
+    );
+    assert_eq!(
+        ledger.rows[0].evidence,
+        Some(locator("orders the plan steps"))
+    );
+    // A flip with no named assertion pins nothing (AC-333), from the exported type too.
+    let unnamed = compute_ledger(&spec[..1], &runs, &BTreeMap::new(), &feasible(), &[]);
+    assert_eq!(unnamed.rows[0].status, LedgerStatus::Unpinned);
+    // The exit check over that ledger, and the admissibility row over the same criteria.
+    let refused = stage_exit("item", "verify", &ledger).expect_err("two ACs are not pinned");
+    assert_eq!(
+        refused_ids(&refused),
+        vec!["AC-B".to_owned(), "AC-C".to_owned()]
+    );
+    let requires = Pack::from_toml("ac455-requires", AC455_REQUIRES).expect("loads");
+    let refusal = admissible("implement", &spec, &requires).expect_err("AC-C has no verification");
+    assert_eq!(refusal.acs, vec!["AC-C".to_owned()]);
+}
+
+/// **AC-347's lint over the SHIPPED catalog** (`s8g` section 8g.5; D21-46 R5; R1 = ADR-0191
+/// decision 7, proposed). *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME.)* Every
+/// `.redkiln/catalog` activity with `stage = "verify"` is walked through the kernel's own lint,
+/// [`verify_activity_has_no_agent_step`], file by file; the count walked is non-zero (D21-42 13a),
+/// and the set that carries an agent step is **exactly** `{migration-dry-run}`, the single residual
+/// D21-46 R5 names (*"`migration-dry-run` stays a named residual, because no Phase-1 lane reaches
+/// it"*). A new agent step at verify turns this red (M19); so does `integration-tests` back at
+/// verify (M20), and so does removing the residual without updating this test. The test states the
+/// residual; it does not hide it. Reachability is `selection::migration_dry_run_is_selected_on_no_shipped_lane`'s.
+#[test]
+fn ac347_verify_stage_agent_steps_are_exactly_the_named_residual() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../.redkiln/catalog")
+        .canonicalize()
+        .expect("the shipped catalog directory resolves");
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(&dir)
+        .expect("the shipped catalog reads")
+        .map(|e| e.expect("an entry").path())
+        .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+        .collect();
+    files.sort();
+    let mut walked = Vec::new();
+    let mut agent_bearing = std::collections::BTreeSet::new();
+    for path in &files {
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .expect("a UTF-8 file name");
+        let src = std::fs::read_to_string(path).expect("the activity reads");
+        let catalog = rk_kernel::catalog::Catalog::from_sources(&[(name, src.as_str())])
+            .unwrap_or_else(|e| panic!("{name} loads: {e:?}"));
+        for a in catalog.activities() {
+            if a.stage == "verify" {
+                walked.push(a.id.clone());
+            }
+        }
+        match verify_activity_has_no_agent_step(name, &src) {
+            Ok(()) => {}
+            Err(rk_kernel::verify::VerifyActivityError::AgentStep { activity, .. }) => {
+                agent_bearing.insert(activity);
+            }
+            Err(other) => panic!("{name}: the lint did not run: {other}"),
+        }
+    }
+    assert!(
+        files.len() >= 100,
+        "the shipped catalog read {} files",
+        files.len()
+    );
+    assert!(
+        !walked.is_empty(),
+        "zero verify-stage activities walked — a green over nothing (D21-42 13a)"
+    );
+    println!(
+        "ac347-shipped: walked {} verify-stage activities {:?}; agent-bearing {:?}",
+        walked.len(),
+        walked,
+        agent_bearing
+    );
+    assert_eq!(
+        agent_bearing,
+        std::collections::BTreeSet::from(["migration-dry-run".to_owned()]),
+        "the verify stage's agent-bearing activities are not exactly AC-347's named residual \
+         (D21-46 R5)"
     );
 }

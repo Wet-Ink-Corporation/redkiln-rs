@@ -1,6 +1,9 @@
 # Artifact-kind registry (schema §9c amendments 27 and 43; proposal §2.1). One table per kind.
 # source = "human"  → a root: no producer anywhere; supplied at intake or pasted (PC3, derived_from = []).
 # source = "activity" → some catalog activity provides it (lattice.py --validate checks this).
+# source = "pass" → produced by a composition-root pass its record names, never by a catalog activity; the selector
+#   selects no producer for it and the stage still requires its artifact.write (added 2026-09-29, s8g; R1 = ADR-0191
+#   decision 1, proposed: TestReport's one producer is the verify pass).
 # keyed_by = "toolchain" → a required instance per element of the item's toolchain set (amendment 43).
 # schema = the value schema (schemas.toml) the artifact's body is typed by; lint checks composing emits against it.
 # Added 2026-09-08 from the catalog/pack inventory (75 kinds) + SessionNotes (gate attachment) + ProfileReport (PC7).
@@ -8,6 +11,19 @@
 [artifact.ADR]
 source = "activity"
 schema = "ADR"
+
+# (added 2026-09-29, s8g, D21-43 N23; R1 = ADR-0191 decision 4, proposed) the tests an implement-stage activity
+# authored; not a verdict. Its value schema is not yet typed (the record's medium-confidence item).
+# PROVISIONAL (2026-09-29, s8g build, package S8G-P4-PACK-REHOME; blocker returned for a ruling): keyed by
+# toolchain, as TestReport was. R1 decision 4 reads "it is not keyed_by", and unkeyed, AC-047's load-time
+# rank lint refuses EVERY shipped selection: unit-tests and unit-tests-ue both provide it at method_rank 20
+# and are both admissible for a {node, unreal} / {text, binary} item (measured: Load(RankTie { kind:
+# "AuthoredTests", activities: ["unit-tests", "unit-tests-ue"] })). ADR-0073's keyed expansion is what kept
+# the pair from contending while they provided TestReport.
+[artifact.AuthoredTests]
+source = "activity"
+schema = "AuthoredTests"
+keyed_by = "toolchain"
 
 [artifact.APIContract]
 source = "activity"
@@ -300,7 +316,7 @@ source = "activity"
 schema = "TestDesign"
 
 [artifact.TestReport]
-source = "activity"
+source = "pass"
 schema = "TestReport"
 keyed_by = "toolchain"
 

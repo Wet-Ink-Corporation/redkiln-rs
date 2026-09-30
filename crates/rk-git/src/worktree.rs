@@ -189,6 +189,16 @@ pub const RUN_BRANCH_PREFIX: &str = "rk-run/";
 /// The review reference tree's suffix, `<item>.review-ref`, in the same directory as the run tree.
 pub const REVIEW_REF_SUFFIX: &str = ".review-ref";
 
+/// The mutation tree's suffix, `<item>.mut`, in the same directory as the run tree (`s8g` section
+/// 8g.5; R1 = ADR-0191 decision 11, proposed). *(dated 2026-09-29, s8g build, package
+/// S8G-P3-KERNEL-GIT.)*
+pub const MUT_SUFFIX: &str = ".mut";
+
+// The worst-case path bound reserves `.review-ref`'s 11 characters for a sibling tree's suffix;
+// the mutation tree's must fit inside it (`s8g` section 8g.5: *"Its 4-character suffix fits inside
+// the 11 characters"*).
+const _: () = assert!(MUT_SUFFIX.len() <= REVIEW_REF_SUFFIX.len());
+
 /// Windows' 260-character `MAX_PATH` leaves 259 usable (§8d-ii.0 item 2).
 pub const PATH_LIMIT: usize = 259;
 
@@ -254,6 +264,9 @@ pub enum ItemIdRefusal {
     LockSuffix,
     DeviceName,
     ReviewRefSuffix,
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; `s8g` section 8g.1 move 3.)* An id
+    /// ending `.mut`, case-folded, which would collide with another item's mutation tree.
+    MutSuffix,
 }
 
 impl ItemIdRefusal {
@@ -271,6 +284,7 @@ impl ItemIdRefusal {
             Self::LockSuffix => "lock-suffix",
             Self::DeviceName => "windows-device-name",
             Self::ReviewRefSuffix => "review-ref-suffix",
+            Self::MutSuffix => "mut-suffix",
         }
     }
 }
@@ -645,7 +659,9 @@ impl ItemId {
     /// `[a-zA-Z0-9._-]`; not `.`, `..` or `.git`, case-folded; no leading or trailing `.`, no `..`,
     /// no `.lock` suffix (git's ref rules for `rk-run/<item>`, case-folded because Windows' loose
     /// refs are files); not a Windows device name with or without an extension; and no
-    /// `.review-ref` suffix, case-folded, which would collide with another item's reference tree.
+    /// `.review-ref` suffix, case-folded, which would collide with another item's reference tree;
+    /// and no `.mut` suffix, case-folded, which would collide with another item's mutation tree
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; s8g section 8g.1 move 3)*.
     /// The first rule broken is the one named.
     ///
     /// # Errors
@@ -704,6 +720,10 @@ fn item_id_refusal(raw: &str) -> Option<ItemIdRefusal> {
     if folded.ends_with(REVIEW_REF_SUFFIX) {
         return Some(ItemIdRefusal::ReviewRefSuffix);
     }
+    // *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; s8g section 8g.1 move 3.)*
+    if folded.ends_with(MUT_SUFFIX) {
+        return Some(ItemIdRefusal::MutSuffix);
+    }
     None
 }
 
@@ -727,6 +747,10 @@ pub struct RunTree {
     pub path: PathBuf,
     /// `<main>/.redkiln/worktrees/<item>.review-ref`, the review reference tree.
     pub reference: PathBuf,
+    /// `<main>/.redkiln/worktrees/<item>.mut`, the verify pass's ephemeral mutation tree (`s8g`
+    /// section 8g.5; R1 = ADR-0191 decision 11, proposed): beside the reference tree, never inside
+    /// the run tree. *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+    pub mutation: PathBuf,
     /// `rk-run/<item>`.
     pub branch: String,
 }
@@ -746,6 +770,7 @@ pub fn derive(main: &Path, item: &ItemId) -> RunTree {
         item: item.clone(),
         path: root.join(item.as_str()),
         reference: root.join(format!("{}{REVIEW_REF_SUFFIX}", item.as_str())),
+        mutation: root.join(format!("{item}.mut", item = item.as_str())),
         branch: format!("{RUN_BRANCH_PREFIX}{}", item.as_str()),
     }
 }

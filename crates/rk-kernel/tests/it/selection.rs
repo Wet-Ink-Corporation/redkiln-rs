@@ -1097,3 +1097,555 @@ fn a_require_row_keyed_on_rigor_reads_the_stages_rigor() {
     );
     assert_eq!(out.rows_fired(), 2);
 }
+
+// ---- `s8g` section 8g.2: `KindSource::Pass` (R1 = ADR-0191 decision 1, proposed). -------------
+// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+
+/// A process pack whose one stage is named `check`, not `verify`, so nothing here can be read off a
+/// stage literal (ADR-0162 decision 5), requiring `TestReport` as its baseline.
+const PASS_PACK: &str = r#"[pack]
+id = "pass-fixture"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { check = "mandatory" }
+
+[stage.check]
+baseline = ["TestReport"]
+"#;
+
+/// One catalog activity at `check` providing `TestReport`, agent-bearing, as the shipped
+/// `unit-tests` was: the producer a pass-sourced kind must NOT select.
+const PASS_CATALOG: &[(&str, &str)] = &[(
+    "unit-tests.toml",
+    r#"[activity]
+id           = "unit-tests"
+version      = 1
+stage        = "check"
+provides     = ["TestReport"]
+requires     = []
+derived_from = []
+tags         = ["kind:incident"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "gaps"
+kind    = "agent"
+outputs = "value:TestReport"
+
+[[step]]
+id   = "emit"
+kind = "emit"
+"#,
+)];
+
+fn test_report_registry(source: &str) -> ArtifactRegistry {
+    let src = format!("[artifact.TestReport]\nsource = \"{source}\"\nschema = \"TestReport\"\n");
+    ArtifactRegistry::from_toml("artifacts.toml", &src)
+        .unwrap_or_else(|e| panic!("the one-row registry (source = {source}) loads: {e}"))
+}
+
+/// **R1 = ADR-0191 decision 1** (`s8g` section 8g.2): *"The selector selects no catalog producer
+/// for a `pass` kind; stage completeness still requires its `artifact.write`."* Over one fixture
+/// whose catalog DOES provide the kind, so the control can select it:
+///
+/// - `source = "activity"` (the control): `unit-tests` is selected and planned.
+/// - `source = "pass"`: no producer, no plan node, no `Unsatisfiable` gate; `TestReport` stays in
+///   `R`, `Missing`, and is named by `pass_sourced()` as what the stage still owes.
+/// - The same, with the artifact materialised (the pass's `artifact.write` read back): `Present`,
+///   and nothing is owed.
+#[test]
+fn a_pass_sourced_kind_selects_no_catalog_producer() {
+    let pack = Pack::from_toml("pass-fixture.toml", PASS_PACK).expect("the fixture pack loads");
+    let catalog = Catalog::from_sources(PASS_CATALOG).expect("the fixture catalog loads");
+    let facets = facets();
+    let item = Item::new("INC-9", "incident");
+    let report = rk_kernel::select::Instance::of("TestReport");
+
+    // CONTROL: the same catalog under `source = "activity"` selects its producer, so the absence
+    // below is the source's doing and not a fixture that selects nothing.
+    let control = rk_kernel::select::select(
+        &pack,
+        &catalog,
+        &test_report_registry("activity"),
+        &facets,
+        "check",
+        &item,
+    )
+    .expect("the control selects");
+    let control_rows: Vec<&str> = control
+        .producers()
+        .map(|p| p.activity_id.as_str())
+        .collect();
+    assert_eq!(
+        control_rows,
+        vec!["unit-tests"],
+        "CONTROL: an activity-sourced TestReport selects the catalog producer"
+    );
+    assert!(
+        control.pass_sourced().is_empty(),
+        "CONTROL: an activity-sourced kind is owed by no pass"
+    );
+
+    let out = rk_kernel::select::select(
+        &pack,
+        &catalog,
+        &test_report_registry("pass"),
+        &facets,
+        "check",
+        &item,
+    )
+    .expect("a pass-sourced kind selects");
+    let rows: Vec<String> = out
+        .producers()
+        .map(|p| format!("{} <- {}", p.instance, p.activity_id))
+        .collect();
+    assert!(
+        rows.is_empty(),
+        "a pass-sourced kind selected a catalog producer (M16's shape): {rows:?}"
+    );
+    let plan = out.plan().expect("the DAG orders");
+    assert!(
+        plan.order().is_empty(),
+        "a catalog activity is planned for a pass-sourced kind: {:?}",
+        plan.order()
+    );
+    assert!(
+        out.unsatisfiable().is_empty(),
+        "a pass-sourced kind is not unsatisfiable: its producer is the pass: {:?}",
+        out.unsatisfiable()
+    );
+    // Stage completeness still needs the write: the instance stays in `R`, `Missing`, and owed.
+    assert!(
+        out.required().kinds().any(|i| *i == report),
+        "TestReport left R: nothing would then require its artifact.write"
+    );
+    assert_eq!(
+        out.classifications().get(&report),
+        Some(&rk_kernel::select::Classification::Missing)
+    );
+    assert_eq!(
+        out.pass_sourced(),
+        std::slice::from_ref(&report),
+        "the stage does not name the pass-sourced instance it still owes"
+    );
+
+    // Once the pass's write has materialised it, nothing is owed and still nothing is selected.
+    let written = item.with_artifact(
+        rk_kernel::select::ArtifactState::new(&report).exists(rk_types::digest::sha256(b"report")),
+    );
+    let done = rk_kernel::select::select(
+        &pack,
+        &catalog,
+        &test_report_registry("pass"),
+        &facets,
+        "check",
+        &written,
+    )
+    .expect("selects");
+    assert_eq!(
+        done.classifications().get(&report),
+        Some(&rk_kernel::select::Classification::Present)
+    );
+    assert!(
+        done.pass_sourced().is_empty(),
+        "a written pass kind is still owed"
+    );
+    assert_eq!(done.producers().count(), 0);
+}
+
+// ---- `s8g` section 8g.2 / 8g.5: N23's re-homing and AC-347's residual over the SHIPPED files. ----
+// *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; R1 = ADR-0191 decisions 3 to 7,
+// proposed.)*
+
+/// The four activities D21-43 N23 re-homes.
+const REHOMED: [&str; 4] = [
+    "unit-tests",
+    "unit-tests-ue",
+    "equivalence-boundary",
+    "property-based-testing",
+];
+
+struct ShippedSel {
+    pack: Pack,
+    catalog: Catalog,
+    artifacts: ArtifactRegistry,
+    facets: rk_kernel::registry::Registry,
+}
+
+fn shipped_sel(pack_file: &str) -> ShippedSel {
+    let red = workspace_root().join(".redkiln");
+    let read = |p: std::path::PathBuf| {
+        std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{} reads: {e}", p.display()))
+    };
+    ShippedSel {
+        pack: Pack::from_toml(pack_file, &read(red.join("packs").join(pack_file)))
+            .unwrap_or_else(|e| panic!("the shipped pack {pack_file} loads: {e}")),
+        catalog: Catalog::from_dir(&red.join("catalog"))
+            .unwrap_or_else(|e| panic!("the shipped catalog loads: {e:?}")),
+        artifacts: ArtifactRegistry::from_toml("artifacts.toml", &read(red.join("artifacts.toml")))
+            .unwrap_or_else(|e| panic!("the shipped artifact registry loads: {e:?}")),
+        facets: rk_kernel::registry::Registry::from_toml(&read(red.join("facets.toml")))
+            .unwrap_or_else(|e| panic!("the shipped facet registry loads: {e:?}")),
+    }
+}
+
+/// An item as `rk-cli`'s `build_item` binds one, every facet null, then the lane's values:
+/// `criticality` as given and the other three ordinals `low`, `cos = standard`, `external_dep` as
+/// given, `has_repro = true`, and one toolchain with its change kind.
+fn shipped_item(
+    s: &ShippedSel,
+    kind: &str,
+    criticality: &str,
+    external_dep: bool,
+    toolchain: (&str, &str),
+) -> Item {
+    let mut item = Item::new("S8G-P4-1", kind);
+    for facet in s.facets.facets() {
+        if facet.name == "kind" || facet.source == rk_kernel::registry::Source::Kernel {
+            continue;
+        }
+        item = item.with_facet_null(&facet.name);
+    }
+    for (name, member) in [
+        ("criticality", criticality),
+        ("blast_radius", "low"),
+        ("size", "low"),
+        ("novelty", "low"),
+    ] {
+        let domain: Vec<String> = s
+            .facets
+            .facet(name)
+            .unwrap_or_else(|| panic!("facets.toml declares `{name}`"))
+            .values
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect();
+        let refs: Vec<&str> = domain.iter().map(String::as_str).collect();
+        item = item.with_facet_ordinal(name, &refs, member);
+    }
+    item.with_facet_str("cos", "standard")
+        .with_facet_bool("external_dep", external_dep)
+        .with_facet_bool("has_repro", true)
+        .with_facet_set("toolchain", [toolchain.0])
+        .with_toolchain(toolchain.0, [toolchain.1])
+}
+
+fn producers_for<'s>(sel: &'s rk_kernel::select::Selection, kind: &str) -> Vec<&'s str> {
+    sel.producers()
+        .filter(|p| p.instance.kind == kind)
+        .map(|p| p.activity_id.as_str())
+        .collect()
+}
+
+fn shipped_select(
+    s: &ShippedSel,
+    pack: &Pack,
+    stage: &str,
+    item: &Item,
+) -> rk_kernel::select::Selection {
+    rk_kernel::select::select(pack, &s.catalog, &s.artifacts, &s.facets, stage, item)
+        .unwrap_or_else(|e| panic!("`{stage}` selects: {e:?}"))
+}
+
+/// **D21-43 N23** (`s8g` section 8g.2; R1 = ADR-0191 decisions 3 to 5): *"Re-homed to the
+/// implement stage as test-authoring activities under ADR-0072. Verify only measures."* Over the
+/// SHIPPED catalog, packs and registries:
+///
+/// - both packs' `criticality >= high` escalation demands `AuthoredTests` at `implement`, and it
+///   selects a re-homed activity there (`equivalence-boundary`, rank 30: `unit-tests` stops at
+///   `max_rigor = "recommended"` and both packs' implement stage is mandatory);
+/// - at `verify`, no re-homed activity is selected, `TestReport` has no catalog producer and no
+///   `Unsatisfiable` gate, and the stage names it as pass-owed (R1 decision 1);
+/// - at `criticality = low` (the two `s8` lanes) no re-homed activity is selected at implement;
+/// - over a probe pack requiring `AuthoredTests` at implement at `recommended`, the rank-20 members
+///   are implement candidates: `unit-tests` for a Rust text change, `unit-tests-ue` for an Unreal
+///   binary one; the same probe at `verify` has no candidate. M18's shape turns the probe red.
+#[test]
+fn the_rehomed_test_authoring_activities_select_at_implement() {
+    for (pack_file, kind) in [("bug-standard.toml", "bug"), ("story.toml", "story")] {
+        let s = shipped_sel(pack_file);
+        let high = shipped_item(&s, kind, "high", false, ("rust", "text"));
+        let implement = shipped_select(&s, &s.pack, "implement", &high);
+        assert!(
+            implement
+                .required()
+                .kinds()
+                .any(|i| i.kind == "AuthoredTests"),
+            "{pack_file}: the escalation did not move to implement over AuthoredTests (N23): R = {:?}",
+            implement.required().kinds().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            producers_for(&implement, "AuthoredTests"),
+            vec!["equivalence-boundary"],
+            "{pack_file}: the re-homed test-design escalation does not select at implement"
+        );
+
+        let verify = shipped_select(&s, &s.pack, "verify", &high);
+        let at_verify: Vec<&str> = verify
+            .producers()
+            .map(|p| p.activity_id.as_str())
+            .filter(|a| REHOMED.contains(a))
+            .collect();
+        assert!(
+            at_verify.is_empty(),
+            "{pack_file}: a re-homed activity is still selected at verify: {at_verify:?}"
+        );
+        assert!(
+            producers_for(&verify, "TestReport").is_empty(),
+            "{pack_file}: TestReport has a catalog producer beside the pass (two routes)"
+        );
+        assert!(
+            verify
+                .unsatisfiable()
+                .iter()
+                .all(|u| u.kind != "TestReport"),
+            "{pack_file}: a pass-sourced TestReport was gated Unsatisfiable"
+        );
+        assert!(
+            verify.pass_sourced().iter().any(|i| i.kind == "TestReport"),
+            "{pack_file}: the verify stage does not name TestReport as pass-owed: {:?}",
+            verify.pass_sourced()
+        );
+
+        let low = shipped_item(&s, kind, "low", false, ("rust", "text"));
+        let quiet = shipped_select(&s, &s.pack, "implement", &low);
+        let lane: Vec<&str> = quiet
+            .producers()
+            .map(|p| p.activity_id.as_str())
+            .filter(|a| REHOMED.contains(a))
+            .collect();
+        assert!(
+            lane.is_empty(),
+            "{pack_file}: at criticality low a re-homed activity is selected at implement: {lane:?}"
+        );
+    }
+
+    // The probe: the shipped catalog and registries under a pack that asks for AuthoredTests at
+    // implement at `recommended`, and the same ask at verify.
+    let probe = Pack::from_toml(
+        "rehome-probe.toml",
+        concat!(
+            "[pack]\nid = \"rehome-probe\"\napplies = \"kind == story\"\nappetite = { points = 60 }\n\n",
+            "[policy]\nstages = { implement = \"recommended\", verify = \"recommended\" }\n\n",
+            "[stage.implement]\nbaseline = [\"AuthoredTests\"]\n\n",
+            "[stage.verify]\nbaseline = [\"AuthoredTests\"]\n",
+        ),
+    )
+    .expect("the probe pack loads");
+    let s = shipped_sel("story.toml");
+    for ((tc, change), want) in [
+        (("rust", "text"), "unit-tests"),
+        (("unreal", "binary"), "unit-tests-ue"),
+    ] {
+        let item = shipped_item(&s, "story", "low", false, (tc, change));
+        let at = shipped_select(&s, &probe, "implement", &item);
+        assert_eq!(
+            producers_for(&at, "AuthoredTests"),
+            vec![want],
+            "for a {tc} {change} change the rank-20 test-authoring member is not an implement \
+             candidate (N23: re-homed to implement)"
+        );
+        let v = shipped_select(&s, &probe, "verify", &item);
+        assert!(
+            producers_for(&v, "AuthoredTests").is_empty()
+                && v.unsatisfiable().iter().any(|u| u.kind == "AuthoredTests"),
+            "for {tc}: an AuthoredTests producer still sits at verify: {:?}",
+            v.producers().collect::<Vec<_>>()
+        );
+    }
+}
+
+/// **D21-46 R5 and D21-48 X9** (`s8g` section 8g.2; R1 = ADR-0191 decision 6): `integration-tests`
+/// is re-homed whole, and `story.toml`'s `external_dep` -> `IntegrationReport` row moved with it.
+/// Over `story.toml`, with `external_dep = true`, `integration-tests` is selected at implement and
+/// at no other stage, and verify gates no `IntegrationReport`; with `external_dep = false` (the
+/// control, and the story lane) it is selected at none. M21's shape (the row moved back to verify)
+/// selects it nowhere and gates `IntegrationReport`.
+#[test]
+fn integration_tests_selects_at_implement_under_external_dep() {
+    let s = shipped_sel("story.toml");
+    let stages: Vec<String> = s.pack.stage_order().to_vec();
+    assert!(
+        stages.len() >= 10,
+        "story.toml's stage order was not read: {stages:?}"
+    );
+    // A stage whose selection REFUSES selects nothing, so it cannot select `integration-tests`;
+    // measured 2026-09-29, story's `design` refuses under `external_dep = true` with
+    // `Step5(CyclicDag { path: ["adr-record", "design-doc", "adr-record"] })`, which is not this
+    // stage's (no row this package moves reaches `design`). Such a refusal is printed, must not
+    // name `integration-tests`, and `implement` and `verify` must select.
+    let walk = |external_dep: bool| -> Vec<String> {
+        let item = shipped_item(&s, "story", "low", external_dep, ("rust", "text"));
+        let mut at = Vec::new();
+        for stage in &stages {
+            let sel = match rk_kernel::select::select(
+                &s.pack,
+                &s.catalog,
+                &s.artifacts,
+                &s.facets,
+                stage,
+                &item,
+            ) {
+                Ok(sel) => sel,
+                Err(e) => {
+                    let d = format!("{e:?}");
+                    println!("s8g-p4 external_dep={external_dep} `{stage}` refuses: {d}");
+                    assert!(
+                        stage != "implement" && stage != "verify",
+                        "story `{stage}` must select: {d}"
+                    );
+                    assert!(
+                        !d.contains("integration-tests"),
+                        "story `{stage}` refuses naming integration-tests: {d}"
+                    );
+                    continue;
+                }
+            };
+            if sel
+                .producers()
+                .any(|p| p.activity_id == "integration-tests")
+            {
+                at.push(stage.clone());
+            }
+            if external_dep && stage == "verify" {
+                assert!(
+                    sel.unsatisfiable()
+                        .iter()
+                        .all(|u| u.kind != "IntegrationReport"),
+                    "story's verify stage gates IntegrationReport, whose only producer sits at \
+                     implement: the require row did not move (D21-46 R5)"
+                );
+            }
+        }
+        at
+    };
+    assert_eq!(
+        walk(true),
+        vec!["implement".to_owned()],
+        "under external_dep, integration-tests is not selected at implement alone"
+    );
+    assert!(
+        walk(false).is_empty(),
+        "CONTROL: without external_dep integration-tests is selected somewhere"
+    );
+}
+
+/// **D21-46 R5** (`s8g` section 8g.5; R1 = ADR-0191 decision 7): *"`migration-dry-run` stays a
+/// named residual, because no Phase-1 lane reaches it (`data_migration` is NOT MEASURABLE)."*
+/// Both shipped packs, over every cell of the shipped lattice (`Axes::shipped()`), with the
+/// covering array's `data_migration` column forced to `1` in every row, select `migration-dry-run`
+/// in none. The AC-347 lint cannot see reachability, so this is the test a later row that reaches
+/// the residual turns red (M22).
+///
+/// **CONTROL** (the guard can go red): a copy of the shipped tree whose `story.toml` carries M22's
+/// row (`[[stage.verify.require]] when = "external_dep"`, `artifacts = ["MigrationTestReport"]`),
+/// walked over one Rust cell with `external_dep = 1` and `data_migration = 1`, DOES select it.
+///
+/// Red first: this pins 7e's outcome (the demand was DROPPED at 7e), so it is green on entry by
+/// construction; its red is the control above and M22.
+#[test]
+fn migration_dry_run_is_selected_on_no_shipped_lane() {
+    use rk_kernel::lattice::{self, Axes, Sources};
+    let red = workspace_root().join(".redkiln");
+    let inputs = lattice::load(&Sources::under(&red))
+        .unwrap_or_else(|e| panic!("the shipped lattice inputs load: {e}"));
+    assert!(
+        inputs
+            .catalog()
+            .activities()
+            .iter()
+            .any(|a| a.id == "migration-dry-run"),
+        "PREMISE: the shipped catalog holds migration-dry-run"
+    );
+    let dm = lattice::BOOLS
+        .iter()
+        .position(|b| *b == "data_migration")
+        .expect("data_migration is a covering column");
+    let mut axes = Axes::shipped();
+    for row in &mut axes.covering_rows {
+        row[dm] = 1;
+    }
+    let report = lattice::run(&inputs, &axes, None)
+        .unwrap_or_else(|e| panic!("the shipped lattice runs: {e}"));
+    assert_eq!(report.packs().len(), 2, "both shipped packs were walked");
+    assert!(
+        report.contexts("pack-default") > 0,
+        "the forced run walked no context"
+    );
+    for pack in report.packs() {
+        let sel = report.selected_in(pack);
+        assert!(
+            !sel.is_empty(),
+            "{pack}: the lattice selected nothing, so an absence proves nothing"
+        );
+        assert!(
+            !sel.contains("migration-dry-run"),
+            "{pack} selects migration-dry-run in some cell with data_migration forced true: the \
+             residual is reachable, which is AC-347's breach (D21-46 R5)"
+        );
+    }
+
+    // CONTROL: M22's row, in a copy, over one cell.
+    let probe = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("s8g-p4-m22-probe-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&probe);
+    for sub in ["catalog", "packs"] {
+        std::fs::create_dir_all(probe.join(sub)).expect("the probe tree is created");
+        for e in std::fs::read_dir(red.join(sub)).expect("the shipped directory reads") {
+            let p = e.expect("an entry").path();
+            if p.extension().is_some_and(|x| x == "toml") {
+                std::fs::copy(&p, probe.join(sub).join(p.file_name().expect("a name")))
+                    .expect("a copy");
+            }
+        }
+    }
+    for f in ["facets.toml", "artifacts.toml"] {
+        std::fs::copy(red.join(f), probe.join(f)).expect("a copy");
+    }
+    let story = probe.join("packs").join("story.toml");
+    let src = std::fs::read_to_string(&story).expect("the copied story pack reads");
+    let anchor = "[stage.review]\n";
+    assert_eq!(
+        src.matches(anchor).count(),
+        1,
+        "the control's anchor is unique"
+    );
+    std::fs::write(
+        &story,
+        src.replace(
+            anchor,
+            concat!(
+                "[[stage.verify.require]]\nwhen = \"external_dep\"\n",
+                "artifacts = [\"MigrationTestReport\"]\n\n[stage.review]\n",
+            ),
+        ),
+    )
+    .expect("the control row is written");
+    let ext = lattice::BOOLS
+        .iter()
+        .position(|b| *b == "external_dep")
+        .expect("external_dep is a covering column");
+    let mut one = Axes::shipped();
+    one.toolchains.retain(|t| t.name == "rust");
+    let mut row = one.covering_rows[0];
+    row[dm] = 1;
+    row[ext] = 1;
+    one.covering_rows = vec![row];
+    one.surfaces = Some(vec![Vec::new()]);
+    let control = lattice::run(
+        &lattice::load(&Sources::under(&probe)).expect("the control tree loads"),
+        &one,
+        Some(&["story"]),
+    )
+    .expect("the control runs");
+    assert!(
+        control.selected_in("story").contains("migration-dry-run"),
+        "CONTROL: M22's row did not make migration-dry-run reachable, so the assertion above could \
+         not go red"
+    );
+    let _ = std::fs::remove_dir_all(&probe);
+}

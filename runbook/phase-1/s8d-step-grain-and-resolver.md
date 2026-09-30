@@ -1789,6 +1789,20 @@ default refuses by name and never answers empty, and the result still passes the
 record: ADR-0170 decision 8 admits *"a registry verb"*, and ADR-0189 decision 12 (proposed) records the arm.
 `feed::a_git_route_feed_and_a_store_route_feed_with_an_input_still_refuse` pins the unchanged refusal.
 
+*(dated 2026-09-29, `s8g` build, package S8G-P4-PACK-REHOME; `s8g` §8g.1 move 1; D21-43 N23, D21-46 R5; R1 = ADR-0191
+decisions 1 and 3 to 6, proposed.)* **`s8g`'s first row move, made: `equivalence-boundary` leaves both `verify` rows.**
+`[artifact.TestReport]` reads `source = "pass"`, so the selector selects no catalog producer for it, and the four N23
+providers sit at `implement` over `AuthoredTests`. **The `implement` rows are unchanged**: the re-homed escalation is
+`when = "criticality >= high"` and both lanes carry `criticality = low`, so no re-homed activity is selected there, and
+`equivalence-boundary` is selected at no stage of either lane. The closing sentence above, *"the implement rows gain
+them there"*, is corrected: on these two lanes they gain nothing. **`integration-tests` is in neither table**: its only
+demand is `story.toml`'s `external_dep` row (moved to `[stage.implement]`), and both lanes read `external_dep =
+false`. Measured through the no-dispatch helper: **`LANE_WALK fix walked=11 refused=3`** (`confirmation-test`,
+`smoke-test`, `rolling-deploy`) and **`LANE_WALK story walked=9 refused=4`** (`bdd-scenarios`, `docs-update`,
+`smoke-test`, `rolling-deploy`); the claims read **11 of 14** and **9 of 13**. The two `lane_walk` tests' `verify` rows
+moved in the same change. Checkpoint 8d (6a)'s floors, 10 and 8, still hold. `smoke-test`'s flip to **walks** and
+`tag-release` replacing `rolling-deploy` are the rest of move 1, and are the `s8g` packages' that build them (R4, R5).
+
 ### 8d.10 Tests, red first, and the mutants that must die
 
 Every test below is authored, run, and **watched fail for the right reason** before the code it pins

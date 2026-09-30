@@ -24,3 +24,25 @@ source = "activity"
 
 [artifact.Orphan]
 source = "activity"
+
+# report-branches (D21-67 ruling 6, added 2026-09-29 at s8g): its six kinds; KeyedGap and Chain are
+# keyed by toolchain, so the keyed render and the transitive entry are reachable.
+[artifact.Base]
+source = "activity"
+
+[artifact.WrongStage]
+source = "activity"
+
+[artifact.KeyedGap]
+source = "activity"
+keyed_by = "toolchain"
+
+[artifact.ForbiddenOnly]
+source = "activity"
+
+[artifact.Chain]
+source = "activity"
+keyed_by = "toolchain"
+
+[artifact.Missing]
+source = "activity"

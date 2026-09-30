@@ -26,11 +26,13 @@
 //! **ADR-0101 clause 5 bounds what any of this may be read as**: the gate exists and fails closed.
 
 pub mod admissibility;
+pub mod claims;
 pub mod comparator;
 pub mod eligible;
 pub mod exit;
 pub mod flip;
 pub mod ledger;
+pub mod runner;
 
 use rk_ports::toolchain::{FeasibilityError, MutationFeasibility};
 use rk_types::verify::VerifyReport;

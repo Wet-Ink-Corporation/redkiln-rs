@@ -1,10 +1,12 @@
 # reach: (story, verify, optional) with 'unreal' in toolchain — Unreal specialisation of unit-tests (PC7 ii): same rank,
 #   toolchain specificity wins on a mixed Node+UE item (then the Node tests are NOT run — F35 records it)
+# (dated 2026-09-29, s8g, D21-43 N23; R1 = ADR-0191 decision 3, proposed) RE-HOMED to implement over AuthoredTests by
+#   N23's letter. It authors nothing (two tool steps, a check and an emit): the emit binds the automation run.
 [activity]
 id           = "unit-tests-ue"
-version      = 2   # bumped 2026-09-08 (§9c.42)
-stage        = "verify"
-provides     = ["TestReport"]
+version      = 3   # bumped 2026-09-29 (s8g, D21-43 N23; ADR-0072; .redkiln/CHANGELOG.md)
+stage        = "implement"
+provides     = ["AuthoredTests"]
 requires     = ["Changeset", "Spec"]
 derived_from = ["Changeset"]
 tags         = ["kind:story", "kind:bug", "kind:tech-debt", "kind:project", "kind:security-vuln", "kind:chore", "toolchain:unreal"]   # run4
@@ -45,5 +47,5 @@ retry   = { max = 1 }
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { TestReport = { status = "${automation.outputs.status}", passed = "${automation.outputs.passed}", failed = "${automation.outputs.failed}", selection = "${automation.outputs.tests}" } }   # composing emit (§9c.34)
+artifacts = { AuthoredTests = { status = "${automation.outputs.status}", passed = "${automation.outputs.passed}", failed = "${automation.outputs.failed}", selection = "${automation.outputs.tests}" } }   # composing emit (§9c.34)
 evidence  = ["${cook}", "${automation}"]

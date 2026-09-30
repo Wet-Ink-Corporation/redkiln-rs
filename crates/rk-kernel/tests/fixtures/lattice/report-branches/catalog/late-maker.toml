@@ -1,0 +1,8 @@
+# report-branches: WrongStage is required at design and produced only here, at implement.
+[activity]
+id          = "late-maker"
+version     = 1
+stage       = "implement"
+provides    = ["WrongStage"]
+method_rank = 10
+cost_class  = "S"

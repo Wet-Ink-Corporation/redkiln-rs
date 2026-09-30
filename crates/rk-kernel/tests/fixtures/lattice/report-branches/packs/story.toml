@@ -1,0 +1,10 @@
+# report-branches (D21-67 ruling 6): one pack whose design stage reaches all five unsat-report branches.
+[pack]
+id = "story"
+applies = "kind == story"
+
+[policy]
+stages = { triage = "mandatory", design = "recommended", implement = "recommended", operate = "forbidden" }
+
+[stage.design]
+baseline = ["Base", "WrongStage", "KeyedGap"]

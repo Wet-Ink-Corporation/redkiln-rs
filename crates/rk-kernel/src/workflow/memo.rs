@@ -1403,6 +1403,14 @@ impl VerbRegistry {
             .map(|t| ToolchainValues::new(t.values.clone()))
     }
 
+    /// Every `[toolchain.<name>]` table's name, in name order: the keys the claims binder reads
+    /// its column from (`verify::claims`; R1 = ADR-0191 decision 10, proposed). Names are the
+    /// table keys (`rust`, `node`), never an adapter identity (AC-487). *(dated 2026-09-29, s8g
+    /// build, package S8G-P3-KERNEL-GIT.)*
+    pub fn toolchain_names(&self) -> impl Iterator<Item = &str> {
+        self.toolchains.keys().map(String::as_str)
+    }
+
     /// The loaded `[toolchain.<name>]` table, declarations included.
     #[must_use]
     pub fn table(&self, toolchain: &str) -> Option<&ValueTable> {

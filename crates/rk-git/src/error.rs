@@ -73,6 +73,13 @@ pub enum GitError {
     /// executable and then read is RE-READ, never assumed"*). No ref moved.
     /// *(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE.)*
     LandingReread { expected: String, found: String },
+
+    /// A release tag refused by name before `git tag` ran: a target off the run-owned branch, or an
+    /// item already tagged at another commit (`s8g`'s write-set record, R3 = ADR-0193 decision 1,
+    /// proposed). *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+    ReleaseRefused {
+        refusal: crate::release::ReleaseRefusal,
+    },
 }
 
 impl GitError {
@@ -87,7 +94,8 @@ impl GitError {
             | Self::ExtendedLengthPath { .. }
             | Self::ForeignWorktree { .. }
             | Self::CarryRefused { .. }
-            | Self::WorktreeRefused { .. } => true,
+            | Self::WorktreeRefused { .. }
+            | Self::ReleaseRefused { .. } => true,
             Self::Spawn { .. }
             | Self::NonZeroExit { .. }
             | Self::WorktreeRemoveFailed { .. }

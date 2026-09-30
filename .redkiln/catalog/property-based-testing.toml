@@ -1,10 +1,12 @@
 # reach: (story, verify, recommended) — deviation add only: equivalence-boundary(30) covers every context this applies to (F34 ambiguity B1)
 # test-design rigor family (see smoke-test)
+# (dated 2026-09-29, s8g, D21-43 N23; R1 = ADR-0191 decision 3, proposed) RE-HOMED to implement over AuthoredTests;
+#   the emit binds `invariants`' authored tests, and `run` and `confirm` are step evidence.
 [activity]
 id           = "property-based-testing"
-version      = 2   # bumped 2026-09-08 (§9c.42)
-stage        = "verify"
-provides     = ["TestReport"]
+version      = 3   # bumped 2026-09-29 (s8g, D21-43 N23; ADR-0072; .redkiln/CHANGELOG.md)
+stage        = "implement"
+provides     = ["AuthoredTests"]
 requires     = ["Changeset", "Spec"]
 derived_from = ["Changeset", "Spec"]
 tags         = ["kind:story", "kind:bug", "toolchain:node", "toolchain:rust", "toolchain:python", "toolchain:dotnet"]
@@ -56,5 +58,5 @@ retry   = { max = 1 }
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { TestReport = "${confirm.outputs}" }
+artifacts = { AuthoredTests = "${invariants.outputs}" }
 evidence  = ["${run}", "${confirm}"]

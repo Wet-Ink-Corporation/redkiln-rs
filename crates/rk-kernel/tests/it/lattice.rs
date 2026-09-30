@@ -31,9 +31,20 @@ const PYTHON_ROWS: &str = include_str!("../fixtures/lattice/p9-covering-array.tx
 
 /// The shape of the reading over the installed pair, measured and pinned (s8b §8b.2). AC-101 and
 /// AC-102 over these two packs are REPORTED, not thresholded (D21-47 V3).
+///
+/// *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; D21-43 N23, D21-46 R5; R1 =
+/// ADR-0191 decisions 1 and 3 to 6, proposed.)* **Re-pinned: `SHIPPED_DEAD` ~~56~~ 57.** The
+/// re-run over the re-homed catalog (`TestReport` pass-sourced; the four N23 providers and
+/// `integration-tests` at `implement` over `AuthoredTests`, keyed by toolchain PROVISIONALLY)
+/// reads `pairs=279936 unsat=1296 dead=57/102`. The dead set is the entry's 56 (measured at
+/// `100a108` in a private worktree) plus exactly one id, **`unit-tests`**: its `max_rigor =
+/// "recommended"` meets only the `criticality >= high` escalation at `rigor = "mandatory"`, the one
+/// demand for `AuthoredTests`. `unsat` did not move: `IntegrationReport`'s entry moved from story
+/// `verify` to story `implement` with its row, and `TestReport` is no entry (pass-sourced). Against
+/// AC-102's 20% line: 57/102 = 55.9%, reported, not thresholded, for the installed pair (D21-47 V3).
 const SHIPPED_PAIRS: u64 = 279_936;
 const SHIPPED_UNSAT: u64 = 1_296;
-const SHIPPED_DEAD: usize = 56;
+const SHIPPED_DEAD: usize = 57;
 
 fn workspace() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
@@ -557,6 +568,23 @@ fn p6_lattice_over_the_shipped_pack() {
         "AC-103 over the installed pair: hard cycles {:?}",
         report.ac103_errors()
     );
+    // *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; R1 = ADR-0191 decision 1, proposed.)*
+    // `TestReport` is `source = "pass"`: its one producer is the verify pass, which the selector
+    // selects no catalog producer for and never gates `Unsatisfiable` (`KindSource::Pass`). The
+    // lattice reads selection, so a pass-sourced kind is no unsat entry here either.
+    let pass_unsat: Vec<&(String, String, String)> = report
+        .unsat_examples()
+        .keys()
+        .filter(|(_, _, k)| k.starts_with("TestReport"))
+        .collect();
+    assert!(
+        pass_unsat.is_empty(),
+        "a pass-sourced kind is reported unsatisfiable: {pass_unsat:?}"
+    );
+    for ((p, s, k), e) in report.unsat_examples() {
+        println!("lattice-shipped-unsat: {p} {s} {k} first-mode={}", e.mode);
+    }
+    println!("lattice-shipped-dead: {:?}", report.dead());
     assert_eq!(
         (pairs, unsat, report.dead().len()),
         (SHIPPED_PAIRS, SHIPPED_UNSAT, SHIPPED_DEAD),
@@ -783,6 +811,113 @@ fn dead_activity_fixture_is_listed() {
     assert!(
         !lattice::kill_line_fires(1, 5, 20),
         "AC-102's > 20% line fires on 1/5 (exactly 20%)"
+    );
+}
+
+/// The report-branches fixture's first-example vectors, derived by hand: every band `low`, covering
+/// row 0 (`1 0 1 0 0 0 1 0`), and toolchain `node` or `node+unreal`.
+const V_NODE: &str = "kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0";
+const V_NU: &str = "kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node+unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0";
+
+/// **D21-67 ruling 6** (s8g section 8g.2's named precondition of the lattice re-run): the five
+/// unsat-report branches no golden byte pinned, reached by ONE hand-derived fixture
+/// (`tests/fixtures/lattice/report-branches/`, sharing `common/`).
+///
+/// | branch | where the fixture reaches it |
+/// | --- | --- |
+/// | `forbidden_stage` (`forbidden-stage=`) | `base-maker` requires `ForbiddenOnly`, whose one producer sits at the forbidden `operate` |
+/// | `unsat_other_stage` (`wrong-stage-producer=`) | `WrongStage` is required at `design` and produced only at `implement`; `ForbiddenOnly`'s entry counts too (failed empty, other non-empty) |
+/// | the example's `other_stage` list | both of those entries' examples |
+/// | the keyed render `{kind}{suffix}` | `KeyedGap` is keyed by toolchain; `keyed-maker` admits `unreal` and `dotnet` only, so the `node` instance is unsat |
+/// | the transitive entry `<kind>:transitive@<stage>` | `Chain` is keyed; at `tc=node+unreal` its `node` instance selects `chain-maker`, whose own `Missing` has no producer, and its `unreal` instance fails `tags` |
+///
+/// `base-maker` (rank 10) is admissible only when the toolchain set holds both `node` and `unreal`,
+/// so `ForbiddenOnly` and `Chain` are demanded at `tc=node+unreal` alone and that context is their
+/// first example; `base-fallback` (rank 20) produces `Base` everywhere else.
+///
+/// **The expected lines were derived by hand before the fixture existed** (never copied from a
+/// run): the story pack applies to `kind == story` only, so it runs 4 modes x 81 band sets x 4
+/// toolchains x 8 covering rows = 10368 contexts, 2592 per toolchain; no predicate reads a band, a
+/// boolean or the rigor, so every count is a toolchain count. `WrongStage` is unsat in all 10368;
+/// `KeyedGap{node}` wherever the set holds `node` (`node`, `node+unreal`: 5184); `ForbiddenOnly`
+/// and `Chain` at `node+unreal` only (2592). The first example is the first context enumerated:
+/// mode `optional`, every band `low`, covering row 0 (`1 0 1 0 0 0 1 0`), toolchain `node` or, for
+/// the two `base-maker` entries, `node+unreal`.
+///
+/// **The one quoted `lattice.py` cross-check** *(2026-09-29, s8g build, package S8G-P4-PACK-REHOME)*,
+/// by `s8b` §8b.2's staged-copy method: `lattice.py` written from `P9_PIN` by `git show` into
+/// `target/s8g-p4-lattice-xcheck` (a relative path), the fixture's `catalog/` and `packs/` and
+/// `common/`'s two files copied to its top level, run there with no `--packs` and no `--catalog`
+/// (`PYTHONHASHSEED=0 PYTHONIOENCODING=utf-8`), rc 0. Its guards, read before any line was compared:
+/// `P6 lattice run; catalog=6 activities; packs=['story']; pack digests: story=ed04d04ada09`;
+/// `prereg pairs=  2592` on each of the four per-mode lines; the tag
+/// `cat:1f77bb0f139b fac+art:2de68beff0ee pk:ed04d04ada09` (`common/`'s tag moved from
+/// `1cd93c6cef11` with this fixture's six kinds; never `spikes/p9`'s `592fa138d68d`). Its unsat
+/// section, byte-identical to this port's four lines (`cmp`), tag elided:
+///
+/// ```text
+/// story          design        WrongStage             n=10368 forbidden-stage=    0 wrong-stage-producer=10368 why='R' failed=[] other_stage=['late-maker@implement'] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+/// story          design        KeyedGap{node}         n= 5184 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['keyed-maker:tags'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+/// story          design        ForbiddenOnly          n= 2592 forbidden-stage= 2592 wrong-stage-producer= 2592 why='requires of base-maker' failed=[] other_stage=['forbidden-maker@operate'] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node+unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+/// story          design        Chain                  n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of base-maker' failed=['Missing:transitive@design', 'chain-maker:tags@design'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node+unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+/// ```
+#[test]
+fn the_report_branches_fixture_exercises_every_unsat_branch() {
+    let inputs = load(&fixture("report-branches"));
+    assert_eq!(
+        inputs.pack_ids(),
+        ["story".to_owned()],
+        "the fixture walks one pack, `story`"
+    );
+    let report = run(&inputs, &Axes::p6_registered());
+    assert_eq!(
+        report.contexts("pack-default"),
+        2592,
+        "81 band sets x 4 toolchains x 8 covering rows at pack-default"
+    );
+    let expected: Vec<String> = [
+        format!(
+            "story          design        WrongStage             n=10368 forbidden-stage=    0 wrong-stage-producer=10368 why='R' failed=[] other_stage=['late-maker@implement'] e.g. [optional] {V_NODE}"
+        ),
+        format!(
+            "story          design        KeyedGap{{node}}         n= 5184 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['keyed-maker:tags'] other_stage=[] e.g. [optional] {V_NODE}"
+        ),
+        format!(
+            "story          design        ForbiddenOnly          n= 2592 forbidden-stage= 2592 wrong-stage-producer= 2592 why='requires of base-maker' failed=[] other_stage=['forbidden-maker@operate'] e.g. [optional] {V_NU}"
+        ),
+        format!(
+            "story          design        Chain                  n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of base-maker' failed=['Missing:transitive@design', 'chain-maker:tags@design'] other_stage=[] e.g. [optional] {V_NU}"
+        ),
+    ]
+    .into_iter()
+    .map(|l| format!("{} | {l}", report.tag()))
+    .collect();
+    let lines = report.lines();
+    let head = format!(
+        "{} | == unsatisfiable by (pack, stage, kind): count of contexts, then why (first example) ==",
+        report.tag()
+    );
+    let at = lines
+        .iter()
+        .position(|l| *l == head)
+        .unwrap_or_else(|| panic!("the report has no unsat-by-kind section: {lines:#?}"));
+    let blank = format!("{} | ", report.tag());
+    let section: Vec<String> = lines[at + 1..]
+        .iter()
+        .take_while(|l| **l != blank)
+        .cloned()
+        .collect();
+    assert!(
+        !section.is_empty(),
+        "the unsat-by-kind section is empty — no branch was reached"
+    );
+    println!("report-branches: {} unsat lines", section.len());
+    for l in &section {
+        println!("report-branches-line: {l}");
+    }
+    assert_eq!(
+        section, expected,
+        "the report-branches fixture's unsat lines are not the hand-derived bytes"
     );
 }
 

@@ -695,6 +695,16 @@ Three things the port must get right, each a measured trap:
   of the line. `rigor=pack-default` is the mode AC-101 pins its rate to.
 - It asserts `packs == 2` and `contexts > 0`. It also asserts that ties and hard cycles are 0 (AC-103's zero
   tolerance), and it pins the measured shape.
+  *(dated 2026-09-29, `s8g` build, package S8G-P4-PACK-REHOME; `s8g` §8g.2; D21-43 N23, D21-46 R5; R1 = ADR-0191,
+  `proposed`.)* **The pin moved with `s8g`'s re-homing, by dated edit of the test's constants: `SHIPPED_DEAD` ~~56~~
+  57**; `SHIPPED_PAIRS` 279 936 and `SHIPPED_UNSAT` 1 296 unchanged. Measured through the no-dispatch helper:
+  *"`lattice-shipped: packs=2 rigor=pack-default contexts=31104 pairs=279936 unsat=1296 dead=57/102 ties=0
+  hard_cycles=0 toolchains=node,unreal,node+unreal,dotnet,rust surfaces=6`"*. The dead set is the entry's 56 (read at
+  `100a108` in a private worktree) plus one id, **`unit-tests`**: its `max_rigor = "recommended"` meets only the
+  `criticality >= high` escalation at `rigor = "mandatory"`, now the one demand for `AuthoredTests`. Against AC-102's 20%
+  line, 57/102 (55.9%) is reported for the installed pair and not thresholded (D21-47 V3). The port now reads
+  `source = "pass"` as the selector does (no catalog producer judged, never an unsat entry), and the test asserts that
+  no `TestReport` entry is reported. Checkpoint 8b is provisional until Checkpoint 8g (12) re-runs it whole.
 - `lattice::p6_validate_over_the_shipped_pack` asserts AC-104's totality with a non-zero contexts-checked per family.
 - `lattice::zero_packs_is_refused_not_reported` pins the shape `lattice.py --packs <path>` exhibits. Selecting zero
   packs is a typed `Err`, never a report.

@@ -1306,10 +1306,13 @@ const FIX: Lane = Lane {
                 ("change-summary", Verdict::Walks),
             ],
         },
+        // *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; `s8g` §8g.1 move 1; D21-43 N23;
+        // R1 = ADR-0191 decisions 1 and 3, proposed.)* `equivalence-boundary` left this row: `TestReport`
+        // is pass-sourced and the N23 providers sit at `implement`, where `criticality = low` selects
+        // none of them. Was `("equivalence-boundary", Verdict::Walks)` first in this list.
         Row {
             stage: "verify",
             selected: &[
-                ("equivalence-boundary", Verdict::Walks),
                 (
                     "confirmation-test",
                     Verdict::Refuses("`before`'s output has no field `.selection`"),
@@ -1388,10 +1391,12 @@ const STORY: Lane = Lane {
                 ("change-summary", Verdict::Walks),
             ],
         },
+        // *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; `s8g` §8g.1 move 1; D21-43 N23;
+        // R1 = ADR-0191 decisions 1 and 3, proposed.)* `equivalence-boundary` left this row, as on the
+        // fix lane. Was `("equivalence-boundary", Verdict::Walks)` first in this list.
         Row {
             stage: "verify",
             selected: &[
-                ("equivalence-boundary", Verdict::Walks),
                 (
                     "smoke-test",
                     Verdict::Refuses("`checklist:smoke` is mandatory"),

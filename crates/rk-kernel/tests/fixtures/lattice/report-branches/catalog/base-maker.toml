@@ -1,0 +1,11 @@
+# report-branches (D21-67 ruling 6): the Base producer when the toolchain set holds node AND unreal.
+# It requires ForbiddenOnly (the forbidden-stage branch) and Chain (the transitive branch).
+[activity]
+id            = "base-maker"
+version       = 1
+stage         = "design"
+provides      = ["Base"]
+requires      = ["ForbiddenOnly", "Chain"]
+method_rank   = 10
+cost_class    = "S"
+applicable_if = "'node' in toolchain and 'unreal' in toolchain"

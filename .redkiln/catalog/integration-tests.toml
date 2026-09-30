@@ -1,9 +1,13 @@
 # reach: (project, verify, recommended) — require row "kind == project or external_dep" → IntegrationReport
+# (dated 2026-09-29, s8g, D21-46 R5 and D21-48 X9: "The whole activity moves to implement, because stage membership
+#   is per activity"; R1 = ADR-0191 decision 6, proposed) RE-HOMED WHOLE to implement: `write` authors the tests and
+#   `run` and `green` move with it; AuthoredTests listed first, IntegrationReport kept (story.toml's external_dep row
+#   moved to [stage.implement] with it). Verify still measures: the pass's whole suite runs these tests.
 [activity]
 id           = "integration-tests"
-version      = 2   # bumped 2026-09-08 (§9c.42)
-stage        = "verify"
-provides     = ["IntegrationReport"]
+version      = 3   # bumped 2026-09-29 (s8g, D21-46 R5 / D21-48 X9; ADR-0072; .redkiln/CHANGELOG.md)
+stage        = "implement"
+provides     = ["AuthoredTests", "IntegrationReport"]
 requires     = ["Changeset", "Spec", "APIContract?"]
 derived_from = ["Changeset", "APIContract?"]
 tags         = ["kind:project", "kind:story"]   # run6: integration runs through the toolchain port for any toolchain
@@ -45,5 +49,5 @@ on_false = { to = "write", max = 2 }
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { IntegrationReport = { status = "${run.outputs.status}", passed = "${run.outputs.passed}", failed = "${run.outputs.failed}", sha = "${run.outputs.sha}" } }   # composing emit (§9c.34)
+artifacts = { AuthoredTests = "${write.outputs}", IntegrationReport = { status = "${run.outputs.status}", passed = "${run.outputs.passed}", failed = "${run.outputs.failed}", sha = "${run.outputs.sha}" } }   # composing emit (§9c.34)
 evidence  = ["${run}"]

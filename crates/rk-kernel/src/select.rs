@@ -247,9 +247,22 @@ pub struct Selection {
     rows_fired: usize,
     step5: Step5Outcome,
     inputs_digest: Digest,
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 1,
+    /// proposed.)* The required instances whose kind is registered `source = "pass"` and is not
+    /// `Present`: no catalog producer was selected for them, and the stage is not complete
+    /// until the pass's `artifact.write` materialises each. Derived from `R`, the step-3
+    /// classifications and the registry, so it is not part of the canonical bytes.
+    pass_sourced: Vec<Instance>,
 }
 
 impl Selection {
+    /// The required, pass-sourced instances still `Missing` or `Stale` (R1 = ADR-0191 decision
+    /// 1): what a composition-root pass owes before the stage is complete.
+    #[must_use]
+    pub fn pass_sourced(&self) -> &[Instance] {
+        &self.pass_sourced
+    }
+
     /// `R`, as step 2 built it and as no later step may edit.
     #[must_use]
     pub const fn required(&self) -> &RequiredSet {
@@ -585,6 +598,15 @@ pub(in crate::select) fn select_amended(
         }
         seen.push(identity);
 
+        // *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 1,
+        // proposed; `s8g` section 8g.2.)* **A pass-sourced kind selects NO catalog producer**: a
+        // composition-root pass the record names produces it, so no activity is judged for it,
+        // none is planned, and it is not `Unsatisfiable` (its producer exists; it is the pass). The
+        // instance stays in `R` and in `pass_sourced` below until its `artifact.write` lands.
+        if artifacts.is_pass_sourced(&instance.kind) {
+            continue;
+        }
+
         // ADR-0057's Decision: `forbidden` means nothing in that stage runs, EVEN VIA `requires`.
         // The producing stage of a required kind is what decides this, and a kind whose only
         // producers live in a forbidden stage owes BOTH a skip row and a gate (§7b.9(7)).
@@ -654,6 +676,15 @@ pub(in crate::select) fn select_amended(
 
     let inputs_digest = canonical::inputs_digest(pack, catalog, item)?;
 
+    // R1 = ADR-0191 decision 1: stage completeness still needs a pass-sourced kind's
+    // `artifact.write`, so every required pass-sourced instance not yet `Present` is named here.
+    let pass_sourced: Vec<Instance> = required
+        .kinds()
+        .filter(|i| artifacts.is_pass_sourced(&i.kind))
+        .filter(|i| classifications.get(*i) != Some(&Classification::Present))
+        .cloned()
+        .collect();
+
     // ---- step 5 -------------------------------------------------------------------------------
     let five = step5(
         pack,
@@ -665,6 +696,7 @@ pub(in crate::select) fn select_amended(
         &skipped,
         rows_fired,
         &inputs_digest,
+        &pass_sourced,
     )?;
 
     Ok(Selection {
@@ -680,6 +712,7 @@ pub(in crate::select) fn select_amended(
         rows_fired,
         step5: five,
         inputs_digest,
+        pass_sourced,
     })
 }
 

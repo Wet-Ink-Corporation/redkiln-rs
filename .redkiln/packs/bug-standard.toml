@@ -18,6 +18,9 @@ stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommende
 # keeps it. This transcribes the order `stages` is written in; the two key sets must match
 # exactly or the pack refuses to load.
 stage_order = ["triage", "discovery", "analysis", "specification", "design", "planning", "implement", "verify", "review", "release", "operate", "closeout"]
+# s8g (2026-09-29): AC-139's shipped default, block (fail-closed), recorded as the human decision (D21-43 N24; R2 =
+# ADR-0192 decision 5, proposed). AC-455's row: an AC with no `verification` refuses the verify stage.
+verification_required = ["verify"]
 
 [stage.analysis]
 goal = "The defect reproduces deterministically and its cause is established"
@@ -50,16 +53,20 @@ artifacts = ["Estimate"]
 [stage.implement]
 goal = "A tested change exists with a readable summary"
 baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+# s8g (2026-09-29, D21-43 N23; R1 = ADR-0191 decision 5, proposed): MOVED from [stage.verify], where it was over
+# TestReport, with its when and rigor. TestReport is pass-sourced, and a rigor floor on it selects nothing.
+[[stage.implement.require]]
+when = "criticality >= high"
+artifacts = ["AuthoredTests"]
+rigor = "mandatory"
 
 [stage.verify]
 
 goal = "The repro passes at the fix sha and nothing regressed"
 baseline = ["TestReport", "ConfirmationResult", "SmokeResult"]
-# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
-[[stage.verify.require]]
-when = "criticality >= high"
-artifacts = ["TestReport"]
-rigor = "mandatory"
+# s8g (2026-09-29, D21-43 N23): the criticality >= high test-design escalation MOVED to [stage.implement] over
+# AuthoredTests (it read: when = "criticality >= high", artifacts TestReport, rigor = "mandatory").
 [[stage.verify.require]]
 when = "'text' in change"
 artifacts = ["ScanReport"]

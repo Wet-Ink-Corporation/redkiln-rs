@@ -1,10 +1,12 @@
 # reach: (story, verify, optional) with 'text' in change and criticality >= high — unit-tests inapplicable there
 # test-design rigor family (see smoke-test)
+# (dated 2026-09-29, s8g, D21-43 N23; R1 = ADR-0191 decision 3, proposed) RE-HOMED to implement over AuthoredTests,
+#   listed first; the emit binds `write`'s authored tests, and `run` is step evidence.
 [activity]
 id           = "equivalence-boundary"
-version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
-stage        = "verify"
-provides     = ["TestReport", "TestDesign"]
+version      = 4   # bumped 2026-09-29 (s8g, D21-43 N23; ADR-0072; .redkiln/CHANGELOG.md)
+stage        = "implement"
+provides     = ["AuthoredTests", "TestDesign"]
 requires     = ["Changeset", "Spec"]
 derived_from = ["Changeset", "Spec"]
 tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:project"]   # P6 run1 fix; 2026-09-08 family totality
@@ -73,5 +75,5 @@ on_false = { to = "design", max = 2 }
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { TestReport = "${run.outputs}", TestDesign = "${design.outputs}" }
+artifacts = { AuthoredTests = "${write.outputs}", TestDesign = "${design.outputs}" }
 evidence  = ["${run}", "${adversary?}"]

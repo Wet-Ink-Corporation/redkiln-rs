@@ -1061,6 +1061,11 @@ fn changelog() -> String {
         .expect(".redkiln/CHANGELOG.md exists (ADR-0072's pack changelog)")
 }
 
+/// *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME.)* Activities a LATER stage re-versioned
+/// under ADR-0072 after D21-67 ruling 1's bump, with the version that stage wrote: `s8g`'s N23
+/// re-homing (D21-43 N23; R1 = ADR-0191 decision 3, proposed).
+const LATER_BUMPS: &[(&str, i64)] = &[("equivalence-boundary", 4)];
+
 fn version_of(id: &str) -> i64 {
     shipped_toml(id)
         .get("activity")
@@ -1386,10 +1391,19 @@ fn the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged() {
         ("C", CLASS_C.as_slice()),
     ] {
         for (id, old, new) in list {
+            // *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; D21-47's time-bound-guard
+            // rule.)* A later stage's ADR-0072 bump moves this exact-version premise: `s8g`'s N23
+            // re-homing takes `equivalence-boundary` 3 -> 4 (`.redkiln/CHANGELOG.md`
+            // `equivalence-boundary@4`). The ruling's own `<id>@<new>` row is still required below.
+            let later = LATER_BUMPS
+                .iter()
+                .find(|(l, _)| l == id)
+                .map_or(*new, |(_, v)| *v);
             assert_eq!(
                 version_of(id),
-                *new,
-                "{id}: D21-67 ruling 1 bumps version {old} → {new} (ADR-0072)"
+                later,
+                "{id}: D21-67 ruling 1 bumps version {old} → {new} (ADR-0072); with a later \
+                 stage's dated bump it reads {later}"
             );
             let row = log
                 .lines()

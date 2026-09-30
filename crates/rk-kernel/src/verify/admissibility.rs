@@ -4,13 +4,16 @@
 //! THEN the stage is refused with the AC id named, at zero model cost AND the same spec passes under
 //! a pack whose policy does not require it."*
 //!
-//! The type ([`super::ledger::SpecAc`]) carries `verification: Option<String>` and refuses nothing;
+//! The type (`rk_types::acceptance::AcceptanceCriterion`; *dated 2026-09-29, s8g build: R2 =
+//! ADR-0192 decision 4 retires the kernel-local shape*) carries `verification: Option<Text>` and
+//! refuses nothing;
 //! the pack's `[policy] verification_required = [<stages>]` is the row that decides, and this is
 //! a pure function of the two — zero model cost by construction. The key's spelling is this
 //! stage's reading and no record's (raised in the tracker); the `doctor` rule reporting the same at
 //! configuration time is `rk-cli`'s and is RAISED as orphaned (`s7b-ii` §7b-ii.14).
 
-use super::ledger::SpecAc;
+use rk_types::acceptance::AcceptanceCriterion;
+
 use crate::select::pack::Pack;
 
 /// The stage was refused: which stage, which ACs.
@@ -40,7 +43,7 @@ impl std::error::Error for Refused {}
 /// # Errors
 ///
 /// [`Refused`] naming the ACs at `verification: None` when the pack requires one at `stage`.
-pub fn admissible(stage: &str, spec: &[SpecAc], pack: &Pack) -> Result<(), Refused> {
+pub fn admissible(stage: &str, spec: &[AcceptanceCriterion], pack: &Pack) -> Result<(), Refused> {
     if !pack.requires_verification_at(stage) {
         return Ok(());
     }

@@ -462,6 +462,13 @@ pub struct Inputs {
     by_kind: BTreeMap<String, Vec<usize>>,
     registry: Registry,
     roots: BTreeSet<String>,
+    /// *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME; R1 = ADR-0191 decision 1,
+    /// proposed.)* `artifacts.toml` kinds with `source = "pass"`: a composition-root pass produces
+    /// each, so, as the selector does (`KindSource::Pass`), the walk judges no catalog producer for
+    /// one and never reports it unsatisfiable. `lattice.py` knows no such source; the p9 tree
+    /// declares none, so the parity goldens do not move. Not a root: the header's `roots=` list is
+    /// `source = "human"` alone.
+    passes: BTreeSet<String>,
     keyed: BTreeSet<String>,
     /// `artifacts.toml` kinds with `source = "activity"` and no `status = "extended"`.
     activity_kinds: Vec<String>,
@@ -768,6 +775,7 @@ pub fn load(sources: &Sources) -> Result<Inputs, LatticeError> {
         .and_then(toml_subset::Value::as_table)
         .ok_or_else(|| shape(&sources.artifacts, "no [artifact.*] tables"))?;
     let mut roots = BTreeSet::new();
+    let mut passes = BTreeSet::new();
     let mut keyed = BTreeSet::new();
     let mut activity_kinds = Vec::new();
     for (name, row) in table {
@@ -777,6 +785,10 @@ pub fn load(sources: &Sources) -> Result<Inputs, LatticeError> {
         if artifacts.is_human_sourced(name) {
             roots.insert(name.clone());
         }
+        let pass = artifacts.is_pass_sourced(name);
+        if pass {
+            passes.insert(name.clone());
+        }
         if kind.keyed_by.as_deref() == Some("toolchain") {
             keyed.insert(name.clone());
         }
@@ -784,7 +796,7 @@ pub fn load(sources: &Sources) -> Result<Inputs, LatticeError> {
             .as_table()
             .and_then(|t| t.get("status"))
             .and_then(toml_subset::Value::as_str);
-        if !artifacts.is_human_sourced(name) && status != Some("extended") {
+        if !artifacts.is_human_sourced(name) && !pass && status != Some("extended") {
             activity_kinds.push(name.clone());
         }
     }
@@ -903,6 +915,7 @@ pub fn load(sources: &Sources) -> Result<Inputs, LatticeError> {
         by_kind,
         registry,
         roots,
+        passes,
         keyed,
         activity_kinds,
         packs,
@@ -1349,7 +1362,8 @@ impl<'a, 'f, 'x> Run<'a, 'f, 'x> {
         if self.visiting.contains(&key) {
             return Ok(None);
         }
-        if self.inp.roots.contains(kind) {
+        if self.inp.roots.contains(kind) || self.inp.passes.contains(kind) {
+            // A pass-sourced kind: produced by its pass, never by a catalog activity (R1).
             return Ok(Some(Got::Root));
         }
         let inp = self.inp;
@@ -1423,7 +1437,10 @@ impl<'a, 'f, 'x> Run<'a, 'f, 'x> {
             }
             let rk = rk.as_str();
             let rinst = if self.keyed(rk) { inst } else { None };
-            if self.provided.contains(&(rk, rinst)) || inp.roots.contains(rk) {
+            if self.provided.contains(&(rk, rinst))
+                || inp.roots.contains(rk)
+                || inp.passes.contains(rk)
+            {
                 continue;
             }
             // I1: the same stage first, then any non-forbidden stage, in pack order.
@@ -2672,7 +2689,10 @@ pub fn validate(inputs: &Inputs, axes: &Axes) -> Result<Validation, LatticeError
             if *optional {
                 continue;
             }
-            if !inputs.roots.contains(req) && inputs.producers_of(req).is_empty() {
+            if !inputs.roots.contains(req)
+                && !inputs.passes.contains(req)
+                && inputs.producers_of(req).is_empty()
+            {
                 errors.push(format!(
                     "requires: {} needs '{req}' — no producer and not source = human (§9c.27)",
                     a.id

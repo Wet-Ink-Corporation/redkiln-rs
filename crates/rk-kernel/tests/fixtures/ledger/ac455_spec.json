@@ -1,0 +1,21 @@
+{
+  "_comment": "AC-455 -- one fixture spec, two policy rows, in rk_types::AcceptanceCriterion's serde form (dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R2 = ADR-0192 decision 4). AC-455-A declares a verification; AC-455-B is at `verification: None` -- which the TYPE accepts without complaint (S-MIG decision 1: the policy, not the type, decides whether that blocks a stage). No verification, no assertion, no mutation on AC-455-B, by design.",
+  "acceptance_criteria": [
+    {
+      "id": "AC-455-A",
+      "criterion": "pins it",
+      "verification": "tests/it/x.rs::pins_it"
+    },
+    {
+      "id": "AC-455-B",
+      "criterion": "declares nothing"
+    }
+  ],
+  "assertions": {
+    "AC-455-A": {
+      "file": "tests/it/x.rs",
+      "test": "pins_it",
+      "assertion": "assert_eq!(a, b)"
+    }
+  }
+}

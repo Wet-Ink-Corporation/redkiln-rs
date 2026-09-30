@@ -154,6 +154,35 @@ impl<'j> GitOps<'j> {
         args: &[&str],
         env: &[(std::ffi::OsString, std::ffi::OsString)],
     ) -> Result<GitOutput, GitError> {
+        self.run_inner(op, cwd, args, env, None)
+    }
+
+    /// [`Self::run`], with `stdin` written to the live child: the form `apply -` needs, so a
+    /// declared mutation patch reaches git without a file in any tree (`crate::mutation`; R3 =
+    /// ADR-0193 decision 2, proposed). Like the environment, the input is never journalled: the
+    /// argv digest, the status and stdout are, and on replay the recorded result is served and
+    /// `stdin` is never read. *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+    ///
+    /// # Errors
+    /// As [`Self::run`].
+    pub fn run_with_stdin(
+        &mut self,
+        op: GitOp,
+        cwd: &WorktreePath,
+        args: &[&str],
+        stdin: &[u8],
+    ) -> Result<GitOutput, GitError> {
+        self.run_inner(op, cwd, args, &[], Some(stdin))
+    }
+
+    fn run_inner(
+        &mut self,
+        op: GitOp,
+        cwd: &WorktreePath,
+        args: &[&str],
+        env: &[(std::ffi::OsString, std::ffi::OsString)],
+        stdin: Option<&[u8]>,
+    ) -> Result<GitOutput, GitError> {
         // The mode is matched FIRST. There is no path from Replay to `self.exec`.
         match self.mode {
             Mode::Replay => {
@@ -181,10 +210,10 @@ impl<'j> GitOps<'j> {
             }
             Mode::Live => {
                 self.writes_performed += 1;
-                let result = if env.is_empty() {
-                    self.exec.run(op, cwd, args)
-                } else {
-                    self.exec.run_env(op, cwd, args, env)
+                let result = match (stdin, env.is_empty()) {
+                    (Some(input), _) => self.exec.run_with_stdin(op, cwd, args, input),
+                    (None, true) => self.exec.run(op, cwd, args),
+                    (None, false) => self.exec.run_env(op, cwd, args, env),
                 };
                 let inv = match &result {
                     Ok(out) => GitInvocation {

@@ -367,6 +367,11 @@ fn an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused() {
         ("prn".into(), R::DeviceName),
         ("x.review-ref".into(), R::ReviewRefSuffix),
         ("x.Review-Ref".into(), R::ReviewRefSuffix),
+        // *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; s8g section 8g.1 move 3.)* The
+        // mutation tree is `<item>.mut` beside the run tree, so an id ending `.mut` would collide with
+        // another item's mutation tree, as one ending `.review-ref` would with its reference tree.
+        ("x.mut".into(), R::MutSuffix),
+        ("x.MUT".into(), R::MutSuffix),
     ];
     let mut wrong = Vec::new();
     for (raw, want) in &rows {
@@ -417,6 +422,8 @@ fn an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused() {
         "con-1",
         "gitx",
         "x.review-refs",
+        "x.muts",
+        "mut",
         &"a".repeat(64),
     ] {
         let id = ItemId::parse(ok).unwrap_or_else(|e| panic!("CONTROL: `{ok}` was refused: {e:?}"));

@@ -34,6 +34,11 @@ pub enum KindSource {
     Human,
     /// Some catalog activity `provides` it.
     Activity,
+    /// *(dated 2026-09-29, `s8g` build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 1,
+    /// proposed; `s8g` section 8g.2.)* Produced by a composition-root pass the record names (the
+    /// verify pass for `TestReport`). The selector selects NO catalog producer for it; the
+    /// instance stays in `R`, `Missing` until its `artifact.write` materialises it.
+    Pass,
 }
 
 impl KindSource {
@@ -42,6 +47,7 @@ impl KindSource {
         match self {
             Self::Human => "human",
             Self::Activity => "activity",
+            Self::Pass => "pass",
         }
     }
 
@@ -49,6 +55,7 @@ impl KindSource {
         match s {
             "human" => Some(Self::Human),
             "activity" => Some(Self::Activity),
+            "pass" => Some(Self::Pass),
             _ => None,
         }
     }
@@ -182,8 +189,9 @@ impl ArtifactRegistry {
             let source = KindSource::from_token(token).ok_or_else(|| {
                 shape(format!(
                     "[artifact.{name}]: `source = {token:?}` is outside the closed set \
-                     (human, activity). ADR-0057 mints this registry with two sources and a third \
-                     is a decision with a record, not a default."
+                     (human, activity, pass). ADR-0057 mints this registry with two sources, R1 = \
+                     ADR-0191 decision 1 adds `pass`, and a fourth is a decision with a record, not a \
+                     default."
                 ))
             })?;
             kinds.insert(
@@ -232,6 +240,16 @@ impl ArtifactRegistry {
         self.kinds
             .get(name)
             .is_some_and(|k| k.source == KindSource::Human)
+    }
+
+    /// `true` when the kind is registered `source = "pass"`: a composition-root pass produces it
+    /// and the selector selects no catalog producer for it (R1 = ADR-0191 decision 1, proposed).
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+    #[must_use]
+    pub fn is_pass_sourced(&self, name: &str) -> bool {
+        self.kinds
+            .get(name)
+            .is_some_and(|k| k.source == KindSource::Pass)
     }
 
     /// The axis a kind is keyed by, if any.

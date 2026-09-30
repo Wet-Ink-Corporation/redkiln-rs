@@ -1,10 +1,13 @@
 # reach: (story, verify, optional) with 'text' in change and criticality < high — require row → TestReport
+# (dated 2026-09-29, s8g, D21-43 N23; R1 = ADR-0191 decision 3, proposed) RE-HOMED to implement over AuthoredTests:
+#   TestReport is pass-sourced (the verify pass is its one producer); this activity's toolchain:test runs are step
+#   evidence. When `fill` does not run (rigor < recommended) it authors nothing, and the emit binds the run.
 # test-design rigor family (see smoke-test); generic text producer, specialised by unit-tests-ue (PC7)
 [activity]
 id           = "unit-tests"
-version      = 2   # bumped 2026-09-08 (§9c.42)
-stage        = "verify"
-provides     = ["TestReport"]
+version      = 3   # bumped 2026-09-29 (s8g, D21-43 N23; ADR-0072; .redkiln/CHANGELOG.md)
+stage        = "implement"
+provides     = ["AuthoredTests"]
 requires     = ["Changeset", "Spec"]
 derived_from = ["Changeset"]
 tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:project"]
@@ -77,5 +80,5 @@ on_false = { to = "fill", max = 2 }
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { TestReport = "${rerun.outputs?} ?? ${run.outputs}" }
+artifacts = { AuthoredTests = "${fill.outputs?} ?? ${run.outputs}" }
 evidence  = ["${run}", "${gaps?}", "${rerun?}"]

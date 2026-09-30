@@ -482,6 +482,10 @@ fn the_shipped_rust_value_table_is_exactly_the_declared_key_map() {
     // proposed.)* `package_binaries`, the second of ADR-0170 decision 9's three declaration rows, is
     // written at `s8d` (the ruling moves it from `s8g`); the map's declaration set is decision 9's.
     declared.insert("package_binaries");
+    // *(dated 2026-09-29, `s8g` build, package S8G-P3-KERNEL-GIT; R1 = ADR-0191 decision 10,
+    // proposed; AC-349.)* `claims`, the third of decision 9's three declaration rows (`s8c` §8c.5:
+    // *"`s8g`'s `claims` column (AC-349)"*), is written by `s8g`'s verify record.
+    declared.insert("claims");
     let extra: Vec<&String> = table
         .keys()
         .filter(|k| !declared.contains(k.as_str()))

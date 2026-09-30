@@ -66,6 +66,16 @@ pub enum GitOp {
     UpdateRef,
     /// `read-tree HEAD` on the run-owned worktree's OWN index, after the ref moved (step 7).
     ResyncIndex,
+    // --- s8g's two writes: the write-set record (R3 = ADR-0193, proposed) supersedes clause 5 IN
+    // PART for exactly these, each scoped (D21-47: *"That covers s8f's `commit-tree`/`update-ref`,
+    // s8g's `Tag`/`Apply`"*). No push variant exists, and R3 adds none.
+    // *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT.)*
+    /// `tag -a rk-release/<item> -m <message> <commit>`: one annotated, local release tag on a commit of
+    /// the run-owned branch (R3 decision 1). Named on code lines only inside `crate::release`.
+    Tag,
+    /// `apply` of a criterion's declared mutation patch, only in the verify pass's ephemeral
+    /// `<item>.mut` tree (R3 decision 2). Named on code lines only inside `crate::mutation`.
+    Apply,
 
     // --- reads ---
     /// Includes `rev-parse --git-common-dir` (s8d-ii §8d-ii.6's re-entry read) and
@@ -112,7 +122,10 @@ impl GitOp {
     /// package S8E-P5; `s8e` §8e.3, D21-43 N7*): replay serves the kernel boundary's git writes from
     /// its `git_op` rows, and a row carries the name [`Self::as_str`] wrote. Adding a variant here
     /// adds nothing to the write set; the set is the enum.
-    pub const ALL: [Self; 27] = [
+    ///
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R3 = ADR-0193, proposed.)* 27 -> 29:
+    /// `Tag` and `Apply`, the write-set record's two writes.
+    pub const ALL: [Self; 29] = [
         Self::WorktreeAdd,
         Self::WorktreeRemove,
         Self::Add,
@@ -129,6 +142,8 @@ impl GitOp {
         Self::CommitTree,
         Self::UpdateRef,
         Self::ResyncIndex,
+        Self::Tag,
+        Self::Apply,
         Self::RevParse,
         Self::Status,
         Self::Log,
@@ -167,6 +182,8 @@ impl GitOp {
             Self::CommitTree => "commit-tree",
             Self::UpdateRef => "update-ref",
             Self::ResyncIndex => "read-tree HEAD",
+            Self::Tag => "tag",
+            Self::Apply => "apply",
             Self::RevParse => "rev-parse",
             Self::Status => "status",
             Self::Log => "log",
@@ -201,7 +218,9 @@ impl GitOp {
             | Self::Clean
             | Self::CommitTree
             | Self::UpdateRef
-            | Self::ResyncIndex => true,
+            | Self::ResyncIndex
+            | Self::Tag
+            | Self::Apply => true,
             Self::RevParse
             | Self::Status
             | Self::Log
@@ -223,8 +242,15 @@ impl GitOp {
     /// the target's `reference-transaction` hook (git 2.28 and later): both run under clause 2's
     /// empty `core.hooksPath`, as `commit` does.
     #[must_use]
+    ///
+    /// *(dated 2026-09-29, s8g build, package S8G-P3-KERNEL-GIT; R3 = ADR-0193 decision 1, proposed.)*
+    /// `tag` moves a ref too (`refs/tags/rk-release/<item>`), so it runs under the same empty
+    /// `core.hooksPath`: the target repository's `reference-transaction` hook must not run.
     pub const fn creates_a_commit(self) -> bool {
-        matches!(self, Self::Commit | Self::CommitTree | Self::UpdateRef)
+        matches!(
+            self,
+            Self::Commit | Self::CommitTree | Self::UpdateRef | Self::Tag
+        )
     }
 
     /// Does this operation touch trailers, so `trailer.ifexists=add` must be in force?
