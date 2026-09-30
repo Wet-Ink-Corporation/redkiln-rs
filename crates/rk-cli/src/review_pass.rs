@@ -22,6 +22,7 @@
 //! **`0101` clause 5 bounds what any of this may be read as.** S-SUBTLE-CB is registered and unrun;
 //! the gate exists and fails closed, and nothing here claims more than that.
 
+use rk_kernel::catalog::{Activity, Catalog};
 use rk_kernel::review::classify::{Observation, RunObservation};
 use rk_kernel::review::confirm::{ConfirmInput, Confirmed, confirm_with};
 use rk_kernel::review::policy::ReviewWeight;
@@ -46,6 +47,29 @@ use rk_types::time::Timestamp;
 /// relaxing it is not a tidy-up.
 pub const FINDINGS_SCHEMA: &str = "Findings";
 
+/// **The review verdict kind**: what a review activity declares first in `provides`.
+///
+/// *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119, TAKEN PROVISIONALLY under
+/// D21-105; the Findings-key record, ADR-0196, proposed.)*
+///
+/// The step schema a review commits under ([`FINDINGS_SCHEMA`]) and the kind its activity provides
+/// are measured to differ on the shipped catalog: 0 of 102 activities provide `Findings`, and the
+/// five review-stage verdict producers provide `["ReviewVerdict"]`. So "which activity is a review"
+/// is read off this kind, through [`is_review_activity`], and both readers call that one predicate.
+///
+/// 🛑 **EXACT ELEMENT EQUALITY, AND THE NEAR MISS IS ON THE TREE.** The shipped `security-review`
+/// provides **`SecurityReviewVerdict`**, which an `ends_with` or `contains` rule would match.
+pub const REVIEW_VERDICT_KIND: &str = "ReviewVerdict";
+
+/// **Is `activity` a review?** — its `provides` FIRST is [`REVIEW_VERDICT_KIND`], exactly.
+///
+/// The ONE definition: `verbs::run`'s entry check (`findings_stage_reached`) and the
+/// seal's row selection ([`findings_in`]) both call it, so the two cannot diverge (D21-119 item 1).
+#[must_use]
+pub fn is_review_activity(activity: &Activity) -> bool {
+    activity.provides.first().map(String::as_str) == Some(REVIEW_VERDICT_KIND)
+}
+
 /// How the pass declined to produce a verdict. **Never a block**, and never an empty finding set
 /// standing in for an absent one (AC-282).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +79,28 @@ pub enum PassSkipped {
     NoFindingsRow,
     /// A row was found and its payload is not a well-formed `Findings` (AC-281).
     Malformed(IngestError),
+    /// *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119 item 2.)* A `Findings` row
+    /// whose `activity_id_at_version` resolves to no activity of the catalog this invocation
+    /// loaded. **A refusal, named, never a skip**: a skip would read as [`Self::NoFindingsRow`], a
+    /// review that silently never happened. `None` is a row with no such member.
+    Unresolved {
+        /// The id the row carries, verbatim, or `None` when the member is absent.
+        activity_id_at_version: Option<String>,
+    },
+}
+
+/// **The seal's verdict from the pass's block set** (`s8e` §8e.8).
+///
+/// Nothing blocked seals `approved`, anything blocked seals `changes-requested`. *(dated 2026-09-29, `s8g` build, package
+/// R-D2119-8g: moved here out of `verbs::run::review_pass`'s body, unchanged, so the shipped-catalog
+/// tests read the mapping the seal uses.)*
+#[must_use]
+pub const fn seal_verdict(nothing_blocked: bool) -> rk_git::trailer::grammar::Verdict {
+    if nothing_blocked {
+        rk_git::trailer::grammar::Verdict::Approved
+    } else {
+        rk_git::trailer::grammar::Verdict::ChangesRequested
+    }
 }
 
 /// The finding set this run committed, read out of its own journal.
@@ -63,19 +109,56 @@ pub enum PassSkipped {
 /// second `activity_committed`, and the verdict is about what the run finally committed. `explain`
 /// resolves its run id the same way, off the same kind, for the same reason.
 ///
+/// **Only a REVIEW activation's row is a candidate** *(dated 2026-09-29, `s8g` build, package
+/// R-D2119-8g; D21-119 item 2, TAKEN PROVISIONALLY under D21-105; ADR-0196, proposed)*. A row is
+/// a candidate when its step schema is [`FINDINGS_SCHEMA`] AND its `activity_id_at_version`
+/// resolves, in `catalog` (the one this invocation loaded), to an activity that
+/// [`is_review_activity`] AND sits at `stage`, the stage the seal is written under (D21-93). About
+/// forty shipped non-review activities (`fix-spec`, `root-cause`, … each `adversary`) commit under
+/// `Findings` too; before this clause any of them triggered the pass, and a later one displaced the
+/// review's verdict. Among candidates the LAST is taken, by the rule above.
+///
+/// 🛑 **An id that does not resolve is REFUSED, not skipped.** Walking back from the end, the first
+/// `Findings` row that resolves to no activity stops the read as [`PassSkipped::Unresolved`]; rows
+/// before the verdict row are not read.
+///
 /// # Errors
-/// [`PassSkipped::NoFindingsRow`] when no `activity_committed` row carries the review schema;
-/// [`PassSkipped::Malformed`] when one does and its `result` fails `Findings::ingest`.
-pub fn findings_in(events: &[Event]) -> Result<Findings, PassSkipped> {
-    let row = events
-        .iter()
-        .rev()
-        .find(|e| {
-            e.kind == EventKind::ActivityCommitted
-                && e.payload.get("schema").and_then(serde_json::Value::as_str)
-                    == Some(FINDINGS_SCHEMA)
-        })
-        .ok_or(PassSkipped::NoFindingsRow)?;
+/// [`PassSkipped::NoFindingsRow`] when no review activation at `stage` committed a `Findings` row;
+/// [`PassSkipped::Unresolved`] for a `Findings` row, read before any candidate, whose activation
+/// the catalog does not carry; [`PassSkipped::Malformed`] when the candidate's `result` fails
+/// `Findings::ingest`.
+pub fn findings_in(
+    events: &[Event],
+    catalog: &Catalog,
+    stage: &str,
+) -> Result<Findings, PassSkipped> {
+    let mut row = None;
+    for e in events.iter().rev() {
+        if e.kind != EventKind::ActivityCommitted
+            || e.payload.get("schema").and_then(serde_json::Value::as_str) != Some(FINDINGS_SCHEMA)
+        {
+            continue;
+        }
+        let named = e
+            .payload
+            .get("activity_id_at_version")
+            .and_then(serde_json::Value::as_str);
+        let Some(activity) = named.and_then(|id| {
+            catalog
+                .activities()
+                .iter()
+                .find(|a| a.id_at_version().as_deref() == Some(id))
+        }) else {
+            return Err(PassSkipped::Unresolved {
+                activity_id_at_version: named.map(ToOwned::to_owned),
+            });
+        };
+        if is_review_activity(activity) && activity.stage == stage {
+            row = Some(e);
+            break;
+        }
+    }
+    let row = row.ok_or(PassSkipped::NoFindingsRow)?;
 
     // `result` is `Typed.value` verbatim (AC-009). An absent member is NOT an empty set: it is a
     // row that cannot be a review, and it is reported as an absence rather than approved by one.

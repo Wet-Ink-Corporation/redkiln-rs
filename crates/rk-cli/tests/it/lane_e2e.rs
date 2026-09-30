@@ -2457,12 +2457,15 @@ fn the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity() {
         let catalog = root.join(".redkiln").join("catalog");
         let review_min =
             std::fs::read_to_string(catalog.join("review-min.toml")).expect("review-min reads");
-        let provides = "provides     = [\"Findings\"]";
+        // *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119.)* ~~`provides     =
+        // ["Findings"]`~~ -- `review-min` now declares the review verdict kind first and
+        // `Findings` second, so the copy below is a review activity to either entry key.
+        let provides = "provides     = [\"ReviewVerdict\", \"Findings\"]";
         let stage_line = "stage        = \"review\"";
         assert!(
             review_min.matches(provides).count() == 1
                 && review_min.matches(stage_line).count() == 1,
-            "PREMISE: review-min declares `Findings` at `review`"
+            "PREMISE: review-min declares the review verdict kind and `Findings` at `review`"
         );
         std::fs::write(
             catalog.join("review-here.toml"),

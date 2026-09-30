@@ -25,7 +25,12 @@
 id           = "review-min"
 version      = 1
 stage        = "review"
-provides     = ["Findings"]
+# (dated 2026-09-29, s8g build, package R-D2119-8g; D21-119, TAKEN PROVISIONALLY under D21-105;
+# ADR-0196, proposed.) `provides` FIRST is now the review verdict kind, as every shipped review
+# verdict producer declares it: `review_pass::is_review_activity` is what the seal reads (and the
+# entry check, from D21-119's second commit). `Findings` stays second, so the pack variants' `baseline = ["Findings"]` still
+# selects this activity. It read a one-element list, `Findings` alone.
+provides     = ["ReviewVerdict", "Findings"]
 requires     = []
 derived_from = []
 deviation_ok = []

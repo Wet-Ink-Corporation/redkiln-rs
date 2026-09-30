@@ -10,12 +10,18 @@
 //! **ADR-0101 clause 5 bounds what any of this may be read as.** S-SUBTLE-CB is registered and
 //! unrun; nothing here claims anything about the gate's calibration.
 
-use rk_cli::review_pass::{PassSkipped, ToolchainReExecutor, findings_in, selection_of};
+use rk_cli::review_pass::{
+    FINDINGS_SCHEMA, PassSkipped, REVIEW_VERDICT_KIND, ToolchainReExecutor, findings_in,
+    is_review_activity, seal_verdict, selection_of,
+};
+use rk_git::trailer::grammar::Verdict;
+use rk_kernel::catalog::{Activity, Catalog};
 use rk_kernel::review::reexec::{ReExecution, ReExecutor, Unverifiable};
 use rk_ports::toolchain::{
     ChangeSummary, Classification, Selection, StepBound, TestOutcome, TestRunner, Toolchain,
     VerbCall, VerbOutput,
 };
+use rk_types::artifact::findings::Findings;
 use rk_types::artifact::findings::{EvidenceLabel, Finding};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::event::Event;
@@ -140,19 +146,110 @@ fn finding(ac: &str, repro: Repro) -> Finding {
     }
 }
 
+/// A committed row of the shipped `adversarial-review`'s `review` step.
+///
+/// *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119 item 2.)* ~~`"activity_id_at_version":
+/// "review@1"`~~ — the seal now resolves a row's activation against the catalog, so this helper's
+/// rows name the shipped review activity at its shipped version, read off `.redkiln/catalog/`.
 fn committed(schema: &str, result: serde_json::Value) -> Event {
+    committed_by(&at_version(ADVERSARIAL_REVIEW), "review", schema, result)
+}
+
+/// A committed step row, as `activity::step_committed_event` writes one.
+fn committed_by(
+    activity_id_at_version: &str,
+    step_id: &str,
+    schema: &str,
+    result: serde_json::Value,
+) -> Event {
     Event::new(
         EventKind::ActivityCommitted,
         serde_json::json!({
-            "activity_id_at_version": "review@1",
+            "activity_id_at_version": activity_id_at_version,
             "at": 0,
             "attempt": 1,
             "item": "an-item",
+            "iteration_path": [],
             "result": result,
             "run_id": "review-0000000000000000",
             "schema": schema,
+            "step_id": step_id,
         }),
     )
+}
+
+// ---------------------------------------------------------------- the shipped catalog (D21-119)
+
+/// The shipped review activity both lanes select (D21-119 finding 2).
+const ADVERSARIAL_REVIEW: &str = "adversarial-review";
+/// The shipped review stage's name, as the shipped packs spell it. A TEST literal: `crates/rk-cli/
+/// src/` compares no stage to a string (ADR-0162 decision 5).
+const REVIEW: &str = "review";
+
+fn workspace() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .canonicalize()
+        .expect("the workspace root resolves")
+}
+
+/// The shipped catalog, composed by `run`'s own `catalog_sources` over this repository (no trial).
+fn shipped() -> &'static Catalog {
+    static CATALOG: std::sync::OnceLock<Catalog> = std::sync::OnceLock::new();
+    CATALOG.get_or_init(|| {
+        let sources = rk_cli::verbs::run::catalog_sources(&workspace(), None)
+            .unwrap_or_else(|e| panic!("the shipped catalog's sources read: {e:?}"));
+        let borrowed: Vec<(&str, &str)> = sources
+            .iter()
+            .map(|(n, s)| (n.as_str(), s.as_str()))
+            .collect();
+        Catalog::from_sources(&borrowed)
+            .unwrap_or_else(|e| panic!("the shipped catalog loads: {e}"))
+    })
+}
+
+fn shipped_activity(id: &str) -> &'static Activity {
+    shipped()
+        .activities()
+        .iter()
+        .find(|a| a.id == id)
+        .unwrap_or_else(|| panic!("PREMISE: the shipped catalog carries `{id}`"))
+}
+
+/// `<id>@<version>` of the shipped activity `id`, as the committed row's key carries it.
+fn at_version(id: &str) -> String {
+    shipped_activity(id)
+        .id_at_version()
+        .unwrap_or_else(|| panic!("PREMISE: the shipped `{id}` declares a version"))
+}
+
+/// PREMISE: the shipped `id` sits at `stage`, provides `first` first, and its step `step`
+/// commits under the `Findings` schema — the shape each D21-119 test is about.
+fn premise(id: &str, stage: &str, first: &str, step: &str) {
+    let a = shipped_activity(id);
+    assert_eq!(a.stage, stage, "PREMISE: `{id}` sits at `{stage}`");
+    assert_eq!(
+        a.provides.first().map(String::as_str),
+        Some(first),
+        "PREMISE: `{id}` provides `{first}` first"
+    );
+    assert!(
+        a.steps
+            .iter()
+            .any(|s| s.id == step && s.output_type.as_deref() == Some(FINDINGS_SCHEMA)),
+        "PREMISE: `{id}`'s step `{step}` commits under `{FINDINGS_SCHEMA}`"
+    );
+}
+
+/// The seal's read at `stage` over the shipped catalog.
+fn read_at(events: &[Event], stage: &str) -> Result<Findings, PassSkipped> {
+    findings_in(events, shipped(), stage)
+}
+
+/// The seal's read at the shipped review stage — what the pre-D21-119 tests above call.
+fn read(events: &[Event]) -> Result<Findings, PassSkipped> {
+    read_at(events, REVIEW)
 }
 
 fn one_finding_payload(ac: &str, command: &str) -> serde_json::Value {
@@ -211,7 +308,7 @@ fn selection_is_the_double_dash_tail_or_nothing() {
 #[test]
 fn findings_come_from_the_journal_and_absence_is_not_an_empty_set() {
     assert_eq!(
-        findings_in(&[]),
+        read(&[]),
         Err(PassSkipped::NoFindingsRow),
         "an empty journal is no review, not a review with nothing to say"
     );
@@ -220,7 +317,7 @@ fn findings_come_from_the_journal_and_absence_is_not_an_empty_set() {
     // non-review stage takes, and it must not produce a verdict.
     let other = [committed("ImplReport", serde_json::json!({ "ok": true }))];
     assert_eq!(
-        findings_in(&other),
+        read(&other),
         Err(PassSkipped::NoFindingsRow),
         "a row under another schema is not a finding set"
     );
@@ -229,7 +326,7 @@ fn findings_come_from_the_journal_and_absence_is_not_an_empty_set() {
         "Findings",
         one_finding_payload("AC-601", "cargo test -- ac601"),
     )];
-    let findings = findings_in(&good).expect("a well-formed payload ingests");
+    let findings = read(&good).expect("a well-formed payload ingests");
     assert_eq!(findings.items.len(), 1, "the one finding is read");
     assert_eq!(findings.items[0].ac, "AC-601");
 
@@ -245,7 +342,7 @@ fn findings_come_from_the_journal_and_absence_is_not_an_empty_set() {
             one_finding_payload("AC-999", "cargo test -- ac999"),
         ),
     ];
-    let findings = findings_in(&twice).expect("the later payload ingests");
+    let findings = read(&twice).expect("the later payload ingests");
     assert_eq!(
         findings.items[0].ac, "AC-999",
         "the LAST committed finding set is the run's, not the first"
@@ -260,7 +357,7 @@ fn a_malformed_payload_refuses_rather_than_reading_as_zero_findings() {
         "Findings",
         serde_json::json!({ "items": "not an array" }),
     )];
-    match findings_in(&bad) {
+    match read(&bad) {
         Err(PassSkipped::Malformed(_)) => {}
         other => panic!("a malformed payload is a typed refusal, got {other:?}"),
     }
@@ -495,5 +592,296 @@ fn an_empty_arm_is_no_record_never_a_flip() {
     assert!(
         reexec.run(&f, sha).is_some(),
         "CONTROL: red beside green is a record"
+    );
+}
+
+// ================================================================ D21-119: the review key
+//
+// *(Added 2026-09-29, `s8g` build, package R-D2119-8g; D21-119, TAKEN PROVISIONALLY under D21-105
+// items 3 and 4; the Findings-key record, ADR-0196, proposed.)* Every test below reads the SHIPPED
+// catalog (`.redkiln/catalog/`, composed by `run`'s own `catalog_sources`), with journal rows in
+// the shape `activity::step_committed_event` writes: each names its activation at the shipped
+// version and commits a finding set under the `Findings` schema, as the shipped steps'
+// `outputs = "value:Findings"` do. None dispatches, runs a binary or touches a repository.
+
+/// The shipped review stage's authored rigor on the fix lane, as `review_pass` reads it (AC-302).
+fn shipped_review_weight() -> rk_kernel::review::policy::ReviewWeight {
+    let src = std::fs::read_to_string(workspace().join(".redkiln/packs/bug-standard.toml"))
+        .expect("the shipped fix-lane pack reads");
+    let pack = rk_kernel::select::Pack::from_toml("bug-standard.toml", &src)
+        .expect("the shipped fix-lane pack loads");
+    rk_kernel::review::policy::resolve_review_tier(pack.rigor(REVIEW))
+}
+
+/// The pass's verdict over `findings`, re-executed on two scripted arms, mapped as the seal maps it.
+fn sealed_verdict(findings: &Findings, candidate_green: bool) -> Verdict {
+    let candidate = ScriptedToolchain::green(candidate_green);
+    let reference = ScriptedToolchain::green(true);
+    let reexec = ToolchainReExecutor {
+        candidate: &candidate,
+        reference: &reference,
+    };
+    let confirmed = rk_cli::review_pass::confirm(
+        findings,
+        shipped_review_weight(),
+        "0123456789abcdef0123456789abcdef01234567",
+        "an-item",
+        rk_types::time::Timestamp::from_unix_seconds(0),
+        &reexec,
+    );
+    seal_verdict(confirmed.block_set().is_empty())
+}
+
+/// **(b1) An `adversarial-review`/`review` activation seals `approved`** — at its own stage, and
+/// ONLY there (D21-93: the seal names its stage; D21-119 item 2).
+///
+/// An empty finding set, committed by the shipped review activity's `review` step, is selected at
+/// the shipped review stage and maps to `approved`. The same journal read at `release` (the stage a
+/// lane reaches next) is no review row there: without the stage clause the review stage's verdict
+/// would be sealed again under every later stage the lane enters.
+#[test]
+fn adversarial_review_seals_approved_at_its_own_stage() {
+    premise(ADVERSARIAL_REVIEW, REVIEW, REVIEW_VERDICT_KIND, "review");
+    let journal = [committed_by(
+        &at_version(ADVERSARIAL_REVIEW),
+        "review",
+        FINDINGS_SCHEMA,
+        serde_json::json!({ "items": [] }),
+    )];
+    let findings = read(&journal).expect("the shipped review activation's row is the verdict row");
+    assert!(findings.items.is_empty(), "the empty finding set is read");
+    assert_eq!(
+        sealed_verdict(&findings, true),
+        Verdict::Approved,
+        "nothing blocked seals `approved`"
+    );
+    assert_eq!(
+        read_at(&journal, "release"),
+        Err(PassSkipped::NoFindingsRow),
+        "the review stage's row was selected again at `release`: the seal is scoped to the stage \
+         it is written under"
+    );
+}
+
+/// **(b2) An `adversarial-review`/`review` activation seals `changes-requested`** — a finding the
+/// re-execution flips (candidate red, reference green) blocks at the shipped review stage's weight,
+/// and a later stage does not re-read it.
+#[test]
+fn adversarial_review_seals_changes_requested_at_its_own_stage() {
+    premise(ADVERSARIAL_REVIEW, REVIEW, REVIEW_VERDICT_KIND, "review");
+    let journal = [committed_by(
+        &at_version(ADVERSARIAL_REVIEW),
+        "review",
+        FINDINGS_SCHEMA,
+        one_finding_payload("AC-601", "cargo test -- ac601"),
+    )];
+    let findings = read(&journal).expect("the shipped review activation's row is the verdict row");
+    assert_eq!(findings.items.len(), 1, "the one finding is read");
+    assert_eq!(
+        sealed_verdict(&findings, false),
+        Verdict::ChangesRequested,
+        "a flipped, reproduced finding at the shipped review stage's weight blocks, and a block \
+         seals `changes-requested`"
+    );
+    assert_eq!(
+        sealed_verdict(&findings, true),
+        Verdict::Approved,
+        "CONTROL: the same finding that does not reproduce blocks nothing"
+    );
+    assert_eq!(
+        read_at(&journal, "release"),
+        Err(PassSkipped::NoFindingsRow),
+        "the review stage's row was selected again at `release`"
+    );
+}
+
+/// **(c) A `fix-spec`/`adversary` `Findings` row does not trigger the review pass or a seal.**
+///
+/// `fix-spec` (specification, provides `Spec`) is one of the ~40 shipped non-review activities
+/// whose adversary step commits under `Findings` (D21-119 finding 4). Before D21-119 the seal took
+/// ANY `Findings` row, so a fix lane's specification adversary was read as a review verdict.
+#[test]
+fn a_fix_spec_adversary_findings_row_does_not_seal() {
+    premise("fix-spec", "specification", "Spec", "adversary");
+    let journal = [committed_by(
+        &at_version("fix-spec"),
+        "adversary",
+        FINDINGS_SCHEMA,
+        one_finding_payload("AC-601", "cargo test -- ac601"),
+    )];
+    for stage in ["specification", REVIEW] {
+        assert_eq!(
+            read_at(&journal, stage),
+            Err(PassSkipped::NoFindingsRow),
+            "a fix-spec/adversary `Findings` row was read as a review verdict at `{stage}`"
+        );
+    }
+}
+
+/// **(d) A later non-review `Findings` row does not displace the review verdict.**
+///
+/// The review activation commits first; a later adversary row commits after it. The ruling names
+/// `equivalence-boundary`/`adversary` as the verify-stage case; *(measured at build)* S8G-P4
+/// re-homed `equivalence-boundary` to `implement`, so the post-review case is also taken at a stage
+/// the lane reaches AFTER review: `knowledge-harvest`/`adversary` (closeout). Under "the last
+/// `Findings` row" either would displace the verdict.
+#[test]
+fn a_later_non_review_findings_row_does_not_displace_the_review_verdict() {
+    premise(ADVERSARIAL_REVIEW, REVIEW, REVIEW_VERDICT_KIND, "review");
+    premise(
+        "equivalence-boundary",
+        "implement",
+        "AuthoredTests",
+        "adversary",
+    );
+    premise("knowledge-harvest", "closeout", "KBAtoms", "adversary");
+    let journal = [
+        committed_by(
+            &at_version(ADVERSARIAL_REVIEW),
+            "review",
+            FINDINGS_SCHEMA,
+            one_finding_payload("AC-601", "cargo test -- ac601"),
+        ),
+        committed_by(
+            &at_version("equivalence-boundary"),
+            "adversary",
+            FINDINGS_SCHEMA,
+            one_finding_payload("AC-998", "cargo test -- ac998"),
+        ),
+        committed_by(
+            &at_version("knowledge-harvest"),
+            "adversary",
+            FINDINGS_SCHEMA,
+            one_finding_payload("AC-999", "cargo test -- ac999"),
+        ),
+    ];
+    let findings = read(&journal).expect("the review activation's row is still the verdict row");
+    assert_eq!(
+        findings
+            .items
+            .iter()
+            .map(|f| f.ac.as_str())
+            .collect::<Vec<_>>(),
+        vec!["AC-601"],
+        "a later non-review `Findings` row displaced the review verdict"
+    );
+    assert_eq!(
+        read_at(&journal, "closeout"),
+        Err(PassSkipped::NoFindingsRow),
+        "the closeout adversary's row was read as a review verdict at `closeout`"
+    );
+}
+
+/// **(e) `security-review` and `design-review` do not seal.** Both sit at the shipped review stage
+/// and both have a `review` step committing under `Findings`, but neither provides the review
+/// verdict kind first: `SecurityReviewVerdict` is the near miss an `ends_with`/`contains` match
+/// would take, and `DesignVerdict` is not a review verdict at all.
+#[test]
+fn security_review_and_design_review_do_not_seal() {
+    premise("security-review", REVIEW, "SecurityReviewVerdict", "review");
+    premise("design-review", REVIEW, "DesignVerdict", "review");
+    for id in ["security-review", "design-review"] {
+        assert!(
+            !is_review_activity(shipped_activity(id)),
+            "`{id}` was read as a review activity"
+        );
+        let journal = [committed_by(
+            &at_version(id),
+            "review",
+            FINDINGS_SCHEMA,
+            one_finding_payload("AC-601", "cargo test -- ac601"),
+        )];
+        assert_eq!(
+            read(&journal),
+            Err(PassSkipped::NoFindingsRow),
+            "`{id}`'s `Findings` row was read as the review verdict"
+        );
+    }
+    assert!(
+        is_review_activity(shipped_activity(ADVERSARIAL_REVIEW)),
+        "CONTROL: the shipped adversarial-review is a review activity"
+    );
+}
+
+/// **(f) An unresolvable `activity_id_at_version` is refused by name, never skipped.** A skip
+/// would read as `NoFindingsRow` — no review — which is the vacuous green D21-119 item 2 forbids.
+#[test]
+fn an_unresolvable_activity_id_at_version_is_refused_by_name() {
+    let review = committed_by(
+        &at_version(ADVERSARIAL_REVIEW),
+        "review",
+        FINDINGS_SCHEMA,
+        serde_json::json!({ "items": [] }),
+    );
+    let stale = committed_by(
+        "adversarial-review@999",
+        "review",
+        FINDINGS_SCHEMA,
+        one_finding_payload("AC-601", "cargo test -- ac601"),
+    );
+    assert_eq!(
+        read(&[review.clone(), stale]),
+        Err(PassSkipped::Unresolved {
+            activity_id_at_version: Some("adversarial-review@999".to_owned())
+        }),
+        "an activation the loaded catalog does not carry was not refused by name"
+    );
+    let mut absent = committed("Findings", serde_json::json!({ "items": [] }));
+    absent
+        .payload
+        .as_object_mut()
+        .expect("a row is an object")
+        .remove("activity_id_at_version");
+    assert_eq!(
+        read(&[review.clone(), absent]),
+        Err(PassSkipped::Unresolved {
+            activity_id_at_version: None
+        }),
+        "a `Findings` row naming no activation was not refused"
+    );
+    assert!(
+        read(&[review]).is_ok(),
+        "CONTROL: the resolvable row alone is the verdict row"
+    );
+}
+
+/// **(g) `formal-inspection`'s verdict row is pinned: the LAST of its two `Findings` steps.** The
+/// shipped `formal-inspection` commits `reader` then `second-reader`, both under `Findings`, from
+/// one review activation; by the existing re-dispatch rule the verdict is the last committed row,
+/// the second reader's. Green on arrival by construction (the rule predates D21-119); its red is
+/// the mutant that takes the first row (§8g.1's D21-119 note, M6).
+#[test]
+fn formal_inspections_second_reader_row_is_the_verdict() {
+    premise("formal-inspection", REVIEW, REVIEW_VERDICT_KIND, "reader");
+    premise(
+        "formal-inspection",
+        REVIEW,
+        REVIEW_VERDICT_KIND,
+        "second-reader",
+    );
+    let fi = at_version("formal-inspection");
+    let journal = [
+        committed_by(
+            &fi,
+            "reader",
+            FINDINGS_SCHEMA,
+            one_finding_payload("AC-701", "cargo test -- ac701"),
+        ),
+        committed_by(
+            &fi,
+            "second-reader",
+            FINDINGS_SCHEMA,
+            one_finding_payload("AC-702", "cargo test -- ac702"),
+        ),
+    ];
+    let findings = read(&journal).expect("formal-inspection is a review activation");
+    assert_eq!(
+        findings
+            .items
+            .iter()
+            .map(|f| f.ac.as_str())
+            .collect::<Vec<_>>(),
+        vec!["AC-702"],
+        "formal-inspection's verdict row is the second reader's, the last committed"
     );
 }

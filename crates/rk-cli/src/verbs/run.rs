@@ -491,11 +491,18 @@ fn findings_stage_reached(resolved: &Resolved) -> Option<FindingsStage> {
             break;
         }
         walked += 1;
+        // *(dated 2026-09-29, `s8g` build, package R-D2119-8g, D21-119's FIRST commit: the seal
+        // scoping.)* ~~`provides.first() == FINDINGS_SCHEMA`~~ — an INTERIM key, `provides` names
+        // `Findings` anywhere, by element equality: `pack-min`'s review activity now declares the
+        // review verdict kind first (the seal's key) and `Findings` second, and this keeps the entry
+        // exactly as live as before on every catalog (0 shipped activities name `Findings` in
+        // `provides`). D21-119's second commit replaces it with `review_pass::is_review_activity`.
         if pack.rigor(stage) != Some(rk_kernel::rigor::Rigor::Forbidden)
             && let Some(activity) = catalog.activities().iter().find(|a| {
                 a.stage == stage
-                    && a.provides.first().map(String::as_str)
-                        == Some(crate::review_pass::FINDINGS_SCHEMA)
+                    && a.provides
+                        .iter()
+                        .any(|p| p == crate::review_pass::FINDINGS_SCHEMA)
             })
         {
             return Some(FindingsStage {
@@ -4224,6 +4231,26 @@ fn remove_reference_worktree(exec: &GitExec, repo: &WorktreePath, path: &Path) {
     let _ = std::fs::remove_dir_all(path);
 }
 
+/// **The catalog the review pass resolves a committed row against** — the same sources
+/// [`base_inputs`] hands the kernel for this invocation (`catalog_sources` over the checkout, the
+/// item's admitted trial included). A catalog that does not load is a refusal, named: the seal must
+/// not decide "not a review" off a catalog it could not read. *(dated 2026-09-29, `s8g` build,
+/// package R-D2119-8g; D21-119 item 2.)*
+fn review_catalog(resolved: &Resolved) -> Result<rk_kernel::catalog::Catalog, Exit> {
+    let sources = catalog_sources(
+        Path::new(resolved.worktree.as_str()),
+        resolved.trial.as_deref(),
+    )?;
+    let borrowed: Vec<(&str, &str)> = sources
+        .iter()
+        .map(|(n, s)| (n.as_str(), s.as_str()))
+        .collect();
+    rk_kernel::catalog::Catalog::from_sources(&borrowed).map_err(|e| {
+        eprintln!("redkiln: the catalog the review pass resolves against did not load: {e}");
+        Exit::ConfigError
+    })
+}
+
 /// **The review pass — the producer of `Exit::FindingsBlock` (ADR-0162; §7h.3's call site).**
 ///
 /// `Ok(None)` is *"this activation is not a review"*, which is the ordinary path for every other
@@ -4251,10 +4278,48 @@ fn review_pass(
     // `None` on the unbound machinery seam, which seals nothing.
     mut seal_boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
 ) -> Result<Option<Exit>, Halt> {
-    let findings = match crate::review_pass::findings_in(&recorded.events) {
+    // *(dated 2026-09-29, `s8g` build, package R-D2119-8g; D21-119 item 2, TAKEN PROVISIONALLY
+    // under D21-105; ADR-0196, proposed.)* The seal reads only a REVIEW activation's `Findings` row:
+    // `findings_in` resolves each row's `activity_id_at_version` against the catalog THIS invocation
+    // loads (the one `base_inputs` hands the kernel) and keeps a row only when that activity is a
+    // review (`review_pass::is_review_activity`) at the stage the seal is written under. A journal
+    // with no `Findings`-schema row at all needs no catalog, so it is read first.
+    let any_findings_row = recorded.events.iter().any(|e| {
+        e.kind == rk_types::event_kind::EventKind::ActivityCommitted
+            && e.payload.get("schema").and_then(serde_json::Value::as_str)
+                == Some(crate::review_pass::FINDINGS_SCHEMA)
+    });
+    if !any_findings_row {
+        return Ok(None);
+    }
+    let catalog = match review_catalog(resolved) {
+        Ok(catalog) => catalog,
+        Err(exit) => return Ok(Some(exit)),
+    };
+    let findings = match crate::review_pass::findings_in(
+        &recorded.events,
+        &catalog,
+        &resolved.stage,
+    ) {
         Ok(findings) => findings,
         // Not a review activation. Every non-review stage takes this path.
         Err(crate::review_pass::PassSkipped::NoFindingsRow) => return Ok(None),
+        Err(crate::review_pass::PassSkipped::Unresolved {
+            activity_id_at_version,
+        }) => {
+            eprintln!(
+                "redkiln: a committed `{}` row of `{}` names the activation {}, which resolves to \
+                 no activity of the catalog this run loaded, so the review pass cannot tell whether \
+                 it is a review; it is refused by name, never skipped (D21-119)",
+                crate::review_pass::FINDINGS_SCHEMA,
+                resolved.item.id(),
+                activity_id_at_version.map_or_else(
+                    || "(no `activity_id_at_version` member)".to_owned(),
+                    |id| format!("`{id}`")
+                ),
+            );
+            return Ok(Some(Exit::ConfigError));
+        }
         Err(crate::review_pass::PassSkipped::Malformed(e)) => {
             eprintln!(
                 "redkiln: the review dispatch committed a result that is not a finding set: \
@@ -4358,11 +4423,9 @@ fn review_pass(
         // `Boundary::act`): the `Slice-Verdict:` commit first, then `t1_slice_seal` and the anchored
         // `slice_sealed` row. A refused seal — the slice undeclared, the item id, the project, a stage,
         // whitespace — is exit 3, named, and nothing is committed.
-        let verdict = if blocked.is_empty() {
-            rk_git::trailer::grammar::Verdict::Approved
-        } else {
-            rk_git::trailer::grammar::Verdict::ChangesRequested
-        };
+        // *(dated 2026-09-29, `s8g` build, package R-D2119-8g.)* The mapping, unchanged, lives in
+        // `review_pass::seal_verdict` so the shipped-catalog tests read the one the seal uses.
+        let verdict = crate::review_pass::seal_verdict(blocked.is_empty());
         if let Some(boundary) = seal_boundary.as_mut() {
             let sealed = rk_kernel::runtime::tier_one::seal_act(
                 resolved.slice.as_deref(),
