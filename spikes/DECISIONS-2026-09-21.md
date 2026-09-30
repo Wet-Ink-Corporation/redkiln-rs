@@ -1,4 +1,8 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-119), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-121), and what they license
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-120)"**; `D21-121` is appended with this move.)*
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-119)"**; `D21-120` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-118)"**; `D21-119` is appended with this move.)*
 
@@ -5117,3 +5121,79 @@ what the shipped review provides"*.
 - Deferring leaves a live mis-seal hazard.
 
 **Reversal.** Revert the two commits and the proposed record.
+
+---
+
+## D21-120 · `s8g`: a pass-sourced kind holds its stage's advance: `replay::resume` refuses by name until the pass's `artifact.write` is journalled
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-548450** (two-way door, judgment; defaulted to A).
+
+**The blocker.** Package S8G-P3 found that ADR-0191 decision 1 (*"stage completeness still requires its
+`artifact.write`"*) is enforced nowhere.
+- `fsm::next_action` returns `AdvanceStage` once the plan is exhausted.
+- A pass-sourced instance has no plan node.
+- `.redkiln/artifacts.toml` already reads `[artifact.TestReport] source = "pass"` (P4).
+
+So every verify stage would advance with no `TestReport` written.
+
+**Ruled.** The panel's three judges converged on a guard inside `rk_kernel::replay::resume`, a fourth option none of
+the three listed options described.
+1. **Where it runs.** The check runs in `resume`'s `AdvanceStage` arm, before `rt.step`. It also runs in its `Done`
+   arm when there is no successor, so a held lane end is not an end.
+2. **What is owed.** The owed set is `selection.pass_sourced()` minus every instance that has a journalled
+   `artifact.write` for this item at this stage. A row matches on its kind plus its toolchain key element (ADR-0073).
+   Only rows after the stage's latest entry count. The check never uses Classification alone: rk-cli seeds no
+   `ArtifactState`, so a Classification-only guard would refuse for ever.
+3. **The refusal.** While anything is owed, `advance_refused` names the class and every owed instance (for example
+   `pass-owed: TestReport{rust}`). `RecordedRun` gains a typed `pass_owed()`, and the loop breaks. There is no step,
+   no commit, no mark and no row; this is the refusal shape of ADR-0189 decision 4.
+4. **rk-cli.** In the verify-pass package, rk-cli runs `verify_pass` for each owed instance and calls `resume` again
+   for the same stage. It retries once and does not push the stage onto `visited` a second time. If the pass does not
+   complete, rk-cli exits held, naming the refusal.
+5. **Tests.** Three red-first tests, in which the guard:
+   - refuses with no write;
+   - advances once a matching write exists;
+   - holds the lane end.
+
+   Mutants: the check removed, the journal filter dropped, the lane-end arm dropped.
+6. **Records.** `fsm::next_action`, the `NextAction` set, `Runtime::step`, `module_boundary` and Checkpoint 7b are
+   unchanged. ADR-0191 (proposed) takes a dated in-record note naming where decision 1's completeness clause is
+   enforced. No accepted Decision moves: ADR-0152 decision 2 holds, because the arm still breaks.
+
+**Reversal.** Delete the guard and the rk-cli branch.
+
+---
+
+## D21-121 · `s8g`: `AuthoredTests` is keyed by toolchain; ADR-0191 supersedes ADR-0132's keyed-set enumeration in part
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-9b529f** (two-way door, judgment; defaulted to A). Under D21-105 AFK rule 4, the ruling moves an accepted Decision, and
+the proposed ADR-0191 carries it. ADR-0191 flips at `s8g`'s close only if the operator has not objected in this
+ledger. The ruling is on the review packet's confirm list.
+
+**The blocker.** Package S8G-P4 found the problem. ADR-0191 decision 4 reads *"it is not `keyed_by`"*. After N23,
+`unit-tests` and `unit-tests-ue` both provide `AuthoredTests` at implement, both at `method_rank` 20. Left unkeyed,
+every shipped selection refuses to load:
+`Load(RankTie { kind: "AuthoredTests", … activities: ["unit-tests", "unit-tests-ue"] })`. While the pair provided the
+keyed `TestReport`, ADR-0073's per-instance expansion kept them from contending.
+
+**Ruled.** The blocker panel chose option (a′).
+1. **The pack.** `keyed_by = "toolchain"` stays on `[artifact.AuthoredTests]`, as P4 built it, with its PROVISIONAL
+   comment until the operator rules. `spikes/p9/artifacts.toml` is not edited (ADR-0132 forbids it). No
+   `method_rank`, `applicable_if`, tag or activity version moves.
+2. **The record.** ADR-0191 (proposed) takes a dated in-record amendment.
+   - It strikes decision 4's *"it is not `keyed_by`"*.
+   - It adds `0132` to its `supersedes`, in part and at one site: ADR-0132's Decision enumeration, *"The
+     toolchain-keyed set is **six**"*, and *"moves 5 → 6 keyed kinds"*. With `AuthoredTests` both become seven.
+   - Every other clause of ADR-0132 and ADR-0073 stands verbatim, including the method_rank forbids bullet.
+   - The reason is ADR-0132's own finding: *"The tie is a shadow of a kind that *is* keyed"*.
+
+   ADR-0132's `superseded_by` gains `0191` at ADR-0191's flip.
+
+**Rejected.**
+- A catalog tie-break, such as a distinct rank for `unit-tests-ue`, re-opens F35 §1.3's defect: a mixed Node+UE item
+  would author only one toolchain's tests.
+- Not re-homing `unit-tests-ue` contradicts N23 and fails Checkpoint 8g (7d).
+
+**Reversal.** Remove the keying line, revert the record amendment, and take the tie-break.
