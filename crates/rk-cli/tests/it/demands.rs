@@ -23,6 +23,14 @@
 //! reads `checklist` as a LIST of items. The double parses the envelope's `content` itself; the
 //! production handler does not, so a real `smoke` call over the shipped checklist is refused
 //! `input-malformed` until the bridge is ruled (package S8G-P7-DEMANDS's blocker).
+//!
+//! *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; D21-124, TAKEN PROVISIONALLY under
+//! D21-105.)* **Ruled and closed: the double no longer hides it.** The bridge is `rk-cli`'s
+//! [`rk_cli::verbs::run::bridged`] decorator, the one `choose_toolchain` wraps every adapter in. The
+//! double now reads `checklist` STRICTLY as a list, as the real handler does (`items_of`'s envelope
+//! parsing is deleted), and sits behind the same decorator, so this suite goes red over any shape the
+//! real handler refuses. A [`Tap`] in front of the decorator records what the kernel hands the PORT
+//! (the envelope, with its digest); the double records what the ADAPTER receives (the item list).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -152,33 +160,16 @@ struct SmokeItem {
     stdout_contains: String,
 }
 
-/// The `[[item]]` rows of a `checklist:` envelope's `content`, through the kernel's own TOML subset.
-fn items_of(envelope: &Json) -> Result<Vec<SmokeItem>, String> {
-    let content = envelope
-        .get("content")
-        .and_then(Json::as_str)
-        .ok_or_else(|| format!("the checklist input carries no `content`: {envelope}"))?;
-    let doc = rk_kernel::toml_subset::parse(content).map_err(|e| format!("{e:?}"))?;
-    let items = doc
-        .get("item")
-        .and_then(rk_kernel::toml_subset::Value::as_array)
-        .ok_or_else(|| "the checklist declares no `[[item]]`".to_owned())?;
-    items
-        .iter()
-        .map(|item| serde_json::from_value(toml_json(item)).map_err(|e| e.to_string()))
-        .collect()
-}
-
-fn toml_json(v: &rk_kernel::toml_subset::Value) -> Json {
-    use rk_kernel::toml_subset::Value as T;
-    match v {
-        T::Str(s) => Json::from(s.clone()),
-        T::Int(i) => Json::from(*i),
-        T::Float(f) => Json::from(*f),
-        T::Bool(b) => Json::from(*b),
-        T::Array(items) => Json::Array(items.iter().map(toml_json).collect()),
-        T::Table(t) => Json::Object(t.iter().map(|(k, v)| (k.clone(), toml_json(v))).collect()),
-    }
+/// The `checklist` input as the real handler reads it: STRICTLY a list of record V's items
+/// (`rk-adapter-toolchain-rust`'s `verbs::smoke`, `input(inputs, "smoke", "checklist")`), refused
+/// with the handler's own `input-malformed` wording otherwise. *(dated 2026-09-29, `s8g` build,
+/// package R-D2124-D2127-8g; D21-124 item 5: this was `items_of`, which parsed the envelope's
+/// `content` itself and so went green over a shape the real handler refuses.)*
+fn strict_items(checklist: &Json) -> Result<Vec<SmokeItem>, StepError> {
+    serde_json::from_value(checklist.clone()).map_err(|e| StepError::Transport {
+        kind: rk_types::error::TransportKind::Decode,
+        detail: format!("smoke refused (input-malformed): the `checklist` input: {e}"),
+    })
 }
 
 fn verb_output<T: serde::Serialize>(kind: &str, value: &T) -> Result<VerbOutput, StepError> {
@@ -260,11 +251,11 @@ impl Toolchain for Demands {
         let refuse = |why: String| StepError::Unsupported { capability: why };
         match call.verb {
             "smoke" => {
-                let envelope = call
+                let checklist = call
                     .inputs
                     .get("checklist")
                     .ok_or_else(|| refuse("smoke: no `checklist` input".to_owned()))?;
-                let items = items_of(envelope).map_err(|e| refuse(format!("smoke: {e}")))?;
+                let items = strict_items(checklist)?;
                 let rows: Vec<SmokeRow> = items
                     .iter()
                     .enumerate()
@@ -380,6 +371,47 @@ impl Toolchain for Demands {
     }
 }
 
+/// **What the kernel hands the PORT**, recorded in front of the checklist bridge (D21-124): every
+/// `run_verb` call's inputs by verb, then delegated. *(Added 2026-09-29, `s8g` build, package
+/// R-D2124-D2127-8g.)*
+struct Tap {
+    inner: Arc<dyn Toolchain>,
+    calls: Mutex<Vec<(String, Json)>>,
+}
+
+impl Toolchain for Tap {
+    fn detect(&self) -> Result<bool, StepError> {
+        self.inner.detect()
+    }
+    fn build(&self, bound: StepBound) -> Result<BuildReport, StepError> {
+        self.inner.build(bound)
+    }
+    fn test(&self, selection: &Selection, bound: StepBound) -> Result<TestOutcome, StepError> {
+        self.inner.test(selection, bound)
+    }
+    fn lint(&self, bound: StepBound) -> Result<(), StepError> {
+        self.inner.lint(bound)
+    }
+    fn classify(&self, path: &str) -> Result<Classification, StepError> {
+        self.inner.classify(path)
+    }
+    fn change_summary(&self, range: &str, bound: StepBound) -> Result<ChangeSummary, StepError> {
+        self.inner.change_summary(range, bound)
+    }
+    fn run_verb(&self, call: &VerbCall<'_>) -> Result<VerbOutput, StepError> {
+        self.calls.lock().expect("unpoisoned").push((
+            call.verb.to_owned(),
+            Json::Object(
+                call.inputs
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+            ),
+        ));
+        self.inner.run_verb(call)
+    }
+}
+
 // ------------------------------------------------------------------------------- the walk
 
 /// One walk's product: the report, the item's journal after it, and what the double was handed.
@@ -387,6 +419,8 @@ struct Walked {
     report: ActivityReport,
     events: Vec<Event>,
     calls: Vec<(String, Json)>,
+    /// What the kernel handed the port, in front of the bridge (D21-124).
+    port_calls: Vec<(String, Json)>,
     tree: tempfile::TempDir,
 }
 
@@ -459,6 +493,15 @@ impl Walked {
     /// The inputs the double's `verb` call was handed (the last such call).
     fn call(&self, verb: &str) -> Option<&Json> {
         self.calls
+            .iter()
+            .rev()
+            .find(|(name, _)| name == verb)
+            .map(|(_, inputs)| inputs)
+    }
+
+    /// The inputs the kernel handed the PORT for `verb` (the last such call), before the bridge.
+    fn port_call(&self, verb: &str) -> Option<&Json> {
+        self.port_calls
             .iter()
             .rev()
             .find(|(name, _)| name == verb)
@@ -562,12 +605,19 @@ fn walk(activity_id: &str, script: Script) -> Walked {
             Json::from("/demands-cargo-home/advisory-dbs"),
         );
     let double = Arc::new(Demands::new(script));
+    // *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; D21-124 item 5.)* The double sits
+    // behind the production decorator, and the tap in front of it. Was `toolchain:
+    // Arc::clone(&double) as Arc<dyn Toolchain>`.
+    let tap = Arc::new(Tap {
+        inner: rk_cli::verbs::run::bridged(Arc::clone(&double) as Arc<dyn Toolchain>),
+        calls: Mutex::new(Vec::new()),
+    });
     let ports = Ports {
         store: Arc::clone(&db),
         harness: Arc::new(FakeHarness::scripted(Vec::new())) as Arc<dyn Harness>,
         tracker: Arc::new(BoardTracker::default()) as Arc<dyn Tracker>,
         docs: Arc::new(RecordingDocs::default()) as Arc<dyn DocsSite>,
-        toolchain: Arc::clone(&double) as Arc<dyn Toolchain>,
+        toolchain: Arc::clone(&tap) as Arc<dyn Toolchain>,
     };
     let rt = Runtime::new(ports, &run_id, &stage)
         .with_tool_routing(routing)
@@ -603,6 +653,7 @@ fn walk(activity_id: &str, script: Script) -> Walked {
         report,
         events: journal(&db),
         calls: double.calls(),
+        port_calls: tap.calls.lock().expect("unpoisoned").clone(),
         tree,
     }
 }
@@ -628,11 +679,19 @@ fn smoke_result_is_produced_through_the_registry_verb() {
     );
     let names: Vec<&str> = w.calls.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(names, ["build", "smoke"], "the port calls, in step order");
+    // *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; D21-124.)* The envelope is read at
+    // the PORT (the tap, before the bridge); the items at the ADAPTER (the double, after it). Was
+    // both from the double's own call, which parsed the envelope itself (`items_of`).
     let envelope = w
-        .call("smoke")
-        .expect("the smoke verb was reached")
+        .port_call("smoke")
+        .expect("the smoke verb reached the port")
         .get("checklist")
         .expect("the smoke call carries its `checklist` input");
+    assert_eq!(
+        envelope.get("key").and_then(Json::as_str),
+        Some("checklist:smoke"),
+        "the port is handed the resolver's envelope (ADR-0173): {envelope}"
+    );
     let shipped = std::fs::read(root().join(".redkiln/checklists/smoke.toml"))
         .expect("the shipped smoke checklist");
     assert_eq!(
@@ -645,7 +704,13 @@ fn smoke_result_is_produced_through_the_registry_verb() {
         Some(rk_types::digest::sha256(&shipped).as_str()),
         "the input is the SHIPPED checklist's bytes"
     );
-    let items = items_of(envelope).expect("the shipped checklist is in record V's item form");
+    let items = strict_items(
+        w.call("smoke")
+            .expect("the smoke verb reached the adapter")
+            .get("checklist")
+            .expect("the adapter's call carries `checklist`"),
+    )
+    .expect("the adapter is handed the shipped checklist as a list in record V's item form");
     assert!(!items.is_empty(), "the checklist holds items");
     let mut ids = std::collections::BTreeSet::new();
     for item in &items {
@@ -958,5 +1023,86 @@ fn every_restored_demand_writes_one_artifact_write() {
         failures.is_empty(),
         "a restored demand did not write exactly one artifact.write:\n  {}",
         failures.join("\n  ")
+    );
+}
+
+// ------------------------------------------------------------------------------- D21-125's guard
+
+/// **The smoke checklist carries no `init` or `status` row until a record makes the smoke scratch
+/// a repository** (`s8g` B2; D21-125, TAKEN PROVISIONALLY under D21-105; R4 = ADR-0194 decision 2's
+/// dated note, proposed). *(Added 2026-09-29, `s8g` build, package R-D2124-D2127-8g.)*
+///
+/// ADR-0170 decision 4's escape clause (*"a row that needs the directory to be a repository makes
+/// it one in its own argv"*) cannot be met under the same decision's rule (*"against the binaries
+/// that build produced, never an installed `redkiln`"*): the handler's scratch is an empty
+/// directory, it runs no git, and `argv[0]` must be a built binary. Measured, `redkiln init` and
+/// `redkiln status` exit 3 there. A row pinning exit 3 would certify a refusal as health, so the
+/// rows stay out, owed to whichever record makes the scratch a repository.
+///
+/// The file is PARSED (`rk_kernel::toml_subset`) and only each item's `argv` ELEMENTS are read: the
+/// header comment and the `--help` rows' `stdout_contains` both name `init` and `status`, so a text
+/// scan would be satisfied or broken by its own prose. The ADR's owed note is matched on its exact
+/// phrase inside decision 2's text.
+#[test]
+fn smoke_checklist_carries_no_init_or_status_row_until_ruled() {
+    let text = std::fs::read_to_string(root().join(".redkiln/checklists/smoke.toml"))
+        .expect("the shipped smoke checklist reads");
+    let doc = rk_kernel::toml_subset::parse(&text).expect("the smoke checklist parses");
+    let items = doc
+        .get("item")
+        .and_then(rk_kernel::toml_subset::Value::as_array)
+        .expect("the checklist declares [[item]] rows");
+    assert!(!items.is_empty(), "the guard read no item");
+    let mut argvs = 0usize;
+    let mut offending = Vec::new();
+    for item in items {
+        let table = item.as_table().expect("an [[item]] row is a table");
+        let argv = table
+            .get("argv")
+            .and_then(rk_kernel::toml_subset::Value::as_array)
+            .expect("every item carries an argv array");
+        argvs += 1;
+        if argv
+            .iter()
+            .filter_map(rk_kernel::toml_subset::Value::as_str)
+            .any(|a| a == "init" || a == "status")
+        {
+            offending.push(format!(
+                "{}: {argv:?}",
+                table
+                    .get("id")
+                    .and_then(rk_kernel::toml_subset::Value::as_str)
+                    .unwrap_or("?")
+            ));
+        }
+    }
+    assert_eq!(argvs, items.len(), "every item's argv was read");
+    assert!(
+        offending.is_empty(),
+        "the smoke checklist carries an `init` or `status` row: {offending:?}. D21-125: these rows \
+         land only with the record that makes the smoke scratch a repository (remedy (i) handler \
+         init plus a root commit through rk-git, or (ii) a checklist scratch-setup item form), \
+         measured with positive expectations; the same commit inverts or retires this test"
+    );
+
+    let adr = std::fs::read_to_string(
+        root().join("references/adr/0194-the-four-verify-and-release-demands-have-producers.md"),
+    )
+    .expect("R4 = ADR-0194 reads");
+    let start = adr
+        .find("2. **The smoke checklist**")
+        .expect("ADR-0194 carries decision 2");
+    let end = adr[start..]
+        .find("3. **`ConfirmationResult`")
+        .map_or(adr.len(), |e| start + e);
+    // Whitespace is collapsed first: the record is hard-wrapped, and the phrase may cross a line.
+    let decision_two = adr[start..end]
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(
+        decision_two.contains("owed to a ruling"),
+        "ADR-0194 decision 2 no longer carries the owed note (\"owed to a ruling\") that names the two \
+         rows (D21-125)"
     );
 }

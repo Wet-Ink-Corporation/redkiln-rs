@@ -566,6 +566,13 @@ here moves until `s8g` lands. Selection itself changed under `s8d`'s R8 (ADR-017
 activity, `rigor` bound). This section's universe is a closure over `requires`, not a selection run, so R8 does not move
 the 24.
 
+*(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-126,
+TAKEN PROVISIONALLY under D21-105.)* **(a) is settled with no typed `lint` output.** `s8g` retired the two checks by
+ADR-0072 edits (`bdd-scenarios@5`, `docs-update@5`: the `toolchain:lint` step and the `policy` conjunct that read it
+deleted) rather than widening the port, so `LintReport` stays a registry-declared kind with no `rk-types` type, it
+does not join `EXPORTED`, and nothing here moves for it. (b) was settled by `confirmation-test@2`'s catalog edit
+(`s8g` §8g.1's S8G-P7-DEMANDS disposition): `ConfirmationResult`'s members are unchanged.
+
 | kind | lanes | role(s) | kind | lanes | role(s) |
 | --- | --- | --- | --- | --- | --- |
 | `ADR` | story | architect | `ImplReport` | both | implementer, investigator |

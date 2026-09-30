@@ -4876,6 +4876,182 @@ impl rk_ports::toolchain::Toolchain for UndetectedToolchain {
     }
 }
 
+/// **The checklist-envelope bridge** (`s8g` B1; D21-124, TAKEN PROVISIONALLY under D21-105; R4 =
+/// ADR-0194 decision 2's dated note, proposed). *(Added 2026-09-29, `s8g` build, package
+/// R-D2124-D2127-8g.)*
+///
+/// ADR-0173's resolver hands a `checklist:` input to the port as its envelope, `{ key, path,
+/// content, digest }`; ADR-0170's Rust `smoke` handler reads `checklist` as a LIST of items
+/// (*"`smoke` reads `checklist`, a list of items"*). Measured before this decorator, the real
+/// handler answered *"smoke refused (input-malformed): the `checklist` input: invalid type: map,
+/// expected a sequence"*. Both accepted records hold as written: the unwrap is here, at the port,
+/// in the composition root (ADR-0173: *"The read is the composition root's"*). The kernel's
+/// journalled and memoised input keeps its envelope and digest (ADR-0174's memo reads it).
+///
+/// **Trigger, strict.** Only a `run_verb` call's input named `checklist`, and only when it is an
+/// object whose `key` is a string starting `checklist:` and which carries a string `content`.
+/// **Transform.** `content` is parsed by [`rk_kernel::toml_subset`], the parser the loader reads a
+/// checklist file with (no TOML dependency is added), and its `[[item]]` rows become a JSON array,
+/// field names and types kept. **Fail closed.** An unparseable content, a missing or empty `item`
+/// array, an object that fails the trigger, and any shape other than an object or an array each
+/// refuse `input-malformed` in the handlers' own form, naming the key, and nothing is forwarded. An
+/// array passes unchanged. Per-item field validation stays the handler's.
+///
+/// Every adapter [`choose_toolchain`] constructs is wrapped here, so `run`, the verify and review
+/// passes, [`real_toolchain`] and `doctor` all get it by construction;
+/// `checklist_bridge::no_adapter_constructor_in_rk_cli_src_is_reachable_undecorated` is the floor.
+/// **Reversal** (D21-124): delete this decorator; if a second toolchain verb comes to read a
+/// checklist, the unwrap moves to the kernel's tool arm (option (c)) instead.
+#[must_use]
+pub fn bridged(
+    inner: Arc<dyn rk_ports::toolchain::Toolchain>,
+) -> Arc<dyn rk_ports::toolchain::Toolchain> {
+    Arc::new(ChecklistBridge { inner })
+}
+
+/// The decorator [`bridged`] returns: every method delegates; `run_verb` unwraps `checklist`.
+struct ChecklistBridge {
+    inner: Arc<dyn rk_ports::toolchain::Toolchain>,
+}
+
+/// The `[[item]]` rows of a checklist envelope as a JSON array, or the refusal's reason.
+fn checklist_items(value: &serde_json::Value) -> Result<Option<serde_json::Value>, String> {
+    use serde_json::Value as J;
+    match value {
+        J::Array(_) => Ok(None),
+        J::Object(map) => {
+            let key = map.get("key").and_then(J::as_str);
+            let content = map.get("content").and_then(J::as_str);
+            let (key, content) = match (key, content) {
+                (Some(k), Some(c)) if k.starts_with("checklist:") => (k, c),
+                (Some(k), _) => {
+                    return Err(format!(
+                        "the envelope keyed `{k}` is not a `checklist:` envelope carrying a string \
+                         `content`"
+                    ));
+                }
+                (None, _) => {
+                    return Err(
+                        "an object with no string `key` is not a `checklist:` envelope".to_owned(),
+                    );
+                }
+            };
+            let doc = rk_kernel::toml_subset::parse(content)
+                .map_err(|e| format!("`{key}`'s content does not parse: {e}"))?;
+            let rows = doc
+                .get("item")
+                .and_then(rk_kernel::toml_subset::Value::as_array)
+                .ok_or_else(|| format!("`{key}` declares no `[[item]]` array"))?;
+            if rows.is_empty() {
+                return Err(format!("`{key}` declares zero `[[item]]` rows"));
+            }
+            rows.iter()
+                .map(|row| toml_to_json(row).map_err(|e| format!("`{key}`: {e}")))
+                .collect::<Result<Vec<_>, _>>()
+                .map(|items| Some(J::Array(items)))
+        }
+        other => Err(format!(
+            "a {} is neither a `checklist:` envelope nor a list of items",
+            match other {
+                J::Null => "null",
+                J::Bool(_) => "boolean",
+                J::Number(_) => "number",
+                J::String(_) => "string",
+                J::Array(_) | J::Object(_) => "value",
+            }
+        )),
+    }
+}
+
+/// One `toml_subset` value as JSON, names and types kept; a non-finite float is refused.
+fn toml_to_json(v: &rk_kernel::toml_subset::Value) -> Result<serde_json::Value, String> {
+    use rk_kernel::toml_subset::Value as T;
+    Ok(match v {
+        T::Str(s) => serde_json::Value::from(s.clone()),
+        T::Int(i) => serde_json::Value::from(*i),
+        T::Float(f) => serde_json::Number::from_f64(*f)
+            .map(serde_json::Value::Number)
+            .ok_or_else(|| format!("the float {f} has no JSON form"))?,
+        T::Bool(b) => serde_json::Value::from(*b),
+        T::Array(items) => serde_json::Value::Array(
+            items
+                .iter()
+                .map(toml_to_json)
+                .collect::<Result<Vec<_>, _>>()?,
+        ),
+        T::Table(t) => serde_json::Value::Object(
+            t.iter()
+                .map(|(k, v)| toml_to_json(v).map(|v| (k.clone(), v)))
+                .collect::<Result<serde_json::Map<_, _>, _>>()?,
+        ),
+    })
+}
+
+impl rk_ports::toolchain::Toolchain for ChecklistBridge {
+    fn detect(&self) -> Result<bool, rk_types::error::StepError> {
+        self.inner.detect()
+    }
+    fn build(
+        &self,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_types::verb_output::BuildReport, rk_types::error::StepError> {
+        self.inner.build(bound)
+    }
+    fn test(
+        &self,
+        selection: &rk_ports::toolchain::Selection,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_ports::toolchain::TestOutcome, rk_types::error::StepError> {
+        self.inner.test(selection, bound)
+    }
+    fn lint(
+        &self,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<(), rk_types::error::StepError> {
+        self.inner.lint(bound)
+    }
+    fn classify(
+        &self,
+        path: &str,
+    ) -> Result<rk_ports::toolchain::Classification, rk_types::error::StepError> {
+        self.inner.classify(path)
+    }
+    fn change_summary(
+        &self,
+        range: &str,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {
+        self.inner.change_summary(range, bound)
+    }
+    fn run_verb(
+        &self,
+        call: &rk_ports::toolchain::VerbCall<'_>,
+    ) -> Result<rk_ports::toolchain::VerbOutput, rk_types::error::StepError> {
+        let Some(value) = call.inputs.get("checklist") else {
+            return self.inner.run_verb(call);
+        };
+        match checklist_items(value) {
+            Ok(None) => self.inner.run_verb(call),
+            Ok(Some(items)) => {
+                let mut inputs = call.inputs.clone();
+                inputs.insert("checklist".to_owned(), items);
+                self.inner.run_verb(&rk_ports::toolchain::VerbCall {
+                    verb: call.verb,
+                    inputs: &inputs,
+                    bound: call.bound,
+                })
+            }
+            Err(why) => Err(rk_types::error::StepError::Transport {
+                kind: rk_types::error::TransportKind::Decode,
+                detail: format!(
+                    "{} refused (input-malformed): the `checklist` input: {why}",
+                    call.verb
+                ),
+            }),
+        }
+    }
+}
+
 /// **ADR-0137: build the real `Toolchain`, chosen by the port's own `detect()`.**
 ///
 /// `[adapters] toolchains` in **declared order**, first success wins. Position would not do — the
@@ -5053,8 +5229,10 @@ pub fn choose_toolchain(
                     Some(pnpm) => cfg.with_tool_program("pnpm", PathBuf::from(pnpm)),
                     None => cfg,
                 };
+                // *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124.)* Wrapped in the
+                // checklist-envelope bridge ([`bridged`]) at construction, so no path gets it bare.
                 match rk_adapter_toolchain_rust::RustToolchain::new(cfg) {
-                    Ok(built) => Arc::new(built),
+                    Ok(built) => bridged(Arc::new(built)),
                     Err(e) => {
                         report(&format!("{name} could not be built: {e}"));
                         tried.push(format!("{name}: could not be built: {e}"));
@@ -5080,8 +5258,10 @@ pub fn choose_toolchain(
                         continue;
                     }
                 };
+                // *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124.)* Wrapped in the
+                // checklist-envelope bridge ([`bridged`]) at construction, so no path gets it bare.
                 match rk_adapter_toolchain_node::NodeToolchain::new(cfg) {
-                    Ok(built) => Arc::new(built),
+                    Ok(built) => bridged(Arc::new(built)),
                     Err(e) => {
                         report(&format!("{name} could not be built: {e}"));
                         tried.push(format!("{name}: could not be built: {e}"));

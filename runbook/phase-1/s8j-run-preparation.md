@@ -545,6 +545,12 @@ stage's path because each lane's first activity needs its root:
 - Three of the five Spec providers require IntakeRecord: `bdd-scenarios`, `use-case-spec` and `user-story-ac`
   [measured: their `requires` rows]. `bdd-scenarios` is the one the story pack's mandatory specification stage
   selects today (D21-43 N2).
+  *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; receiver note, `spikes/DECISIONS-2026-09-21.md`
+  D21-126, TAKEN PROVISIONALLY under D21-105.)* The Spec producer is `bdd-scenarios@5`: its `gherkin-lint` step
+  and the `policy` conjunct that read it are retired (ADR-0072; `.redkiln/CHANGELOG.md`), so its `policy` reads
+  `check.failed == 0` and no longer refuses on an unbound `lint` output. `lane_walk`'s story row walks
+  (`LANE_WALK story walked=13 refused=0`), so `lane_proof::story_lane_spec_is_landed_and_journalled` no longer
+  meets that refusal before `emit`.
 
 **Who owns what (D21-43's integration calls).** *"The loader and `.redkiln/processes/` are **s8d**'s. The
 pack-declared human-root questions are **s8j**'s. s8g's `.redkiln/questions.toml` is dropped in favour of s8d's

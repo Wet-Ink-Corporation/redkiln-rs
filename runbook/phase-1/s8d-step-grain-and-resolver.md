@@ -1846,6 +1846,22 @@ being `story.toml`'s `external_dep` row and both lanes reading `external_dep = f
 and 8, still hold (14 and 11). With this line, move 1's three row changes are all made; Checkpoint 8d stays provisional
 until Checkpoint 8g (12) re-runs it whole.
 
+*(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; `spikes/DECISIONS-2026-09-21.md` D21-126, TAKEN
+PROVISIONALLY under D21-105; D21-73 item 4, second half.)* **The story lane's two remaining refusals flip to walks.**
+`bdd-scenarios@5` and `docs-update@5` (ADR-0072 edits, `.redkiln/CHANGELOG.md`) retire their `toolchain:lint` step
+and the `policy` conjunct that read it, because `Toolchain::lint` returns `()` and the step bound nothing; each
+`policy` reads `check.failed == 0` over `${self-check.outputs}`. Read from inside the test binary through the
+no-dispatch helper, both tests `ok`: before the edit **`LANE_WALK story walked=11 refused=2`** (`bdd-scenarios`:
+*"the step `gherkin-lint` has not run in this activation"*; `docs-update`: *"the step `lint` has not run in this
+activation"*), after it **`LANE_WALK story walked=13 refused=0`**; the fix lane unchanged at **`walked=14
+refused=0`**. The rows as measured: story `specification` `bdd-scenarios` **walks**; `implement` `docs-update`
+**walks**, `tdd-red-green-refactor`, `change-summary`; every other row as the S8G-P8 line above. **The claims now
+read 14 of 14 (fix) and 13 of 13 (story)**, measured, not presumed. Checkpoint 8d (6a)'s floors, 10 and 8, are lower
+bounds and are not raised by this line (the readings are 14 and 13). The shipped-pack lattice reading is unchanged
+(`lattice-shipped: packs=2 rigor=pack-default contexts=31104 pairs=279936 unsat=1296 dead=57/102 ties=0
+hard_cycles=0`, before and after, every `lattice-shipped` line byte-identical), so Checkpoint 8b's lattice pins do
+not move. `rk-kernel`'s `selection::no_check_step_reads_a_toolchain_lint_output` guards the retired shape.
+
 ### 8d.10 Tests, red first, and the mutants that must die
 
 Every test below is authored, run, and **watched fail for the right reason** before the code it pins

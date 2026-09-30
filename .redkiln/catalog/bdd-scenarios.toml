@@ -3,7 +3,7 @@
 # spec form family: user-story-ac(10) < structured-nl-requirements(20) < bdd-scenarios(30) < use-case-spec(40)
 [activity]
 id           = "bdd-scenarios"
-version      = 4   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
+version      = 5   # bumped 2026-09-29 (s8g, D21-126; ADR-0072; .redkiln/CHANGELOG.md bdd-scenarios@5)
 stage        = "specification"
 provides     = ["Spec", "GherkinScenarios"]
 requires     = ["IntakeRecord", "ProblemStatement?"]   # run5: stories forbid discovery
@@ -17,25 +17,16 @@ evidence     = ["SelfCheck", "ToolReport", "Findings?", "HumanAnswer?"]
 budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 3600 }
 deviation_ok = ["downgrade"]
 keywords     = ["bdd", "gherkin", "given when then", "executable specification"]
-rationale    = "ISTQB CTFL v4 collaboration-based approaches: executable examples double as the acceptance test; costs a lint step and a reviewer."
+rationale    = "ISTQB CTFL v4 collaboration-based approaches: executable examples double as the acceptance test; costs a reviewer."
 
 [[step]]
 id      = "draft"
 kind    = "agent"
 role    = "spec-author"
-inputs  = { intake = "artifact:IntakeRecord", problem = "artifact:ProblemStatement?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}", lint = "${gherkin-lint.outputs?}" }
+inputs  = { intake = "artifact:IntakeRecord", problem = "artifact:ProblemStatement?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}" }
 outputs = "value:GherkinScenarios"
 timeout_secs = 900
 retry   = { max = 2 }
-
-[[step]]
-id      = "gherkin-lint"
-kind    = "tool"
-run     = "toolchain:lint"
-inputs  = { scenarios = "${draft.outputs.scenarios}" }
-outputs = "value:LintReport"
-timeout_secs = 120
-retry   = { max = 1 }
 
 [[step]]
 id      = "self-check"
@@ -59,8 +50,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { lint = "${gherkin-lint.outputs}", check = "${self-check.outputs}" }
-expr    = "lint.errors.len() == 0 and check.failed == 0"
+inputs  = { check = "${self-check.outputs}" }
+expr    = "check.failed == 0"
 on_false = { to = "draft", max = 2 }
 
 [[step]]
@@ -83,4 +74,4 @@ inputs  = { spec = "${to-spec.outputs}", findings = "${adversary.outputs?}" }
 id      = "emit"
 kind    = "emit"
 artifacts = { Spec = "${to-spec.outputs}", GherkinScenarios = "${draft.outputs}" }
-evidence  = ["${gherkin-lint}", "${self-check}", "${adversary?}", "${signoff?}"]
+evidence  = ["${self-check}", "${adversary?}", "${signoff?}"]

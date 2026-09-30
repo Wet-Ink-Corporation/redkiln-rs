@@ -1649,3 +1649,138 @@ fn migration_dry_run_is_selected_on_no_shipped_lane() {
     );
     let _ = std::fs::remove_dir_all(&probe);
 }
+
+// ---- D21-126 (`s8g` B3; D21-73 item 4, second half): no check reads a `toolchain:lint` output --------
+
+/// The `[[step]]` tables of one parsed activity file, in file order.
+fn toml_steps_of(doc: &rk_kernel::toml_subset::Table) -> Vec<&rk_kernel::toml_subset::Table> {
+    doc.get("step")
+        .and_then(rk_kernel::toml_subset::Value::as_array)
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(rk_kernel::toml_subset::Value::as_table)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Over parsed activity files: how many `run = "toolchain:lint"` steps were seen, and every
+/// `kind = "check"` step input that reads one of them (`<file>: <check id>.<input> = <value>`).
+fn check_reads_of_lint(files: &[(String, rk_kernel::toml_subset::Table)]) -> (usize, Vec<String>) {
+    let str_of = |t: &rk_kernel::toml_subset::Table, k: &str| {
+        t.get(k)
+            .and_then(rk_kernel::toml_subset::Value::as_str)
+            .map(str::to_owned)
+    };
+    let mut lint_steps = 0usize;
+    let mut violations = Vec::new();
+    for (name, doc) in files {
+        let steps = toml_steps_of(doc);
+        let lint_ids: Vec<String> = steps
+            .iter()
+            .filter(|s| str_of(s, "run").as_deref() == Some("toolchain:lint"))
+            .filter_map(|s| str_of(s, "id"))
+            .collect();
+        lint_steps += lint_ids.len();
+        for check in steps
+            .iter()
+            .filter(|s| str_of(s, "kind").as_deref() == Some("check"))
+        {
+            let Some(inputs) = check
+                .get("inputs")
+                .and_then(rk_kernel::toml_subset::Value::as_table)
+            else {
+                continue;
+            };
+            for (input, value) in inputs {
+                let Some(value) = value.as_str() else {
+                    continue;
+                };
+                for id in &lint_ids {
+                    if value.contains(&format!("${{{id}.outputs")) {
+                        violations.push(format!(
+                            "{name}: `{}`.{input} = {value:?} reads the `toolchain:lint` step `{id}`",
+                            str_of(check, "id").unwrap_or_default()
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    (lint_steps, violations)
+}
+
+/// **No `check` step reads the output of a `toolchain:lint` step** (D21-126, TAKEN PROVISIONALLY
+/// under D21-105; `s8g` B3; ADR-0072 edits `bdd-scenarios@5` and `docs-update@5`).
+///
+/// `Toolchain::lint` returns `Result<(), StepError>` (ADR-0169's port, 17 implementations), so a
+/// `toolchain:lint` step binds no value and a check that reads one refuses by name on every lane.
+/// The two lane activities whose `policy` read `lint.errors.len() == 0` retire the step and the
+/// conjunct at v5. This holds for as long as the port returns `()`: a later record that gives
+/// `lint` a typed output re-adds the steps by another ADR-0072 bump and amends this guard.
+///
+/// The files are PARSED (`rk_kernel::toml_subset`), never text-scanned, so a comment or a
+/// rationale that names the old conjunct cannot satisfy or break it. Anti-vacuity: the walk counts
+/// its files and must see at least one `toolchain:lint` step (`change-summary`'s code lint, which no
+/// check reads). CONTROL: a synthetic activity whose check reads its lint step is flagged.
+#[test]
+fn no_check_step_reads_a_toolchain_lint_output() {
+    let dir = workspace_root().join(".redkiln").join("catalog");
+    let mut files = Vec::new();
+    for entry in std::fs::read_dir(&dir).expect("the shipped catalog directory reads") {
+        let path = entry.expect("a catalog entry").path();
+        if path.extension().and_then(|e| e.to_str()) != Some("toml") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).expect("a catalog file reads");
+        let doc = rk_kernel::toml_subset::parse(&text)
+            .unwrap_or_else(|e| panic!("{} parses: {e}", path.display()));
+        files.push((
+            path.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            doc,
+        ));
+    }
+    assert!(
+        !files.is_empty(),
+        "the walk read no catalog file under {} — a guard over zero files passes having read nothing",
+        dir.display()
+    );
+    let (lint_steps, violations) = check_reads_of_lint(&files);
+    println!(
+        "LINT_READERS files={} toolchain_lint_steps={lint_steps} violations={}",
+        files.len(),
+        violations.len()
+    );
+    assert!(
+        lint_steps >= 1,
+        "the walk saw no `toolchain:lint` step over {} files (change-summary carries one), so the \
+         guard below cannot see what it guards",
+        files.len()
+    );
+
+    // CONTROL, asserted before the verdict: the same function flags a check that reads its lint step.
+    let control = rk_kernel::toml_subset::parse(concat!(
+        "[activity]\nid = \"control\"\n\n",
+        "[[step]]\nid = \"gl\"\nkind = \"tool\"\nrun = \"toolchain:lint\"\n\n",
+        "[[step]]\nid = \"policy\"\nkind = \"check\"\n",
+        "inputs = { lint = \"${gl.outputs}\" }\nexpr = \"lint.errors.len() == 0\"\n",
+    ))
+    .expect("the control parses");
+    let (control_lint, control_hits) = check_reads_of_lint(&[("control.toml".to_owned(), control)]);
+    assert_eq!(
+        (control_lint, control_hits.len()),
+        (1, 1),
+        "CONTROL: a check reading its `toolchain:lint` step is not flagged: {control_hits:?}"
+    );
+
+    assert!(
+        violations.is_empty(),
+        "a `check` step reads the output of a `toolchain:lint` step, which binds nothing while \
+         `Toolchain::lint` returns `()` (D21-126; D21-73 item 4): the check refuses by name on \
+         every lane that selects it:\n  {}",
+        violations.join("\n  ")
+    );
+}

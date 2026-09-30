@@ -10,6 +10,13 @@
 # here": the scratch is an empty directory, not a repository, and record V's handler runs no git), so §8g.6's
 # "`redkiln -C <scratch> init`, then `status`" rows are owed to a ruling (package S8G-P7-DEMANDS's blocker), not
 # written with an inverted expectation.
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g.) The blocker is ruled: D21-125 (TAKEN PROVISIONALLY under
+# D21-105) keeps the rows out and names ADR-0170 decision 4's internal contradiction (its escape clause, "a row that
+# needs the directory to be a repository makes it one in its own argv", cannot be met under its rule that rows run
+# "against the binaries that build produced"). The rows are owed to the record that makes the smoke scratch a
+# repository; demands::smoke_checklist_carries_no_init_or_status_row_until_ruled pins their absence. Comment only:
+# the twelve rows below are unchanged. From D21-124, the handler receives these rows as a list through rk-cli's
+# checklist-envelope bridge (rk_cli::verbs::run::bridged).
 
 source = "runbook/phase-1/s8g-verify-and-restored-demands.md section 8g.6, 'The first cut': redkiln --version; redkiln-migrate --version; redkiln --help, naming the nine verbs (cli.rs: 'The nine verbs, and no others'); redkiln-migrate with no arguments, exiting clap's 2 (RT-53). Each expectation measured on the built binary before it was written."
 

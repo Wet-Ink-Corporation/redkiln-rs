@@ -3167,6 +3167,12 @@ Items 1–3 are pre-existing `s7b` selection code; the stage file says only the 
 - **Item 4 is owed**: `confirmation-test`'s emit fields and the `lint` output to `s8g`/`s8h` as their stage files fit
   (each by a dated receiver note), and `bisect`'s registry row to the stage that owns its verb.
 
+*(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g.)* **Item 4 is fully disposed of at `s8g`.**
+`confirmation-test`'s emit fields were settled by `confirmation-test@2` (package S8G-P7-DEMANDS; R4 = ADR-0194 decision 3's
+dated note). The `lint` output is settled by retirement under D21-126 (`bdd-scenarios@5`, `docs-update@5`; the story lane
+measured `walked=13 refused=0`). `bisect`'s registry row is ruled by D21-127: no row, no Phase-1 owner, owed to the
+Phase-2 bisect repair. D21-124..D21-127 are each TAKEN PROVISIONALLY under D21-105, pending the operator's confirmation.
+
 ---
 
 ## D21-74 · Step 5 draws no self-edge, and inside `Changeset`'s own producer `selection = "affected"` resolves over the run branch's diff

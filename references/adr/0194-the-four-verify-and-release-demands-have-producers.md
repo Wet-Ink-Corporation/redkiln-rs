@@ -95,6 +95,42 @@ Rejected: they are ADR-0170's decisions (record V), and a second specification w
    private worktree). The producer walk is proved over a double that parses the envelope; a real `smoke` call over the
    shipped checklist refuses until the bridge is ruled (same blocker).
 
+   *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; `spikes/DECISIONS-2026-09-21.md` D21-124, TAKEN
+   PROVISIONALLY under D21-105; this record `proposed`.)* **The checklist-envelope bridge: closed by D21-124.** The
+   unwrap is a `Toolchain` decorator in `rk-cli`'s composition root (`rk_cli::verbs::run::bridged`), wrapped around
+   each adapter where `choose_toolchain` constructs it, so `run`, the verify and review passes, `real_toolchain` and
+   `doctor` all get it. It unwraps only a `checklist` input that is an object whose `key` starts `checklist:` and
+   which carries a string `content`: the content is parsed by `rk_kernel::toml_subset` (no TOML dependency is added)
+   and its `[[item]]` rows are handed to the adapter as a JSON array; every other shape but an array refuses
+   `input-malformed` naming the key, and an array passes unchanged. The kernel's journalled input keeps its envelope
+   and digest. No accepted Decision moves: ADR-0170's *"`smoke` reads `checklist`, a list of items"* and ADR-0173's
+   resolver table hold as written. Measured through the no-dispatch helper: the real `RustToolchain`, reached through
+   `real_toolchain` over the shipped checklist's envelope, now fails at its build (*"the build stream carries no
+   build-finished message (exit 101)"*, a fixture with no target), not at input parsing; the undecorated adapter
+   still answers *"invalid type: map, expected a sequence"*; the `demands::` double reads `checklist` strictly as a
+   list and sits behind the same decorator. **An unreconciled point, recorded and not ruled:** ADR-0170 decision 8
+   reads *"A checklist is a TOML file of `[[item]]` rows (`id`, `text`) plus a `source`"*, while decision 4's `smoke`
+   handler reads each item as `{ id, argv, cwd, expect_exit, stdout_contains }` and refuses an unknown field; the
+   shipped `smoke.toml` is in the handler's form. The two row forms are not reconciled by this record.
+
+   *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; `spikes/DECISIONS-2026-09-21.md` D21-125, TAKEN
+   PROVISIONALLY under D21-105; this record `proposed`.)* **The `init` and `status` rows stay out, and ADR-0170
+   decision 4's internal contradiction is named, not moved.** Its escape clause, *"a row that needs the directory to
+   be a repository makes it one in its own argv"*, cannot be met under the same decision's rule that the handler
+   *"runs each declared checklist row against the binaries that build produced, never an installed `redkiln`"*: the
+   scratch is an empty directory, the handler runs no git, and `argv[0]` must be a built binary, so no row can make
+   it a repository. The two rows remain owed to a ruling: they land only with a record choosing (i) the handler makes
+   the scratch a repository through `rk-git` before any row runs (superseding decision 4's *"The handler runs no
+   git"* in part and extending ADR-0105 clause 5's write set), or (ii) a checklist-level scratch-setup item form
+   (superseding decision 4's item form in part), measured at the handler's real placement with positive
+   expectations. A row pinning exit 3 is rejected: it would certify a refusal as health. A panel judge's private
+   measurement, to be re-measured before any record cites it: `git init` alone still exits 3 (*"your current branch
+   'main' does not have any commits yet"*), so (i) needs a root commit with a committer identity passed on the call,
+   and discovery must be bounded (`GIT_CEILING_DIRECTORIES` or an explicit `GIT_DIR`), because `redkiln init` in a
+   directory under no repository's `.git/` found an enclosing repository and wrote there.
+   `demands::smoke_checklist_carries_no_init_or_status_row_until_ruled` pins the absence over the PARSED checklist's
+   `argv` elements and this note's phrase.
+
 3. **`ConfirmationResult` — `confirmation-test`.** `toolchain:test` with *"`selection =
    "artifact:ReproCase.command"`"* through `selection_of` (ADR-0162) and the resolver; the `fixed` check reads
    *"`result.status == 'passing'`"*, and a non-passing result opens *"`question = "confirmation.not-fixed"`"*, one of
@@ -114,6 +150,38 @@ Rejected: they are ADR-0170's decisions (record V), and a second specification w
    **D21-73 item 4's other two halves are not decided by this record**: the `lint` port's output (`Toolchain::lint`
    returns `()`, and `bdd-scenarios`/`docs-update` read `lint.errors`) and `bisect`'s registry row were measured and
    returned to the orchestrator with options by package S8G-P7-DEMANDS, unruled.
+
+   *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; `spikes/DECISIONS-2026-09-21.md` D21-126, TAKEN
+   PROVISIONALLY under D21-105; this record `proposed`.)* **D21-73 item 4's second half, the `lint` output: settled by
+   retirement, not by a widening.** `bdd-scenarios@5` and `docs-update@5` (ADR-0072 edits, `.redkiln/CHANGELOG.md`)
+   delete their `toolchain:lint` step and the `lint` input on the drafting step; each `policy` reads `check.failed
+   == 0` over `${self-check.outputs}` with `on_false` unchanged; the evidence drops the lint step; `bdd-scenarios`'
+   rationale reads *"costs a reviewer"* and `docs-update`'s drops *"the lint catches broken references"*. The retired
+   check never ran: `Toolchain::lint(&self, bound)` returns `Result<(), StepError>` and receives no step input, so the
+   step linted no Gherkin and no docs and bound no value. **Rejected: (b), widening the port** to a typed
+   `LintReport`, which would move ADR-0169's port and its 17 implementations and ADR-0170's surface, and would let a
+   clean clippy run open a Gherkin gate (a proxy); **rejected: (a), handing the item to `s8h`**, whose §8h.4 moves
+   nothing until `s8g` lands, and the optional read `${…?}`, which fails open. The `lint` registry row (`outputs =
+   "LintReport"`, route `port`), the port trait, `change-summary`'s and `tech-debt-assessment`'s code-lint steps and
+   `api-contract-spec`'s `toolchain:contract_lint` are untouched. The owner of a real Gherkin or docs lint is a future
+   record after Phase 1 (a content-specific verb with a typed output, as a new `toolchain`-route row); the steps come
+   back at v6 by another ADR-0072 bump. Measured: the story lane reads **`LANE_WALK story walked=13 refused=0`** (was
+   11 and 2), the fix lane `walked=14 refused=0`, and the shipped-pack lattice reading is unchanged (`packs=2
+   contexts=31104 pairs=279936 unsat=1296 dead=57/102 ties=0 hard_cycles=0`). `rk-kernel`'s
+   `selection::no_check_step_reads_a_toolchain_lint_output` guards the shape over the parsed catalog.
+
+   *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; `spikes/DECISIONS-2026-09-21.md` D21-127, TAKEN
+   PROVISIONALLY under D21-105; this record `proposed`.)* **D21-73 item 4's third half, `bisect`'s registry row: no
+   row, no Phase-1 owner.** No `.redkiln/registry.toml` row is written and `rk-kernel`'s `verb_registry::SHIPPED_ROWS`
+   stays 13. D21-73's *"the stage that owns its verb"* has no `s8*` owner (neither `s8h` nor `s8j` scopes a
+   VCS-history handler), so `bisect` stays in the set accepted ADR-0170 decision 1 already names: *"The other verbs
+   have no row and refuse by **bare** name"*. The owner is the Phase-2 bisect repair (ADR-0093: *"Retained as the
+   Phase-2 repair"*), whose record writes the row with its handler: `inputs` from what the handler reads, a declared
+   `vcs_history` feed, `side_effecting` from its real behaviour, and the `SHIPPED_ROWS` 13 → 14 edit together.
+   **Rejected:** a row with `inputs = []`, which the catalog step's three carried names (`command`, `history`,
+   `range`) contradict and which would pass the input check vacuously; and a Rust `bisect` git operation, which is
+   out of this stage's scope and overlaps ADR-0193's write set. No accepted Decision moves, and no lane count moves:
+   `bisect` is selected on neither lane.
 
 4. **`ScanReport` — `sca-scan`.** `toolchain:sca_scan`, gated by `scan.accept-findings`. The handler's semantics are
    ADR-0170 decision 5's: both tools, the CVSS bands, `unrated`, the advisory database's commit or a refusal by name,
@@ -180,3 +248,10 @@ premise that a failing result *"is emitted and the stage completes on it"* was r
 alone; at `b5b7305` the decode table's interim verdict (`rk-kernel`'s `decode_verb_value`, scoped by `s8d` P4's
 `read_by_a_later_check`) already refused it. The check is still the decision D21-46 R6 records: it makes the refusal
 name the activity's own check and reads the status the catalog states.
+
+*(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; D21-124..D21-127, each TAKEN PROVISIONALLY under
+D21-105.)* **The confidence line's open items, re-read.** The checklist-envelope bridge is closed (decision 2's
+D21-124 note). Decision 2's two `init`/`status` rows stay owed to a record that makes the smoke scratch a repository
+(D21-125). D21-73 item 4's `lint` half is settled by the `bdd-scenarios@5`/`docs-update@5` retirement (D21-126) and
+its `bisect` half by deferral to the Phase-2 bisect repair (D21-127), each in decision 3's dated notes. ADR-0170
+decision 8's `(id, text)` row form against the smoke item form stays unreconciled.

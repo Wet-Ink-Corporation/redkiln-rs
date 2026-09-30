@@ -257,6 +257,10 @@ under D21-107, not flipped); the next ledger id is **D21-119** *(dated 2026-09-2
   after this stage the fix lane reads 14 rows (`equivalence-boundary` leaves verify), **14 of 14** only if
   `confirmation-test`'s emit fields are settled here (§8g.1's D21-73 item 4 note), else 13 of 14; the story lane
   reads **13** rows, **13 of 13** only if the `lint` port's output is placed here (the same note), else 11 of 13.
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126, TAKEN PROVISIONALLY under D21-105.)* Measured after the `lint` output was settled by
+  retirement (`bdd-scenarios@5`, `docs-update@5`), from the test binary's own lines: **`LANE_WALK story walked=13
+  refused=0`** and **`LANE_WALK fix walked=14 refused=0`**, so the story lane reads **13 of 13** and the fix lane
+  **14 of 14**.
 - `pub const ALL: [Self; 41]` in `crates/rk-types/src/event_kind.rs`; Checkpoint 7c's guard in
   `runbook/phase-1/s7c-adapters.md` reads `grep -qE 'pub const ALL: \[Self; 41\]' crates/rk-types/src/event_kind.rs`.
   It moves to 42 in the commit that lands `verify_completed` (D21-47).
@@ -368,6 +372,11 @@ line in the earlier stage's file, in that commit:
      `implement` is unchanged (the escalation is keyed on `criticality >= high`, both lanes `low`), `equivalence-boundary`
      is selected at no stage, and `integration-tests` is in neither table (`external_dep = false` on both). Checkpoint
      8d (6a)'s floors of 10 and 8 hold. `s8d` §8d.9 carries the dated line with every measured row.
+   - *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126, TAKEN PROVISIONALLY under D21-105.)* **The story claim moves ~~11 of 13~~ to 13
+     of 13.** `bdd-scenarios@5` and `docs-update@5` retire their `toolchain:lint` step and the `policy` conjunct
+     that read it (ADR-0072), so both walk: measured **`LANE_WALK story walked=13 refused=0`** (was `walked=11
+     refused=2`), the fix lane unchanged at `walked=14 refused=0`. `s8d` §8d.9 carries the dated line; Checkpoint 8d
+     (6a)'s floors are lower bounds and are not raised.
 2. **`s8e`'s interim-key list.** `fsm::every_item_scoped_kind_carries_the_interim_item_key` *"iterates
    `EventKind::ALL` against that list, so a kind added later without a decision fails it"*. `verify_completed` is such
    a kind, so this stage's variant turns the test red until the list names it. R1 names the kind item-scoped, with its
@@ -402,12 +411,18 @@ their stage files fit (each by a dated receiver note), and `bisect`'s registry r
   `bdd-scenarios` (`${gherkin-lint.outputs}`) and `docs-update` (`${lint.outputs}`). This stage widens the port (§8g.2),
   so the lint output is placed here. If `LintReport` becomes a Rust type, `s8h` §8h.4 exports it by name (its receiver
   note).
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126.)* The output is **not** placed as a Rust type: the two checks are retired by
+  catalog edit (the disposition below), `LintReport` stays a registry-declared kind with no `rk-types` type, and
+  `s8h` §8h.4 has nothing to export (its dated receiver note). ~~This stage widens the port (§8g.2), so the lint
+  output is placed here.~~
 - **`bisect`'s registry row.** `.redkiln/catalog/bisect.toml`'s `bisect` step runs `toolchain:bisect`, and
   `.redkiln/registry.toml` has no `bisect` row (`spikes/p9/registry.toml` has one: `outputs = "BisectReport"`,
   `timeout = "test_timeout"`). No `s8*` stage file owns that verb (measured: `grep -n bisect` over `runbook/phase-1/s8*.md`
   names it only as a rank or a ceiling), so D21-73's *"the stage that owns its verb"* falls here, as the stage that owns
   the verify verbs. It moves no lane count: after R8 (ADR-0179) step 4 chooses `root-cause`, rank 10, for the fix lane's
   `RootCause`, and `bisect` is selected on neither lane.
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; panel ruling B4; D21-127.)* Disposed of below: deferred to the record deciding a bisect
+  handler (the Phase-2 bisect repair); not owned by this stage.
 - **`package_binaries` is already written** (D21-73 item 5; R8 = ADR-0179 decision 4, `proposed` *(dated 2026-09-27, `s8d` close: accepted on D21-86)*, superseding ADR-0170
   decision 9 in part at *"(`s8g` writes this repository's set)"*). `[toolchain.rust]` carries `package_binaries =
   ["redkiln", "redkiln-migrate"]`, §8g.6's set with its warrant. `rk-cli`'s `tool_routing` binds it as `package.binaries`.
@@ -437,13 +452,32 @@ disposition of the four hand-offs.**
   across the workspace (`grep -rn "fn lint(" crates` → 17); the shipped `lint` row declares `outputs = "LintReport"`,
   route `port`; `rk-types` has no `LintReport`; `bdd-scenarios` (`gherkin-lint`) and `docs-update` (`lint`) read
   `lint.errors.len() == 0`, and neither adapter's `lint` lints Gherkin or docs. The widening is a port and type decision
-  that neither this file nor R4 carries, so the story lane stays **10 of 13** (both refuse by name), not 13 of 13.
+  that neither this file nor R4 carries, so the story lane stays ~~**10 of 13** (both refuse by name), not 13 of 13~~.
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; B3; D21-126, TAKEN PROVISIONALLY under D21-105.)* **Settled by retirement, not by a
+  widening.** ADR-0072 edits `bdd-scenarios@5` and `docs-update@5` delete the `toolchain:lint` step and the `lint`
+  input on the drafting step; each `policy` reads `check.failed == 0` over `${self-check.outputs}`, `on_false`
+  unchanged; the evidence drops the lint step; the rationales drop the lint (`.redkiln/CHANGELOG.md` rows). The
+  retired check never ran: `Toolchain::lint` takes only a bound and returns `()`. Rejected: (b) a typed `LintReport`
+  (a port and type change over 17 implementations, and a clippy result would open a Gherkin gate, a proxy); (a)
+  handing it to `s8h`, whose §8h.4 moves nothing until this stage lands; and the optional read `${…?}`, which fails
+  open. Owner of a real Gherkin or docs lint: a future record on the orchestrator's ledger after Phase 1, not `s8h`
+  or `s8j`; the steps return at v6 by another ADR-0072 bump once a lint verb that reads the files exists with a typed
+  output. Guard: `rk-kernel`'s `selection::no_check_step_reads_a_toolchain_lint_output` (parsed TOML; its mutant,
+  `gherkin-lint` and its conjunct restored, killed, §8g.9). The story lane reads **13 of 13** (`LANE_WALK story
+  walked=13 refused=0`). R4 = ADR-0194 decision 3 carries the dated note.
 - **`bisect`'s registry row: NOT written; returned with options, unruled.** `spikes/p9/registry.toml` gives
   `bisect = { outputs = "BisectReport", live = false, timeout = "test_timeout" }`; ADR-0170 decision 1's row also needs
   `inputs`, `route` and `side_effecting`, and no handler exists to fix the inputs (a `toolchain` row's inputs are *"the
   names its Rust handler reads"*). It moves no lane count: `bisect` is selected on neither lane, and a verb with no row
   and a `toolchain` row no adapter implements both refuse by the bare name `bisect`. Adding the row also moves
   `rk-kernel`'s `verb_registry::SHIPPED_ROWS` (13 → 14).
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; panel ruling B4; D21-127, TAKEN PROVISIONALLY under D21-105.)* **Ruled: deferred, no
+  Phase-1 owner.** No row is written and `verb_registry::SHIPPED_ROWS` stays 13. `bisect` keeps ADR-0170 decision
+  1's bare-name refusal (*"The other verbs have no row and refuse by **bare** name"*). D21-73's *"the stage that
+  owns its verb"* has no `s8*` owner (`s8h`'s and `s8j`'s scopes carry no VCS-history handler). The row is owed by
+  the record deciding a bisect handler (the Phase-2 bisect repair, per the AC register and ADR-0093), which writes
+  `inputs` from what its handler reads, a declared `vcs_history` feed, `side_effecting` from the handler, and the
+  `SHIPPED_ROWS` 13 → 14 dated edit together. No lane count moves.
 - **`package_binaries`: cited, unchanged** (`[toolchain.rust]`'s `["redkiln", "redkiln-migrate"]`, ADR-0179 decision 4).
   `demands::build_artifact_carries_release_digests` asserts `package` is handed exactly that set; M9 killed.
 
@@ -1030,12 +1064,18 @@ is a version bump with a row in `.redkiln/CHANGELOG.md` (ADR-0072).
   - `redkiln --version`;
   - `redkiln-migrate --version`;
   - `redkiln --help`, naming the nine verbs (*"The nine verbs, and no others"*, `cli.rs`);
-  - `redkiln -C <scratch> init`, then `status`;
+  - ~~`redkiln -C <scratch> init`, then `status`;~~ *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-125.)* owed, not in the first cut.
+    ADR-0170 decision 4's scratch is an empty directory, its handler runs no git, and `argv[0]` must be a built
+    binary, so no row can make it a repository. The rows land only with a record choosing (i) handler init plus a
+    root commit through `rk-git`, or (ii) a checklist scratch-setup item form;
   - `redkiln-migrate` with no arguments, exiting clap's `2` (RT-53).
 - **The scratch repository sits outside the run-owned worktree.** Every item's `cwd` is `scratch`, a repository
   **outside `.redkiln/worktrees/<item>`** (D21-44). Inside it, D21-42 9's landing would stage the scratch files.
   Where the handler makes the scratch repository is record V's decision. This stage requires that it be outside the
   run tree, and `demands::smoke_result_is_produced_through_the_registry_verb` asserts that.
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-125.)* Correction: under record V the scratch is an empty directory, not a
+  repository (ADR-0170 decision 4: *"The handler makes one empty directory per call"*). The outside-the-run-tree
+  requirement and its assertion stand unchanged.
 - **`smoke` is live.** The spike registry marks it *"`live = true`"*, and the design's rule is that a live verb
   *"implies `memo = false` on every step using it"*.
 
@@ -1159,6 +1199,19 @@ green, each one of `T_CLI`'s thirty-nine (Checkpoint 8g (5)), so the `NEW` count
   shipped checklist's envelope in a private-worktree probe, answers *"smoke refused (input-malformed): the `checklist`
   input: invalid type: map, expected a sequence"*. The double parses the envelope's `content`; the bridge is returned to
   the orchestrator with options, unruled.
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124 and D21-125, each TAKEN PROVISIONALLY under D21-105.)* **Both ruled.** (B1,
+  D21-124) The smoke producer's real path is bridged: `rk-cli`'s `verbs::run::bridged` decorator, wrapped around each
+  adapter where `choose_toolchain` constructs it (so every composition path gets it), unwraps only a `checklist`
+  input that is an object keyed `checklist:<id>` carrying a string `content`, parsing it with `rk_kernel::toml_subset`
+  into the `[[item]]` rows as a JSON array, and refuses every other shape but an array `input-malformed`, naming the
+  key; the journalled input keeps its envelope and digest. The `demands::` double no longer parses the envelope
+  itself (`items_of` deleted): it reads `checklist` strictly as a list and sits behind the same decorator, with a tap
+  in front recording the envelope the port receives. Measured: the real `RustToolchain`, reached through
+  `real_toolchain` over the shipped checklist's envelope, now fails at its build (a fixture with no target), not at
+  input parsing. (B2, D21-125) The `init`/`status` rows stay out, pinned by
+  `demands::smoke_checklist_carries_no_init_or_status_row_until_ruled` over the parsed checklist; a panel measurement
+  shows `git init` alone still exits 3 (no root commit), and an unbounded scratch lets `init` write into an enclosing
+  repository; re-measure before any record cites it.
 - **ConfirmationResult.** Settled by `confirmation-test@2` (§8g.1's dated disposition above).
 - **ScanReport.** The walk over `s8b`'s `sca-scan@2` opens `scan.accept-findings` on a high finding and on an unrated
   advisory alone (the `clean` check journalled `false`), and emits without a gate on a clean scan (`clean` `true`).
@@ -1308,6 +1361,14 @@ D21-47: R1's disposition was conditional, and is now unconditional.)*
 *(dated 2026-09-29, s8g build, package R-D2119-8g.)* ~~Two records here supersede in part.~~ Three do: ADR-0196 (D21-119) moves ADR-0186's key sentences and its gap statement, in both directions, asserted by Checkpoint 8g (6b).
 *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-122 item 4 and D21-123 item 6, each TAKEN PROVISIONALLY under D21-105.)* **ADR-0191's `supersedes` gains `0189`**, in part, for decision 8's member list only (an additive `key` member on the keyed writer's row), by a dated in-record amendment quoting the decision; ADR-0189 decision 3 does not move. ADR-0189 (accepted) is not edited now: the flip checklist writes its back-link (*"superseded in part by 0191, decision 8's member list"*) and the README's supersession row at ADR-0191's flip, if the operator has not objected, and the README and preamble census move then. The README's link count moves now by dated note (94 links, six not yet reciprocated). ADR-0191's decision 11 note (e) takes a dated note striking *"is not yet written"*, and ADR-0192 decision 2 a dated in-record note naming the row's key and spelling, the reader, the no-Node-row rule and the disagreement refusal. No accepted Decision moves under D21-123.
 
+*(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124..D21-127, each TAKEN PROVISIONALLY under D21-105.)* **No new record; R4's dated notes.**
+R4 = ADR-0194 (still `proposed`) takes five dated notes: decision 2's D21-124 note (the bridge, and ADR-0170 decision
+8's `(id, text)` row form against the smoke item form, unreconciled) and D21-125 note (the `init`/`status` rows owed,
+ADR-0170 decision 4's escape clause named as unsatisfiable under its own built-binary rule; the phrase *"owed to a
+ruling"* kept verbatim for the guard), decision 3's D21-126 and D21-127 notes, and an evidence note. No accepted
+Decision moves, so no superseding record is written and the README and preamble census do not move. The successor
+record for the two smoke rows is the operator's, not this stage's.
+
 ### 8g.9 Red first — the named tests and the mutants
 
 Every test below is authored, run, and **watched fail for its own reason** before the code that makes it pass —
@@ -1334,6 +1395,29 @@ Checkpoint 8g (5)'s `T_KERNEL` and `want` move 13 → 16 and its final `NEW` gua
 **1313**. The Findings-route tests (D21-119) are still to be added by their own dated edit.
 *(dated 2026-09-29, s8g build, package R-D2119-8g; D21-119 item 5.)* **~~Seventy~~ seventy-eight**: the Findings-route record names its eight tests, all in `rk-cli`'s `review_pass::` (~~39~~ **47**): `review_pass::a_shipped_lane_reaching_review_without_a_slice_is_refused_at_entry`, `review_pass::adversarial_review_seals_approved_at_its_own_stage`, `review_pass::adversarial_review_seals_changes_requested_at_its_own_stage`, `review_pass::a_fix_spec_adversary_findings_row_does_not_seal`, `review_pass::a_later_non_review_findings_row_does_not_displace_the_review_verdict`, `review_pass::security_review_and_design_review_do_not_seal`, `review_pass::an_unresolvable_activity_id_at_version_is_refused_by_name`, `review_pass::formal_inspections_second_reader_row_is_the_verdict`. Checkpoint 8g (5)'s `T_CLI` and its `rk-cli` want move 39 -> 47 and its final `NEW` guard 70 -> 78, so (9)'s floor is 1243 + 78 = **1321** (1313 + 8). Measured whole-suite after commit 2: 1321 passed / 0 failed / 9 ignored over 44.
 *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-122 item 3 and D21-123 item 5.)* **~~Seventy-eight~~ eighty-six**: the two rulings name eight tests. D21-122: `rk-store`'s `render::write_keyed_refuses_a_second_distinct_key_by_name` and `render::write_keyed_same_key_replaces` (a new `rk-store` list, **2**), `rk-kernel`'s `lane_order::a_two_toolchain_item_owes_the_refused_second_key` (~~16~~ **17**) and `rk-cli`'s `verify_pass::a_two_toolchain_item_holds_on_the_second_key`. D21-123, all `rk-cli`: `verify_pass::ac337_the_shipped_rust_row_is_read_through_the_pass_adapter` (red *"bug-standard.toml: the shipped Rust lane's feasibility does not read from the registry row"*, `left: Err("the pack declares no usable mutation feasibility, … (AC-337 …): Undeclared")`), `verify_pass::ac337_a_node_lane_with_criteria_is_refused_by_name` (red at its PREMISE, *"the shipped registry declares exactly one `mutation` row: []"*; the Node refusal itself held before the row, so M-NODE and M-DEF show it can fail), `verify_pass::ac337_a_registry_and_pack_disagreement_is_refused_by_name` (red *"a disagreement between the registry and the pack was resolved to NotFeasible { reason: \"the fixture\" }"*) and `verify_pass::ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger` (the ruling's tests 1 and 2 in one: the verify fixture's packs declare no `[mutation]`, and the registry is the shipped one copied with its `setup_projects` row removed, asserted once, because tree creation would install a project the fixture lacks; red *"the lane was refused before the ledger (AC-337's configuration error)"*, `left: ConfigError`, with the run's own line *"held: the verify stage exit was refused: the pack declares no usable mutation feasibility … Undeclared"*; its CONTROL, the `mutation` row removed too, is `ConfigError` with no ledger and no gate). The first red of that test was for another reason (the copied registry named `[checklist.*]` and `[kb.*]` files the fixture lacked), so the fixture copies both directories and the red was re-taken for the stated one. `rk-cli` ~~47~~ **52**. Checkpoint 8g (5) gains `T_STORE` and its `rk-store` want (2), `T_KERNEL` and its want move 16 → 17, `T_CLI` and its want 47 → 52, and its final `NEW` guard 78 → 86, so (9)'s floor is 1243 + 86 = **1329** (1321 + 8). `verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map` is an existing test, amended by dated line, not counted.
+*(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124, D21-125 and D21-126.)* **~~Eighty-six~~ ninety-three**: the three rulings name seven tests.
+D21-124, all `rk-cli`, in a new `checklist_bridge::` module: `checklist_bridge::the_real_rust_smoke_gets_past_input_parsing_through_real_toolchain`
+(ruling test (i); red *"the real Rust `smoke` handler, reached through real_toolchain, still refuses the shipped checklist's envelope at input
+parsing (D21-124): Err(Transport { kind: Decode, detail: "smoke refused (input-malformed): the `checklist` input: invalid type: map,
+expected a sequence" })"*; green: the build fails instead, *"the build stream carries no build-finished message (exit 101)"*),
+`checklist_bridge::the_undecorated_rust_smoke_still_refuses_the_envelope` (test (ii), the pin; green on entry by construction, since it
+asserts the adapter's own refusal, and it is what makes the decorator the fix), `checklist_bridge::a_malformed_checklist_envelope_refuses_by_name`
+(test (iii): unparseable content, no `item` array, an empty one, a non-`checklist:` key, no string `content`, no key, a string, a number and
+null each refuse `input-malformed` naming the key, and nothing is forwarded; red *"the bridge fails open … Ok(VerbOutput { kind: "Echo"
+… })"*), `checklist_bridge::an_envelope_is_unwrapped_to_its_items_and_everything_else_passes_unchanged` (the shipped checklist's twelve rows
+as a list, an array and a checklist-free call unchanged; red *"the envelope was not unwrapped to a list"*) and
+`checklist_bridge::no_adapter_constructor_in_rk_cli_src_is_reachable_undecorated` (the code-lines-only lint over rk-cli `src`, two sites,
+with its control; red naming both `choose_toolchain` arms). D21-125, `rk-cli`:
+`demands::smoke_checklist_carries_no_init_or_status_row_until_ruled` (parsed `argv` elements; green on entry, seeded red by the MINIT row
+below). `rk-cli` ~~52~~ **58**. D21-126, `rk-kernel`: `selection::no_check_step_reads_a_toolchain_lint_output` (red *"bdd-scenarios.toml:
+`policy`.lint = "${gherkin-lint.outputs}" reads the `toolchain:lint` step `gherkin-lint`"* and the `docs-update` line; `LINT_READERS
+files=102 toolchain_lint_steps=4 violations=2`, then `toolchain_lint_steps=2 violations=0`); `rk-kernel` ~~17~~ **18**. Existing tests
+moved by dated line, not counted: the six pre-existing `demands::` smoke-path tests (the strict double behind the bridge; red on the
+strict double before the decorator, *"smoke refused (input-malformed): the `checklist` input: invalid type: map, expected a sequence"*),
+`lane_walk::the_story_lane_walk_table_holds_for_a_spike_toml_story` (its story rows; red *"the story lane differs from §8d.9's table in
+2 place(s)"*) and `quality_block::the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged` (`LATER_BUMPS` gains
+`bdd-scenarios` 5; red *"bdd-scenarios: … it reads 4, left: 5"*). Checkpoint 8g (5)'s `T_KERNEL` and its want move 17 → 18, `T_CLI` and
+its want 52 → 58, and its final `NEW` guard 86 → 93, so (9)'s floor is 1243 + 93 = **1336** (1329 + 7).
 
 | # | mutant | must turn red |
 | --- | --- | --- |
@@ -1417,6 +1501,21 @@ and each must turn its named test red. A survivor blocks the close.
 | M-DEF | neither declared defaults to feasible | `verify_pass::ac337_a_node_lane_with_criteria_is_refused_by_name`, `verify_pass::ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger` (its CONTROL: *"left: Success right: ConfigError"*) |
 | M-ADM | `DECLARATION_ROWS` does not admit `mutation` | `verify_pass::ac337_the_shipped_rust_row_is_read_through_the_pass_adapter` (the loader refuses `toolchain.rust.mutation` by name), and the other three `ac337_` tests |
 
+*(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124, D21-125 and D21-126, each TAKEN PROVISIONALLY under D21-105.)* **The three rulings' mutants: all eight killed**, from `D:/repos/redkiln-sev/afk-tools/sp/s8g/R-D2124-D2127-8g-mutants.py` (log `R-D2124-D2127-8g-mutants.log`).
+- **The rig.** The private worktree `target/wt-rd2124`, detached at `aac2dec`, with the main checkout's uncommitted work copied in byte for byte (`cmp` clean) and its workspace built (`support::pack_min_repo` needs the fixture child; the first attempt's baseline was red for that reason alone, *"the fixture child is not built"*, and is kept as `R-D2124-D2127-8g-mutants.attempt1.log`). It was removed afterwards; `git worktree list` read the same three entries as before, `git worktree prune --dry-run -v` printed nothing, and `.git/redkiln/tmp` held the same three entries.
+- **The method.** Unmutated controls ran first, green: `rk-cli` 8 of 8 (the five `checklist_bridge::` tests and three `demands::` tests) and `rk-kernel` 1 of 1. Each mutant's anchor was asserted once, its file written via tmp + `os.replace` and restored in `finally`, and its sha256 verified restored; each selection ran its full count.
+
+| # | mutant | turned red |
+| --- | --- | --- |
+| MA | the decorator removed at its definition (`bridged` returns the adapter unwrapped) | `checklist_bridge::the_real_rust_smoke_gets_past_input_parsing_through_real_toolchain` (*"… still refuses the shipped checklist's envelope at input parsing … invalid type: map, expected a sequence"*), `demands::smoke_result_is_produced_through_the_registry_verb` (*"the shipped smoke-test does not walk: … invalid type: map, expected a sequence"*), `demands::a_failing_smoke_result_fails_the_stage`, and the two bridge unit tests |
+| MB | the Rust arm of `choose_toolchain` undecorated (`Ok(built) => Arc::new(built)`) | `checklist_bridge::the_real_rust_smoke_gets_past_input_parsing_through_real_toolchain`, `checklist_bridge::no_adapter_constructor_in_rk_cli_src_is_reachable_undecorated` (naming `run.rs`'s Rust constructor line) |
+| MC | the trigger's `checklist:` prefix dropped | `checklist_bridge::a_malformed_checklist_envelope_refuses_by_name` |
+| MD | an empty `item` array admitted | `checklist_bridge::a_malformed_checklist_envelope_refuses_by_name` |
+| ME | a string, number, boolean or null passed through | `checklist_bridge::a_malformed_checklist_envelope_refuses_by_name` |
+| MF | an unparseable content forwarded raw | `checklist_bridge::a_malformed_checklist_envelope_refuses_by_name` |
+| MINIT | D21-125's seed: an `init` row with `expect_exit = 3` planted in `.redkiln/checklists/smoke.toml` | `demands::smoke_checklist_carries_no_init_or_status_row_until_ruled` (*"the smoke checklist carries an `init` or `status` row: [\"redkiln-init: …\"]. D21-125: these rows land only with the record that makes the smoke scratch a repository …"*), and the twelve-row count in `checklist_bridge::an_envelope_is_unwrapped_…` |
+| MLINT | `bdd-scenarios`' `gherkin-lint` step and its `policy` conjunct restored | `selection::no_check_step_reads_a_toolchain_lint_output` (*"a `check` step reads the output of a `toolchain:lint` step …"*) |
+
 ### 8g.10 Checkpoint 8g
 
 **What this checkpoint asserts:**
@@ -1441,6 +1540,10 @@ and each must turn its named test red. A survivor blocks the close.
   `path` (final consistency pass 2026-09-24). The producer walk over `s8b`'s `sca-scan` reads `unrated`. The gate
   questions load from `s8d`'s registry, and there is no `.redkiln/questions.toml`. `smoke-test` fails on a
   `SmokeResult` that is not passing (D21-46 R6).
+  *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124..D21-126.)* The real Rust `smoke` handler gets past
+  input parsing through `real_toolchain` (the checklist bridge), no adapter `rk-cli` constructs is undecorated ((6c)),
+  the smoke checklist carries no `init`/`status` row until ruled, no check reads a `toolchain:lint` output, and the
+  story lane walks 13 of 13 ((5b)).
 - **`tag-release`** sits in the extended directory and trials under the fixture harness with zero dispatches. **No
   `rk-release/*` tag appears in this repository** as a side effect of the block.
 - **The whole suite, fmt and clippy are green.** Checkpoints 5, 6, 7b, 7b-ii, 7d, 8b, 8d, 8d-ii, 8e and 8f re-run
@@ -1465,7 +1568,8 @@ a dated edit before the block's first run and never lowered to make a red run gr
 package S8G-P1-RECORDS; stage open.)* **Written: PREV = 1243** (D21-116's recorded count), and (9)'s floor is 1243 + 67
 = **1310** (§8g.9's dated count). *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g.)* Re-derived from the
 same recorded count, never lowered: §8g.9's dated count is now eighty-six, so the floor is 1243 + 86 = **1329** ((9)'s
-dated comment; (5)'s `NEW` guard). The struck text below is the drafted chain, kept for its history. ~~The expected value,
+dated comment; (5)'s `NEW` guard). *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124..D21-126.)* Re-derived again from the same
+recorded count: §8g.9's dated count is ninety-three, so the floor is 1243 + 93 = **1336**. The struck text below is the drafted chain, kept for its history. ~~The expected value,
 **re-derived at stage open from Checkpoint 8f's recorded count**, is PREV = **1123**, `s8f`'s Checkpoint 8f `FLOOR`
 (`s8f` §8f.2 item 9: *"That gives 740 + 9 + 25 + 78 + 62 + 50 + 74 = 1038 at Checkpoint 8e, and 1038 + 85 =
 **1123** here"*), so (9)'s floor is 1123 + 66 = **1189**.~~ The chain, recomputed once, is ADR-0164's 740 passed at
@@ -1627,7 +1731,9 @@ ctl=$(printf '%s\n%s\n' 'crates/x/src/a.rs:1:pub struct SpecAc {' 'crates/x/src/
 
 # ---- (5) THE NAMED TESTS, per crate, each by its own `... ok` line and an EXACT count.
 T_TYPES="event_kinds::verify_completed_is_tier_two_and_wired verify_types::verify_completed_payload_refuses_an_absent_member acceptance_criterion::ac137_criterion_without_gwt_or_verification_is_accepted acceptance_criterion::mutation_declaration_round_trips_declared_and_not_feasible acceptance_criterion::a_prose_only_mutation_is_refused_at_ingest acceptance_criterion::acceptance_criterion_is_in_the_exported_registry judgement_registry::ac133_every_exported_enum_is_registered judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails judgement_registry::the_registry_names_no_enum_that_is_not_exported"
-T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion verify::verify_completed_carries_its_origin_and_stage selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement selection::integration_tests_selects_at_implement_under_external_dep selection::migration_dry_run_is_selected_on_no_shipped_lane lattice::the_report_branches_fixture_exercises_every_unsat_branch lane_order::a_pass_owed_advance_is_refused_with_no_write lane_order::a_pass_owed_advance_proceeds_once_the_write_is_journalled lane_order::a_pass_owed_lane_end_is_held lane_order::a_two_toolchain_item_owes_the_refused_second_key"
+T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion verify::verify_completed_carries_its_origin_and_stage selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement selection::integration_tests_selects_at_implement_under_external_dep selection::migration_dry_run_is_selected_on_no_shipped_lane lattice::the_report_branches_fixture_exercises_every_unsat_branch lane_order::a_pass_owed_advance_is_refused_with_no_write lane_order::a_pass_owed_advance_proceeds_once_the_write_is_journalled lane_order::a_pass_owed_lane_end_is_held lane_order::a_two_toolchain_item_owes_the_refused_second_key selection::no_check_step_reads_a_toolchain_lint_output"
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126.) T_KERNEL gains
+# selection::no_check_step_reads_a_toolchain_lint_output, and rk-kernel's want below moves 17 -> 18.
 # (dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-122 item 3.) T_KERNEL gains
 # lane_order::a_two_toolchain_item_owes_the_refused_second_key, and rk-kernel's want below moves 16 -> 17.
 # (dated 2026-09-29, s8g build, package S8G-P5-VERIFY-PASS; D21-120 item 5.) T_KERNEL gains D21-120's three guard
@@ -1639,7 +1745,11 @@ T_GIT="gitops::tag_is_on_the_enumerated_write_set gitops::apply_is_on_the_enumer
 # tests, so the checkpoint cannot select around them.
 T_STORE="render::write_keyed_refuses_a_second_distinct_key_by_name render::write_keyed_same_key_replaces"
 T_RUST="selection::ac348_selection_is_byte_identical_over_200_change_sets selection::ac355_lockfile_change_is_whole_suite_and_one_file_is_affected"
-T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes_one_keyed_test_report_with_one_artifact_write verify_pass::verify_completed_names_the_adapter_detect_chose verify_pass::node_detected_fixture_records_the_node_adapter verify_pass::red_suite_is_a_failed_verify_never_green verify_pass::ac331_timeout_and_kill_are_unverifiable verify_pass::ac344_missing_binary_is_cannot_run verify_pass::ac347_the_pass_dispatches_nothing verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call verify_pass::ac338_restored_mutation_is_unverifiable verify_pass::ac339_mutation_runs_in_a_disposable_worktree verify_pass::ac341_the_pass_calls_no_tracker_method verify_pass::ac348_selection_is_recomputed_from_verify_completed verify_pass::ac353_killed_verify_resumes_to_the_same_decision verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter verify_pass::the_lane_reaches_the_pass_through_verbs_run_run verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree verify_pass::ac139_shipped_packs_block_a_missing_verification verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry demands::smoke_result_is_produced_through_the_registry_verb demands::a_failing_smoke_result_fails_the_stage demands::confirmation_result_passes_at_the_fix_sha demands::confirmation_not_fixed_opens_its_gate demands::scan_high_finding_opens_scan_accept_findings demands::scan_unrated_advisory_opens_scan_accept_findings demands::scan_clean_emits_without_a_gate demands::build_artifact_carries_release_digests demands::every_restored_demand_writes_one_artifact_write tag_release::release_record_tags_the_landed_commit_locally tag_release::rollback_target_is_the_previous_release_tag tag_release::first_release_names_its_rollback_target_as_none tag_release::release_record_carries_the_build_artifact_digest tag_release::the_tag_is_never_pushed tag_release::trial_runs_one_activity_with_zero_dispatches tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused tag_release::selection_picks_tag_release_over_the_deploy_patterns doctor::ac349_equal_specificity_claim_is_a_doctor_row review_pass::a_shipped_lane_reaching_review_without_a_slice_is_refused_at_entry review_pass::adversarial_review_seals_approved_at_its_own_stage review_pass::adversarial_review_seals_changes_requested_at_its_own_stage review_pass::a_fix_spec_adversary_findings_row_does_not_seal review_pass::a_later_non_review_findings_row_does_not_displace_the_review_verdict review_pass::security_review_and_design_review_do_not_seal review_pass::an_unresolvable_activity_id_at_version_is_refused_by_name review_pass::formal_inspections_second_reader_row_is_the_verdict verify_pass::a_two_toolchain_item_holds_on_the_second_key verify_pass::ac337_the_shipped_rust_row_is_read_through_the_pass_adapter verify_pass::ac337_a_node_lane_with_criteria_is_refused_by_name verify_pass::ac337_a_registry_and_pack_disagreement_is_refused_by_name verify_pass::ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger"
+T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes_one_keyed_test_report_with_one_artifact_write verify_pass::verify_completed_names_the_adapter_detect_chose verify_pass::node_detected_fixture_records_the_node_adapter verify_pass::red_suite_is_a_failed_verify_never_green verify_pass::ac331_timeout_and_kill_are_unverifiable verify_pass::ac344_missing_binary_is_cannot_run verify_pass::ac347_the_pass_dispatches_nothing verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call verify_pass::ac338_restored_mutation_is_unverifiable verify_pass::ac339_mutation_runs_in_a_disposable_worktree verify_pass::ac341_the_pass_calls_no_tracker_method verify_pass::ac348_selection_is_recomputed_from_verify_completed verify_pass::ac353_killed_verify_resumes_to_the_same_decision verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter verify_pass::the_lane_reaches_the_pass_through_verbs_run_run verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree verify_pass::ac139_shipped_packs_block_a_missing_verification verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry demands::smoke_result_is_produced_through_the_registry_verb demands::a_failing_smoke_result_fails_the_stage demands::confirmation_result_passes_at_the_fix_sha demands::confirmation_not_fixed_opens_its_gate demands::scan_high_finding_opens_scan_accept_findings demands::scan_unrated_advisory_opens_scan_accept_findings demands::scan_clean_emits_without_a_gate demands::build_artifact_carries_release_digests demands::every_restored_demand_writes_one_artifact_write tag_release::release_record_tags_the_landed_commit_locally tag_release::rollback_target_is_the_previous_release_tag tag_release::first_release_names_its_rollback_target_as_none tag_release::release_record_carries_the_build_artifact_digest tag_release::the_tag_is_never_pushed tag_release::trial_runs_one_activity_with_zero_dispatches tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused tag_release::selection_picks_tag_release_over_the_deploy_patterns doctor::ac349_equal_specificity_claim_is_a_doctor_row review_pass::a_shipped_lane_reaching_review_without_a_slice_is_refused_at_entry review_pass::adversarial_review_seals_approved_at_its_own_stage review_pass::adversarial_review_seals_changes_requested_at_its_own_stage review_pass::a_fix_spec_adversary_findings_row_does_not_seal review_pass::a_later_non_review_findings_row_does_not_displace_the_review_verdict review_pass::security_review_and_design_review_do_not_seal review_pass::an_unresolvable_activity_id_at_version_is_refused_by_name review_pass::formal_inspections_second_reader_row_is_the_verdict verify_pass::a_two_toolchain_item_holds_on_the_second_key verify_pass::ac337_the_shipped_rust_row_is_read_through_the_pass_adapter verify_pass::ac337_a_node_lane_with_criteria_is_refused_by_name verify_pass::ac337_a_registry_and_pack_disagreement_is_refused_by_name verify_pass::ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger checklist_bridge::the_real_rust_smoke_gets_past_input_parsing_through_real_toolchain checklist_bridge::the_undecorated_rust_smoke_still_refuses_the_envelope checklist_bridge::a_malformed_checklist_envelope_refuses_by_name checklist_bridge::an_envelope_is_unwrapped_to_its_items_and_everything_else_passes_unchanged checklist_bridge::no_adapter_constructor_in_rk_cli_src_is_reachable_undecorated demands::smoke_checklist_carries_no_init_or_status_row_until_ruled"
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124 and D21-125.) T_CLI gains six: D21-124's five
+# checklist_bridge:: tests and D21-125's demands:: guard, and rk-cli's want below moves 52 -> 58. Was: T_CLI ending at
+# verify_pass::ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger. Each runs by its own `... ok` line under the
+# exact count below, so a filter that matches nothing cannot pass.
 # (dated 2026-09-29, s8g build, package R-D2119-8g; D21-119 item 5.) T_CLI gains the Findings-route record's eight tests (a)-(g), all review_pass::, and rk-cli's want below moves 39 -> 47. Was: T_CLI ending at doctor::ac349_equal_specificity_claim_is_a_doctor_row.
 # (dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-122 item 3 and D21-123 item 5.) T_CLI gains five: D21-122's
 # verify_pass::a_two_toolchain_item_holds_on_the_second_key and D21-123's four verify_pass::ac337_ tests, and
@@ -1647,7 +1757,9 @@ T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes
 NEW=0
 # (dated 2026-09-29, s8g build, package R-D2122-D2123-8g.) rk-kernel 16 -> 17, rk-cli 47 -> 52, and rk-store@2 joins.
 # Was: for spec in "rk-types@9@$T_TYPES" "rk-kernel@16@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@47@$T_CLI"; do
-for spec in "rk-types@9@$T_TYPES" "rk-kernel@17@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@52@$T_CLI" "rk-store@2@$T_STORE"; do
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g.) rk-kernel 17 -> 18 and rk-cli 52 -> 58.
+# Was: for spec in "rk-types@9@$T_TYPES" "rk-kernel@17@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@52@$T_CLI" "rk-store@2@$T_STORE"; do
+for spec in "rk-types@9@$T_TYPES" "rk-kernel@18@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@58@$T_CLI" "rk-store@2@$T_STORE"; do
   crate=${spec%%@*}; rest=${spec#*@}; want=${rest%%@*}; names=${rest#*@}
   got=$(printf '%s\n' $names | grep -c .)
   [ "$got" -eq "$want" ] || { echo "FAIL: $crate's list carries $got names, this file says $want — the list and the prose disagree"; exit 1; }
@@ -1668,7 +1780,41 @@ done
 # rk-cli tests. Was: [ "$NEW" -eq 70 ] ... §8g.9 says seventy.
 # (dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-122 item 3 and D21-123 item 5.) 78 -> 86: the two
 # rulings' eight tests (rk-store 2, rk-kernel 1, rk-cli 5). Was: [ "$NEW" -eq 78 ] ... §8g.9 says seventy-eight.
-[ "$NEW" -eq 86 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says eighty-six"; exit 1; }
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124, D21-125 and D21-126.) 86 -> 93: the three
+# rulings' seven tests (rk-cli 6, rk-kernel 1). Was: [ "$NEW" -eq 86 ] ... §8g.9 says eighty-six.
+[ "$NEW" -eq 93 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says ninety-three"; exit 1; }
+
+# ---- (5b) (dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126, TAKEN PROVISIONALLY under D21-105.)
+# ---- THE STORY LANE WALKS THIRTEEN OF THIRTEEN, read from inside the test binary (never inferred from a green).
+out=$(nodispatch cargo test -p rk-kernel --test it -- lane_walk::the_story_lane_walk_table_holds_for_a_spike_toml_story --exact --nocapture 2>&1); rc=$?
+nd_check "(5b)'s story lane_walk reading" || exit 1
+[ "$rc" -eq 0 ] || { echo "FAIL: the story lane_walk test did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo "FAIL: the story lane_walk selection did not run exactly 1 test"; exit 1; }
+k=$(printf '%s\n' "$out" | grep -oE 'LANE_WALK story walked=[0-9]+ refused=[0-9]+' | grep -c .)
+[ "$k" -eq 1 ] || { echo "FAIL: the story lane printed $k LANE_WALK lines, not exactly one"; exit 1; }
+printf '%s\n' "$out" | grep -qF 'LANE_WALK story walked=13 refused=0' || { echo "FAIL: the story lane does not read walked=13 refused=0 (D21-126)"; printf '%s\n' "$out" | grep -oE 'LANE_WALK story [^ ]+ [^ ]+'; exit 1; }
+
+# ---- (6c) (dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124, TAKEN PROVISIONALLY under D21-105.)
+# ---- rk-cli CONSTRUCTS TOOLCHAIN ADAPTERS ONLY INSIDE THE CHECKLIST BRIDGE. A FLOOR over CODE lines beneath (5)'s
+# ---- checklist_bridge::the_real_rust_smoke_gets_past_input_parsing_through_real_toolchain and
+# ---- checklist_bridge::no_adapter_constructor_in_rk_cli_src_is_reachable_undecorated.
+raw=$(grep -rnE '(RustToolchain|NodeToolchain)::(new|new_over_registry)\(' crates/rk-cli/src --include=*.rs); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the adapter-constructor sweep could not run (grep rc=$rc)"; exit 1; }
+code=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
+n=$(printf '%s\n' "$code" | grep -c .)
+[ "$n" -eq 2 ] || { echo "FAIL: $n adapter-constructor code lines in rk-cli src, not choose_toolchain's two (D21-124)"; printf '%s\n' "$code"; exit 1; }
+bad=0
+for site in $(printf '%s\n' "$code" | cut -d: -f1,2); do
+  f=${site%%:*}; l=${site#*:}
+  k=$(sed -n "$((l + 1)),$((l + 3))p" "$f" | grep -cF 'Ok(built) => bridged(Arc::new(built))')
+  [ "$k" -eq 1 ] || { echo "FAIL: $f:$l constructs a toolchain adapter whose Ok arm is not bridged(...) (D21-124)"; bad=1; }
+done
+[ "$bad" -eq 0 ] || exit 1
+# CONTROL: the code-line filter drops a comment naming the constructor and keeps the code line.
+ctl=$(printf '%s\n' 'x.rs:3:    // RustToolchain::new(cfg)' 'x.rs:4:    match rk_adapter_toolchain_rust::RustToolchain::new(cfg) {' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep -c .)
+[ "$ctl" -eq 1 ] || { echo "FAIL: the adapter-constructor sweep's control kept $ctl of 2 lines, expected exactly the code line"; exit 1; }
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g.) Read, extracted from this file's bytes: PASS on the tree (2
+# sites, both bridged); over a scratch copy with the Node arm undecorated it FAILs naming run.rs's Node constructor line.
 
 # ---- (6) NO STAGE-NAME LITERAL IN rk-cli/src (ADR-0162 decision 5) — a FLOOR over CODE lines beneath the
 # ---- behavioural `selected_by_required_kind_not_stage_name` above, whose fixture names its verify stage `check`.
@@ -1766,6 +1912,14 @@ done
 for pair in unit-tests@3 unit-tests-ue@3 equivalence-boundary@4 property-based-testing@3 integration-tests@3 smoke-test@2; do
   grep -qF "$pair" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming $pair in s8b's <id>@<new version> form (ADR-0072; D21-43 N23; D21-46 R5, R6)"; exit 1; }
 done
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126.) The two lint retirements, each as a table row
+# (`| <id>@5 |`) and at version 5 on disk.
+for id in bdd-scenarios docs-update; do
+  grep -qF "| $id@5 |" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no '| $id@5 |' row (ADR-0072; D21-126)"; exit 1; }
+  grep -qE '^version[[:space:]]*=[[:space:]]*5([[:space:]]|$)' ".redkiln/catalog/$id.toml" || { echo "FAIL: $id is not at version 5 (D21-126)"; exit 1; }
+done
+# (dated 2026-09-29, s8g build, package R-D2124-D2127-8g.) Read, extracted from this file's bytes: PASS on the tree; over a
+# scratch copy whose CHANGELOG lacks the docs-update@5 row it FAILs naming it.
 # (7d) N23: the four displaced providers, re-homed to implement over ONE test-authoring kind listed first.
 kinds=""
 for a in unit-tests unit-tests-ue equivalence-boundary property-based-testing; do
@@ -1899,6 +2053,9 @@ test -n "$secs" || { echo "FAIL: the verify record carries no cold slowest-child
 # ---- (dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-122 and D21-123.) Re-derived: the two rulings
 # ---- name eight tests, which joined (5) (T_STORE 2; T_KERNEL 16 -> 17; T_CLI 47 -> 52; NEW 78 -> 86). The floor is
 # ---- 1243 + 86 = 1329. PREV is unchanged.
+# ---- (dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124, D21-125 and D21-126.) Re-derived: the three
+# ---- rulings name seven tests, which joined (5) (T_KERNEL 17 -> 18; T_CLI 52 -> 58; NEW 86 -> 93). The floor is
+# ---- 1243 + 93 = 1336. PREV is unchanged.
 # ---- At least 44 result lines,
 # ---- as at 992d257. Under (0b)'s wrapper (D21-47).
 # ~~PREV=1123~~ (dated 2026-09-29, s8g build, stage open: Checkpoint 8f's recorded count, D21-116)
@@ -2130,6 +2287,24 @@ echo "CP8G-END-OF-BLOCK reached"
   registry, not changed. **The `[toolchain.node]` `mutation` row** is owed with the first Node self-hosting run.
 - *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-122.)* **Per-key sidecars** (D21-122's option 2) are owed to a later record if a multi-toolchain
   lane ever ships: until then a second key per kind per stage run is refused by name (`KeyedSidecarCollision`).
+- *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-125, TAKEN PROVISIONALLY under D21-105.)* **The smoke checklist's `init` and `status` rows** are
+  owed. ADR-0170 decision 4's escape clause (*"a row that needs the directory to be a repository makes it one in its
+  own argv"*) cannot be met under its own built-binary rule; remedy (i) (the handler makes the scratch a repository
+  through `rk-git`, with a root commit, a per-call committer identity and bounded discovery) or (ii) (a checklist
+  scratch-setup item form) is the operator's to choose, each superseding decision 4 in part by a new record. No stage
+  is assigned (neither `s8h`'s nor `s8j`'s scope covers the smoke checklist); `demands::smoke_checklist_carries_no_init_or_status_row_until_ruled`
+  pins the absence until then. **A side effect reported for the operator, not fixed:** a panel judge's measurement ran
+  the built `redkiln init` in a temporary directory, and it wrote `.redkiln/config.toml` and touched `.git/info`
+  inside a stray, pre-existing repository at `C:/Users/ryanm/AppData/Local/Temp/claude`, outside the project; it was
+  left untouched.
+- *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-124.)* **ADR-0170 decision 8's checklist row form** (*"`[[item]]` rows (`id`, `text`) plus a
+  `source`"*) differs from the smoke handler's item form (`{ id, argv, cwd, expect_exit, stdout_contains }`), which
+  the shipped `smoke.toml` follows. Recorded in R4 = ADR-0194, unreconciled and not ruled.
+- *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126.)* **A real Gherkin or docs lint** is owed to a future record after Phase 1 (a
+  content-specific verb with a typed output); `bdd-scenarios` and `docs-update` re-add their lint step at v6 by
+  ADR-0072 then. `api-contract-spec`'s `toolchain:contract_lint` (off-lane, still refusing) is named to the same record.
+- *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-127.)* **`bisect`'s registry row** is owed to the Phase-2 bisect repair, with its handler, a
+  declared `vcs_history` feed and the `SHIPPED_ROWS` 13 → 14 edit together.
 
 **Handed to `s8j`, by name:**
 

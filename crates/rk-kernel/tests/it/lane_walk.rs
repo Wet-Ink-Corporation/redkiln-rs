@@ -1386,6 +1386,18 @@ fn walk_lane(lane: &Lane) {
 //
 // Upstream activities now emit what later ones require, so the rig seeds less: fix `BugReport`;
 // story `IntakeRecord, Spec`.
+//
+// *(dated 2026-09-29, `s8g` build, package R-D2124-D2127-8g; B3; D21-126, TAKEN PROVISIONALLY under
+// D21-105; D21-73 item 4, second half.)* **The `lint` output is settled by retirement, not by a
+// widening.** `bdd-scenarios@5` and `docs-update@5` (ADR-0072; `.redkiln/CHANGELOG.md`) delete their
+// `toolchain:lint` step and the `policy` conjunct that read it (`policy` reads `check.failed == 0`
+// over `${self-check.outputs}`), because `Toolchain::lint` returns `()` and the step bound nothing.
+// Read from inside this binary: before the edit **`LANE_WALK story walked=11 refused=2`**
+// (`bdd-scenarios`: *"the step `gherkin-lint` has not run in this activation"*; `docs-update`: *"the
+// step `lint` has not run in this activation"*), after it **`LANE_WALK story walked=13
+// refused=0`**, the thirteen of thirteen measured, not presumed; the fix lane is unchanged at
+// `walked=14 refused=0`. `rk-kernel`'s `selection::no_check_step_reads_a_toolchain_lint_output`
+// guards the shape.
 
 /// §8d.9's fix lane, as measured.
 const FIX: Lane = Lane {
@@ -1491,12 +1503,13 @@ const STORY: Lane = Lane {
     ],
     path: "spikes/p9/packs/spike.toml",
     rows: &[
+        // *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; B3; D21-126, TAKEN PROVISIONALLY
+        // under D21-105; D21-73 item 4, second half.)* `bdd-scenarios@5` retires its `gherkin-lint`
+        // step and the `policy` conjunct that read it (ADR-0072), so it walks. Was
+        // `Verdict::Refuses("the step `gherkin-lint` has not run")`.
         Row {
             stage: "specification",
-            selected: &[(
-                "bdd-scenarios",
-                Verdict::Refuses("the step `gherkin-lint` has not run"),
-            )],
+            selected: &[("bdd-scenarios", Verdict::Walks)],
         },
         Row {
             stage: "planning",
@@ -1504,13 +1517,13 @@ const STORY: Lane = Lane {
         },
         // *(dated 2026-09-27, F3-D2174; D21-74 rulings 1 and 2.)* The `implement` SELECTION no
         // longer refuses (step 5 draws no self-edge), and `tdd` reads `affected` from the run branch.
+        // *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; B3; D21-126.)* `docs-update@5`
+        // retires its `lint` step and conjunct, as `bdd-scenarios@5` does, so it walks. Was
+        // `Verdict::Refuses("the step `lint` has not run")`.
         Row {
             stage: "implement",
             selected: &[
-                (
-                    "docs-update",
-                    Verdict::Refuses("the step `lint` has not run"),
-                ),
+                ("docs-update", Verdict::Walks),
                 ("tdd-red-green-refactor", Verdict::Walks),
                 ("change-summary", Verdict::Walks),
             ],

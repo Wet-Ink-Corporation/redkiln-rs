@@ -65,6 +65,7 @@ mod adapter_selection;
 mod answer;
 mod catalog;
 mod change_deriver;
+mod checklist_bridge;
 mod config;
 mod cost;
 mod demands;

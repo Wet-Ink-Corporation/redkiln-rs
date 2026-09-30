@@ -1068,7 +1068,10 @@ fn changelog() -> String {
 /// *(dated 2026-09-29, s8g build, package S8G-P4-PACK-REHOME.)* Activities a LATER stage re-versioned
 /// under ADR-0072 after D21-67 ruling 1's bump, with the version that stage wrote: `s8g`'s N23
 /// re-homing (D21-43 N23; R1 = ADR-0191 decision 3, proposed).
-const LATER_BUMPS: &[(&str, i64)] = &[("equivalence-boundary", 4)];
+/// *(dated 2026-09-29, s8g build, package R-D2124-D2127-8g; D21-126, TAKEN PROVISIONALLY under
+/// D21-105.)* `bdd-scenarios` 4 → 5: its `gherkin-lint` step and the `policy` conjunct that read it
+/// are retired (`.redkiln/CHANGELOG.md` `bdd-scenarios@5`). Was `&[("equivalence-boundary", 4)]`.
+const LATER_BUMPS: &[(&str, i64)] = &[("equivalence-boundary", 4), ("bdd-scenarios", 5)];
 
 fn version_of(id: &str) -> i64 {
     shipped_toml(id)
