@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-127), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-128), and what they license
+
+*(Title moved 2026-09-30 during `s8g`: it read **"(D21-1 … D21-127)"**; `D21-128` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-126)"**; `D21-127` is appended with this move.)*
 
@@ -5403,3 +5405,59 @@ neither lane.
 3. The owner is the Phase-2 bisect repair (the AC register; ADR-0093's *"Retained as the Phase-2 repair"*).
 
 **Reversal.** Add the row, and a handler record, when a lane selects `bisect`.
+
+---
+
+## D21-128 · Checkpoint 6's Command-site lines: the test git helpers route through `git_exec`, and the production line is narrowed to its fourteen pinned non-git spawn sites
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-30, pending the operator's confirmation — Weigh-In
+wi-4f3d23.** It is authority-bound because the `s8d` close flagged this question for the operator, so the weigh-in item is
+**left open** for the operator. The work proceeds on it, and it is on the review packet's confirm list.
+
+**The blocker.** `s8g`'s refuting round 1 raised it. Checkpoint 6's two Command-site bans have been red since 7c and 7d,
+and Checkpoint 8g (12) replays Checkpoint 6 whole. The `s8d` close recorded: *"Whether Checkpoint 6 is re-run, and
+against which narrowing of its Command-site line, is **flagged for the operator and not decided**"*. Measured:
+- **The git line** reads 21 at `bb22b51` and 19 once `s8g`'s two new sites are routed. The 19 are 16 test helpers
+  (redkiln-migrate and rk-cli `tests/it`) and 3 lint-control fixtures.
+- **The production line** (`crates/*/src`) reads 14. All 14 are non-git process spawns, in 8 files:
+  - rk-adapter-claude `runner.rs` (2);
+  - the two toolchain `run.rs` files (2 each);
+  - rk-cli `doctor/probe.rs` (1);
+  - rk-containment `bounded.rs` (2), `ffi.rs` (2), `posix.rs` (1) and `windows.rs` (2).
+
+**Ruled.** The blocker panel chose a hybrid split by warrant. Checkpoint 6 stays in Checkpoint 8g (12); dropping it is
+rejected.
+
+**(A) The git line.**
+- The 16 test-helper sites route through `rk_git::git_exec::run` or `run_with_env`. Shared bodies collapse onto one
+  support helper, and each `#[expect]` reason is corrected.
+- Checkpoint 6's git line gains, by dated D21-47 edit, only the anchored exclusion `ci.yml` already carries
+  (`tests/fixtures/lint-controls/`), with the three controls pinned.
+- The line then reads 0. **ADR-0077 is kept whole**, and no record moves.
+
+**(B) The production line.** It is narrowed to its warrant by a dated in-place edit under D21-47, on the precedent of
+`s6`'s 2026-09-13 note (a).
+- The regex is kept, and an anchored admission list names the 8 files, each with a PINNED per-file count compared by
+  strict equality (14 in total).
+- Each entry names its raising stage (7c for the adapters and rk-containment, 7d for the doctor probe) and gives
+  ADR-0127 as the reason: rk-containment owns spawning, and its accepted API takes a `std::process::Command`.
+- The clippy `disallowed-types` deny remains the per-site instrument.
+
+**(C) Controls, in a private worktree only.** Each must turn its line red:
+- (i) a new git site in a new tests file;
+- (ii) a new git site in a routed file;
+- (iii) a widened exclusion with a planted fixture;
+- (iv) a new spawn in an unlisted src file;
+- (v) an extra spawn in an admitted file;
+- (vi) a removed admitted site.
+
+**(D) Census on this ledger.**
+- The git line: 21, then 19, then 0, with 3 pinned controls.
+- The production line: 14, all admitted and pinned.
+
+PROGRESS row 6's 7c/7d mark and its `s8g` mark are discharged only by an rc-0 pass of Checkpoint 8g (12).
+
+**Fallback, if the routing cannot land in `s8g`.** Option (1): admit the test sites with pinned per-file counts,
+mirrored into `ci.yml`, and write a `proposed` record against ADR-0077's *"anywhere else in the workspace"*.
+
+**Reversal.** Revert the routing and the admission list, and take the fallback, or drop Checkpoint 6 from (12).
