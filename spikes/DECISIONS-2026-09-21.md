@@ -1,4 +1,12 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-123), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-127), and what they license
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-126)"**; `D21-127` is appended with this move.)*
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-125)"**; `D21-126` is appended with this move.)*
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-124)"**; `D21-125` is appended with this move.)*
+
+*(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-123)"**; `D21-124` is appended with this move.)*
 
 *(Title moved 2026-09-29 during `s8g`: it read **"(D21-1 … D21-122)"**; `D21-123` is appended with this move.)*
 
@@ -5284,3 +5292,107 @@ carries criteria would be refused at verify by name (AC-337).
    (proposed) decision 2 is carried out as written.
 
 **Reversal.** Remove the row and the registry reader, and amend ADR-0192 decision 2 to name the pack's table (option 2).
+
+---
+
+## D21-124 · `s8g` B1: the checklist envelope is unwrapped at the port by a fail-closed decorator in rk-cli's `real_toolchain`
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-9afdd0** (two-way door, judgment; defaulted to A). No accepted Decision moves. The panel's full ruling is in the
+run's judge-panel output (s8g package S8G-P7's items B1–B4), summarised here.
+
+**The blocker.** S8G-P7 measured it. ADR-0173's resolver hands a `checklist:` input to the port as a
+`{key, path, content, digest}` envelope. ADR-0170's Rust smoke handler deserializes `checklist` as a list. The real
+`RustToolchain` answered *"smoke refused (input-malformed): the `checklist` input: invalid type: map, expected a
+sequence"*. The `demands::` test double hid this because it parsed the envelope itself.
+
+**Ruled** (blocker panel, option (a) refined):
+1. **Placement.** A `Toolchain` decorator inside `rk-cli::verbs::run::real_toolchain`, so every composition path gets
+   it. A test or lint asserts that no adapter constructor in rk-cli is reachable undecorated.
+2. **Trigger.** Only the `checklist` input of a `run_verb` call, and only when it is an object whose `key` starts with
+   `checklist:` and which carries a string `content`.
+3. **Transform.** Parse `content` with `rk_kernel::toml_subset`; no new TOML dependency is added. The `[[item]]` rows
+   become a JSON array. The journalled input keeps its envelope and digest.
+4. **Fail closed.** Each of these refuses as input-malformed, naming the key:
+   - an unparseable envelope;
+   - a missing or empty `item` array;
+   - an object that fails the trigger;
+   - any shape other than an object or an array.
+
+   An input that is already an array passes through unchanged.
+5. **Tests.** The `demands::` double becomes strict and sits behind the same decorator. The red-first tests are:
+   - (i) a real `RustToolchain` smoke call through the decorator over the shipped `smoke.toml` gets past input
+     parsing;
+   - (ii) the undecorated call still refuses;
+   - (iii) malformed content refuses by name.
+
+   A mutant removes the decorator and must be killed.
+6. **Record.** ADR-0194 (proposed) takes a dated note. It also names an unreconciled point: ADR-0170 decision 8's
+   `(id, text)` checklist rows against the smoke checklist's item form.
+
+**Reversal.** Remove the decorator. If a second toolchain verb comes to read a checklist, take option (c), where the
+resolver hands over the array.
+
+---
+
+## D21-125 · `s8g` B2: the `init` and `status` smoke rows stay out; ADR-0170 decision 4's internal contradiction is named, not moved
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-28616f** (two-way door, judgment; defaulted to A). No accepted Decision moves. The panel's full ruling is in the
+run's judge-panel output (s8g package S8G-P7's items B1–B4), summarised here.
+
+**The blocker.** In record V's scratch, `redkiln init` and `redkiln status` exit 3 (*"git is not usable here"*). The
+scratch is an empty directory, and ADR-0170 decision 4's handler runs no git.
+
+**Ruled** (option (a+), unanimous: 8 / 8 / 8):
+1. **The checklist.** `.redkiln/checklists/smoke.toml` stays at its twelve measured rows.
+2. **No inverted rows.** Option (b), rows pinning exit 3, is rejected: they would certify a refusal as health.
+3. **The contradiction is named, not moved.** ADR-0170 decision 4's escape clause (*"a row that needs the directory to
+   be a repository makes it one in its own argv"*) cannot be met under the same decision's rule (*"against the
+   binaries that build produced, never an installed `redkiln`"*). ADR-0194 (proposed) and the review packet record it.
+   The two rows are owed to whichever record makes the smoke scratch a repository.
+
+**Reversal.** Write that record, then measure and add the two rows.
+
+---
+
+## D21-126 · `s8g` B3: `bdd-scenarios` and `docs-update` retire their lint step and lint conjunct (ADR-0072 edits, v4 → v5)
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-6a2d50** (two-way door, judgment; defaulted to C). No accepted Decision moves. The panel's full ruling is in the
+run's judge-panel output (s8g package S8G-P7's items B1–B4), summarised here.
+
+**The blocker.** `Toolchain::lint` returns `Result<(), StepError>`, with no output. The shipped `lint` row declares
+`LintReport`, which has no type and no decode entry. `bdd-scenarios` and `docs-update` gate on `lint.errors.len() == 0`,
+and neither adapter lints Gherkin or docs. So both refuse on the story lane.
+
+**Ruled** (option (c′)). An ADR-0072 catalog edit to each activity, version 4 → 5, with CHANGELOG rows:
+1. Delete the lint step.
+2. Delete the `lint` input on the drafting step.
+3. The policy reads `check.failed == 0` over `${self-check.outputs}`, with `on_false` unchanged.
+4. The evidence drops the lint step.
+5. The rationale's *"costs a lint step and a reviewer"* becomes *"costs a reviewer"*.
+
+The `lint` registry row, the port trait (ADR-0169) and ADR-0170's row are untouched. The story lane's claim moves by a
+dated line; the lane walks, the lattice and Checkpoint 8b's pins are re-measured.
+
+**Reversal.** Re-add the step at v6 once a lint port with output exists: option (b), a `LintReport` record.
+
+---
+
+## D21-127 · `s8g` B4: `bisect` has no registry row; it stays in ADR-0170 decision 1's no-row set, owed to the Phase-2 bisect repair
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-09-29, pending the operator's confirmation — Weigh-In
+wi-671db9** (two-way door, judgment; defaulted to A). No accepted Decision moves. The panel's full ruling is in the
+run's judge-panel output (s8g package S8G-P7's items B1–B4), summarised here.
+
+**The blocker.** No `.redkiln/registry.toml` row, no `s8*` owner and no handler exists for `bisect`. It is selected on
+neither lane.
+
+**Ruled** (option (a′)). Dated notes only. No `bisect` row is written, and `verb_registry::SHIPPED_ROWS` stays at 13.
+1. D21-73's *"the stage that owns its verb"* has no Phase-1 owner. Neither s8h nor s8j scopes a VCS-history handler.
+2. `bisect` therefore stays in the set accepted ADR-0170 decision 1 already names: *"The other verbs have no row and
+   refuse by **bare** name"*.
+3. The owner is the Phase-2 bisect repair (the AC register; ADR-0093's *"Retained as the Phase-2 repair"*).
+
+**Reversal.** Add the row, and a handler record, when a lane selects `bisect`.
