@@ -5378,6 +5378,7 @@ and neither adapter lints Gherkin or docs. So both refuse on the story lane.
 3. The policy reads `check.failed == 0` over `${self-check.outputs}`, with `on_false` unchanged.
 4. The evidence drops the lint step.
 5. The rationale's *"costs a lint step and a reviewer"* becomes *"costs a reviewer"*.
+   *(dated 2026-09-30, `s8g` build, package R1FIX-8g, refuting round 1: a correction of this summary's letter, not of the ruling. Item 5 holds for `bdd-scenarios` only. `docs-update`'s rationale never carried *"costs a lint step and a reviewer"*: at `178868f` it read *"Diátaxis: every change lands its docs in the right quadrant; the lint catches broken references, the checklist catches the wrong quadrant."*, and the edit built drops *"the lint catches broken references"*, reading *"Diátaxis: every change lands its docs in the right quadrant; the checklist catches the wrong quadrant."* ADR-0194's D21-126 note states it so.)*
 
 The `lint` registry row, the port trait (ADR-0169) and ADR-0170's row are untouched. The story lane's claim moves by a
 dated line; the lane walks, the lattice and Checkpoint 8b's pins are re-measured.

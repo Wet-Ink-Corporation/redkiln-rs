@@ -353,12 +353,27 @@ fn apply_is_on_the_enumerated_write_set() {
     let repo = fx.repo_with_one_commit("mut");
     let item = rk_git::worktree::ItemId::parse("fix-2").expect("a safe id");
     let tree = rk_git::worktree::derive(&repo, &item);
-    let root = repo.join(".redkiln").join("worktrees");
-    assert_eq!(tree.mutation, root.join("fix-2.mut"));
+    // The root is taken from rk-git's one derivation, never re-joined here (Checkpoint 8d-ii (3),
+    // D21-44). *(dated 2026-09-30, s8g build, package R1FIX-8g: this read a second, literal
+    // derivation of the root, which 8d-ii's one-derivation guard bans outside the worktree module.)*
     assert_eq!(
         tree.mutation.parent(),
         tree.reference.parent(),
         "the mutation tree does not sit beside the review reference tree"
+    );
+    assert_eq!(
+        tree.mutation.parent(),
+        tree.path.parent(),
+        "the mutation tree does not sit under the run-tree root"
+    );
+    assert_eq!(
+        tree.mutation.file_name().and_then(|n| n.to_str()),
+        Some("fix-2.mut"),
+        "the mutation tree is not the item's `<item>.mut`"
+    );
+    assert!(
+        tree.mutation.starts_with(&repo),
+        "the mutation tree is outside the repository"
     );
     assert_ne!(
         tree.mutation, tree.path,

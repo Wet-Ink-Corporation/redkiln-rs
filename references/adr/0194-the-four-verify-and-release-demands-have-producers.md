@@ -159,7 +159,7 @@ Rejected: they are ADR-0170's decisions (record V), and a second specification w
    rationale reads *"costs a reviewer"* and `docs-update`'s drops *"the lint catches broken references"*. The retired
    check never ran: `Toolchain::lint(&self, bound)` returns `Result<(), StepError>` and receives no step input, so the
    step linted no Gherkin and no docs and bound no value. **Rejected: (b), widening the port** to a typed
-   `LintReport`, which would move ADR-0169's port and its 17 implementations and ADR-0170's surface, and would let a
+   `LintReport`, which would move ADR-0169's port and its ~~17~~ 19 implementations *(corrected 2026-09-30, `s8g` build, package R1FIX-8g, refuting round 1: `grep -rnE "impl(<[^>]*>)? +([a-z_]+::)*Toolchain +for" crates --include=*.rs` over code lines reads 19, three doc-comment hits excluded, `ChecklistBridge` and `checklist_bridge`'s `Recorder` among them; the figure is a rejected option's rationale and moves no checkpoint)* and ADR-0170's surface, and would let a
    clean clippy run open a Gherkin gate (a proxy); **rejected: (a), handing the item to `s8h`**, whose §8h.4 moves
    nothing until `s8g` lands, and the optional read `${…?}`, which fails open. The `lint` registry row (`outputs =
    "LintReport"`, route `port`), the port trait, `change-summary`'s and `tech-debt-assessment`'s code-lint steps and

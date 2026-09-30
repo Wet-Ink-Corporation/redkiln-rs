@@ -189,7 +189,10 @@ The following remain true, and the four assertions of §7f.1 are run rather than
   clone.)*
 - **`shipped_pack_loads` is GREEN** — the product's own `.redkiln/` passes every load-time lint, not merely parses.
 - **`redkiln run` no longer refuses at catalog load**, which is this step's whole externally visible effect.
-- **`artifacts.toml` carries six toolchain-keyed kinds** and `spikes/p9/artifacts.toml` is unchanged.
+- **`artifacts.toml` carries ~~six~~ toolchain-keyed kinds** and `spikes/p9/artifacts.toml` is unchanged. *(dated
+  2026-09-30, `s8g` build, package R1FIX-8g: **seven** since `s8g` — D21-121 keeps `keyed_by = "toolchain"` on
+  `AuthoredTests`, and ADR-0191, proposed, supersedes ADR-0132's *"The toolchain-keyed set is **six**"* in part. The
+  block's guard moved 6 -> 7 by a dated line, under D21-47's time-bound rule, with a planted control.)*
 - **No `method_rank` moved** — the tie is resolved by keying, per ADR-0056.
 
 *(Amended 2026-09-27, `s8d-ii` build, P6: `s8d-ii` §8d-ii.7's three amendments, in the commit that moves the run-tree
@@ -218,7 +221,16 @@ lint stays `s8e`'s (§8e.13), and `s8j` §8j.8 amends this arm further, taking t
 cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
 test -d .redkiln/catalog && test -f .redkiln/artifacts.toml || { echo "FAIL: .redkiln/ not derived — Checkpoint 7f NOT RUN (Halt 8)"; exit 1; }
-keyed=$(grep -c '^keyed_by = "toolchain"' .redkiln/artifacts.toml); [ "$keyed" -eq 6 ] || { echo "FAIL: $keyed toolchain-keyed kinds, expected 6 (ADR-0132, superseding ADR-0073 in part, 2026-09-21)"; exit 1; }
+# ~~keyed=$(grep -c '^keyed_by = "toolchain"' .redkiln/artifacts.toml); [ "$keyed" -eq 6 ] || { echo "FAIL: $keyed toolchain-keyed kinds, expected 6 (ADR-0132, superseding ADR-0073 in part, 2026-09-21)"; exit 1; }~~
+# (dated 2026-09-30, s8g build, package R1FIX-8g; D21-47's time-bound rule: "A time-bound guard in an earlier
+# checkpoint is amended by the stage that moves its premise, in the same commit.") D21-121 (TAKEN PROVISIONALLY under
+# D21-105) keeps keyed_by = "toolchain" on [artifact.AuthoredTests], and ADR-0191 (proposed) supersedes ADR-0132's
+# "The toolchain-keyed set is **six**" in part: "With `AuthoredTests` both become seven." The count moves 6 -> 7, the
+# seventh is asserted to be AuthoredTests by name, and a planted control shows the count without that one line (6,
+# the pre-s8g figure) is refused. Reversal (D21-121's): remove the keying line and restore -eq 6 here.
+keyed=$(grep -c '^keyed_by = "toolchain"' .redkiln/artifacts.toml); [ "$keyed" -eq 7 ] || { echo "FAIL: $keyed toolchain-keyed kinds, expected 7 (ADR-0132, superseding ADR-0073 in part, 2026-09-21; ADR-0191 superseding ADR-0132's enumeration in part, D21-121)"; exit 1; }
+at=$(awk '/^\[artifact\./{s=($0=="[artifact.AuthoredTests]")} s && /^keyed_by = "toolchain"/{n++} END{print n+0}' .redkiln/artifacts.toml); [ "$at" -eq 1 ] || { echo "FAIL: [artifact.AuthoredTests] carries $at keyed_by = \"toolchain\" lines, expected 1 (D21-121)"; exit 1; }
+ctl=$(awk '/^\[artifact\./{s=($0=="[artifact.AuthoredTests]")} !(s && /^keyed_by = "toolchain"/)' .redkiln/artifacts.toml | grep -c '^keyed_by = "toolchain"'); [ "$ctl" -eq 6 ] && [ "$ctl" -ne 7 ] || { echo "FAIL: PLANTED CONTROL - the registry without AuthoredTests' keying line reads $ctl, not the pre-s8g 6 the guard above refuses"; exit 1; }
 grep -q '^\[artifact.ImplReport\]' .redkiln/artifacts.toml || { echo "FAIL: ImplReport has no registry entry at all"; exit 1; }
 grep -q 'superseded_by: \["0132"\]' references/adr/0073-*.md || { echo "FAIL: ADR-0073 carries no back-link to 0132 — a one-sided link is a defect, not a shorthand (adr/README.md)"; exit 1; }
 grep -q '^supersedes: \["0073"\]' references/adr/0132-*.md || { echo "FAIL: ADR-0132 does not declare what it supersedes"; exit 1; }

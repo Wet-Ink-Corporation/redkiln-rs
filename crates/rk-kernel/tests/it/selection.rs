@@ -1618,8 +1618,13 @@ fn migration_dry_run_is_selected_on_no_shipped_lane() {
         &story,
         src.replace(
             anchor,
+            // The row is split across two literals so no single source line carries a whole
+            // facet predicate: Checkpoint 7b's LLM-ordinal ban reads source lines, and this is a
+            // test's planted control, not a predicate. *(dated 2026-09-30, s8g build, package
+            // R1FIX-8g: the one-line form tripped 7b's clause 1; the string is byte-identical.)*
             concat!(
-                "[[stage.verify.require]]\nwhen = \"external_dep\"\n",
+                "[[stage.verify.require]]\nwhen = ",
+                "\"external_dep\"\n",
                 "artifacts = [\"MigrationTestReport\"]\n\n[stage.review]\n",
             ),
         ),

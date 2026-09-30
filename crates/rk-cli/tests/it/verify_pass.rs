@@ -1205,6 +1205,101 @@ fn ac139_shipped_packs_block_a_missing_verification() {
     }
 }
 
+/// The verify fixture with a committed `Spec` whose one criterion carries NO `verification` (and a
+/// mutation declared `not_feasible`, so without the policy row the ledger is reached and holds the
+/// exit on it), the pack's `[mutation]` declaration (AC-337), and, when `with_row`, the pack's
+/// `[policy] verification_required = ["check"]` row naming the fixture's one stage.
+/// *(Added 2026-09-30, `s8g` build, package R1FIX-8g.)*
+fn admissibility_repo(with_row: bool) -> tempfile::TempDir {
+    let repo = verify_repo(&[RUST], true);
+    let root = repo.path();
+    let spec = serde_json::json!({
+        "acceptance_criteria": [{
+            "id": "AC-901",
+            "criterion": "the fixture's one criterion carries no verification",
+            "mutation": { "kind": "not_feasible", "reason": "the fixture declares no executable mutation" },
+        }],
+    });
+    let dir = root.join(".redkiln").join("artifacts").join(ITEM);
+    std::fs::create_dir_all(&dir).expect("the managed directory");
+    std::fs::write(
+        dir.join("Spec.json"),
+        serde_json::to_vec_pretty(&spec).expect("the spec serialises"),
+    )
+    .expect("the spec writes");
+    let order = "stage_order = [\"check\"]\n";
+    for pack in ["bug-standard.toml", "story.toml"] {
+        let path = root.join(".redkiln").join("packs").join(pack);
+        let mut src = std::fs::read_to_string(&path).expect("the pack reads");
+        assert_eq!(
+            src.matches(order).count(),
+            1,
+            "PREMISE: the fixture {pack} orders its one stage `check` once"
+        );
+        if with_row {
+            src = src.replacen(
+                order,
+                &format!("{order}verification_required = [\"check\"]\n"),
+                1,
+            );
+        }
+        src.push_str("\n[mutation]\nfeasible = true\n");
+        std::fs::write(&path, src).expect("the pack writes");
+    }
+    crate::git(root, &["add", ".redkiln/packs", ".redkiln/artifacts"]);
+    crate::git(
+        root,
+        &["commit", "--quiet", "-m", "the N24 admissibility fixture"],
+    );
+    repo
+}
+
+/// **N24's row is read on the lane** (D21-43 N24; R2 = ADR-0192 decision 5; `s8g` §8g.3's "the pass
+/// runs the ledger and the admissibility check (§8g.2, step 6)"). Through `verbs::run::run`, a
+/// committed `Spec` whose criterion has no `verification`, under a pack whose policy requires one at
+/// the stage, is HELD before the ledger: a named non-zero exit, no `TestReport`, no stage-exit
+/// refusal, no AC-357 gate. The CONTROL, the same spec with the row absent, is not refused by the
+/// policy and reaches the ledger. *(Added 2026-09-30, `s8g` build, package R1FIX-8g: round 1's
+/// finding that `verify_step_six` never called `admissibility::admissible`.)*
+#[test]
+fn n24_a_verification_less_criterion_is_held_at_verify_through_the_lane() {
+    let repo = admissibility_repo(true);
+    let root = repo.path();
+    assert_eq!(
+        run_verify(root, &ScriptedFactory::new(Vec::new())),
+        Exit::NonZero,
+        "the pack's verification_required row did not hold the stage (N24, AC-139)"
+    );
+    assert!(
+        test_report_writes(root).is_empty(),
+        "a TestReport was written over a criterion the policy refuses"
+    );
+    assert!(
+        rows_of(root, EventKind::StageExitRefused).is_empty(),
+        "the ledger was reached: the admissibility check runs before it"
+    );
+    assert!(ac_gates(root).is_empty(), "AC-357's gate was opened");
+
+    // CONTROL: the row absent — the same spec is not refused by the policy and reaches the ledger.
+    let bare = admissibility_repo(false);
+    let broot = bare.path();
+    assert_eq!(
+        run_verify(broot, &ScriptedFactory::new(Vec::new())),
+        Exit::Success,
+        "CONTROL: without the row the lane must reach the ledger and open AC-357's gate"
+    );
+    assert_eq!(
+        rows_of(broot, EventKind::StageExitRefused).len(),
+        1,
+        "CONTROL: the ledger was not reached"
+    );
+    assert_eq!(
+        ac_gates(broot).len(),
+        1,
+        "CONTROL: AC-357's gate was not opened"
+    );
+}
+
 // ------------------------------------------------------------------------------------------------
 // §8g.2 step 6 and §8g.5: the mutation harness (AC-338, AC-339), AC-353's kill and resume, AC-359's
 // drift, and `verify.ac-discriminates` answered through the loaded registry. *(dated 2026-09-29,
@@ -2200,23 +2295,14 @@ fn ac353_killed_verify_resumes_to_the_same_decision() {
     assert_eq!(replayed[0].paths, resumed[0].paths);
 }
 
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository with git; the product's git goes through rk-git's \
-              one GitExec wrapper (ADR-0077)"
-)]
+/// The fixture's git, through `rk-git`'s one process-exec site (`git_exec::run`), as `s8d`'s
+/// `verb_rows` helper does. *(dated 2026-09-30, s8g build, package R1FIX-8g: this was a process
+/// `Command` for `git` of its own, which Checkpoint 6's workspace-wide `Command::new("git")` line reads;
+/// routed through the wrapper so `s8g` adds no site to it.)*
 fn git_out(cwd: &Path, args: &[&str]) -> String {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} in {} failed: {}",
-        cwd.display(),
-        String::from_utf8_lossy(&out.stderr)
-    );
-    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+    rk_git::git_exec::run(cwd, args)
+        .unwrap_or_else(|e| panic!("git {args:?} in {} failed: {e:?}", cwd.display()))
+        .stdout_trimmed()
+        .trim()
+        .to_owned()
 }

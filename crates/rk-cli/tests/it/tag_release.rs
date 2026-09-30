@@ -78,23 +78,16 @@ fn git(cwd: &Path, args: &[&str]) {
     crate::git(cwd, args);
 }
 
-#[expect(
-    clippy::disallowed_types,
-    reason = "a test reading its own fixture repository; the product's git goes through rk-git"
-)]
+/// The fixture's git, through `rk-git`'s one process-exec site (`git_exec::run`), as `s8d`'s
+/// `verb_rows` helper does. *(dated 2026-09-30, s8g build, package R1FIX-8g: this was a process
+/// `Command` for `git` of its own, which Checkpoint 6's workspace-wide `Command::new("git")` line reads;
+/// routed through the wrapper so `s8g` adds no site to it.)*
 fn git_out(cwd: &Path, args: &[&str]) -> String {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+    rk_git::git_exec::run(cwd, args)
+        .unwrap_or_else(|e| panic!("git {args:?} in {} failed: {e:?}", cwd.display()))
+        .stdout_trimmed()
+        .trim()
+        .to_owned()
 }
 
 fn copy_dir(from: &Path, to: &Path) {

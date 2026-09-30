@@ -3774,6 +3774,9 @@ fn journal_now(
 ///
 /// 1. The item's criteria, off the committed `Spec` sidecar in the run-owned tree
 ///    ([`crate::verify_pass::criteria_of`]); none is nothing to hold (the ledger is empty).
+///    Then N24's policy row (`rk_kernel::verify::admissibility::admissible` over the item's pack):
+///    a criterion without a `verification` where the pack requires one holds the stage, named.
+///    *(dated 2026-09-30, `s8g` build, package R1FIX-8g.)*
 /// 2. The pack's mutation feasibility (AC-337: an absent `[mutation]` declaration is a
 ///    configuration error, raised here where the verify gate reads it).
 /// 3. The mutation harness ([`crate::verify_pass::mutate`]) for each criterion with a declared
@@ -3810,6 +3813,29 @@ fn verify_step_six(
     };
     if criteria.is_empty() {
         return Ok(Ok(()));
+    }
+
+    // ---- (1b) N24's policy row, before any harness run and before the ledger. *(dated 2026-09-30,
+    // `s8g` build, package R1FIX-8g; D21-43 N24, R2 = ADR-0192 decision 5, proposed; §8g.3: "the
+    // pass runs the ledger and the admissibility check (§8g.2, step 6)".)* The item's pack decides
+    // (`[policy] verification_required`), never the type (AC-138): a criterion at `verification:
+    // None` under a pack requiring one at this stage holds the stage, named, with no `TestReport`.
+    let pack = match rk_kernel::select::Pack::from_toml(
+        &format!("{}.toml", resolved.pack_name),
+        &resolved.pack_src,
+    ) {
+        Ok(pack) => pack,
+        Err(e) => {
+            return Ok(Err((
+                format!("the item's pack does not load for the admissibility check: {e}"),
+                Exit::ConfigError,
+            )));
+        }
+    };
+    if let Err(refused) =
+        rk_kernel::verify::admissibility::admissible(&resolved.stage, &criteria, &pack)
+    {
+        return Ok(Err((refused.to_string(), Exit::NonZero)));
     }
 
     // ---- (2) AC-337. *(dated 2026-09-29, `s8g` build, package R-D2122-D2123-8g; D21-123 item 4.)*
