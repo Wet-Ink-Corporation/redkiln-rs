@@ -366,25 +366,14 @@ fn run_tree_probe(root: &Path) -> String {
 }
 
 /// Does git in `root` report `rel` as ignored? `check-ignore -q` exits 0 for ignored and 1 for not;
-/// anything else is a broken probe, never a "not ignored".
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository's own ignore rules; see `crate::git`"
-)]
+/// anything else is a broken probe, never a "not ignored". Through `rk-git`'s one process-exec site
+/// (`support::git_run`; ADR-0077; D21-128 A1): the exit code is read off
+/// `GitError::NonZeroExit`, which carries it (A2).
 fn git_ignores(root: &Path, rel: &str) -> bool {
-    let out = std::process::Command::new("git")
-        .args(["check-ignore", "-q", "--no-index", rel])
-        .current_dir(root)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("git check-ignore runs");
-    match out.status.code() {
-        Some(0) => true,
-        Some(1) => false,
-        other => panic!(
-            "git check-ignore exited {other:?}: {}",
-            String::from_utf8_lossy(&out.stderr)
-        ),
+    match crate::support::git_run(root, &["check-ignore", "-q", "--no-index", rel]) {
+        Ok(_) => true,
+        Err(rk_git::error::GitError::NonZeroExit { code: Some(1), .. }) => false,
+        Err(other) => panic!("git check-ignore did not answer 0 or 1: {other:?}"),
     }
 }
 

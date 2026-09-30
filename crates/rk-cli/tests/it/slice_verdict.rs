@@ -31,7 +31,6 @@
 //!   entry then names the item-id rule (§8e.12's S8E-M8 rows, measured).
 
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 
 use crate::support::{self, PackVariant};
 
@@ -78,26 +77,24 @@ fn run_over(root: &Path, corpus: &Path) -> std::process::Output {
 }
 
 /// Every `Slice-Verdict:` value on `rk-run/<item>`, oldest first, read by git's own parser.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository with git's own trailer parser; the product's git goes \
-              through rk-git's one GitExec wrapper"
-)]
+/// Through `rk-git`'s one process-exec site (`support::git_run`; ADR-0077; D21-128 A1); a refused
+/// `log` (an absent ref) reads as no seals, as before the routing, and a git that cannot start
+/// panics.
 fn seals_on_run_ref(root: &Path) -> Vec<(String, String)> {
-    let out = std::process::Command::new("git")
-        .args([
+    let run_ref = format!("refs/heads/rk-run/{ITEM}");
+    let out = match crate::support::git_run(
+        root,
+        &[
             "log",
             "--reverse",
             "--format=%H%x1f%(trailers:key=Slice-Verdict,valueonly,separator=%x1e)",
-            &format!("refs/heads/rk-run/{ITEM}"),
-        ])
-        .current_dir(root)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs");
-    if !out.status.success() {
-        return Vec::new();
-    }
+            &run_ref,
+        ],
+    ) {
+        Ok(out) => out,
+        Err(rk_git::error::GitError::NonZeroExit { .. }) => return Vec::new(),
+        Err(e) => panic!("git log did not run: {e:?}"),
+    };
     String::from_utf8_lossy(&out.stdout)
         .lines()
         .filter_map(|l| l.split_once('\x1f'))

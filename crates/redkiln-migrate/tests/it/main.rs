@@ -27,7 +27,6 @@ mod provenance;
 mod report;
 
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 
 // ---- locations -------------------------------------------------------------------------------
 
@@ -162,48 +161,39 @@ pub fn assert_no_block_comment(region: &str, what: &str) {
 
 // ---- temp repositories (D18-9) -----------------------------------------------------------------
 
-/// Run git in `cwd`.
+/// **Git in `cwd`, through `rk-git`'s one process-exec site, asserting it succeeded** — the one
+/// body `git` and `git_out` share.
 ///
-/// The tests build repositories; the **product** never spawns git outside `rk-git`'s one `GitExec`
-/// wrapper (ADR-0077), which is what Checkpoint 7d's `Command::new("git")` ban over `src/`
-/// enforces — and what `ac522_worktree_recreated_never_reused` reads as its instrument.
-#[expect(
-    clippy::disallowed_types,
-    reason = "a test building its own fixture repository; the product's git goes through rk-git's \
-              one GitExec wrapper (ADR-0077), which the block's src/ ban enforces"
-)]
-pub fn git(cwd: &Path, args: &[&str]) {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
+/// ADR-0077's git rule is workspace-wide, tests included: *"No `std::process::Command` for git
+/// exists anywhere else in the workspace"* (Checkpoint 6's workspace-wide git-spawn line), and
+/// `git_exec::run` is the route its own doc names, *"Used by the startup probe ... and by
+/// fixtures"*. *(dated 2026-09-30, `s8g` build, package D21128-8g; D21-128 A1. The reason this
+/// helper's `#[expect(clippy::disallowed_types)]` gave — "the block's src/ ban enforces" —
+/// misread the rule; the attribute is gone with the type.)*
+fn git_ok(cwd: &Path, args: &[&str]) -> rk_git::git_exec::GitOutput {
+    match rk_git::git_exec::run(cwd, args.iter().copied()) {
+        Ok(out) => out,
+        Err(rk_git::error::GitError::NonZeroExit { code, stderr, .. }) => panic!(
+            "git {args:?} failed (exit {code:?}): {}",
+            String::from_utf8_lossy(&stderr)
+        ),
+        Err(e) => panic!("git {args:?} did not run: {e:?}"),
+    }
 }
 
-/// Capture git's stdout in `cwd`, asserting it succeeded.
-#[expect(
-    clippy::disallowed_types,
-    reason = "a test reading its own fixture repository; see `git` above"
-)]
+/// Run git in `cwd`, asserting it succeeded ([`git_ok`]).
+///
+/// The **product**'s git goes through the same wrapper, which is what
+/// `ac522_worktree_recreated_never_reused` reads as its instrument.
+pub fn git(cwd: &Path, args: &[&str]) {
+    git_ok(cwd, args);
+}
+
+/// Capture git's stdout in `cwd`, trimmed, asserting it succeeded ([`git_ok`]).
 pub fn git_out(cwd: &Path, args: &[&str]) -> String {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+    String::from_utf8_lossy(&git_ok(cwd, args).stdout)
+        .trim()
+        .to_owned()
 }
 
 /// A temp repository with one commit, and nothing else.

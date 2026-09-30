@@ -99,7 +99,6 @@ mod verify_pass;
 mod worktree_assigned;
 
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 
 /// The crate's own `src/` directory, resolved from the manifest rather than from the process cwd.
 ///
@@ -274,25 +273,13 @@ pub fn temp_repo() -> tempfile::TempDir {
     dir
 }
 
-/// Run git in `cwd`. The tests build repositories; the PRODUCT never spawns git outside `rk-git`'s
-/// one wrapper, which is what Checkpoint 7d's `Command::new("git")` ban over `src/` enforces.
-#[expect(
-    clippy::disallowed_types,
-    reason = "a test building its own fixture repository; the product's git goes through rk-git's \
-              one GitExec wrapper (ADR-0077), which the block's src/ ban enforces"
-)]
+/// Run git in `cwd`, asserting it succeeded.
+///
+/// The tests build repositories, and their git goes
+/// through `rk-git`'s one process-exec site like the product's: ADR-0077's git rule is
+/// workspace-wide, tests included (`support::git_run`; D21-128 A1).
 pub fn git(cwd: &Path, args: &[&str]) {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
+    crate::support::git_ok(cwd, args);
 }
 
 /// Spawn `redkiln -C <repo> init` with stdin closed (D-15: no verb reads stdin).
@@ -308,18 +295,9 @@ pub fn run_init(repo: &Path) -> std::process::Output {
 }
 
 /// Every ref in the repository, sorted — the `refs/` surface AC-531's enumerator covers beside the
-/// working tree and the hooks directory.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository's own refs; see `git` above"
-)]
+/// working tree and the hooks directory. Panics if git fails (D21-128 A2).
 pub fn refs(repo: &Path) -> Vec<String> {
-    let out = std::process::Command::new("git")
-        .args(["for-each-ref", "--format=%(refname)"])
-        .current_dir(repo)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git for-each-ref runs");
+    let out = crate::support::git_ok(repo, &["for-each-ref", "--format=%(refname)"]);
     let mut names: Vec<String> = String::from_utf8_lossy(&out.stdout)
         .lines()
         .map(str::to_owned)
@@ -328,18 +306,10 @@ pub fn refs(repo: &Path) -> Vec<String> {
     names
 }
 
-/// `git status --porcelain` over the whole tree, as a sorted listing.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository's own porcelain listing; see `git` above"
-)]
+/// `git status --porcelain` over the whole tree, as a sorted listing. Panics if git fails
+/// (D21-128 A2).
 pub fn porcelain(repo: &Path) -> Vec<String> {
-    let out = std::process::Command::new("git")
-        .args(["status", "--porcelain"])
-        .current_dir(repo)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git status runs");
+    let out = crate::support::git_ok(repo, &["status", "--porcelain"]);
     let mut lines: Vec<String> = String::from_utf8_lossy(&out.stdout)
         .lines()
         .map(str::to_owned)
@@ -349,18 +319,12 @@ pub fn porcelain(repo: &Path) -> Vec<String> {
 }
 
 /// The repository's common dir, read from git rather than assumed — a linked worktree's is not
-/// `<root>/.git`.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository's own common dir; see `git` above"
-)]
+/// `<root>/.git`. Panics if git fails (D21-128 A2).
 pub fn common_dir(repo: &Path) -> PathBuf {
-    let out = std::process::Command::new("git")
-        .args(["rev-parse", "--path-format=absolute", "--git-common-dir"])
-        .current_dir(repo)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git rev-parse runs");
+    let out = crate::support::git_ok(
+        repo,
+        &["rev-parse", "--path-format=absolute", "--git-common-dir"],
+    );
     PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_owned())
 }
 

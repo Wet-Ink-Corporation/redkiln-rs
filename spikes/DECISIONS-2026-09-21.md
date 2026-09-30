@@ -5461,3 +5461,46 @@ PROGRESS row 6's 7c/7d mark and its `s8g` mark are discharged only by an rc-0 pa
 mirrored into `ci.yml`, and write a `proposed` record against ADR-0077's *"anywhere else in the workspace"*.
 
 **Reversal.** Revert the routing and the admission list, and take the fallback, or drop Checkpoint 6 from (12).
+
+*(dated 2026-09-30, s8g build, package D21128-8g.)* **Built.** A1 and A2 are done: the 16 test-helper git spawns
+route through `rk_git::git_exec::run`, over one support helper per test binary. For rk-cli that helper is
+`support::git_run`, with `git_ok` and `git_code` built on it. For redkiln-migrate it is `git_ok`.
+
+**The A2 measurement.** `git_exec::run` maps a non-zero exit to `Err(GitError::NonZeroExit { code, stderr, .. })`
+and keeps no stdout on failure.
+- **The five helpers that read a failing exit** read `code` off the error, or treat the error as the refusal they
+  already expected: `init::git_ignores`, `lane_e2e::git_read`, `lane_e2e::git_rc`, `run_worktree::git_rc` and
+  `slice_verdict::seals_on_run_ref`. Each keeps its meaning, and four mutants, one per exit-reading arm, were all
+  killed:
+  - M1 (`git_code` reads a non-zero exit as 0): 2 failed;
+  - M2 (`git_ignores` reads exit 1 as ignored): 1 failed;
+  - M3 (`git_read` reads a refusal as empty output): 6 failed;
+  - M4 (the seal reader panics on a refusal): 2 failed.
+- **The seven helpers that ignored the status** now panic on failure: `support::head_message`,
+  `support::commit_count`, `main::refs`, `main::porcelain`, `main::common_dir`, `answer::author_of` and
+  `root::root_of`. The rk-cli suite stayed green under that change (310/0/0), so no caller reads a failed git's
+  stdout.
+- **No site is unroutable, so A5 did not fire and no ADR was written.**
+
+**The census.**
+- The git line: 21 at `bb22b51`, 19 at `66c9c6c`, and 0 after A1 and A3, with 3 pinned controls.
+- The production line: 14, all admitted and pinned, with 0 unadmitted.
+
+**Controls (i) to (vi)** were each red (rc 1) and then green (rc 0) in a private worktree. `s6` note (c) records
+them.
+
+**Checkpoint 8g gains (11b).** It is a direct probe of both lines. It passes on the routed tree, and it FAILED
+(rc 1, 16 sites) over the unrouted `66c9c6c` tree.
+
+**Checkpoint 6, whole, extracted from `s6`'s bytes:** three formal runs through the no-dispatch wrapper at 4/4, extracted from this file's bytes (no line of it runs a redkiln binary or mutates git, so none was skipped), each exited 1 at a whole-suite cargo test line on ONE test, the 5 s-bound `run::ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting` (6.2 s, 6.4 s and 9.4 s, each 309 passed / 1 failed), with the operator's IDE running; re-run alone it passes (1 passed, 1.57 s). A DIAGNOSTIC copy skipping only that test in the two whole-suite runs exited 0 and reached its end marker, S-GIX line printed, so every other line, both Command-site lines included, passes. NOT a formal pass: Checkpoint 8g (12)'s replay owns that.
+
+**Measured and not disposed of: `ci.yml`'s mirror is still red.** The ruling's A3 premise was *"ci.yml's git grep
+also reads 0 with no ci.yml edit"*.
+- On this tree, the step's `bad=` pipeline reads **4**. All 4 are COMMENT lines naming the token:
+  - `rk-adapter-toolchain-node/tests/it/ac334.rs:22`;
+  - `rk-cli/tests/it/tag_release.rs:83`;
+  - `rk-cli/tests/it/verify_pass.rs:2300`;
+  - `rk-store/tests/it/contention.rs:18`.
+- The step's own comment says *"The trailing `grep -vE` drops COMMENT lines"*, but its pipeline carries no such
+  filter.
+- `ci.yml` is unedited here. The disposition goes to the panel.

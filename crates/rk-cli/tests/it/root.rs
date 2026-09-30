@@ -25,16 +25,11 @@ use crate::{code_lines, common_dir, lint_controls_dir, run_init, src_dir, temp_r
 ///
 /// Module level rather than inside the test that uses it: `clippy::items_after_statements` is
 /// DENIED workspace-wide (s7d 7d.15's enumerated pedantic subset).
-#[expect(
-    clippy::disallowed_types,
-    reason = "a test reading its own fixture repository's root commit to assert the premise;                   the product's git goes through rk-git's one GitExec wrapper"
-)]
+///
+/// Through `rk-git`'s one process-exec site (`support::git_ok`; ADR-0077; D21-128 A1). Panics if
+/// git fails.
 fn root_of(dir: &Path) -> String {
-    let out = std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(dir)
-        .output()
-        .expect("git runs");
+    let out = crate::support::git_ok(dir, &["rev-parse", "HEAD"]);
     String::from_utf8_lossy(&out.stdout).trim().to_owned()
 }
 

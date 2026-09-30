@@ -234,14 +234,85 @@ n=$(grep -cE '^gix\.workspace = true$' crates/rk-git/Cargo.toml); test "${n:-0}"
 # ---- 2026-09-13; see §6.2's note — ADR-0077:70 bans process::Command FOR GIT, and the wider form
 # ---- blocked AC-181's two-process instrument).
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the type-ban grep is vacuous"; exit 1; }
-test "$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
+# ~~test "$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \~~
+# ~~  | xargs grep -nE 'std::process::Command|tokio::process::Command' \~~
+# ~~  | grep -vE '^crates/rk-git/src/git_exec\.rs:' \~~
+# ~~  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \~~
+# ~~  || { echo "FAIL: process::Command in production code outside the one wrapper"; exit 1; }~~
+# (dated 2026-09-30, s8g build, package D21128-8g; D21-128 (B), TAKEN PROVISIONALLY under D21-105 and on the confirm
+# list as the answer to the s8d close's P7 flag; D21-47's time-bound rule: "A time-bound guard in an earlier
+# checkpoint is amended by the stage that moves its premise, in the same commit.") The struck `= 0` has read 14 since
+# 7c and 7d, and every hit is a NON-git spawn. s7c and s7d RAISED this line for narrowing to its stated warrant
+# (ADR-0077, git) or an anchored filter. The regex and both exclusions are kept. The count is now compared FILE BY
+# FILE, with strict equality, against the anchored admission table below. Each row names its pinned count, its raising
+# stage and its reason, ADR-0127: rk-containment owns spawning, and its accepted API takes a std::process::Command.
+# A new site in an unlisted file fails. An extra site in a listed file fails through the pin. A removed site fails
+# through the equality, so no admission can go stale. The PER-SITE instrument is clippy.toml's disallowed-types row
+# (std::process::Command, tokio::process::Command) under Cargo.toml's [workspace.lints.clippy] all = deny: every site
+# answers it with its own #[expect(clippy::disallowed_types, reason = ...)], as ci.yml has said since 7c. A record
+# that moves ADR-0127's API amends this table in the same commit. Reversal (D21-128's): restore the struck line.
+cp6_prod_census() {
+  git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
   | xargs grep -nE 'std::process::Command|tokio::process::Command' \
   | grep -vE '^crates/rk-git/src/git_exec\.rs:' \
-  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
-  || { echo "FAIL: process::Command in production code outside the one wrapper"; exit 1; }
+  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | cut -d: -f1 | sort | uniq -c | awk '{ print $2" "$1 }' | sort
+}
+# path | pinned count | raising stage | reason
+cp6_prod_table=$(cat <<'CP6_ADMIT'
+crates/rk-adapter-claude/src/runner.rs           2  7c  ADR-0127
+crates/rk-adapter-toolchain-node/src/run.rs      2  7c  ADR-0127
+crates/rk-adapter-toolchain-rust/src/run.rs      2  7c  ADR-0127
+crates/rk-cli/src/doctor/probe.rs                1  7d  ADR-0127
+crates/rk-containment/src/bounded.rs             2  7c  ADR-0127
+crates/rk-containment/src/ffi.rs                 2  7c  ADR-0127
+crates/rk-containment/src/posix.rs               1  7c  ADR-0127
+crates/rk-containment/src/windows.rs             2  7c  ADR-0127
+CP6_ADMIT
+)
+bad=$(printf '%s\n' "$cp6_prod_table" | awk 'NF && !(NF == 4 && $2 ~ /^[1-9][0-9]*$/ && $3 ~ /^7[cd]$/ && $4 == "ADR-0127")')
+[ -z "$bad" ] || { echo "FAIL: an admission row without a pinned count, a raising stage and ADR-0127 (D21-128 (B)):"; printf '%s\n' "$bad"; exit 1; }
+cp6_prod_admit=$(printf '%s\n' "$cp6_prod_table" | awk 'NF { print $1" "$2 }' | sort)
+test "$(printf '%s\n' "$cp6_prod_admit" | awk '{ s += $2 } END { print s + 0 }')" = 14 \
+  || { echo "FAIL: the admission table no longer sums to D21-128's fourteen sites"; exit 1; }
+cp6_prod_got=$(cp6_prod_census)
+[ "$cp6_prod_got" = "$cp6_prod_admit" ] || { echo "FAIL: process::Command in production code does not equal the pinned ADR-0127 admissions (D21-128 (B)); census (<) against admitted (>):"; diff <(printf '%s\n' "$cp6_prod_got") <(printf '%s\n' "$cp6_prod_admit"); exit 1; }
+# PLANTED CONTROLS: the comparison, fed three altered censuses (a spawn in an unlisted file, one more in an admitted
+# file, one admitted site removed), refuses each.
+for c in unlisted extra removed; do
+  case "$c" in
+    unlisted) alt=$( { printf '%s\n' "$cp6_prod_got"; echo 'crates/rk-cli/src/cp6_planted.rs 1'; } | sort) ;;
+    extra) alt=$(printf '%s\n' "$cp6_prod_got" | awk '$1 == "crates/rk-adapter-claude/src/runner.rs" { $2 = $2 + 1 } 1') ;;
+    removed) alt=$(printf '%s\n' "$cp6_prod_got" | awk '$1 == "crates/rk-containment/src/windows.rs" { $2 = $2 - 1 } 1') ;;
+  esac
+  [ "$alt" != "$cp6_prod_admit" ] || { echo "FAIL: PLANTED CONTROL ($c): an altered census still equals the admission table"; exit 1; }
+done
 # The git rule stays workspace-wide, tests included — that one IS ADR-0077:70's own sentence.
-test "$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE '^crates/rk-git/src/git_exec\.rs:' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
+# ~~test "$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE '^crates/rk-git/src/git_exec\.rs:' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \~~
+# ~~  || { echo "FAIL: Command::new(\"git\") outside the wrapper"; exit 1; }~~
+# (dated 2026-09-30, s8g build, package D21128-8g; D21-128 (A), TAKEN PROVISIONALLY under D21-105; D21-47's
+# time-bound rule, quoted above.) The struck line read 21 at bb22b51 and 19 at 66c9c6c: 16 test helpers
+# (redkiln-migrate and rk-cli tests/it) and the 3 lint-control fixtures. The 16 now go through
+# rk_git::git_exec::run (rk-cli's support::git_run, and redkiln-migrate's git_ok), so ADR-0077 is kept whole and no
+# record moves. The line gains ONLY the anchored exclusion ci.yml has carried since s7c RT-13, held in one variable.
+# The companion line pins what that variable excludes, through the SAME variable: exactly the three lint-control
+# instruments, by file, with strict equality. So a widened exclusion that hides a fourth file fails there.
+cp6_lc_re='^crates/[^/]+/tests/fixtures/lint-controls/'
+test "$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE '^crates/rk-git/src/git_exec\.rs:' | grep -vE "$cp6_lc_re" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
   || { echo "FAIL: Command::new(\"git\") outside the wrapper"; exit 1; }
+cp6_lc_got=$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -E "$cp6_lc_re" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | cut -d: -f1 | sort | uniq -c | awk '{ print $2" "$1 }' | sort)
+cp6_lc_want=$(printf '%s\n' \
+  'crates/rk-adapter-claude/tests/fixtures/lint-controls/adr0077_git_command_control.rs 1' \
+  'crates/rk-cli/tests/fixtures/lint-controls/adr0077_git_command_control.rs 1' \
+  'crates/rk-cli/tests/fixtures/lint-controls/adr0102_allow_attribute_control.rs 1' | sort)
+[ "$cp6_lc_got" = "$cp6_lc_want" ] || { echo "FAIL: the lint-controls exclusion hides something other than the three pinned instruments (D21-128 A4); got (<) against pinned (>):"; diff <(printf '%s\n' "$cp6_lc_got") <(printf '%s\n' "$cp6_lc_want"); exit 1; }
+# PLANTED CONTROL: two synthetic hits, one in a tests/it file and one under tests/fixtures/ OUTSIDE lint-controls/,
+# survive the git line's filters (so the exclusion is not wider than its anchor), and the lint-controls hit does not.
+n=$(printf '%s\n' \
+  'crates/rk-cli/tests/it/cp6_planted.rs:1:    let _ = std::process::Command::new("git");' \
+  'crates/rk-cli/tests/fixtures/cp6_planted/x.rs:1:    let _ = std::process::Command::new("git");' \
+  'crates/rk-cli/tests/fixtures/lint-controls/cp6_planted.rs:1:    let _ = std::process::Command::new("git");' \
+  | grep -vE '^crates/rk-git/src/git_exec\.rs:' | grep -vE "$cp6_lc_re" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')
+test "$n" = 2 || { echo "FAIL: PLANTED CONTROL: the git line's filters kept $n of the two non-instrument planted hits, expected 2"; exit 1; }
 # THE POSITIVE HALF. Both bans above pass on a workspace with no git exec at all — Halt 8 shape (g),
 # a pass condition that is the absence of output. THIS CANNOT FAIL without it.
 n=$(grep -c 'Command::new("git")' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: the wrapper does not invoke git; the two bans above assert nothing"; exit 1; }
@@ -342,6 +413,38 @@ n=$(grep -c '^      - name:' .github/workflows/ci.yml); test "${n:-0}" -ge 11 ||
 > The same narrowing is mirrored in `.github/workflows/ci.yml`'s structural job, which carries the rule
 > between checkpoint runs. **Recorded as a decision, not a tidy-up** — the operator was asked before the line
 > moved, and the alternative offered was to leave AC-181 undischarged.
+>
+> **(c)** *(dated 2026-09-30, `s8g` build, package D21128-8g; D21-128, TAKEN PROVISIONALLY under D21-105 and on the
+> confirm list as the answer to the `s8d` close's P7 flag: "flagged for the operator and not decided".)* **Both
+> Command-site lines are amended in place under D21-47's time-bound rule, and the block above carries the struck
+> text beside the new.** The census, by this block's own pipelines:
+>
+> - **The git line** read **21** at `bb22b51` and **19** at `66c9c6c`: 16 test helpers and the 3 lint-control
+>   fixtures. The 16 sites (redkiln-migrate `tests/it/main.rs` x2; rk-cli `tests/it/` `answer`, `init`, `lane_e2e`
+>   x2, `main` x4, `root`, `run_worktree` x2, `slice_verdict`, `support` x2) now route through
+>   `rk_git::git_exec::run`, on one support helper per test binary. Their `#[expect(clippy::disallowed_types)]`
+>   attributes are gone with the type. The line gains only the anchored exclusion `ci.yml` has carried since s7c
+>   RT-13, and a companion line pins exactly the 3 instruments it excludes. The line reads **0**. **ADR-0077 is kept
+>   whole, and no record moves.**
+> - **The production line** read **14** at `178868f`, at `bb22b51` and at `66c9c6c`. All 14 are non-git spawns in 8
+>   files, and all 14 are admitted and pinned, with **0** unadmitted. The warrant is threefold: ADR-0077 is git-only;
+>   ADR-0127 makes rk-containment the owner of spawning, and its accepted API takes a `std::process::Command`; and s7c
+>   and s7d RAISED this narrowing. The per-site instrument is clippy's `disallowed-types` deny, as `ci.yml` has said
+>   since 7c.
+>
+> **Controls, measured in a private worktree** (`target/wt-d21128`, the routed tree applied over `66c9c6c`, then
+> removed). Each turns its line red (rc 1) and goes green again (rc 0) after restore. The baseline is rc 0.
+>
+> 1. (i) a new git spawn in a new `tests/it` file: rc 1 on the git line.
+> 2. (ii) a new git spawn appended to the routed `support.rs`: rc 1 on the git line.
+> 3. (iii) the exclusion widened to `tests/fixtures/`, with a planted `tests/fixtures/cp6_ctl_iii/x.rs`: the git line
+>    passes, and the pin fails with rc 1.
+> 4. (iv) a new `std::process::Command` in an unlisted `rk-cli/src` file: rc 1 on the production line.
+> 5. (v) a second one appended to `runner.rs`: rc 1 on the production line.
+> 6. (vi) one `windows.rs` site removed: rc 1 on the production line.
+>
+> Before the routing, the amended lines over the unrouted `66c9c6c` tree read 16 and FAILED (rc 1), which is the red.
+> The whole block: three formal runs through the no-dispatch wrapper at 4/4, extracted from this file's bytes (no line of it runs a redkiln binary or mutates git, so none was skipped), each exited 1 at a whole-suite cargo test line on ONE test, the 5 s-bound `run::ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting` (6.2 s, 6.4 s and 9.4 s, each 309 passed / 1 failed), with the operator's IDE running; re-run alone it passes (1 passed, 1.57 s). A DIAGNOSTIC copy skipping only that test in the two whole-suite runs exited 0 and reached its end marker, S-GIX line printed, so every other line, both Command-site lines included, passes. NOT a formal pass: Checkpoint 8g (12)'s replay owns that.
 
 The verdict and floor lines make "a **written S-GIX result**" checkable instead of aspirational, and the
 `hooksPath`/`ifexists` greps make two of ADR-0105's rules a build-time fact rather than a sentence. "We built the hybrid so we

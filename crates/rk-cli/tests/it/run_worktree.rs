@@ -7,46 +7,19 @@
 //! *(dated 2026-09-27, `s8d-ii` build, P6.)*
 
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 
 use crate::support::{PackVariant, pack_min_repo};
 
-/// `git <args>` in `cwd`, its trimmed stdout. Panics on a non-zero exit, naming stderr.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository with git; the product's git goes through rk-git's \
-              one GitExec wrapper (ADR-0077)"
-)]
+/// `git <args>` in `cwd`, its trimmed stdout. Panics on a non-zero exit, naming stderr. Through
+/// `rk-git`'s one process-exec site (`support::git_ok`; ADR-0077; D21-128 A1).
 fn git_out(cwd: &Path, args: &[&str]) -> String {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} in {} failed: {}",
-        cwd.display(),
-        String::from_utf8_lossy(&out.stderr)
-    );
+    let out = crate::support::git_ok(cwd, args);
     String::from_utf8_lossy(&out.stdout).trim().to_owned()
 }
 
-/// `git <args>` in `cwd`, its exit code only.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository with git; see `git_out`"
-)]
+/// `git <args>` in `cwd`, its exit code only (`support::git_code`; D21-128 A1/A2).
 fn git_rc(cwd: &Path, args: &[&str]) -> Option<i32> {
-    std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs")
-        .status
-        .code()
+    crate::support::git_code(cwd, args)
 }
 
 /// A path as git prints it and as the OS spells it, folded to one comparable form.

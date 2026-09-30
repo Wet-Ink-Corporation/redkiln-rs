@@ -724,19 +724,10 @@ fn ac406_answer_after_commit_is_void_gate_stays_open() {
     );
 }
 
-/// The git author identity of `dir`'s `HEAD`, as `%an <%ae>`.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading a fixture worktree's own HEAD author; the product's git goes through rk-git's \
-              one GitExec wrapper (support::head_message's form, and its reason)"
-)]
+/// The git author identity of `dir`'s `HEAD`, as `%an <%ae>`, through `rk-git`'s one
+/// process-exec site (`support::git_ok`; ADR-0077; D21-128 A1). Panics if git fails.
 fn author_of(dir: &std::path::Path) -> String {
-    let out = std::process::Command::new("git")
-        .args(["log", "-1", "--format=%an <%ae>"])
-        .current_dir(dir)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("git log runs");
+    let out = crate::support::git_ok(dir, &["log", "-1", "--format=%an <%ae>"]);
     String::from_utf8_lossy(&out.stdout).trim().to_owned()
 }
 

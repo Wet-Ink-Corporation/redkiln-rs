@@ -1508,36 +1508,68 @@ pub fn journal_rows(root: &Path, item: &str) -> Vec<Event> {
         .unwrap_or_else(|e| panic!("the journal reads: {e:?}"))
 }
 
+/// **`git <args>` in `cwd`, through `rk-git`'s one process-exec site** — the one body every
+/// fixture git helper in this test binary shares.
+///
+/// ADR-0077: *"No `std::process::Command` for git exists anywhere else in the workspace"*, tests
+/// included (Checkpoint 6's git-spawn line is workspace-wide). `git_exec::run` is the
+/// route its own doc names: *"Used by the startup probe ... and by fixtures"*. It maps a non-zero
+/// exit to `Err(GitError::NonZeroExit { code, stderr, .. })` and keeps no stdout on failure; a
+/// helper that reads the exit code matches on `code`. *(dated 2026-09-30, `s8g` build, package
+/// D21128-8g; D21-128 A1/A2.)*
+///
+/// # Errors
+/// [`GitError::Spawn`] if git cannot start, [`GitError::NonZeroExit`] on a non-zero exit.
+pub fn git_run(cwd: &Path, args: &[&str]) -> Result<rk_git::git_exec::GitOutput, GitError> {
+    rk_git::git_exec::run(cwd, args.iter().copied())
+}
+
+/// [`git_run`], panicking on any failure and naming the arguments, the directory and the error.
+///
+/// # Panics
+/// If git cannot start or exits non-zero.
+pub fn git_ok(cwd: &Path, args: &[&str]) -> rk_git::git_exec::GitOutput {
+    match git_run(cwd, args) {
+        Ok(out) => out,
+        Err(GitError::NonZeroExit { code, stderr, .. }) => panic!(
+            "git {args:?} in {} failed (exit {code:?}): {}",
+            cwd.display(),
+            String::from_utf8_lossy(&stderr)
+        ),
+        Err(e) => panic!("git {args:?} in {} did not run: {e:?}", cwd.display()),
+    }
+}
+
+/// [`git_run`]'s exit code: `Some(0)` on success, the code git exited with otherwise (`None` when
+/// a signal ended it).
+///
+/// # Panics
+/// If git cannot start at all — a broken probe, never an exit code.
+pub fn git_code(cwd: &Path, args: &[&str]) -> Option<i32> {
+    match git_run(cwd, args) {
+        Ok(_) => Some(0),
+        Err(GitError::NonZeroExit { code, .. }) => code,
+        Err(e) => panic!("git {args:?} in {} did not run: {e:?}", cwd.display()),
+    }
+}
+
 /// `git -C <dir> log -1 --format=%B` — the HEAD commit's full message, trailers included.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading a fixture worktree's own HEAD message; the product's git goes through \
-              rk-git's one GitExec wrapper"
-)]
+///
+/// # Panics
+/// If git fails (D21-128 A2: no caller reads a failed `log`).
 #[must_use]
 pub fn head_message(dir: &Path) -> String {
-    let out = std::process::Command::new("git")
-        .args(["log", "-1", "--format=%B"])
-        .current_dir(dir)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("git log runs");
+    let out = git_ok(dir, &["log", "-1", "--format=%B"]);
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
 
 /// `git rev-list --count HEAD` — how many commits the repository's current branch carries.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading a fixture repository's own commit count; see `head_message` above"
-)]
+///
+/// # Panics
+/// If git fails, or prints something that is not an integer.
 #[must_use]
 pub fn commit_count(dir: &Path) -> usize {
-    let out = std::process::Command::new("git")
-        .args(["rev-list", "--count", "HEAD"])
-        .current_dir(dir)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("git rev-list runs");
+    let out = git_ok(dir, &["rev-list", "--count", "HEAD"]);
     String::from_utf8_lossy(&out.stdout)
         .trim()
         .parse()

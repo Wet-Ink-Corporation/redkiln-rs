@@ -30,7 +30,6 @@
 //! git (with git's own `%(trailers)` parser), the store, and the filesystem.
 
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -264,38 +263,19 @@ pub(crate) fn walk_the_lane_through_a_void(root: &Path) {
 // ------------------------------------------------------------------------------- git, read
 
 /// `git <args>` in `cwd`; `Some(stdout)` on success, `None` when git refuses (an absent ref).
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading a fixture repository with git's own parser; the product's git goes through \
-              rk-git's one GitExec wrapper"
-)]
+/// Through `rk-git`'s one process-exec site (`support::git_run`; ADR-0077; D21-128 A1). A git
+/// that cannot start at all panics, as `expect("git runs")` did here before the routing.
 pub(crate) fn git_read(cwd: &Path, args: &[&str]) -> Option<String> {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs");
-    out.status
-        .success()
-        .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    match crate::support::git_run(cwd, args) {
+        Ok(out) => Some(String::from_utf8_lossy(&out.stdout).into_owned()),
+        Err(rk_git::error::GitError::NonZeroExit { .. }) => None,
+        Err(e) => panic!("git {args:?} did not run: {e:?}"),
+    }
 }
 
-/// `git <args>` in `cwd`, its exit code.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading a fixture repository with git itself; see `git_read`"
-)]
+/// `git <args>` in `cwd`, its exit code (`support::git_code`; D21-128 A1/A2).
 pub(crate) fn git_rc(cwd: &Path, args: &[&str]) -> Option<i32> {
-    std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .expect("git runs")
-        .code()
+    crate::support::git_code(cwd, args)
 }
 
 pub(crate) fn run_ref(item: &str) -> String {
