@@ -4446,6 +4446,8 @@ adapter's rows, with its ADR-0126 tension recorded in a record. **ADR-0190 does 
 entry is unconfirmed** (it moves two accepted records' Decisions); it stays `proposed` under D21-49's flip-stop and
 goes on the review packet's confirm list.
 
+*(Confirmed 2026-09-29 by the operator at a weigh-in sitting during the AFK run: Weigh-In wi-838696 decided A, "widen ActivitySpec (ADR-0190 as built)". This lifts the entry's hold: ADR-0190 flips to `accepted` at `s8g`'s close under D21-105 item 1, on `s8f`'s two conditions (the formal Checkpoint 8f passed whole at `ae38553` with ADR-0190 held, and refuting round 8 was dry), with its four `superseded_by` back-links (0131, 0138, 0163, 0174) and Checkpoint 8f (2)'s `FLIP_PENDING` emptied in the same commit. ADR-0099 decision 1's declared reading is confirmed with it. The operator also confirmed Checkpoint 8f (2)'s `FLIP_PENDING` form at the same sitting: Weigh-In wi-f613b1 decided A.)*
+
 ---
 
 ## D21-108 · `s8f`: s8e's `lane_e2e` dirty arm is rewritten by S8F-P3 over a real `exclude` answer
