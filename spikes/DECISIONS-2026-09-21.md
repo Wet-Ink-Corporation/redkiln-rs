@@ -6021,6 +6021,21 @@ owed. The ruling is on the review packet's confirm list.
 2. **The directory is a caller input** (`settings_dir`), never discovered by the adapter. rk-cli `run` passes
    `<common_dir>/redkiln/runs/<run_id>/` and creates it before the first dispatch; tests pass a tempdir outside the
    worktree.
+   ***AMENDED 2026-10-02 (Weigh-In wi-f940f2, provisional under D21-105; blocker panel, unanimous; the record is
+   `target/afk-wf/s8h-ruling-d21-138.json`):*** *the location is `<common_dir>/redkiln/child-settings/<run_id>/`, a
+   sibling of the run record keyed by the same `run_id`. `runs/<run_id>/` could not hold item 3's retention clause:
+   `rk_kernel::replay::write_run` begins `let _ = std::fs::remove_dir_all(&dir);` and rk-cli calls it after the
+   stage's dispatches. A run's evidence is now the pair `runs/<run_id>/` (the record, replaced whole by
+   `write_run`) and `child-settings/<run_id>/` (launch evidence, never deleted), joined by `run_id` and by each
+   `dispatch_completed` row's `settings_file { path, sha256 }`. `read_run`, replay and `explain` read none of it,
+   so ADR-0130 (accepted) is untouched. A guard test, `run::a_child_settings_file_survives_write_run_for_its_run_id`,
+   pins the move, with a mutant that points the directory back at `runs/`. Residual, fail-closed and left to the
+   operator: `run_id` is content-derived and the directory is never emptied, so an identical re-run can meet the
+   same file name (a recycled PID, the sequence restarting, identical bytes). `create_new` then refuses before
+   spawn and nothing is overwritten. The fixes (a per-invocation subdirectory, a nonce, or accepting identical
+   bytes) each move something §8h.6 pins. The directory is also unbounded. Whether `remove_dir_all` removes a
+   read-only file on Windows is unmeasured; it matters only if the location moves back to `runs/`. The adapter
+   never runs git to find the directory and has no default.*
 3. **Fail closed, by type.** Each of these refuses before spawning, and none falls back to `settings: None`:
    - a missing directory;
    - a directory under the worktree, compared case-folded on Windows with `\\?\` stripped;
