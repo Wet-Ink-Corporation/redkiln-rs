@@ -1414,7 +1414,7 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         .get("implementer")
         .expect("pack-min declares [role.implementer]");
     let role = rk_adapter_claude::binder::Role {
-        model: declared.model,
+        model: declared.model.clone(),
         effort: declared.effort,
     };
     let timeout_secs = resolved
@@ -1437,6 +1437,8 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
             worktree: wt.path(),
             inputs: vec![("item".to_owned(), serde_json::json!("bug-1"))],
             activity_id_at_version: None,
+            // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3; ADR-0197 decision 4, proposed.)*
+            models: &resolved.extras.models,
         })
         .expect("pack-min's one card binds");
 

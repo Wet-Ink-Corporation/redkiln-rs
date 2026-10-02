@@ -8,9 +8,11 @@
 //! (E3's two arms, F7, F15, F20) and exercised, not validated against an oracle** — so what travels
 //! here is the shape the CLI accepted at the pin, not a warrant (PIA-036, PIA-062).
 //!
-//! **What is lifted** (the table's `step.rs` row): [`Tier`], [`Effort`] and
-//! [`Tier::accepts_effort`] (*"haiku rejects the parameter, so an effort on haiku is a spec error
-//! rather than a runtime one"* — the lifted rule the binder enforces); [`AgentCard`] and its
+//! **What is lifted** (the table's `step.rs` row): `Tier`, [`Effort`] and
+//! `Tier::accepts_effort` (*"haiku rejects the parameter, so an effort on haiku is a spec error
+//! rather than a runtime one"* — the lifted rule the binder enforces; *(dated 2026-10-02, s8h
+//! build, package P3-adapter-argv-models)* `Tier` has since left the binding path, and the rule is
+//! the `[models]` row's [`ModelRow::accepts_effort`]); [`AgentCard`] and its
 //! [`AgentCard::to_agents_json`] (*"a single-key object keyed by name"*, confirmed against v2.1.258
 //! — the shape that retired RFC R2, *"effort has no `--agents` equivalent"*); and the `StepSpec`
 //! fields the command builder needs, which are now [`AgentCard`]'s own members plus
@@ -67,34 +69,47 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::ConfigError;
 
-/// Model tier (lifted). Charter §9.4: tier is never a free variable — each experiment pinned the
-/// tier production uses for that step and held it constant; here it is the ROLE's (AC-212).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Tier {
-    Haiku,
-    Sonnet,
-    Opus,
+/// One `[models.<key>]` row of an installed pack (`s8h` §8h.3; ADR-0197 decision 4, proposed):
+/// the full model id and whether that model takes `--effort`.
+///
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models.)* **The closed `Tier` enum left
+/// the binding path here.** A tier is now the open set of `[models]` row keys: a role names a key
+/// (`RoleExtras.model`), the binder resolves it in the pack's table, and the row's full `id` is
+/// what reaches `--model`, `AgentCard.model`, the `--agents` JSON and the card digest. The lifted
+/// rule `Tier::accepts_effort` (`tiers.mjs`: `EFFORTLESS_TIERS = ['haiku']` — *"haiku rejects the
+/// parameter, so an effort on haiku is a spec error rather than a runtime one"*) is the row's
+/// [`ModelRow::accepts_effort`], and its warrant is carried beside the haiku row in each pack.
+/// Exactly the two keys (`deny_unknown_fields`), both required.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModelRow {
+    /// The full model id (`claude-sonnet-5`), never a tier word.
+    pub id: String,
+    /// Whether the model takes `--effort` (the lifted rule, per row).
+    pub accepts_effort: bool,
 }
 
-impl Tier {
-    /// The `--model` element.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Haiku => "haiku",
-            Self::Sonnet => "sonnet",
-            Self::Opus => "opus",
-        }
-    }
+/// A pack's `[models]` table: row key → row. The binder's one source for a role's model.
+pub type Models = BTreeMap<String, ModelRow>;
 
-    /// `tiers.mjs`: `EFFORTLESS_TIERS = ['haiku']` — haiku rejects the parameter, so an effort on
-    /// haiku is a spec error rather than a runtime one (lifted). Checked once, at bind.
-    #[must_use]
-    pub const fn accepts_effort(self) -> bool {
-        !matches!(self, Self::Haiku)
-    }
-}
+/// The CLI's own permission-mode set, plus `default` (`s8h` §8h.2; ADR-0197 decision 2, proposed).
+///
+/// Cited to `claude --help`, the CLI's argv parser, and not to an SDK enum: *"(choices:
+/// "acceptEdits", "auto", "bypassPermissions", "manual", "dontAsk", "plan")"* [measured
+/// 2026-09-24 on 2.1.281; re-read 2026-10-02 on 2.1.287, the same six, captured to
+/// `tests/fixtures/cli-help/2.1.287.permission-mode.txt`]. The binary maps `manual` to `default`
+/// [measured by string search], so `default` is the name the init reports and the name a card
+/// carries: seven in all. Only the shipped pair `default` / `acceptEdits` is admitted in a SHIPPED
+/// card, and that is the doctor row's job, not this set's.
+pub const PERMISSION_MODES: &[&str] = &[
+    "acceptEdits",
+    "auto",
+    "bypassPermissions",
+    "manual",
+    "dontAsk",
+    "plan",
+    "default",
+];
 
 /// Reasoning effort (lifted). F15: applied per dispatch — thinking tokens low 0.0 / high 4.8 /
 /// xhigh 221.0; low vs high did NOT separate.
@@ -187,7 +202,21 @@ pub fn lint_card(name: &str, tools: &[String], permission_mode: &str) -> Result<
     if permission_mode.trim().is_empty() {
         return Err(ConfigError::PermissionModeAbsent { card: card() });
     }
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.2.)* The CLI's closed
+    // set: a misspelling is refused at load and again at bind, naming the mode.
+    if !permission_mode_admitted(permission_mode) {
+        return Err(ConfigError::PermissionModeOutsideSet {
+            card: card(),
+            mode: permission_mode.to_owned(),
+        });
+    }
     Ok(())
+}
+
+/// Is `mode` one of [`PERMISSION_MODES`]? Exact spelling — `acceptEdit` is not `acceptEdits`.
+#[must_use]
+pub fn permission_mode_admitted(mode: &str) -> bool {
+    PERMISSION_MODES.contains(&mode)
 }
 
 /// The card FILE as authored — the closed record a pack author writes.
@@ -332,7 +361,9 @@ pub struct AgentCard {
     pub prompt: String,
     /// Required and non-empty (AC-493) — always written.
     pub tools: Vec<String>,
-    /// The role's tier (AC-212) — always written.
+    /// The role's model (AC-212) — always written. *(dated 2026-10-02, s8h build, package
+    /// P3-adapter-argv-models.)* The FULL id from the pack's `[models]` row the role names
+    /// (ADR-0197 decision 5, proposed), never the row key.
     pub model: String,
     /// The role's effort, present exactly when the tier accepts one (the lifted `accepts_effort`).
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -1,0 +1,27 @@
+# The pack that DECLARES the per-item envelope (s8h §8h.9; Record B = ADR-0198 decision 4, proposed):
+# `appetite.dispatches` (the per-item dispatch cap) and `appetite.tokens` (the per-item token
+# appetite, the sum of `Usage`'s four counters, D21-43 N17 Q2), beside `appetite.points`, `N` and
+# `K`. Added 2026-10-02, s8h build, package P5-kernel-envelope.
+#
+# **Five DIFFERENT numbers**, on `runtime-envelope.toml`'s doctrine: the dispatch cap is 3, `N` is
+# 4, `K` is 2, `appetite.points` is 50 and `appetite.tokens` is 5000, so an accessor that read the
+# wrong key lands on a number the test names and rejects. Integers carry no `_` separators, the
+# form Record B decision 1 fixes for the installed packs.
+[pack]
+id = "runtime-item-envelope-fixture"
+applies = "kind == incident"
+appetite = { points = 50, tokens = 5000, dispatches = 3 }
+
+# `N` — AC-029's attempt cap. Four, which is not the dispatch cap.
+[retry]
+attempts_cap = 4
+
+# `K` — AC-033's threshold. Two.
+[breaker]
+consecutive_platform_failures = 2
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]

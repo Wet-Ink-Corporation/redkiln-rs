@@ -1,0 +1,51 @@
+# s8h §8h.4 (D21-47 cross #4; D21-67 ruling 1: "`s8h`'s severity test re-points to a fixture").
+# Added 2026-10-02, s8h build, package P5-kernel-envelope.
+#
+# A `findings.none(severity in [...])` row over the reviewer's typed `Findings`, read by
+# `quality_block::a_severity_row_reads_the_typed_member_over_a_non_empty_list`. No shipped row
+# reads `severity` (D21-67 ruling 1 disposed of all 39 in s8d), so this fixture, beside
+# `terminal_condition_is_severity_only.toml`, is the row the test evaluates. The check binds the
+# findings LIST (`outputs.items`), because a quantifier reads a list and `Findings` serialises as
+# `{ items: [...] }`. Whether a severity-only row conforms to ADR-0080 d2 bullet 1 is not this
+# fixture's question (D21-67 ruling 1 answered it for the shipped rows).
+
+[activity]
+id           = "s8h-typed-severity"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "s8h-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE ROW.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs.items?}" }
+expr     = "findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}"]

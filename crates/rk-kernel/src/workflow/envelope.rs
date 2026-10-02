@@ -101,6 +101,11 @@
 
 use std::fmt;
 
+use rk_types::event::Event;
+use rk_types::event_kind::EventKind;
+
+use super::budget::Tokens;
+
 /// The pack's `N` — **AC-029's attempt cap.** No `Default`, no `const` fallback, no `unwrap_or`.
 ///
 /// > THEN the delay is exponential with full jitter, base 2 s, capped at 5 min, and **the attempt
@@ -207,6 +212,14 @@ pub enum EnvelopeError {
         /// The role the step nominated, as the catalog spelled it.
         role: String,
     },
+    /// `appetite.dispatches` is absent, so there is no per-item dispatch cap. *(Added 2026-10-02,
+    /// `s8h` build, package P5-kernel-envelope; `s8h` §8h.9; Record B = ADR-0198 decision 4,
+    /// proposed: "An absent `appetite.dispatches` is refused by pack validation as an
+    /// `EnvelopeError` beside `TokenAppetiteNotDeclared`, naming the pack".)*
+    DispatchCapNotDeclared {
+        /// The pack's `[pack] id`.
+        pack: String,
+    },
 }
 
 impl EnvelopeError {
@@ -220,6 +233,7 @@ impl EnvelopeError {
             Self::BreakerThresholdNotDeclared { .. } => "breaker_threshold_not_declared",
             Self::BreakerExpiryNotDeclared { .. } => "breaker_expiry_not_declared",
             Self::RoleFamilyNotDeclared { .. } => "role_family_not_declared",
+            Self::DispatchCapNotDeclared { .. } => "dispatch_cap_not_declared",
         }
     }
 }
@@ -265,8 +279,217 @@ impl fmt::Display for EnvelopeError {
                  to a failing model while the rest kept flowing. The activity's own `family` is \
                  ADR-0058's ACTIVITY family and is never read here"
             ),
+            Self::DispatchCapNotDeclared { pack } => write!(
+                f,
+                "pack `{pack}` declares no `appetite.dispatches`, so the runtime has no per-item \
+                 dispatch cap. It is not defaulted here: the cap and the token appetite are \
+                 declared in the pack and refused as code defaults (Record B = ADR-0198 decision \
+                 4). `appetite.points` and `appetite.tokens` are different counters (AC-020)"
+            ),
         }
     }
 }
 
 impl std::error::Error for EnvelopeError {}
+
+// ---- the per-item envelope (s8h §8h.9; Record B = ADR-0198 decision 4, proposed) -----------------
+//
+// *(dated 2026-10-02, `s8h` build, package P5-kernel-envelope.)* D21-42 19a: *"The kernel enforces a
+// per-item dispatch-count cap and token appetite, refusing with a typed class. First values: 40
+// dispatches, and about 2x the happy-path token estimate."* D21-43 N17 Q2: the appetite counts the
+// sum of `Usage`'s four counters; Q3: the refusal leaves the CLI as `Exit::Overage` (20). Record B
+// took finding 12's question: the refusal is THIS kernel class, never `StepError::Overage`, because
+// it is made before the `Harness` is called and a `StepError` is the port's outcome channel.
+
+/// The pack's per-item dispatch cap, `appetite.dispatches`. No `Default`, no `const` fallback, for
+/// [`AttemptCap`]'s reason: [`DispatchCap::declared`] is the only constructor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct DispatchCap(u32);
+
+impl DispatchCap {
+    /// From the value a pack declared. **The only constructor.**
+    #[must_use]
+    pub const fn declared(n: u32) -> Self {
+        Self(n)
+    }
+
+    /// The declared cap.
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0
+    }
+}
+
+impl fmt::Display for DispatchCap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} dispatches", self.0)
+    }
+}
+
+/// **The envelope's refusal: one variant per counter** (Record B decision 4's drafted
+/// `DispatchCapReached { item, count, cap }` and `TokenAppetiteReached { item, sum, appetite }`).
+///
+/// Made before any spawn and writing no row; the runtime carries it as
+/// `crate::runtime::RuntimeError::Envelope`, and `rk-cli` maps it to `Exit::Overage` (20).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EnvelopeRefusal {
+    /// The item's prior `dispatch` rows have reached `appetite.dispatches`.
+    DispatchCapReached {
+        /// The item the rows are keyed to.
+        item: String,
+        /// How many prior `dispatch` rows the store holds for it.
+        count: u32,
+        /// The pack's cap.
+        cap: DispatchCap,
+    },
+    /// The item's charged tokens have reached `appetite.tokens`.
+    TokenAppetiteReached {
+        /// The item the rows are keyed to.
+        item: String,
+        /// The sum of the four `Usage` counters over its `dispatch_completed` rows.
+        sum: Tokens,
+        /// The pack's appetite.
+        appetite: Tokens,
+    },
+}
+
+impl EnvelopeRefusal {
+    /// A stable tag, never message text.
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::DispatchCapReached { .. } => "dispatch_cap_reached",
+            Self::TokenAppetiteReached { .. } => "token_appetite_reached",
+        }
+    }
+}
+
+impl fmt::Display for EnvelopeRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DispatchCapReached { item, count, cap } => write!(
+                f,
+                "item `{item}` has made {count} dispatches and the pack's `appetite.dispatches` \
+                 is {cap}; the next dispatch is refused before any spawn (Record B = ADR-0198 \
+                 decision 4). A budget state that does not improve by being repeated"
+            ),
+            Self::TokenAppetiteReached {
+                item,
+                sum,
+                appetite,
+            } => write!(
+                f,
+                "item `{item}` has been charged {sum} (the four `Usage` counters over its \
+                 `dispatch_completed` rows) and the pack's `appetite.tokens` is {appetite}; the \
+                 next dispatch is refused before any spawn (Record B = ADR-0198 decision 4)"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for EnvelopeRefusal {}
+
+/// **The per-item envelope a runtime enforces**: the pack's dispatch cap and token appetite, both
+/// declared ([`crate::select::Pack::require_item_envelope`] is the only way to obtain one).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ItemEnvelope {
+    cap: DispatchCap,
+    appetite: Tokens,
+}
+
+impl ItemEnvelope {
+    /// From the two values a pack declared.
+    #[must_use]
+    pub const fn declared(cap: DispatchCap, appetite: Tokens) -> Self {
+        Self { cap, appetite }
+    }
+
+    /// `appetite.dispatches`.
+    #[must_use]
+    pub const fn cap(self) -> DispatchCap {
+        self.cap
+    }
+
+    /// `appetite.tokens`.
+    #[must_use]
+    pub const fn appetite(self) -> Tokens {
+        self.appetite
+    }
+
+    /// The item's prior dispatches: the `dispatch` rows KEYED to `item` (ADR-0182's interim key).
+    /// `query(ByItem)` also returns unkeyed rows in the interim (ADR-0182 decision 4), and those
+    /// are not this item's, so they are not counted (Record B decision 4).
+    #[must_use]
+    pub fn prior_dispatches(events: &[Event], item: &str) -> u32 {
+        let n = events
+            .iter()
+            .filter(|e| e.kind == EventKind::Dispatch && e.item() == Some(item))
+            .count();
+        u32::try_from(n).unwrap_or(u32::MAX)
+    }
+
+    /// The item's charged tokens: the sum of `Usage`'s four counters — `input_tokens`,
+    /// `output_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, each read
+    /// verbatim, the two cache counters falling back to their `ephemeral_*` namings as
+    /// `rk_types::usage::Usage`'s readers do — over the `dispatch_completed` rows keyed to `item`
+    /// (D21-43 N17 Q2). A row whose `usage` is absent or `null` charges nothing, and a counter that
+    /// did not arrive adds nothing: the sum is of what was reported, so a dispatch that reported
+    /// nothing is bounded by the CAP, which is why the cap exists beside the appetite.
+    #[must_use]
+    pub fn charged_tokens(events: &[Event], item: &str) -> Tokens {
+        let mut sum: u64 = 0;
+        for e in events
+            .iter()
+            .filter(|e| e.kind == EventKind::DispatchCompleted && e.item() == Some(item))
+        {
+            let Some(usage) = e.payload.get("usage").filter(|u| !u.is_null()) else {
+                continue;
+            };
+            let Ok(usage) = serde_json::from_value::<rk_types::usage::Usage>(usage.clone()) else {
+                continue;
+            };
+            let counters = [
+                usage.input_tokens,
+                usage.output_tokens,
+                usage
+                    .cache_creation_input_tokens
+                    .or(usage.ephemeral_cache_creation_input_tokens),
+                usage
+                    .cache_read_input_tokens
+                    .or(usage.ephemeral_cache_read_input_tokens),
+            ];
+            for n in counters.into_iter().flatten() {
+                sum = sum.saturating_add(n);
+            }
+        }
+        Tokens::new(sum)
+    }
+
+    /// **Admit the item's next dispatch, or refuse it**, from `events` — the store's journal for
+    /// the item, read before the dispatch. The dispatch AT the cap proceeds (prior count `cap - 1`);
+    /// the one past it does not (prior count `cap`). The cap is checked first.
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeRefusal::DispatchCapReached`] once the prior count has reached the cap;
+    /// [`EnvelopeRefusal::TokenAppetiteReached`] once the charged sum has reached the appetite.
+    pub fn admit(self, events: &[Event], item: &str) -> Result<(), EnvelopeRefusal> {
+        let count = Self::prior_dispatches(events, item);
+        if count >= self.cap.get() {
+            return Err(EnvelopeRefusal::DispatchCapReached {
+                item: item.to_owned(),
+                count,
+                cap: self.cap,
+            });
+        }
+        let sum = Self::charged_tokens(events, item);
+        if sum >= self.appetite {
+            return Err(EnvelopeRefusal::TokenAppetiteReached {
+                item: item.to_owned(),
+                sum,
+                appetite: self.appetite,
+            });
+        }
+        Ok(())
+    }
+}

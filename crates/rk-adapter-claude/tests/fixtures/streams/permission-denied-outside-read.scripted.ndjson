@@ -1,0 +1,1 @@
+{"type":"system","subtype":"permission_denied","session_id":"scripted-0001","tool_name":"Read","tool_use_id":"toolu_scripted_read_1","tool_input":{"file_path":"/outside/outside-read.txt"},"decision_reason_code":"outside_reads_blocked","uuid":"scripted-permission-denied"}

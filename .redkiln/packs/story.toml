@@ -7,7 +7,12 @@ gate_deadline_secs = 864000
 [pack]
 id = "story"
 applies = "kind == story and not ('unreal' in toolchain)"
-appetite = { points = 60 }
+# appetite.tokens and appetite.dispatches (dated 2026-10-02, s8h build, package P5-kernel-envelope):
+# Record B = ADR-0198 decisions 2 and 4 (proposed). tokens is the per-item token appetite, the sum of
+# Usage's four counters (D21-43 N17 Q2), 2 x 17 x 681083 rounded up; dispatches is the per-item
+# dispatch cap, D21-42 19a's 40. The kernel counts both from the store before each dispatch and
+# refuses past either (Exit::Overage, 20). points stays step 5's cost-class sum (AC-020).
+appetite = { points = 60, tokens = 24000000, dispatches = 40 }
 
 [policy]
 stages = { triage = "mandatory", discovery = "forbidden", analysis = "optional", specification = "mandatory", design = "recommended", planning = "optional", implement = "mandatory", verify = "mandatory", review = "mandatory", release = "mandatory", operate = "optional", closeout = "optional" }

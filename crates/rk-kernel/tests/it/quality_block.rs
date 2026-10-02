@@ -1490,3 +1490,113 @@ fn a_findings_conjunct_that_is_not_true_in_some_cell_is_refused() {
         "errors stay indeterminate under ruling 3: {report:?}"
     );
 }
+
+// ---- s8h §8h.4 — A SEVERITY ROW READS THE TYPED MEMBER (D21-47 cross #4; D21-67 ruling 1) -----------
+
+/// The fixture row, `findings.none(severity in ['blocking'])` over the reviewer's typed `Findings`
+/// list. *(Added 2026-10-02, s8h build, package P5-kernel-envelope.)*
+const TYPED_SEVERITY: &str =
+    include_str!("../fixtures/activities/terminal_condition_reads_typed_severity.toml");
+
+/// One reviewer finding, ingested through `rk-types`' typed `Findings` (the reviewer card's output
+/// kind), carrying `severity` as the 11c record's spelling.
+fn typed_findings(severities: &[&str]) -> serde_json::Value {
+    let items: Vec<serde_json::Value> = severities
+        .iter()
+        .map(|s| {
+            serde_json::json!({
+                "ac": "AC-281",
+                "claim": "the review gate refuses a prose command",
+                "evidence": "reproduced",
+                "severity": s,
+                "rationale": "ADR-0096 decision 1",
+                "repro": {
+                    "kind": "run",
+                    "command": "cargo test -p rk-types --test it",
+                    "mutation": null,
+                    "expected": { "kind": "exit", "exit": 0 },
+                    "observed": "exit 101",
+                    "expected_when_met": "exit 0"
+                }
+            })
+        })
+        .collect();
+    let typed =
+        rk_types::artifact::findings::Findings::ingest(serde_json::json!({ "items": items }))
+            .unwrap_or_else(|e| panic!("the reviewer's findings ingest as the typed kind: {e:?}"));
+    // The adversary's `outputs`, as the typed value serialises: the member travels because the
+    // TYPE carries it, not because this test wrote it into a map.
+    serde_json::to_value(&typed).expect("a typed Findings serialises")
+}
+
+/// **A `severity` row over a non-empty findings list reads the typed member** (s8h §8h.4: *"Once
+/// the member lands, a `severity` row over a non-empty findings list reads the typed member instead
+/// of failing with `UnknownField`. Over an empty list the row stays true without reading it"*).
+///
+/// The row is the fixture's (D21-67 ruling 1: *"`s8h`'s severity test re-points to a fixture"*),
+/// its `findings` input bound through the kernel's own `check_context` to the adversary's typed
+/// output, and evaluated by the one `predicate::evaluate`. One `blocking` finding makes the row
+/// `false` and one `advisory` finding makes it `true`, so the value turns on the member it reads;
+/// the empty list is the control.
+#[test]
+fn a_severity_row_reads_the_typed_member_over_a_non_empty_list() {
+    let cat = one(
+        "terminal_condition_reads_typed_severity.toml",
+        TYPED_SEVERITY,
+    );
+    let expr_src = terminal_condition(&cat);
+    assert_eq!(
+        expr_src, "findings.none(severity in ['blocking'])",
+        "the premise: the row"
+    );
+    let policy = cat.activities()[0]
+        .steps
+        .iter()
+        .find(|s| s.kind == StepKind::Check)
+        .expect("the fixture's check step");
+    assert_eq!(
+        policy
+            .inputs
+            .get("findings")
+            .and_then(rk_kernel::catalog::InputValue::as_text),
+        Some("${adversary.outputs.items?}"),
+        "the premise: the row reads the reviewer's findings list"
+    );
+    let parsed = ok_parse(&expr_src);
+
+    let read = |outputs: &serde_json::Value| {
+        let inputs = BTreeMap::from([("findings".to_owned(), outputs["items"].clone())]);
+        let ctx = rk_kernel::runtime::reference::check_context(
+            &Context::new(),
+            &inputs,
+            Some(&parsed.expr),
+        );
+        evaluate(&parsed.expr, &ctx).map(|o| o.value)
+    };
+
+    // THE CLAIM: one finding, the typed member read.
+    let blocking = typed_findings(&["blocking"]);
+    let got = read(&blocking);
+    assert_eq!(
+        got,
+        Ok(Tri::False),
+        "a severity row over one blocking finding must read the typed member and be false, got \
+         {got:?}"
+    );
+    assert_eq!(
+        blocking["items"][0]["severity"], "blocking",
+        "the premise: the typed member is on the serialised finding"
+    );
+    assert_eq!(
+        read(&typed_findings(&["advisory"])),
+        Ok(Tri::True),
+        "over one advisory finding the same row is true: the value turns on the member"
+    );
+
+    // THE CONTROL: over an empty list the row is true without reading the member.
+    assert_eq!(
+        read(&typed_findings(&[])),
+        Ok(Tri::True),
+        "over an empty findings list the row is true"
+    );
+}

@@ -51,6 +51,16 @@
 //!    differing in nothing"*; a key the CLI renamed while servers were configured is a surface
 //!    move the live probe's raw init names, not a case this rule can tell from an honest empty.
 //!
+//! *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.3, §8h.5; N17 Q1.)*
+//! **Adoption now ends in model EQUALITY** (step 2): on both agent readings the reported `model`
+//! must equal the requested FULL id the bound card carries (ADR-0197, proposed; RT-27 settled), and
+//! the segment match over the tier word is deleted. **A fourth decision, the run environment**,
+//! follows the tool set: `permissionMode` must equal the card's mode (the card's `default`, never
+//! the argv's spelling of it, D21-48 X12) and `apiKeySource` must equal `"none"` (ADR-0010
+//! in-band); an absent key is refused, never treated as equal, and each refusal is
+//! `NotIsolated { surface: Env }` with the digest over the reported value's one-member set (empty
+//! when absent) against the expected one. The model mismatch stays `NotAdopted`.
+//!
 //! **What this module never reads**: the adapter's own command line (AC-202's lint half — the
 //! block's ban over the `init|isolation` module filter names the tokens, and none is spelt here):
 //! isolation is decided from the child's own report, because *"an ignored flag looks identical to
@@ -96,6 +106,11 @@ pub struct EffectiveConfig {
     /// The child's MCP servers, by name. `None` when the init carries no list.
     pub mcp_servers: Option<BTreeSet<String>>,
     pub slash_commands_count: Option<usize>,
+    /// The session's auth source, as reported under `apiKeySource` (*(dated 2026-10-02, s8h build,
+    /// package P4-adapter-guards-and-probes)* `s8h` §8h.5; D17-11's amendment: *"AC-511's auth-mode
+    /// field is **`apiKeySource`**, read as `"none"` on a subscription session"*). `None` when the
+    /// init carries no such key.
+    pub api_key_source: Option<String>,
     /// The CLI version the child reported under one of [`VERSION_KEYS`]; `None` when no key
     /// matched (nothing measured — the row then carries `Pinned`).
     pub version: Option<String>,
@@ -136,19 +151,22 @@ pub fn effective_config(raw: &str) -> Option<EffectiveConfig> {
             .get("slash_commands")
             .and_then(|v| v.as_array())
             .map(Vec::len),
+        api_key_source: s("apiKeySource"),
         version: VERSION_KEYS.iter().find_map(|k| s(k)),
         init_digest: sha256(raw.as_bytes()),
     })
 }
 
-/// Does a reported model id belong to the tier the builder asked for on `--model`? The child
-/// reports the full id (`claude-haiku-4-5-20251001` [measured 2.1.277]) while the argv carries
-/// the tier word (`haiku`); the tier word is a `-`-delimited segment of the id. A tier that is
-/// itself a full id (a pinned model) must match exactly.
-#[must_use]
-pub fn model_belongs_to_tier(reported: &str, tier: &str) -> bool {
-    reported == tier || reported.split('-').any(|seg| seg == tier)
-}
+/// The one `apiKeySource` a dispatch may proceed under: a subscription session.
+///
+/// (D17-11's amendment: *"AC-511's auth-mode field is **`apiKeySource`**, read as `"none"` on a subscription session"*;
+/// ADR-0010: *"The adapter must refuse to proceed (assert, not warn)"*).
+///
+/// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.5.)* The
+/// segment match that stood here (`model_belongs_to_tier`: the tier word as a `-`-delimited segment
+/// of the reported id) is DELETED, not left beside the equality: the card carries the `[models]`
+/// row's full id (§8h.3), and adoption is exact equality (RT-27 settled; ADR-0197, proposed).
+pub const API_KEY_SOURCE_NONE: &str = "none";
 
 /// The set digest SM-061 names: SHA-256 over the sorted symmetric difference of the two sets,
 /// joined by `\u{1f}` — the same for the two sets whatever order either was reported in.
@@ -171,17 +189,37 @@ pub enum Decision {
     Refuse(StepError),
 }
 
-/// Take the three decisions of the module doc over a parsed init: version against `pinned`
-/// under `policy`, adoption against `expected_agent`, isolation against `declared_tools`.
+/// What the init is compared against: the pin and the policy, and the bound card's name, model id,
+/// permission mode and tool list.
+///
+/// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.3, §8h.5.)*
+/// `model` is the FULL id the bound card carries (ADR-0197 decision 5, proposed), and
+/// `permission_mode` is the card's mode — never the argv's spelling of it (D21-48 X12: *"the init
+/// comparison reads `default`"*).
+#[derive(Debug, Clone, Copy)]
+pub struct Expected<'a> {
+    pub pinned: &'a str,
+    pub policy: MismatchPolicy,
+    pub agent: &'a str,
+    pub model: &'a str,
+    pub permission_mode: &'a str,
+    pub declared_tools: &'a [String],
+}
+
+/// Take the decisions of the module doc over a parsed init.
+///
+/// The version against `pinned` under `policy`, adoption against the agent and the model id, isolation against the declared tools,
+/// the MCP surface and the run environment.
 #[must_use]
-pub fn decide(
-    init: &EffectiveConfig,
-    pinned: &str,
-    policy: MismatchPolicy,
-    expected_agent: &str,
-    expected_tier: &str,
-    declared_tools: &[String],
-) -> Decision {
+pub fn decide(init: &EffectiveConfig, expected: &Expected<'_>) -> Decision {
+    let Expected {
+        pinned,
+        policy,
+        agent: expected_agent,
+        model: expected_model,
+        permission_mode: expected_mode,
+        declared_tools,
+    } = *expected;
     // 1. the version — only a MEASURED version can mismatch
     let mismatch = init
         .version
@@ -200,15 +238,17 @@ pub fn decide(
             ),
         });
     }
-    // 2. adoption — the wrong agent answering (never tool-set inequality). Two readings, by what
-    //    the init carries (RT-27, the operator's decision of 2026-09-18):
+    // 2. adoption — the wrong agent answering (never tool-set inequality). Two readings of the
+    //    agent, by what the init carries (RT-27, the operator's decision of 2026-09-18):
     //    (a) an `agent` key present: it must equal the expected name — the corpus-era reading;
     //    (b) NO `agent` key — the 2.1.277 shape [measured], RE-MEASURED UNCHANGED at 2.1.278 on
-    //        2026-09-21 by `live_dispatch_probe`: adopted iff the `agents` list carries the expected
-    //        name AND `model` belongs to the bound card's tier (the `--agent`'s model was applied);
-    //        the tool-set equality that completes the composite is step 3's own check. A record
-    //        settling the reading is STILL OWED — two releases agreeing is evidence the shape is
-    //        stable, not a decision that it is the contract.
+    //        2026-09-21 by `live_dispatch_probe`: the `agents` list must carry the expected name.
+    //    *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.3, §8h.5;
+    //    N17 Q1 (i).)* THEN, on both readings, the reported `model` must EQUAL the requested full id
+    //    — RT-27 settled by equality (ADR-0197, proposed): the segment match over the tier word is
+    //    deleted, an absent `model` adopted nothing, and a different spelling of the same model (a
+    //    dated suffix dropped) is a failure, never loosened in place (§8h.11). The class is
+    //    `NotAdopted`.
     if let Some(agent) = init.agent.as_deref() {
         if agent != expected_agent {
             return Decision::Refuse(StepError::NotAdopted {
@@ -216,25 +256,27 @@ pub fn decide(
                 observed: agent.to_owned(),
             });
         }
-    } else {
-        let listed = init
-            .agents
-            .as_ref()
-            .is_some_and(|a| a.contains(expected_agent));
-        let model_of_tier = init
-            .model
-            .as_deref()
-            .is_some_and(|m| model_belongs_to_tier(m, expected_tier));
-        if !(listed && model_of_tier) {
-            return Decision::Refuse(StepError::NotAdopted {
-                expected_agent: expected_agent.to_owned(),
-                observed: format!(
-                    "<no agent key; agents {} {expected_agent}; model {}>",
-                    if listed { "carry" } else { "lack" },
-                    init.model.as_deref().unwrap_or("<none reported>")
-                ),
-            });
-        }
+    } else if !init
+        .agents
+        .as_ref()
+        .is_some_and(|a| a.contains(expected_agent))
+    {
+        return Decision::Refuse(StepError::NotAdopted {
+            expected_agent: expected_agent.to_owned(),
+            observed: format!(
+                "<no agent key; agents lack {expected_agent}; model {}>",
+                init.model.as_deref().unwrap_or("<none reported>")
+            ),
+        });
+    }
+    if init.model.as_deref() != Some(expected_model) {
+        return Decision::Refuse(StepError::NotAdopted {
+            expected_agent: expected_agent.to_owned(),
+            observed: format!(
+                "<model {} reported; {expected_model} requested>",
+                init.model.as_deref().unwrap_or("<none reported>")
+            ),
+        });
     }
     // 3. isolation — the MCP surface (an absent list is the empty set, which equals the declared
     //    empty set — the module doc), then the tool set as EQUALITY
@@ -255,6 +297,25 @@ pub fn decide(
             surface: IsolationSurface::Tools,
             diff_digest: set_digest(reported, &declared),
         });
+    }
+    // 4. the run environment (*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes;
+    //    `s8h` §8h.5; N17 Q1 (ii), (iii).)*): the reported `permissionMode` must EQUAL the card's
+    //    mode — the card's `default`, never the argv's spelling of it (D21-48 X12) — and
+    //    `apiKeySource` must equal `"none"`; an ABSENT key is refused, never treated as equal. Each
+    //    is `NotIsolated { surface: Env }`, the digest over the reported value's one-member set
+    //    (empty when absent) against the expected one.
+    for (reported, want) in [
+        (init.permission_mode.as_deref(), expected_mode),
+        (init.api_key_source.as_deref(), API_KEY_SOURCE_NONE),
+    ] {
+        if reported != Some(want) {
+            let reported: BTreeSet<String> = reported.map(str::to_owned).into_iter().collect();
+            let want: BTreeSet<String> = std::iter::once(want.to_owned()).collect();
+            return Decision::Refuse(StepError::NotIsolated {
+                surface: IsolationSurface::Env,
+                diff_digest: set_digest(&reported, &want),
+            });
+        }
     }
     Decision::Proceed { mismatch }
 }

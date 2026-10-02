@@ -53,7 +53,9 @@ use crate::rigor::Rigor;
 use crate::toml_subset::{self, Value};
 use crate::workflow::breaker::{BreakerExpiry, FamilyKey};
 use crate::workflow::budget::Tokens;
-use crate::workflow::envelope::{AttemptCap, BreakerThreshold, EnvelopeError};
+use crate::workflow::envelope::{
+    AttemptCap, BreakerThreshold, DispatchCap, EnvelopeError, ItemEnvelope,
+};
 
 /// One `[[stage.<name>.require]]` row.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -141,6 +143,10 @@ pub struct Pack {
     attempt_cap: Option<AttemptCap>,
     breaker_threshold: Option<BreakerThreshold>,
     token_appetite: Option<Tokens>,
+    /// `appetite.dispatches` — the per-item dispatch cap. *(Added 2026-10-02, `s8h` build,
+    /// package P5-kernel-envelope; Record B = ADR-0198 decisions 1 and 4, proposed.)* `None` is
+    /// the absence, on the fields above's doctrine; [`Self::require_dispatch_cap`] refuses it.
+    dispatch_cap: Option<DispatchCap>,
     /// `[breaker] expiry_secs` — **the breaker expiry's home, decided 2026-09-14 (D-7)**. `None` is
     /// *"the pack declares none"*, on the three fields above's doctrine exactly.
     breaker_expiry: Option<BreakerExpiry>,
@@ -423,6 +429,11 @@ impl Pack {
             // are step 5's cost-class sum (AC-058, invariant I6), tokens are AC-020's second
             // counter. A pack declaring only `points` declares no token appetite.
             token_appetite: token_appetite(head, &shape)?,
+            // *(dated 2026-10-02, `s8h` build, package P5-kernel-envelope; Record B = ADR-0198
+            // decision 1, proposed.)* `appetite.dispatches` sits in the same inline table and is
+            // a THIRD counter (AC-020): a count of dispatches, not points and not tokens.
+            dispatch_cap: declared_u32(head, "appetite", "dispatches", &shape)?
+                .map(DispatchCap::declared),
             // AC-036's permission. A BOOLEAN, not one of §7b.10's unmeasured quantities: a
             // permission that was never granted is an absence, and the fail-closed fold is
             // `permits_substitution`. A non-boolean value is a `Shape` error, never a silent
@@ -571,6 +582,40 @@ impl Pack {
             .ok_or_else(|| EnvelopeError::TokenAppetiteNotDeclared {
                 pack: self.id.clone(),
             })
+    }
+
+    /// `appetite.dispatches` — the **per-item dispatch cap** — or `None` when the pack declares
+    /// none. *(Added 2026-10-02, `s8h` build, package P5-kernel-envelope.)*
+    #[must_use]
+    pub const fn dispatch_cap(&self) -> Option<DispatchCap> {
+        self.dispatch_cap
+    }
+
+    /// The per-item dispatch cap, or the refusal. **Record B = ADR-0198 decision 4's
+    /// pack-validation half**: *"An absent `appetite.dispatches` is refused by pack validation"*.
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeError::DispatchCapNotDeclared`] when the pack declares no `appetite.dispatches`.
+    pub fn require_dispatch_cap(&self) -> Result<DispatchCap, EnvelopeError> {
+        self.dispatch_cap
+            .ok_or_else(|| EnvelopeError::DispatchCapNotDeclared {
+                pack: self.id.clone(),
+            })
+    }
+
+    /// **The per-item envelope**, both of its values declared, or the first refusal: the cap's,
+    /// then the token appetite's. The runtime enforces it before each dispatch
+    /// (`crate::runtime::Runtime::with_envelope`); nothing here defaults either value.
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeError::DispatchCapNotDeclared`] or [`EnvelopeError::TokenAppetiteNotDeclared`].
+    pub fn require_item_envelope(&self) -> Result<ItemEnvelope, EnvelopeError> {
+        Ok(ItemEnvelope::declared(
+            self.require_dispatch_cap()?,
+            self.require_token_appetite()?,
+        ))
     }
 
     /// The breaker threshold, or the refusal. **AC-033's pack-validation half.**

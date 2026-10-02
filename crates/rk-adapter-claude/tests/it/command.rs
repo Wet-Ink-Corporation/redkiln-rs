@@ -12,9 +12,10 @@ use std::path::{Path, PathBuf};
 use proptest::prelude::*;
 use rk_types::digest::sha256;
 
-use rk_adapter_claude::card::{AgentCard, CacheProfile, Effort, Tier};
+use rk_adapter_claude::card::{AgentCard, CacheProfile, Effort};
 use rk_adapter_claude::command::{
-    ARGV_CAP_BYTES, Assembled, CommandSpec, assemble, command_line_units,
+    ARGV_CAP_BYTES, Assembled, ChildSettings, CommandSpec, ConfinementChain, Sibling, assemble,
+    command_line_units,
 };
 use rk_adapter_claude::config::{Config, ConfigError, MismatchPolicy};
 use rk_adapter_claude::env_denylist::is_denylisted;
@@ -26,21 +27,25 @@ use crate::support::{
 
 /// A bound card the builder takes: the catalog card with the tier injected by hand (the binder's
 /// job, tested in `binder.rs`; here the builder is driven directly).
-fn bound(stem: &str, tier: Tier, effort: Option<Effort>) -> AgentCard {
+///
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3, §8h.6.)* `model` is the `--model` element as written, a
+/// row key here (the golden vectors keep the recorded `haiku`); the binder's full-id route is
+/// `binder::the_full_model_id_reaches_argv_and_the_card_digest`.
+fn bound(stem: &str, model: &str, effort: Option<Effort>) -> AgentCard {
     let c = catalog_card(stem);
     AgentCard {
         name: c.name,
         description: c.description,
         prompt: c.prompt,
         tools: c.tools,
-        model: tier.as_str().to_owned(),
+        model: model.to_owned(),
         effort: effort.map(|e| e.as_str().to_owned()),
         permission_mode: c.permission_mode,
         cache_profile: c.cache_profile,
     }
 }
 
-const fn spec<'a>(
+fn spec<'a>(
     card: &'a AgentCard,
     schema_json: &'a serde_json::Value,
     user_message: &'a str,
@@ -51,7 +56,39 @@ const fn spec<'a>(
         adopt_agent: true,
         strict_tools: &[],
         user_message,
+        settings: Some(golden_settings()),
     }
+}
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3, §8h.6.)* The golden worktree's ancestor chain, as a
+/// literal so the `--settings` element is the same bytes on every platform and machine: the
+/// worktree `D:/rk/worktrees/run-1`, whose root lists `rk` beside a directory `repos` and a file
+/// `pagefile.sys`, `rk` lists `worktrees` beside `notes.txt`, and `worktrees` lists `run-1` beside
+/// another run's `run-2`.
+fn golden_chain() -> ConfinementChain {
+    let entry = |name: &str, is_dir: bool| Sibling {
+        name: name.to_owned(),
+        is_dir,
+    };
+    ConfinementChain {
+        drive: Some('d'),
+        segments: vec!["rk".to_owned(), "worktrees".to_owned(), "run-1".to_owned()],
+        listings: vec![
+            vec![
+                entry("repos", true),
+                entry("rk", true),
+                entry("pagefile.sys", false),
+            ],
+            vec![entry("notes.txt", false), entry("worktrees", true)],
+            vec![entry("run-1", true), entry("run-2", true)],
+        ],
+    }
+}
+
+/// The `--settings` element every `spec` here carries, over [`golden_chain`].
+fn golden_settings() -> &'static ChildSettings {
+    static SETTINGS: std::sync::OnceLock<ChildSettings> = std::sync::OnceLock::new();
+    SETTINGS.get_or_init(|| ChildSettings::from_chain(&golden_chain()))
 }
 
 /// The `flags` arrays of every dispatch row in an extracted recorded file (§7c.17).
@@ -108,7 +145,7 @@ fn golden_argv_per_profile() {
     // above it is edited to match.
     let mut built_by_profile: BTreeMap<&str, (Vec<String>, String)> = BTreeMap::new();
     for (stem, profile, golden_file, recorded_file) in profiles {
-        let card = bound(stem, Tier::Haiku, None);
+        let card = bound(stem, "haiku", None);
         assert_eq!(
             card.cache_profile, profile,
             "PREMISE: the fixture card carries the profile"
@@ -234,7 +271,7 @@ fn golden_argv_per_profile() {
 
     // The one optional element: `--effort <e>` directly after `--model <tier>` on a tier that
     // accepts it (the lifted order), pinned on the reviewer card under sonnet/high.
-    let card = bound("reviewer", Tier::Sonnet, Some(Effort::High));
+    let card = bound("reviewer", "sonnet", Some(Effort::High));
     let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
     assert_eq!(built.argv, golden("reviewer-sonnet-high.argv.json"));
     assert_eq!(&built.argv[4..8], ["--model", "sonnet", "--effort", "high"]);
@@ -260,6 +297,11 @@ fn golden_argv_per_profile() {
 /// `CreateProcessW` (the test asserts the measure, so the fixture is verified at the cap and not
 /// merely believed to be), and is refused; one unit under it is not (§7c.5).
 ///
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.6.)* The fixture's
+/// prompt was re-trimmed by 1,825 characters, the measure the two new elements add under this
+/// file's `spec` (`--setting-sources ""` and the golden chain's `--settings` element), so it is
+/// at the cap again under the vector the builder now produces.
+///
 /// RED (observed 2026-09-18) twice: against the skeleton's byte-sum measure, `one byte under the
 /// cap measures cap - 1: left: 32702 right: 32766` (a measure that is not the platform's is red
 /// before the refusal is); then, with the Windows measure in and the cap check disabled (a
@@ -277,7 +319,7 @@ fn argv_cap_refuses_before_spawn() {
         description: authored.description.clone(),
         prompt: authored.prompt.clone(),
         tools: authored.tools.clone(),
-        model: Tier::Haiku.as_str().to_owned(),
+        model: "haiku".to_owned(),
         effort: None,
         permission_mode: authored.permission_mode.clone(),
         cache_profile: authored.cache_profile,
@@ -435,7 +477,7 @@ fn structured_output_required() {
     }
     // The tool set is the card's declared list and nothing else (ADR-0108 d2): a card that carries
     // it builds, and the `--agents` JSON carries exactly the declared list.
-    let good = bound("golden-static", Tier::Haiku, None);
+    let good = bound("golden-static", "haiku", None);
     let built = assemble(&cfg, &spec(&good, &schema.json, "")).expect("builds");
     let agents: serde_json::Value =
         serde_json::from_str(&built.argv[7]).expect("the --agents element is JSON");
@@ -454,7 +496,7 @@ fn structured_output_required() {
 fn ac203_agents_without_agent_refused() {
     let cfg = config();
     let schema = schema();
-    let card = bound("golden-static", Tier::Haiku, None);
+    let card = bound("golden-static", "haiku", None);
     let define_only = CommandSpec {
         adopt_agent: false,
         ..spec(&card, &schema.json, "")
@@ -508,7 +550,7 @@ fn ac214_permission_mode_explicit() {
             // default a silent card to `default`: `belt: a card silent on permission_mode loaded
             // and a marker file appeared (AC-214)`: left `1`, right `0`.
             assert_eq!(
-                belt_dispatch_authored(&card, Tier::Haiku, None),
+                belt_dispatch_authored(&card, "haiku", None),
                 0,
                 "belt: a card silent on permission_mode loaded and a marker file appeared (AC-214)"
             );
@@ -525,14 +567,28 @@ fn ac214_permission_mode_explicit() {
         ("reviewer", "bypassPermissions"),
         ("probe", "default"),
     ] {
-        let card = bound(stem, Tier::Sonnet, Some(Effort::Low));
+        let card = bound(stem, "sonnet", Some(Effort::Low));
         let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
         let i = built
             .argv
             .iter()
             .position(|a| a == "--permission-mode")
             .expect("the flag is unconditional");
-        assert_eq!(built.argv[i + 1], mode, "{stem}: the value is the card's");
+        // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.2; D21-48 X12.)*
+        // ~~the value is the card's~~ — the value is PERMISSION_MODE_ARGV's spelling of the card's
+        // mode at the fixture Config's pin (2.1.278: `default` stays `default`), so this reading
+        // does not move here and the pin move does not touch it again.
+        let want = rk_adapter_claude::command::argv_permission_mode(&cfg, mode)
+            .expect("the fixture pin has a row");
+        assert_eq!(
+            want, mode,
+            "PREMISE: at 2.1.278 the table's spelling is the card's"
+        );
+        assert_eq!(
+            built.argv[i + 1],
+            want,
+            "{stem}: the table's spelling of the card's mode"
+        );
         assert_eq!(
             built
                 .argv
@@ -551,7 +607,7 @@ fn permission_prompts_none_on_every_argv() {
     let cfg = config();
     let schema = schema();
     for stem in ["golden-static", "golden-default", "reviewer", "probe"] {
-        let card = bound(stem, Tier::Haiku, None);
+        let card = bound(stem, "haiku", None);
         let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
         let i = built
             .argv
@@ -577,6 +633,10 @@ const KNOWN_FLAGS: &[&str] = &[
     "--permission-mode",
     "--strict-mcp-config",
     "--permission-prompts",
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.6; ADR-0197 decision
+    // 9, proposed.)* The two elements this stage adds, each taking one value.
+    "--setting-sources",
+    "--settings",
     "--system-prompt",
 ];
 
@@ -598,7 +658,7 @@ struct ConfigPoint {
 /// it can be handed.
 fn matrix() -> impl Strategy<
     Value = (
-        Tier,
+        &'static str,
         Option<Effort>,
         CacheProfile,
         String,
@@ -608,7 +668,8 @@ fn matrix() -> impl Strategy<
         ConfigPoint,
     ),
 > {
-    let tier = prop_oneof![Just(Tier::Haiku), Just(Tier::Sonnet), Just(Tier::Opus)];
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3, §8h.6.)* a model is a `[models]` row key now.
+    let tier = prop_oneof![Just("haiku"), Just("sonnet"), Just("opus")];
     let effort = prop_oneof![
         Just(None),
         Just(Some(Effort::Low)),
@@ -618,14 +679,12 @@ fn matrix() -> impl Strategy<
         Just(Some(Effort::Max)),
     ];
     let profile = prop_oneof![Just(CacheProfile::Static), Just(CacheProfile::Default)];
-    let mode = prop_oneof![
-        Just("default".to_owned()),
-        Just("acceptEdits".to_owned()),
-        Just("bypassPermissions".to_owned()),
-        Just("plan".to_owned()),
-        Just("dontAsk".to_owned()),
-        "[A-Za-z]{1,20}".prop_map(|s| s),
-    ];
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.2.)* The free-spelling
+    // arm (`[A-Za-z]{1,20}`) left this axis: `lint_card` now refuses a mode outside the CLI's closed
+    // set before an argv exists (`card::permission_mode_outside_the_cli_closed_set_is_refused`), so
+    // the axis walks every member of that set — the argv-producing modes.
+    let mode =
+        proptest::sample::select(rk_adapter_claude::card::PERMISSION_MODES).prop_map(str::to_owned);
     let tools = proptest::collection::vec("[A-Za-z_]{1,12}", 0..6).prop_map(|mut v| {
         // A random name may spell the answer path (`answer`, `mint`, `resolve` as a segment) and
         // the card lint would refuse it before the argv exists — that is AC-269's, not AC-216's.
@@ -702,13 +761,13 @@ proptest! {
     fn ac216_bare_absent_across_matrix((tier, effort, profile, mode, tools, prompt, user, point) in matrix()) {
         let cfg = config_at(&point);
         let schema = schema();
-        let effort = if tier.accepts_effort() { effort } else { None };
+        let effort = if crate::support::models()[tier].accepts_effort { effort } else { None };
         let card = AgentCard {
             name: "m".to_owned(),
             description: "matrix".to_owned(),
             prompt,
             tools,
-            model: tier.as_str().to_owned(),
+            model: tier.to_owned(),
             effort: effort.map(|e| e.as_str().to_owned()),
             permission_mode: mode,
             cache_profile: profile,
@@ -817,7 +876,7 @@ fn rs_files(dir: &Path) -> Vec<PathBuf> {
 fn ac209_system_prompt_hash_invariant() {
     let cfg = config();
     let schema = schema();
-    let card = bound("golden-static", Tier::Haiku, None);
+    let card = bound("golden-static", "haiku", None);
     let volatile: &[&str] = &[
         "",
         "Review the diff.",
@@ -870,7 +929,7 @@ fn ac209_system_prompt_hash_invariant() {
 fn ac132_builder_lints_one_schema_no_strict_tools() {
     let cfg = config();
     let schema = schema();
-    let card = bound("golden-static", Tier::Haiku, None);
+    let card = bound("golden-static", "haiku", None);
     let strict = vec!["lookup_ticket".to_owned()];
     let with_strict = CommandSpec {
         strict_tools: &strict,
@@ -895,4 +954,409 @@ fn ac132_builder_lints_one_schema_no_strict_tools() {
             .iter()
             .any(|a| a == "--tools" || a == "--strict-tools" || a == "--mcp-config")
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models.)* `s8h` §8h.2 (D21-48 X12) and
+// §8h.6 (D21-42 21b, 21d): ADR-0197 decisions 3 and 9, proposed.
+
+/// The value after the one `flag` element of `argv`, asserting the flag occurs exactly once.
+fn value_of<'v>(argv: &'v [String], flag: &str) -> &'v str {
+    let at: Vec<usize> = argv
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| *a == flag)
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(at.len(), 1, "{flag} occurs exactly once in {argv:?}");
+    argv.get(at[0] + 1)
+        .unwrap_or_else(|| panic!("{flag} has no value in {argv:?}"))
+}
+
+/// The `--settings` element of a built argv, parsed.
+fn settings_of(argv: &[String]) -> serde_json::Value {
+    serde_json::from_str(value_of(argv, "--settings")).expect("the --settings element is JSON")
+}
+
+/// `s8h` §8h.6: every argv carries `--setting-sources ""` — explicit and EMPTY, so none of the
+/// three file sources loads — in the fixed position ADR-0197 decision 9 states: after
+/// `--permission-prompts none`, then `--settings <json>`, and under `static` before the
+/// `--system-prompt` pair, which stays LAST. The cap measure counts the quoted empty element.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): before the push, *"--setting-sources occurs
+/// exactly once in ["-p", …]: left: 0 right: 1"*.
+#[test]
+fn setting_sources_is_explicit_and_empty() {
+    let cfg = config();
+    let schema = schema();
+    let mut seen = BTreeSet::new();
+    for stem in ["golden-static", "golden-default", "reviewer", "probe"] {
+        let card = bound(stem, "haiku", None);
+        let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
+        let argv = &built.argv;
+        assert_eq!(
+            value_of(argv, "--setting-sources"),
+            "",
+            "{stem}: the value is EMPTY"
+        );
+        let pos = |e: &str| argv.iter().position(|a| a == e).expect("present");
+        assert_eq!(
+            pos("--setting-sources"),
+            pos("--permission-prompts") + 2,
+            "{stem}: directly after `--permission-prompts none`"
+        );
+        assert_eq!(
+            pos("--settings"),
+            pos("--setting-sources") + 2,
+            "{stem}: then `--settings <json>`"
+        );
+        if card.cache_profile == CacheProfile::Static {
+            assert_eq!(
+                pos("--system-prompt"),
+                argv.len() - 2,
+                "{stem}: --system-prompt LAST"
+            );
+            assert_eq!(pos("--settings") + 2, pos("--system-prompt"));
+        } else {
+            assert_eq!(
+                pos("--settings") + 2,
+                argv.len(),
+                "{stem}: --settings closes the vector"
+            );
+        }
+        seen.insert(card.cache_profile);
+    }
+    assert_eq!(seen.len(), 2, "PREMISE: both profiles were built");
+    // The cap measure counts the quoted empty element: two quotes and its separating space.
+    assert_eq!(
+        command_line_units(Path::new("claude"), &[String::new()]),
+        8 + 1 + 2 + 1,
+        "an empty element measures as `\"\"` (RT-1)"
+    );
+}
+
+/// The deny rules the golden chain must produce, written out by hand from [`golden_chain`].
+fn golden_deny() -> BTreeSet<String> {
+    let mut paths: Vec<String> = vec![
+        "//d/repos/**".to_owned(),
+        "//d/pagefile.sys".to_owned(),
+        "//d/rk/notes.txt".to_owned(),
+        "//d/rk/worktrees/run-2/**".to_owned(),
+        "~/**".to_owned(),
+    ];
+    for c in 'a'..='z' {
+        if c != 'd' {
+            paths.push(format!("//{c}/**"));
+        }
+    }
+    let mut out = BTreeSet::new();
+    for p in &paths {
+        for tool in ["Read", "Edit", "Write"] {
+            out.insert(format!("{tool}({p})"));
+        }
+    }
+    out
+}
+
+/// `s8h` §8h.6: the child's confinement travels in ONE `--settings` element carrying
+/// `permissions.blockReadsOutsideWorkingDirectories: true` and `permissions.deny` rules for `Read`,
+/// `Edit` and `Write` written as the COMPLEMENT ALONG THE WORKTREE'S ANCESTOR CHAIN: at each
+/// ancestor level every sibling not on the path (a directory as `<path>/**`, anything else as
+/// `<path>`), `//<drive>/**` for every other drive letter, and `~/**`. No `!` carve-out and no
+/// allow rule (an allow rule cannot carve an exception out of a deny rule). No rule reaches the
+/// worktree or an ancestor of it. Then the same over the REAL filesystem: `ConfinementChain::read`
+/// lists each ancestor level of a temp tree, and the worktree's own siblings are listed by name.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): with the element pushed but the scaffold's
+/// `{}` body, *"the read fence is set: left: Null right: Bool(true)"*.
+#[test]
+fn child_settings_carry_the_worktree_confinement() {
+    let cfg = config();
+    let schema = schema();
+    let card = bound("golden-default", "haiku", None);
+    let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
+    let s = settings_of(&built.argv);
+    assert_eq!(
+        s["permissions"]["blockReadsOutsideWorkingDirectories"],
+        serde_json::json!(true),
+        "the read fence is set"
+    );
+    let deny: BTreeSet<String> = s["permissions"]["deny"]
+        .as_array()
+        .expect("permissions.deny is an array")
+        .iter()
+        .map(|v| v.as_str().expect("a rule is a string").to_owned())
+        .collect();
+    assert_eq!(
+        deny.len(),
+        s["permissions"]["deny"].as_array().map_or(0, Vec::len),
+        "no rule is repeated"
+    );
+    assert_eq!(
+        deny,
+        golden_deny(),
+        "the deny set is the ancestor-chain complement (s8h §8h.6)"
+    );
+    assert!(
+        s["permissions"].get("allow").is_none(),
+        "no allow rule (it cannot carve a deny)"
+    );
+    for rule in &deny {
+        assert!(!rule.contains('!'), "no `!` carve-out: {rule}");
+        let path = rule
+            .split_once('(')
+            .and_then(|(_, r)| r.strip_suffix(')'))
+            .expect("Tool(path)");
+        let stem = path.trim_end_matches("/**");
+        for on_path in ["//d/rk", "//d/rk/worktrees", "//d/rk/worktrees/run-1"] {
+            assert!(
+                stem != on_path && !on_path.starts_with(&format!("{stem}/")),
+                "{rule} would deny {on_path}, which is on the worktree's path"
+            );
+        }
+    }
+
+    // The real filesystem: a temp tree `<tmp>/lvl/wt` beside a directory `sib` and a file `f.txt`.
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let lvl = tmp.path().join("lvl");
+    let wt = lvl.join("wt");
+    std::fs::create_dir_all(&wt).expect("the worktree");
+    std::fs::create_dir_all(lvl.join("sib")).expect("a sibling directory");
+    std::fs::write(lvl.join("f.txt"), "x").expect("a sibling file");
+    let chain = ConfinementChain::read(&wt).expect("the chain of a real worktree reads");
+    assert_eq!(
+        chain.listings.len(),
+        chain.segments.len(),
+        "one listing per ancestor level"
+    );
+    assert_eq!(
+        chain.segments[chain.segments.len() - 2..],
+        ["lvl".to_owned(), "wt".to_owned()],
+        "the chain ends at the worktree"
+    );
+    let last = &chain.listings[chain.listings.len() - 1];
+    let names: BTreeSet<(&str, bool)> = last.iter().map(|e| (e.name.as_str(), e.is_dir)).collect();
+    assert_eq!(
+        names,
+        BTreeSet::from([("f.txt", false), ("sib", true), ("wt", true)]),
+        "the worktree's own level lists every entry, typed"
+    );
+    let real = ChildSettings::from_chain(&chain);
+    let real: serde_json::Value = serde_json::from_str(real.json()).expect("JSON");
+    let rules: Vec<&str> = real["permissions"]["deny"]
+        .as_array()
+        .expect("deny")
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    assert!(
+        rules
+            .iter()
+            .any(|r| r.starts_with("Read(//") && r.ends_with("/lvl/sib/**)")),
+        "the sibling directory is denied: {rules:?}"
+    );
+    assert!(
+        rules
+            .iter()
+            .any(|r| r.starts_with("Write(//") && r.ends_with("/lvl/f.txt)")),
+        "the sibling file is denied"
+    );
+    assert!(
+        !rules.iter().any(|r| r.contains("/lvl/wt")),
+        "the worktree itself is never denied"
+    );
+    // A relative worktree has no chain: refused, never guessed.
+    assert!(matches!(
+        ConfinementChain::read(Path::new("relative/wt")),
+        Err(ConfigError::Confinement { .. })
+    ));
+}
+
+/// `s8h` §8h.6 (D21-47; s8h review #7): the `--settings` element carries `autoMemoryEnabled:
+/// false` — present and the boolean `false`, never absent (an absent key is the CLI's default).
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): with the scaffold's `{}` body,
+/// *"autoMemoryEnabled is present and false: left: Null right: Bool(false)"*.
+#[test]
+fn child_settings_disable_auto_memory() {
+    let cfg = config();
+    let schema = schema();
+    for stem in ["golden-static", "golden-default"] {
+        let card = bound(stem, "haiku", None);
+        let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
+        let s = settings_of(&built.argv);
+        assert_eq!(
+            s.get("autoMemoryEnabled")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+            serde_json::json!(false),
+            "autoMemoryEnabled is present and false ({stem})"
+        );
+    }
+}
+
+/// Does a help capture's parsed `(choices: …)` list hold `spelling`? The one check the rows test
+/// and its synthetic control share (M33's target).
+fn spelling_listed(capture: &str, spelling: &str) -> bool {
+    crate::support::help_permission_mode_choices(capture)
+        .is_some_and(|choices| choices.iter().any(|c| c == spelling))
+}
+
+/// `s8h` §8h.2 (D21-48 X12): every `PERMISSION_MODE_ARGV` row outside `LIVE_WARRANTED` has its
+/// help capture `cli-help/<version>.permission-mode.txt`, whose parsed `(choices: …)` list holds the
+/// row's spelling and `acceptEdits`; every capture has its row (one to one). Premises: a row exists
+/// for the fixture `Config`'s pin; at least one row is checked; `LIVE_WARRANTED` is `["2.1.278"]`
+/// here (`[]` after s8j's pin move, when the test reads exactly *"the pinned row's spelling of
+/// `default` is in the pinned `--help` list"*). Control: the same check over a synthetic capture
+/// whose choices lack the row's spelling reports it absent.
+///
+/// RED (observed 2026-10-02, in the private worktree `target/wt-P3` through D21-47's wrapper): with
+/// the `2.1.287` row removed, *"PREMISE: at least one help-warranted row was checked"*; with the
+/// spelling check accepting any parsed list (M33), *"CONTROL: a spelling absent from the parsed
+/// choices must be reported absent"*.
+#[test]
+fn permission_mode_spelling_rows_are_listed_by_their_help_fixtures() {
+    let rows = rk_adapter_claude::command::permission_mode_argv_rows();
+    let live = rk_adapter_claude::command::live_warranted_rows();
+    let pin = config().tested_cli_version().to_owned();
+    assert!(
+        rows.iter().any(|(v, _)| *v == pin),
+        "PREMISE: a row exists for the fixture Config's pin {pin}"
+    );
+    assert_eq!(
+        live,
+        ["2.1.278"],
+        "PREMISE: LIVE_WARRANTED is the pin's row until s8j"
+    );
+    let captures: BTreeMap<String, String> = crate::support::help_captures().into_iter().collect();
+    let mut checked = 0usize;
+    for (version, spelling) in rows {
+        if live.contains(version) {
+            continue;
+        }
+        let capture = captures.get(*version).unwrap_or_else(|| {
+            panic!("row {version} has no cli-help/{version}.permission-mode.txt (X12)")
+        });
+        assert!(
+            spelling_listed(capture, spelling),
+            "row {version}: `{spelling}` is not among its help capture's choices"
+        );
+        assert!(
+            spelling_listed(capture, "acceptEdits"),
+            "row {version}: the capture lists no acceptEdits"
+        );
+        checked += 1;
+    }
+    assert!(
+        checked >= 1,
+        "PREMISE: at least one help-warranted row was checked"
+    );
+    for version in captures.keys() {
+        assert!(
+            rows.iter().any(|(v, _)| v == version),
+            "the {version} help capture has no PERMISSION_MODE_ARGV row (rows and captures are one \
+             to one)"
+        );
+    }
+    // The control: a synthetic capture whose choices lack the row's spelling reports it absent,
+    // and the parser reads the synthetic list it was given.
+    let synthetic =
+        "  --permission-mode <mode>  Permission mode (choices: \"acceptEdits\", \"plan\")\n";
+    assert!(
+        spelling_listed(synthetic, "acceptEdits"),
+        "CONTROL: the parser reads the list"
+    );
+    assert!(
+        !spelling_listed(synthetic, "manual"),
+        "CONTROL: a spelling absent from the parsed choices must be reported absent"
+    );
+    assert!(
+        !spelling_listed("  --model <model>  Model\n", "manual"),
+        "CONTROL: a capture with no --permission-mode line lists nothing"
+    );
+}
+
+/// `s8h` §8h.2 (D21-48 X12): the `--permission-mode` element of a `default` card is the
+/// `PERMISSION_MODE_ARGV` row of the `Config`'s OWN pin — `manual` at `2.1.287`, `default` at
+/// `2.1.278` — while the `--agents` JSON's `permissionMode` stays `default` and the card digest is
+/// equal under both. An `acceptEdits` card carries `acceptEdits` under both. (*§8h.12 names the
+/// help-warranted arm `2.1.281`; the row is keyed `2.1.287`, the version installed at stage open —
+/// §8h.2's dated note. Its third clause, guard 2 adopting an init reporting `default`, is the
+/// isolation package's `isolation::permission_mode_reported_unequal_to_the_card_is_refused`: no
+/// init permission-mode guard exists in this package's tree.*) The pin-move commit turns the
+/// `2.1.278` arm into a refusal arm when it deletes that row.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): with the card's mode verbatim on the argv,
+/// *"2.1.287: a `default` card's --permission-mode is the row's spelling"*, left `"default"`, right
+/// `"manual"`.
+#[test]
+fn argv_permission_mode_reads_the_row_of_the_configs_pin() {
+    let schema = schema();
+    let default_card = bound("golden-default", "haiku", None);
+    assert_eq!(
+        default_card.permission_mode, "default",
+        "PREMISE: a `default` card"
+    );
+    let mut accept = bound("golden-default", "haiku", None);
+    accept.permission_mode = "acceptEdits".to_owned();
+    let mut digests = BTreeSet::new();
+    for (pin, want) in [("2.1.287", "manual"), ("2.1.278", "default")] {
+        let cfg = config().at_pin(pin);
+        assert_eq!(
+            cfg.tested_cli_version(),
+            pin,
+            "PREMISE: the Config is at {pin}"
+        );
+        let built = assemble(&cfg, &spec(&default_card, &schema.json, "")).expect("builds");
+        assert_eq!(
+            value_of(&built.argv, "--permission-mode"),
+            want,
+            "{pin}: a `default` card's --permission-mode is the row's spelling"
+        );
+        let agents: serde_json::Value =
+            serde_json::from_str(value_of(&built.argv, "--agents")).expect("JSON");
+        assert_eq!(
+            agents["golden-default"]["permissionMode"], "default",
+            "{pin}: the --agents JSON keeps the card's `default`"
+        );
+        digests.insert(default_card.digest());
+        let built = assemble(&cfg, &spec(&accept, &schema.json, "")).expect("builds");
+        assert_eq!(
+            value_of(&built.argv, "--permission-mode"),
+            "acceptEdits",
+            "{pin}: any other mode is the card's own spelling"
+        );
+    }
+    assert_eq!(
+        digests.len(),
+        1,
+        "the card digest does not move with the pin"
+    );
+}
+
+/// `s8h` §8h.2 (D21-48 X12): a `Config` pinned at a version with no `PERMISSION_MODE_ARGV` row is
+/// refused by `assemble`, before any spawn, with a typed error naming the version — whatever the
+/// card's mode. There is no fallback to the card's spelling. Control: the fixture `Config`'s own pin
+/// assembles.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): *"a pin with no spelling row must be
+/// refused naming 9.9.9 (X12), got Ok(["-p", …])"*.
+#[test]
+fn a_pin_without_a_spelling_row_is_refused() {
+    let schema = schema();
+    let card = bound("golden-default", "haiku", None);
+    let mut accept = card.clone();
+    accept.permission_mode = "acceptEdits".to_owned();
+    for c in [&card, &accept] {
+        match assemble(&config().at_pin("9.9.9"), &spec(c, &schema.json, "")) {
+            Err(ConfigError::NoPermissionModeSpelling { version }) => assert_eq!(version, "9.9.9"),
+            Err(other) => panic!("the refusal is NoPermissionModeSpelling; got {other:?}"),
+            Ok(built) => panic!(
+                "a pin with no spelling row must be refused naming 9.9.9 (X12), got Ok({:?})",
+                built.argv
+            ),
+        }
+    }
+    assemble(&config(), &spec(&card, &schema.json, ""))
+        .expect("CONTROL: the fixture pin assembles");
 }

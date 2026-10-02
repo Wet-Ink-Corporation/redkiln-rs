@@ -594,3 +594,95 @@ fn adr0144_post_commit_step_failure_exits_the_class_row_not_three() {
          never reached the failing step and this assertion is about nothing"
     );
 }
+
+/// **N17's Q3: an envelope refusal leaves through `Overage` (20)** (`s8h` §8h.9; Record B =
+/// ADR-0198 decision 4, proposed). *(Added 2026-10-02, `s8h` build, package P5-kernel-envelope.)*
+///
+/// The item `bug-1` already holds `appetite.dispatches` (pack-min's 40) `dispatch` rows keyed to
+/// it, written by an earlier process; so the run's first dispatch is past the cap. The kernel
+/// refuses it before the port, writing no `dispatch` row, and the verb exits 20 — not row `3`,
+/// which the catch-all would give. The table itself does not move (`ac438_exit_table_snapshot`).
+#[test]
+fn an_envelope_refusal_leaves_through_overage() {
+    const PACK_MIN_CAP: usize = 40;
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let inputs = inputs.with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::supplied("emit-report@1", emit_report_spec()),
+    );
+
+    let trace = crate::support::Trace::new();
+    let store = crate::support::counting_store(&trace);
+    // An earlier process's dispatches of this item, at the cap: keyed rows, as `Runtime::append`
+    // keys them (ADR-0182's interim key).
+    for attempt in 1..=PACK_MIN_CAP {
+        store
+            .lock()
+            .expect("the store lock is not poisoned")
+            .append(
+                rk_types::event::Event::new(
+                    rk_types::event_kind::EventKind::Dispatch,
+                    serde_json::json!({
+                        "activity_id_at_version": "earlier-process@1",
+                        "attempt": attempt,
+                        "item": "bug-1",
+                        "step_id": "earlier-process",
+                    }),
+                )
+                .with_item("bug-1"),
+            )
+            .expect("the seed row appends");
+    }
+    let seeded = trace.steps().len();
+    let harness = std::sync::Arc::new(crate::support::ScriptedHarness::scripted(vec![Err(
+        StepError::Transport {
+            kind: TransportKind::Spawn,
+            detail: "never reached: the envelope refuses first".to_owned(),
+        },
+    )]));
+    let ports = crate::support::ports(
+        std::sync::Arc::clone(&harness) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let token = rk_ports::cancel::CancelToken::new();
+    let mut supply = crate::support::any_spec("emit-report@1", emit_report_spec());
+
+    let got = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &crate::support::clean_env(),
+        &mut supply,
+        &token,
+    );
+
+    assert_eq!(
+        got,
+        Ok(Exit::Overage),
+        "a dispatch past the item's `appetite.dispatches` must leave through Overage (20), N17's \
+         Q3; got {got:?}"
+    );
+    assert_eq!(Exit::Overage.code(), 20, "the row's code is 20");
+    assert_eq!(
+        harness.dispatches(),
+        0,
+        "the envelope refuses BEFORE the port: nothing was spawned"
+    );
+    let appended_dispatches = trace.steps()[seeded..]
+        .iter()
+        .filter(|s| {
+            matches!(
+                s,
+                crate::support::Step::Append(rk_types::event_kind::EventKind::Dispatch)
+            )
+        })
+        .count();
+    assert_eq!(
+        appended_dispatches, 0,
+        "the refused dispatch wrote no `dispatch` cost row"
+    );
+}

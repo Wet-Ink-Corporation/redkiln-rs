@@ -227,6 +227,12 @@ pub enum RuntimeError {
     /// *(dated 2026-09-28, `s8e` build, package S8E-P5; `s8e` §8e.3.)* The tier-1 boundary
     /// refused an act: nothing was written when the refusal is a git one (AC-162).
     TierOne(tier_one::TierOneError),
+    /// *(dated 2026-10-02, `s8h` build, package P5-kernel-envelope; `s8h` §8h.9; Record B =
+    /// ADR-0198 decision 4, proposed.)* **The per-item envelope refused the next dispatch**,
+    /// before any spawn and writing no row. Not a `StepError` (Record B's answer to finding 12):
+    /// the refusal is the kernel's, made before the `Harness` is called. `rk-cli` maps it to
+    /// `Exit::Overage` (20), N17's Q3.
+    Envelope(crate::workflow::envelope::EnvelopeRefusal),
 }
 
 impl RuntimeError {
@@ -239,6 +245,7 @@ impl RuntimeError {
             Self::SpecNotSupplied { .. } => "spec_not_supplied",
             Self::Fsm(_) => "fsm",
             Self::TierOne(_) => "tier_one",
+            Self::Envelope(_) => "envelope",
         }
     }
 }
@@ -255,6 +262,7 @@ impl core::fmt::Display for RuntimeError {
             ),
             Self::Fsm(e) => write!(f, "the recorded journal did not fold: {e}"),
             Self::TierOne(e) => write!(f, "the tier-1 act was refused: {e}"),
+            Self::Envelope(e) => write!(f, "the per-item envelope refused the dispatch: {e}"),
         }
     }
 }
@@ -270,6 +278,12 @@ impl From<KeyError> for RuntimeError {
 impl From<FsmError> for RuntimeError {
     fn from(e: FsmError) -> Self {
         Self::Fsm(e)
+    }
+}
+
+impl From<crate::workflow::envelope::EnvelopeRefusal> for RuntimeError {
+    fn from(e: crate::workflow::envelope::EnvelopeRefusal) -> Self {
+        Self::Envelope(e)
     }
 }
 
@@ -385,6 +399,12 @@ pub struct Runtime {
     /// [`Self::with_item`]. Rows the executor appends through its own guard, and rows a harness
     /// appends, are not keyed here: a stated residual of the interim key.
     item: Option<String>,
+    /// *(dated 2026-10-02, `s8h` build, package P5-kernel-envelope; `s8h` §8h.9; Record B =
+    /// ADR-0198 decision 4, proposed.)* The per-item envelope checked before each dispatch:
+    /// the item's prior `dispatch` rows and its charged tokens, read from the STORE. [`Self::new`]
+    /// binds none (the machinery suites); `replay::resume_routed` binds the selected pack's,
+    /// with [`Self::with_item`], whose key is what the count reads.
+    envelope: Option<crate::workflow::envelope::ItemEnvelope>,
 }
 
 /// **R4 (ADR-0176, proposed): the breaker's binding** — the selected pack.
@@ -432,6 +452,7 @@ impl Runtime {
             breaker: None,
             boundary: None,
             item: None,
+            envelope: None,
         }
     }
 
@@ -534,6 +555,25 @@ impl Runtime {
     pub fn with_breaker(mut self, binding: BreakerBinding) -> Self {
         self.breaker = Some(binding);
         self
+    }
+
+    /// Bind the per-item envelope (`s8h` §8h.9; Record B = ADR-0198 decision 4). Before each
+    /// dispatch the runtime counts the item's keyed `dispatch` rows and sums its charged tokens
+    /// from the store, and refuses past either limit. *(dated 2026-10-02, `s8h` build, package
+    /// P5-kernel-envelope.)*
+    #[must_use]
+    pub const fn with_envelope(
+        mut self,
+        envelope: crate::workflow::envelope::ItemEnvelope,
+    ) -> Self {
+        self.envelope = Some(envelope);
+        self
+    }
+
+    /// The per-item envelope, when one is bound.
+    #[must_use]
+    pub const fn envelope(&self) -> Option<crate::workflow::envelope::ItemEnvelope> {
+        self.envelope
     }
 
     /// The breaker binding, when one is bound.

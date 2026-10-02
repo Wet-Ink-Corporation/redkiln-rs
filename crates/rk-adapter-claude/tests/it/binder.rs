@@ -12,14 +12,21 @@ use rk_types::digest::sha256;
 use rk_types::typed::SchemaId;
 
 use rk_adapter_claude::binder::{BindRequest, Binder, Role, Schema, WORKTREE_KEY};
-use rk_adapter_claude::card::{AgentCard, AuthoredCard, Tier};
+use rk_adapter_claude::card::{AgentCard, AuthoredCard, Models};
 use rk_adapter_claude::command::{CommandSpec, assemble};
 use rk_adapter_claude::config::ConfigError;
 
 use crate::support::{
-    Markers, belt_dispatch_spec, catalog_card, config, config_with_env, role, schema, spawn_config,
-    worktree,
+    Markers, belt_dispatch_spec, catalog_card, config, config_with_env, models, role, schema,
+    spawn_config, worktree,
 };
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3.)* The fixture `[models]` table every `request` binds
+/// through, leaked once so a `BindRequest` can borrow it for any lifetime.
+fn fixture_models() -> &'static Models {
+    static MODELS: std::sync::OnceLock<Models> = std::sync::OnceLock::new();
+    MODELS.get_or_init(models)
+}
 
 fn request<'a>(
     role_name: &'a str,
@@ -37,6 +44,7 @@ fn request<'a>(
         worktree,
         inputs: vec![("item".to_owned(), serde_json::json!("issue-81"))],
         activity_id_at_version: None,
+        models: fixture_models(),
     }
 }
 
@@ -145,8 +153,10 @@ fn ac212_model_effort_from_bound_card_only() {
     let bound = cfg_env
         .bound(&spec.card_digest)
         .expect("the store holds the bound card");
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3.)* The role names the
+    // row key; the bound card and `--model` carry the row's full id.
     assert_eq!(
-        bound.card.model, "sonnet",
+        bound.card.model, "claude-sonnet-5",
         "the model is the role's, never the environment's"
     );
     assert_eq!(bound.card.effort.as_deref(), Some("high"));
@@ -158,6 +168,7 @@ fn ac212_model_effort_from_bound_card_only() {
             adopt_agent: true,
             strict_tools: &[],
             user_message: "",
+            settings: None,
         },
     )
     .expect("builds");
@@ -166,7 +177,7 @@ fn ac212_model_effort_from_bound_card_only() {
         .iter()
         .position(|a| a == "--model")
         .expect("--model");
-    assert_eq!(built.argv[i + 1], "sonnet");
+    assert_eq!(built.argv[i + 1], "claude-sonnet-5");
     let i = built
         .argv
         .iter()
@@ -224,7 +235,9 @@ fn bind_materialises_the_spec_and_the_digest_keyed_store() {
         .bound(&spec.card_digest)
         .expect("keyed by digest");
     assert_eq!(bound.card.name, "probe");
-    assert_eq!(bound.card.model, "haiku");
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3.)* The role names the
+    // row key; the bound card and `--model` carry the row's full id.
+    assert_eq!(bound.card.model, "claude-haiku-4-5-20251001");
     assert_eq!(bound.card.effort, None, "haiku takes no effort");
     assert_eq!(bound.schemas.len(), 1);
     assert_eq!(
@@ -289,7 +302,7 @@ fn bind_materialises_the_spec_and_the_digest_keyed_store() {
     assert_eq!(haiku.schemas[&other.id], other.json);
     assert_eq!(
         cfg.bound(&spec3.card_digest).expect("stored").card.model,
-        Tier::Sonnet.as_str()
+        models()["sonnet"].id
     );
 }
 
@@ -438,4 +451,133 @@ fn a_literal_built_card_that_fails_the_card_lints_never_enters_the_store() {
             "{what}: a Config cannot hold a card that fails the lints (§7c.4)"
         );
     }
+}
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models.)* `s8h` §8h.3 (D21-42 15a, 15b;
+/// ADR-0197 decisions 4 and 5, proposed): the role names a `[models]` row KEY, and the row's FULL
+/// id travels everywhere the tier word did — `AgentCard.model`, the `--model` element, the
+/// `--agents` JSON and so the card digest (`ActivitySpec.card_digest`, which enters the per-step
+/// memo key). Two ids under one row key are two digests; the row key reaches no argv element.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): with the binder writing the row key,
+/// *"the bound card carries the row's full id"*, left `"sonnet"`, right `"claude-sonnet-5"`.
+#[test]
+fn the_full_model_id_reaches_argv_and_the_card_digest() {
+    let schema = schema();
+    let card = catalog_card("reviewer");
+    let wt = worktree();
+    let r = role("sonnet-high");
+    assert_eq!(
+        r.model.as_deref(),
+        Some("sonnet"),
+        "PREMISE: the role names the row key"
+    );
+    let mut other_models = models();
+    other_models.get_mut("sonnet").expect("a sonnet row").id = "claude-sonnet-4-6".to_owned();
+    let mut digests = std::collections::BTreeSet::new();
+    for (table, want) in [
+        (models(), "claude-sonnet-5"),
+        (other_models, "claude-sonnet-4-6"),
+    ] {
+        let mut binder = Binder::new(config());
+        let spec = binder
+            .bind(BindRequest {
+                models: &table,
+                ..request("sonnet-high", &r, &card, &schema, &wt)
+            })
+            .expect("binds");
+        let cfg = binder.into_config();
+        let bound = cfg.bound(&spec.card_digest).expect("stored");
+        assert_eq!(
+            bound.card.model, want,
+            "the bound card carries the row's full id"
+        );
+        assert_eq!(
+            spec.card_digest,
+            sha256(bound.card.to_agents_json().as_bytes()),
+            "the digest is over the --agents bytes"
+        );
+        let agents: serde_json::Value =
+            serde_json::from_str(&bound.card.to_agents_json()).expect("JSON");
+        assert_eq!(
+            agents["reviewer"]["model"], want,
+            "the --agents JSON carries the id"
+        );
+        let built = assemble(
+            &cfg,
+            &CommandSpec {
+                card: &bound.card,
+                schema: &bound.schemas[&spec.schema],
+                adopt_agent: true,
+                strict_tools: &[],
+                user_message: "",
+                settings: None,
+            },
+        )
+        .expect("builds");
+        let i = built
+            .argv
+            .iter()
+            .position(|a| a == "--model")
+            .expect("--model");
+        assert_eq!(
+            built.argv[i + 1],
+            want,
+            "the --model element is the full id"
+        );
+        assert!(
+            !built.argv.iter().any(|a| a == "sonnet"),
+            "the row key reaches no argv element"
+        );
+        digests.insert(spec.card_digest);
+    }
+    assert_eq!(
+        digests.len(),
+        2,
+        "two ids under one row key are two card digests"
+    );
+}
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models.)* `s8h` §8h.3: a role naming a
+/// key absent from the pack's `[models]` table is refused at bind, naming the role and the key —
+/// the full id has no source, and nothing falls back to the key. Control: the same role binds over
+/// a table that carries the key.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): *"a role naming a key absent from [models]
+/// must be refused at bind (s8h §8h.3), got Ok(ActivitySpec { … })"*.
+#[test]
+fn a_tier_absent_from_the_models_table_is_refused() {
+    let schema = schema();
+    let card = catalog_card("reviewer");
+    let wt = worktree();
+    let r = role("sonnet-high");
+    let mut table = models();
+    table.remove("sonnet");
+    assert!(
+        table.contains_key("opus"),
+        "PREMISE: the table is otherwise intact"
+    );
+    let mut binder = Binder::new(config());
+    match binder.bind(BindRequest {
+        models: &table,
+        ..request("sonnet-high", &r, &card, &schema, &wt)
+    }) {
+        Err(ConfigError::ModelKeyAbsent { card, role, key }) => {
+            assert_eq!(
+                (card.as_str(), role.as_str(), key.as_str()),
+                ("reviewer", "sonnet-high", "sonnet")
+            );
+        }
+        other => panic!(
+            "a role naming a key absent from [models] must be refused at bind (s8h §8h.3), got \
+             {other:?}"
+        ),
+    }
+    assert!(
+        binder.config().cards().is_empty(),
+        "nothing entered the store"
+    );
+    binder
+        .bind(request("sonnet-high", &r, &card, &schema, &wt))
+        .expect("CONTROL: the same role binds over a table that carries the key");
 }

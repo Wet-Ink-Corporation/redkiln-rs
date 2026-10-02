@@ -12,6 +12,11 @@
 //!    [`ConfigError::EffortRefusedByTier`] (*"a spec error rather than a runtime one"*). AC-212's
 //!    case (c) — an environment variable that would supply the value — is never read: nothing here
 //!    looks at the `Config`'s captured map, and the argv the builder emits is the bound card's.
+//!    *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.3; ADR-0197
+//!    decision 4, proposed.)* The role's `model` is a `[models]` row KEY resolved in
+//!    [`BindRequest::models`]: a key the table lacks is [`ConfigError::ModelKeyAbsent`], the
+//!    row's `accepts_effort` replaces the lifted `Tier::accepts_effort`, and the bound card
+//!    carries the row's FULL id.
 //! 2. **Runs every card-level and argv-level lint of §7c.4** by assembling the command through
 //!    the one builder (`command::assemble`) with the bound card: the card-level lints over the
 //!    bound card (`card::lint_card` — AC-493, AC-269, AC-214's explicit value; an `AuthoredCard`
@@ -63,7 +68,7 @@ use rk_types::activity::ActivitySpec;
 use rk_types::typed::SchemaId;
 use serde::Deserialize;
 
-use crate::card::{AgentCard, AuthoredCard, Effort, Tier};
+use crate::card::{AgentCard, AuthoredCard, Effort, Models};
 use crate::command::{CommandSpec, assemble};
 use crate::config::{Config, ConfigError};
 
@@ -83,7 +88,10 @@ pub const WORKTREE_KEY: &str = "worktree";
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Role {
-    pub model: Option<Tier>,
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.3.)* A `[models]`
+    /// row KEY (the open set that replaced the closed `Tier`), resolved at bind in
+    /// [`BindRequest::models`].
+    pub model: Option<String>,
     pub effort: Option<Effort>,
 }
 
@@ -111,6 +119,10 @@ pub struct BindRequest<'a> {
     /// copied onto the spec's own member unchanged. The binder reads nothing from it: it is outside
     /// the card, the argv lints and the card digest.
     pub activity_id_at_version: Option<String>,
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.3; ADR-0197
+    /// decision 4, proposed.)* The installed pack's `[models]` table, the one source of the full id
+    /// and of `accepts_effort` for the row key the role names.
+    pub models: &'a Models,
 }
 
 /// The binder: owns the validated `Config` while cards are bound into its store, and hands it back
@@ -147,7 +159,8 @@ impl Binder {
     ///
     /// # Errors
     /// [`ConfigError::ModelUntraceable`], [`ConfigError::EffortUntraceable`],
-    /// [`ConfigError::EffortRefusedByTier`] (AC-212); every refusal of `command::assemble` (the
+    /// [`ConfigError::EffortRefusedByTier`] (AC-212); [`ConfigError::ModelKeyAbsent`] (`s8h`
+    /// §8h.3); every refusal of `command::assemble` (the
     /// card-level lints, AC-203, AC-205, AC-132, the cap); [`ConfigError::Worktree`] (RT-21);
     /// [`ConfigError::CardStoreConflict`] (the same bytes under the other profile).
     pub fn bind(&mut self, req: BindRequest<'_>) -> Result<ActivitySpec, ConfigError> {
@@ -156,17 +169,30 @@ impl Binder {
         let tier = req
             .role
             .model
+            .as_deref()
             .ok_or_else(|| ConfigError::ModelUntraceable {
                 card: card.name.clone(),
                 role: req.role_name.to_owned(),
             })?;
-        let effort = match (tier.accepts_effort(), req.role.effort) {
+        // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3; ADR-0197
+        // decision 4, proposed.)* The role names a [models] row KEY; the row is the one source of
+        // the full id and of `accepts_effort` (the lifted haiku rule, per row). A key the table
+        // lacks is refused naming the role and the key: nothing falls back to the key.
+        let row = req
+            .models
+            .get(tier)
+            .ok_or_else(|| ConfigError::ModelKeyAbsent {
+                card: card.name.clone(),
+                role: req.role_name.to_owned(),
+                key: tier.to_owned(),
+            })?;
+        let effort = match (row.accepts_effort, req.role.effort) {
             (true, Some(e)) => Some(e.as_str().to_owned()),
             (true, None) => {
                 return Err(ConfigError::EffortUntraceable {
                     card: card.name.clone(),
                     role: req.role_name.to_owned(),
-                    tier: tier.as_str().to_owned(),
+                    tier: tier.to_owned(),
                 });
             }
             (false, None) => None,
@@ -174,7 +200,7 @@ impl Binder {
                 return Err(ConfigError::EffortRefusedByTier {
                     card: card.name.clone(),
                     role: req.role_name.to_owned(),
-                    tier: tier.as_str().to_owned(),
+                    tier: tier.to_owned(),
                 });
             }
         };
@@ -183,7 +209,7 @@ impl Binder {
             description: card.description.clone(),
             prompt: card.prompt.clone(),
             tools: card.tools.clone(),
-            model: tier.as_str().to_owned(),
+            model: row.id.clone(),
             effort,
             permission_mode: card.permission_mode.clone(),
             cache_profile: card.cache_profile,
@@ -198,6 +224,13 @@ impl Binder {
                 adopt_agent: true,
                 strict_tools: &[],
                 user_message: "",
+                // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.6.)* NOT YET
+                // WIRED: `ChildSettings::for_worktree` lists every ancestor level of the worktree, and
+                // over a worktree under %TEMP% (4,660 entries on this machine) the element measures
+                // ~1,068,619 units against RT-1's 32,767 cap, so every temp-dir bind would refuse. The
+                // delivery (argv JSON vs a settings file) is BLOCKED for a ruling; until then the
+                // argv carries `--setting-sources ""` and no `--settings` element.
+                settings: None,
             },
         )?;
         // RT-21: the worktree onto the inputs, refusing a collision or a path with no UTF-8 form.

@@ -119,6 +119,263 @@ pub const CANCEL_POLL_MS: u64 = 50;
 /// The tool a schema-bearing dispatch's card must declare (AC-205; ADR-0108).
 pub const STRUCTURED_OUTPUT: &str = "StructuredOutput";
 
+// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.2; D21-48 X12; ADR-0197
+// decision 3, proposed.)* THE ARGV SPELLING OF A CARD'S `default`, one row per CLI version, declared
+// in exactly the form Checkpoint 8h (9) and s8j's Checkpoint 8j (6) read. The card, the `--agents`
+// JSON, the digest and the init comparison all keep `default`; only the `--permission-mode` element
+// reads this table, keyed by the `Config`'s pin. `2.1.278` is the pin, warranted by the 2026-09-21
+// live acceptance (`LIVE_WARRANTED`); `2.1.287` is warranted by its help capture
+// (`tests/fixtures/cli-help/2.1.287.permission-mode.txt`, read at s8h stage open) and is dormant
+// until s8j's pin move deletes the `2.1.278` row.
+// rustfmt would fold the rows onto one line; the declared form is one row per line.
+#[rustfmt::skip]
+pub(crate) const PERMISSION_MODE_ARGV: &[(&str, &str)] = &[
+    ("2.1.278", "default"),
+    ("2.1.287", "manual"),
+];
+
+/// The rows of [`PERMISSION_MODE_ARGV`] warranted by a live acceptance rather than a help capture
+/// (`s8h` §8h.2). `&[]` after s8j's pin move.
+pub(crate) const LIVE_WARRANTED: &[&str] = &["2.1.278"];
+
+/// [`PERMISSION_MODE_ARGV`], read by the help-capture test (an integration test cannot name a
+/// `pub(crate)` item).
+#[must_use]
+pub const fn permission_mode_argv_rows() -> &'static [(&'static str, &'static str)] {
+    PERMISSION_MODE_ARGV
+}
+
+/// [`LIVE_WARRANTED`], read by the help-capture test.
+#[must_use]
+pub const fn live_warranted_rows() -> &'static [&'static str] {
+    LIVE_WARRANTED
+}
+
+/// The `--permission-mode` element for a card whose mode is `card_mode`, under `config`'s pin.
+///
+/// # Errors
+/// [`ConfigError::NoPermissionModeSpelling`] naming the pin, when [`PERMISSION_MODE_ARGV`] has no
+/// row for it.
+pub fn argv_permission_mode(config: &Config, card_mode: &str) -> Result<String, ConfigError> {
+    // Keyed by the Config's pin, never by TESTED_CLI_VERSION (X12: a test builds a Config at
+    // another pin). A pin with no row is refused whatever the card's mode: no fallback.
+    let pin = config.tested_cli_version();
+    let Some((_, spelling)) = PERMISSION_MODE_ARGV.iter().find(|(v, _)| *v == pin) else {
+        return Err(ConfigError::NoPermissionModeSpelling {
+            version: pin.to_owned(),
+        });
+    };
+    Ok(if card_mode == "default" {
+        (*spelling).to_owned()
+    } else {
+        card_mode.to_owned()
+    })
+}
+
+/// One entry of a directory on the worktree's ancestor chain (`s8h` §8h.6).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Sibling {
+    /// The entry's file name.
+    pub name: String,
+    /// A directory (denied as `<path>/**`), or anything else (denied as `<path>`).
+    pub is_dir: bool,
+}
+
+/// The worktree's ancestor chain and what each level lists — the input to [`ChildSettings`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfinementChain {
+    /// The worktree's drive letter, lower-case, when the path carries one (Windows).
+    pub drive: Option<char>,
+    /// The worktree's path segments below the root, in order; the last is the worktree itself.
+    pub segments: Vec<String>,
+    /// `listings[i]` is the entry list of the directory `root + segments[..i]` — one per
+    /// ancestor level, so exactly `segments.len()` lists.
+    pub listings: Vec<Vec<Sibling>>,
+}
+
+impl ConfinementChain {
+    /// The chain of a real worktree, each ancestor level listed from the filesystem.
+    ///
+    /// # Errors
+    /// [`ConfigError::Confinement`].
+    ///
+    /// The worktree must be absolute: a drive path on Windows (`D:/…`, or its verbatim form), a
+    /// rooted path elsewhere. Each ancestor directory is listed once; an ancestor that does not
+    /// exist lists nothing (there is nothing there to deny), and any other listing failure, a
+    /// relative or UNC path, or an entry name that is not UTF-8 is refused — never guessed.
+    ///
+    /// # Errors
+    /// [`ConfigError::Confinement`] naming the path and the failure.
+    pub fn read(worktree: &Path) -> Result<Self, ConfigError> {
+        use std::path::{Component, Prefix};
+        let refuse = |why: &str| ConfigError::Confinement {
+            detail: format!("{}: {why}", worktree.display()),
+        };
+        let mut drive = None;
+        let mut rooted = false;
+        let mut segments = Vec::new();
+        for component in worktree.components() {
+            match component {
+                Component::Prefix(p) => match p.kind() {
+                    Prefix::Disk(d) | Prefix::VerbatimDisk(d) => {
+                        drive = Some(char::from(d).to_ascii_lowercase());
+                    }
+                    _ => {
+                        return Err(refuse(
+                            "not a drive path (UNC and device paths are refused)",
+                        ));
+                    }
+                },
+                Component::RootDir => rooted = true,
+                Component::Normal(n) => segments.push(
+                    n.to_str()
+                        .ok_or_else(|| refuse("a path segment is not UTF-8"))?
+                        .to_owned(),
+                ),
+                Component::CurDir | Component::ParentDir => {
+                    return Err(refuse("the path carries `.` or `..`"));
+                }
+            }
+        }
+        if !rooted || (cfg!(windows) && drive.is_none()) {
+            return Err(refuse("the worktree path is not absolute"));
+        }
+        if segments.is_empty() {
+            return Err(refuse("the worktree is a filesystem root"));
+        }
+        let mut dir = worktree
+            .ancestors()
+            .last()
+            .unwrap_or(worktree)
+            .to_path_buf();
+        let mut listings = Vec::with_capacity(segments.len());
+        for segment in &segments {
+            listings.push(list_dir(&dir).map_err(|e| refuse(&e))?);
+            dir.push(segment);
+        }
+        Ok(Self {
+            drive,
+            segments,
+            listings,
+        })
+    }
+}
+
+/// The entries of one ancestor directory, sorted by name; a directory that does not exist lists
+/// nothing. A symlink is typed by what it points at.
+fn list_dir(dir: &Path) -> Result<Vec<Sibling>, String> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(format!("{} cannot be listed: {e}", dir.display())),
+    };
+    let mut out = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("{} cannot be listed: {e}", dir.display()))?;
+        let name = entry
+            .file_name()
+            .into_string()
+            .map_err(|n| format!("an entry of {} is not UTF-8: {n:?}", dir.display()))?;
+        let is_dir = std::fs::metadata(entry.path()).map_or_else(
+            |_| entry.file_type().is_ok_and(|t| t.is_dir()),
+            |m| m.is_dir(),
+        );
+        out.push(Sibling { name, is_dir });
+    }
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(out)
+}
+
+/// The child's `--settings` element (`s8h` §8h.6; ADR-0197 decision 9, proposed).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChildSettings {
+    json: String,
+}
+
+impl ChildSettings {
+    /// The settings over a chain.
+    ///
+    /// `permissions.blockReadsOutsideWorkingDirectories: true` (the primary read fence);
+    /// `permissions.deny` for `Read`, `Edit` and `Write` over the COMPLEMENT ALONG THE ANCESTOR
+    /// CHAIN — at each level every listed entry not on the path to the worktree (a directory as
+    /// `<path>/**`, anything else as `<path>`), then `//<letter>/**` for every drive letter other
+    /// than the worktree's, then `~/**`; and `autoMemoryEnabled: false`. Paths take the documented
+    /// form `//<drive>/<segments>` (`//d/repos/...`), the drive lower-case. No `!` carve-out and no
+    /// allow rule: a `!` pattern cannot reach an anchored rule and an allow rule cannot carve an
+    /// exception out of a deny rule [documented, `permissions.md`]. On Windows the path-segment
+    /// comparison is ASCII-case-insensitive, as the filesystem is.
+    ///
+    /// **Residuals, stated rather than claimed away** (§8h.6): a sibling created after assembly is
+    /// outside the set; a worktree under the home directory would be denied by `~/**` (run
+    /// worktrees live under the repository's `.redkiln/worktrees/`, D21-44); an entry name carrying
+    /// a glob metacharacter is written as listed.
+    #[must_use]
+    pub fn from_chain(chain: &ConfinementChain) -> Self {
+        let root = chain
+            .drive
+            .map_or_else(|| "//".to_owned(), |d| format!("//{d}/"));
+        let same = |a: &str, b: &str| {
+            if chain.drive.is_some() {
+                a.eq_ignore_ascii_case(b)
+            } else {
+                a == b
+            }
+        };
+        let mut paths: Vec<String> = Vec::new();
+        for (level, listing) in chain.listings.iter().enumerate() {
+            let Some(on_path) = chain.segments.get(level) else {
+                break;
+            };
+            let base = chain.segments[..level]
+                .iter()
+                .fold(root.clone(), |acc, s| format!("{acc}{s}/"));
+            for entry in listing {
+                if same(&entry.name, on_path) {
+                    continue;
+                }
+                let p = format!("{base}{}", entry.name);
+                paths.push(if entry.is_dir { format!("{p}/**") } else { p });
+            }
+        }
+        if let Some(d) = chain.drive {
+            for letter in 'a'..='z' {
+                if letter != d {
+                    paths.push(format!("//{letter}/**"));
+                }
+            }
+        }
+        paths.push("~/**".to_owned());
+        let deny: Vec<String> = paths
+            .iter()
+            .flat_map(|p| ["Read", "Edit", "Write"].map(|tool| format!("{tool}({p})")))
+            .collect();
+        let value = serde_json::json!({
+            "autoMemoryEnabled": false,
+            "permissions": {
+                "blockReadsOutsideWorkingDirectories": true,
+                "deny": deny,
+            },
+        });
+        Self {
+            json: value.to_string(),
+        }
+    }
+
+    /// The settings of a real worktree: [`ConfinementChain::read`], then [`Self::from_chain`].
+    ///
+    /// # Errors
+    /// [`ConfigError::Confinement`].
+    pub fn for_worktree(worktree: &Path) -> Result<Self, ConfigError> {
+        Ok(Self::from_chain(&ConfinementChain::read(worktree)?))
+    }
+
+    /// The `--settings` element's bytes.
+    #[must_use]
+    pub fn json(&self) -> &str {
+        &self.json
+    }
+}
+
 /// What one assembly takes.
 ///
 /// The bound card, the ONE output schema, adoption, the strict tools a spec would add (always
@@ -136,6 +393,9 @@ pub struct CommandSpec<'a> {
     /// The user message, written to the child's stdin then shut (Slice 5). Under `default` the
     /// card body is prepended to it here.
     pub user_message: &'a str,
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.6.)* The child's
+    /// confinement settings, the `--settings` element, assembled from the spec's worktree.
+    pub settings: Option<&'a ChildSettings>,
 }
 
 /// What the builder produced: the program, the argv (the golden vector), the stdin payload, and
@@ -203,6 +463,8 @@ pub fn assemble(config: &Config, spec: &CommandSpec<'_>) -> Result<Assembled, Co
     let card = spec.card;
     // The card-level lints, over the BOUND card, whatever built it (§7c.12).
     lint_card(&card.name, &card.tools, &card.permission_mode)?;
+    // X12: the pin's spelling row exists, refused before anything else is built.
+    argv_permission_mode(config, &card.permission_mode)?;
     // AC-203: `--agents` alone defines; only `--agent` adopts (F7).
     if !spec.adopt_agent {
         return Err(ConfigError::AgentsWithoutAgent {
@@ -240,14 +502,27 @@ pub fn assemble(config: &Config, spec: &CommandSpec<'_>) -> Result<Assembled, Co
     argv.push(card.name.clone());
     argv.push("--json-schema".to_owned());
     argv.push(spec.schema.to_string());
-    // AC-214: unconditional, the card's explicit value.
+    // AC-214: unconditional, the card's explicit value — *(dated 2026-10-02, s8h build, package
+    // P3-adapter-argv-models; s8h §8h.2; D21-48 X12)* spelt on the argv by PERMISSION_MODE_ARGV's
+    // row for the Config's pin when the card says `default`. Only this element moves: the card,
+    // the --agents JSON and the digest keep `default`.
     argv.push("--permission-mode".to_owned());
-    argv.push(card.permission_mode.clone());
+    argv.push(argv_permission_mode(config, &card.permission_mode)?);
     // AC-202: unconditional; the flag in argv is never evidence of isolation — `system/init` is.
     argv.push("--strict-mcp-config".to_owned());
     // AC-215 (argv half): unconditional.
     argv.push("--permission-prompts".to_owned());
     argv.push("none".to_owned());
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.6; ADR-0197 decision 9,
+    // proposed.)* Unconditional and EMPTY: none of the user, project or local setting files loads
+    // (the parser begins `if(e==="")return[];` [measured by string search, 2.1.281 and 2.1.287]).
+    argv.push("--setting-sources".to_owned());
+    argv.push(String::new());
+    // The child's confinement, one element, assembled from the spec's worktree (§8h.6).
+    if let Some(settings) = spec.settings {
+        argv.push("--settings".to_owned());
+        argv.push(settings.json().to_owned());
+    }
     // AC-383 / AC-211: the delivery route, LAST under static (h1-sysprompt's position).
     let stdin = match card.cache_profile {
         CacheProfile::Static => {

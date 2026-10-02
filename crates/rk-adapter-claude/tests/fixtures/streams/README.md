@@ -24,6 +24,21 @@ The RECORDED frames a transcript carries come from `../recorded/` (byte-exact ex
 the row at test time — `// RE-SERIALISED at the pin (runner Value; key order and number repr are not
 the CLI's)`).
 
+*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.3, §8h.5.)* **Every scripted init
+now reports the bound card's model by its FULL id** (`claude-haiku-4-5-20251001` where the line read `haiku`, twelve
+files amended in place): adoption is exact equality of the reported and requested id (RT-27 settled; ADR-0197,
+proposed), so the tier word no longer adopts. The parts added for §8h.5's guards, all SCRIPTED except where named:
+
+| file | what it is / which test |
+| --- | --- |
+| `init-permission-mode-unequal.scripted.ndjson` / `init-permission-mode-absent.scripted.ndjson` | `permissionMode` `acceptEdits` for a `default` card / no key → `NotIsolated { surface: env }` (`isolation::permission_mode_*`) |
+| `init-2-1-287-default.scripted.ndjson` | the init at `2.1.287` reporting `default` while the argv spelled it `manual` (D21-48 X12) → adopted |
+| `init-api-key-source-other.scripted.ndjson` / `init-api-key-source-absent.scripted.ndjson` | `apiKeySource` `ANTHROPIC_API_KEY` / no key → `NotIsolated { surface: env }` (`isolation::api_key_source_*`) |
+| `init-model-sonnet-4-6.scripted.ndjson` / `init-model-sonnet-5.scripted.ndjson` | under the `sonnet-high` role (requested `claude-sonnet-5`): reported `claude-sonnet-4-6` → `NotAdopted`; reported `claude-sonnet-5` → adopted |
+| `init-model-haiku-undated.scripted.ndjson` / `init-no-model.scripted.ndjson` | the haiku id without its dated suffix, and no `model` key → `NotAdopted`; also `dispatch::observed_model_*` |
+| `permission-denied-outside-read.scripted.ndjson` | guard 3's channel (b): the `system` / `permission_denied` event, `decision_reason_code` `outside_reads_blocked` — **DRAFTED from the 2.1.281 binary's literals, UNMEASURED as a live frame**; `s8h` §8h.11's probe 0 retains the real one and `s8j` corrects this file by a dated line if it differs |
+| `result-ok-permission-denials.scripted.ndjson` / `result-ok-empty-permission-denials.scripted.ndjson` | guard 3's channel (a): `result-ok`'s frame with a non-empty / an empty `permission_denials` |
+
 ## The parts
 
 | file | what it is / which test |

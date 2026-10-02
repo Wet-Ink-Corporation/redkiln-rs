@@ -103,6 +103,10 @@ fn ac202_isolation_from_system_init_not_argv() {
 /// allowlist (step 3's own check). When `agent` IS present it must equal the expected name, as
 /// before. RED before the reading: the good 2.1.277 init was `NotAdopted { observed: "<no agent
 /// reported>" }` — the refusal that killed the probe at the init line.
+///
+/// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.3.)* "belongs to the
+/// bound card's tier" is now EQUALITY with the requested full id on both readings (the segment match is
+/// deleted); the three fixtures' verdicts do not move.
 #[test]
 fn ac204_adoption_at_2_1_277_is_read_from_agents_and_model() {
     let r = dispatch_replay(&with_init("init-2-1-277-shape.scripted.ndjson"), 30);
@@ -379,4 +383,207 @@ fn ac202_absent_mcp_key_is_the_empty_set() {
         r.outcome.result
     );
     assert_eq!(completed_rows(&r.store).len(), 1);
+}
+
+// ------------------------------------------------------------------------------------------------
+// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)* `s8h` §8h.5's init equality
+// — three comparisons beside the tool-set and MCP checks, each read from the child's own report and
+// never from the argv: `permissionMode` equals the CARD's mode (D21-48 X12: *"the init comparison
+// reads `default`"*), `model` equals the requested FULL id (§8h.3; RT-27 settled by equality), and
+// `apiKeySource` equals `"none"` (ADR-0010 checked in-band). N17's Q1 classes (§8h.0): a model
+// mismatch is `NotAdopted`; a mode or `apiKeySource` mismatch, or an absent key, is
+// `NotIsolated { surface: Env }`, with the digest over the reported value's one-member set (empty
+// when absent) against the expected one.
+
+fn one(s: &str) -> std::collections::BTreeSet<String> {
+    std::iter::once(s.to_owned()).collect()
+}
+
+/// §8h.5 / N17 Q1 (iii): an init reporting `permissionMode` `acceptEdits` for a `default` card is
+/// `NotIsolated { surface: Env }`, the digest over `{acceptEdits}` against `{default}`. And the
+/// comparison reads the CARD's mode, never the argv's spelling (D21-48 X12): a `Config` pinned at
+/// `2.1.287` puts `--permission-mode manual` on the argv (§8h.2's row), and an init reporting
+/// `default` for it is adopted.
+#[test]
+fn permission_mode_reported_unequal_to_the_card_is_refused() {
+    let r = dispatch_replay(
+        &with_init("init-permission-mode-unequal.scripted.ndjson"),
+        30,
+    );
+    match &r.outcome.result {
+        Err(StepError::NotIsolated {
+            surface: IsolationSurface::Env,
+            diff_digest,
+        }) => assert_eq!(
+            diff_digest,
+            &rk_adapter_claude::init::set_digest(&one("acceptEdits"), &one("default")),
+            "the digest is over the reported mode against the card's (N17 Q1 (iii))"
+        ),
+        other => panic!(
+            "an init reporting permissionMode acceptEdits for a `default` card must be NotIsolated \
+             {{ surface: env }} (s8h §8h.5; N17 Q1 (iii)); got {other:?}"
+        ),
+    }
+    assert_eq!(
+        completed_rows(&r.store).len(),
+        1,
+        "the refusal carries its row (AC-360)"
+    );
+    // the card's `default`, never the argv's `manual` (X12)
+    let t = with_init("init-2-1-287-default.scripted.ndjson");
+    let markers = Markers::new();
+    let wt = tempfile::tempdir().expect("wt");
+    let config = crate::support::spawn_config(&markers, &format!("replay:{}", t.path.display()))
+        .at_pin("2.1.287");
+    let (config, spec) = bind_probe(config, 30, wt.path(), "x");
+    let mut store = VecStore::default();
+    let o = harness(config).dispatch(&spec, &mut store);
+    let argv = &markers.read()[0].argv;
+    let at = argv
+        .iter()
+        .position(|a| a == "--permission-mode")
+        .expect("the argv carries --permission-mode");
+    assert_eq!(
+        argv[at + 1],
+        "manual",
+        "PREMISE: at 2.1.287 the argv carries the row's spelling of `default` (s8h §8h.2)"
+    );
+    assert!(
+        o.result.is_ok(),
+        "guard 2 adopts an init reporting `default` for a `default` card whose argv spelled it \
+         `manual` (D21-48 X12: the init comparison reads `default`); got {:?}",
+        o.result
+    );
+}
+
+/// §8h.5: an ABSENT `permissionMode` is refused, never treated as equal — `NotIsolated { surface:
+/// Env }`, the digest over the empty reported set against `{default}`.
+#[test]
+fn permission_mode_absent_from_init_is_refused() {
+    let r = dispatch_replay(
+        &with_init("init-permission-mode-absent.scripted.ndjson"),
+        30,
+    );
+    match &r.outcome.result {
+        Err(StepError::NotIsolated {
+            surface: IsolationSurface::Env,
+            diff_digest,
+        }) => assert_eq!(
+            diff_digest,
+            &rk_adapter_claude::init::set_digest(
+                &std::collections::BTreeSet::new(),
+                &one("default")
+            ),
+            "an absent key reports the empty set (N17 Q1 (iii))"
+        ),
+        other => panic!(
+            "an init with no permissionMode must be NotIsolated {{ surface: env }} — absent is \
+             refused, not treated as equal (s8h §8h.5); got {other:?}"
+        ),
+    }
+}
+
+/// §8h.3 / §8h.5 / N17 Q1 (i): requested `claude-sonnet-5` (the `sonnet` row's full id), reported
+/// `claude-sonnet-4-6` — `NotAdopted`, even with the `agent` key naming the card. A different
+/// spelling of the same model (the haiku id without its dated suffix) is a failure too (§8h.11:
+/// the equality is never loosened in place), and so is an init that reports no model.
+#[test]
+fn model_reported_unequal_to_the_requested_id_is_refused() {
+    let r = crate::support::dispatch_replay_as(
+        &with_init("init-model-sonnet-4-6.scripted.ndjson"),
+        "sonnet-high",
+        30,
+    );
+    match &r.outcome.result {
+        Err(StepError::NotAdopted {
+            expected_agent,
+            observed,
+        }) => {
+            assert_eq!(expected_agent, "probe");
+            assert!(
+                observed.contains("claude-sonnet-4-6"),
+                "the refusal names the reported model: {observed}"
+            );
+        }
+        other => panic!(
+            "requested claude-sonnet-5, reported claude-sonnet-4-6: adoption is EXACT equality of \
+             the model id (s8h §8h.3; N17 Q1 (i)) — expected NotAdopted, got {other:?}"
+        ),
+    }
+    let r = dispatch_replay(&with_init("init-model-haiku-undated.scripted.ndjson"), 30);
+    assert!(
+        matches!(r.outcome.result, Err(StepError::NotAdopted { .. })),
+        "requested claude-haiku-4-5-20251001, reported claude-haiku-4-5: a different spelling of \
+         the same model is a failure (s8h §8h.11) — expected NotAdopted, got {:?}",
+        r.outcome.result
+    );
+    let r = dispatch_replay(&with_init("init-no-model.scripted.ndjson"), 30);
+    assert!(
+        matches!(r.outcome.result, Err(StepError::NotAdopted { .. })),
+        "an init reporting no model adopted nothing — expected NotAdopted, got {:?}",
+        r.outcome.result
+    );
+}
+
+/// The control: an init reporting exactly the requested full id proceeds — the sonnet row's id
+/// under the `sonnet-high` role, and the haiku row's id under `haiku`.
+#[test]
+fn model_equal_to_the_requested_id_proceeds() {
+    let r = crate::support::dispatch_replay_as(
+        &with_init("init-model-sonnet-5.scripted.ndjson"),
+        "sonnet-high",
+        30,
+    );
+    assert!(
+        r.outcome.result.is_ok(),
+        "requested claude-sonnet-5, reported claude-sonnet-5: adopted — got {:?}",
+        r.outcome.result
+    );
+    let r = dispatch_replay(&with_init("init.scripted.ndjson"), 30);
+    assert!(
+        r.outcome.result.is_ok(),
+        "requested and reported claude-haiku-4-5-20251001: adopted — got {:?}",
+        r.outcome.result
+    );
+}
+
+/// §8h.5 / ADR-0010 in-band (*"The adapter must refuse to proceed (assert, not warn)"*) / N17 Q1
+/// (ii): `apiKeySource` other than `"none"` is `NotIsolated { surface: Env }`, the digest over
+/// `{ANTHROPIC_API_KEY}` against `{none}`.
+#[test]
+fn api_key_source_other_than_none_is_refused() {
+    let r = dispatch_replay(&with_init("init-api-key-source-other.scripted.ndjson"), 30);
+    match &r.outcome.result {
+        Err(StepError::NotIsolated {
+            surface: IsolationSurface::Env,
+            diff_digest,
+        }) => assert_eq!(
+            diff_digest,
+            &rk_adapter_claude::init::set_digest(&one("ANTHROPIC_API_KEY"), &one("none"))
+        ),
+        other => panic!(
+            "apiKeySource ANTHROPIC_API_KEY must be NotIsolated {{ surface: env }} (s8h §8h.5; \
+             ADR-0010; N17 Q1 (ii)); got {other:?}"
+        ),
+    }
+}
+
+/// §8h.5 / N17 Q1 (ii): an ABSENT `apiKeySource` is refused, the digest over the empty set
+/// against `{none}`.
+#[test]
+fn api_key_source_absent_is_refused() {
+    let r = dispatch_replay(&with_init("init-api-key-source-absent.scripted.ndjson"), 30);
+    match &r.outcome.result {
+        Err(StepError::NotIsolated {
+            surface: IsolationSurface::Env,
+            diff_digest,
+        }) => assert_eq!(
+            diff_digest,
+            &rk_adapter_claude::init::set_digest(&std::collections::BTreeSet::new(), &one("none"))
+        ),
+        other => panic!(
+            "an init with no apiKeySource must be NotIsolated {{ surface: env }} — absent is \
+             refused (s8h §8h.5; N17 Q1 (ii)); got {other:?}"
+        ),
+    }
 }

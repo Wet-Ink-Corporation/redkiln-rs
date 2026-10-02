@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use rk_adapter_claude::card::{AgentCard, AuthoredCard, CacheProfile, Effort, Tier};
+use rk_adapter_claude::card::{AgentCard, AuthoredCard, CacheProfile, Effort};
 use rk_adapter_claude::config::ConfigError;
 
 use crate::support::{belt_dispatch_authored, catalog_card, fixture, fixtures, red_card};
@@ -28,7 +28,7 @@ fn ac383_card_without_profile_refused() {
             // default a profile-less card to `static`: `belt: a profile-less card loaded and a
             // marker file appeared (AC-383)`: left `1`, right `0`.
             assert_eq!(
-                belt_dispatch_authored(&card, Tier::Haiku, None),
+                belt_dispatch_authored(&card, "haiku", None),
                 0,
                 "belt: a profile-less card loaded and a marker file appeared (AC-383)"
             );
@@ -72,7 +72,7 @@ fn ac493_empty_or_absent_tools_rejected() {
             // list: `belt: tools-empty.json loaded and a marker file appeared (AC-493)`: left `1`,
             // right `0`.
             assert_eq!(
-                belt_dispatch_authored(&card, Tier::Haiku, None),
+                belt_dispatch_authored(&card, "haiku", None),
                 0,
                 "belt: tools-empty.json loaded and a marker file appeared (AC-493)"
             );
@@ -84,7 +84,7 @@ fn ac493_empty_or_absent_tools_rejected() {
         Err(other) => panic!("tools-absent.json: the refusal is ToolsAbsent; got {other:?}"),
         Ok(card) => {
             assert_eq!(
-                belt_dispatch_authored(&card, Tier::Haiku, None),
+                belt_dispatch_authored(&card, "haiku", None),
                 0,
                 "belt: tools-absent.json loaded and a marker file appeared (AC-493)"
             );
@@ -232,10 +232,13 @@ fn authored_card_carrying_a_tier_is_refused() {
 /// Lifted from `runner/src/step.rs` at the pin: `haiku_rejects_effort`.
 #[test]
 fn haiku_rejects_effort() {
-    assert!(!Tier::Haiku.accepts_effort());
-    assert!(Tier::Sonnet.accepts_effort());
-    assert!(Tier::Opus.accepts_effort());
-    assert_eq!(Tier::Haiku.as_str(), "haiku");
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3.)* `Tier` left the binding path; the lifted rule
+    // is each `[models]` row's `accepts_effort`, read here from the binder's fixture table.
+    let rows = crate::support::models();
+    assert!(!rows["haiku"].accepts_effort);
+    assert!(rows["sonnet"].accepts_effort);
+    assert!(rows["opus"].accepts_effort);
+    assert_eq!(rows["haiku"].id, "claude-haiku-4-5-20251001");
     assert_eq!(Effort::Xhigh.as_str(), "xhigh");
 }
 
@@ -292,4 +295,96 @@ fn agent_card_renders_a_name_keyed_object() {
     let map: BTreeMap<String, serde_json::Value> =
         serde_json::from_str(&card.to_agents_json()).expect("map");
     assert_eq!(map.len(), 1);
+}
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models.)* `s8h` §8h.2 (ADR-0197
+/// decision 2, proposed): `lint_card` refuses a mode outside the CLI's own closed set — the
+/// `claude --help` choices plus `default` — at load AND at bind, naming the card and the mode. A
+/// misspelling (`acceptEdit`) is refused; a case variant (`Default`) and a padded spelling are not
+/// the CLI's either.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper): before the closed-set check, *"`acceptEdit`
+/// must be refused at load (s8h §8h.2), got Ok(AuthoredCard { name: "probe", … })"*.
+#[test]
+fn permission_mode_outside_the_cli_closed_set_is_refused() {
+    let base = fixture("cards/catalog/probe.json");
+    assert_eq!(
+        base.matches("\"permission_mode\": \"default\"").count(),
+        1,
+        "PREMISE: the probe card carries `default` once"
+    );
+    for bad in ["acceptEdit", "Default", "manual ", "bypass", "auto-accept"] {
+        let text = base.replace(
+            "\"permission_mode\": \"default\"",
+            &format!("\"permission_mode\": \"{bad}\""),
+        );
+        match AuthoredCard::from_file("probe", &text) {
+            Err(ConfigError::PermissionModeOutsideSet { card, mode }) => {
+                assert_eq!((card.as_str(), mode.as_str()), ("probe", bad));
+            }
+            other => panic!("`{bad}` must be refused at load (s8h §8h.2), got {other:?}"),
+        }
+        // At bind too: the builder's lint runs over a card built by literal.
+        let tools = vec!["StructuredOutput".to_owned()];
+        assert!(
+            matches!(
+                rk_adapter_claude::card::lint_card("literal", &tools, bad),
+                Err(ConfigError::PermissionModeOutsideSet { .. })
+            ),
+            "`{bad}` must be refused by lint_card, the bind-time lint (s8h §8h.2)"
+        );
+    }
+}
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models.)* `s8h` §8h.2: the control
+/// against an over-narrow set — every choice the captured `claude --help` lists, plus `default`,
+/// is admitted by the closed set, at load and at bind, and the set is exactly those seven. The
+/// choices are read from the capture written at stage open
+/// (`tests/fixtures/cli-help/2.1.287.permission-mode.txt`), never from this file.
+///
+/// RED (observed 2026-10-02, in the private worktree `target/wt-P3` through D21-47's wrapper, the
+/// driver `P3-adapter-argv-models-mutants.py`): with the set narrowed to the shipped pair (an
+/// over-narrow set, the failure this control exists for), *"`auto` is a CLI choice (2.1.287 help) and
+/// must be admitted"*.
+#[test]
+fn every_cli_permission_mode_is_admitted_by_the_closed_set() {
+    let captures = crate::support::help_captures();
+    assert!(
+        !captures.is_empty(),
+        "PREMISE: at least one --help capture exists (s8h §8h.0 item 6)"
+    );
+    let base = fixture("cards/catalog/probe.json");
+    let tools = vec!["StructuredOutput".to_owned()];
+    for (version, text) in &captures {
+        let choices = crate::support::help_permission_mode_choices(text)
+            .unwrap_or_else(|| panic!("the {version} capture lists no --permission-mode choices"));
+        assert!(
+            choices.len() >= 2,
+            "PREMISE: a real choices list ({choices:?})"
+        );
+        let mut admitted: Vec<String> = choices.clone();
+        admitted.push("default".to_owned());
+        for mode in &admitted {
+            assert!(
+                rk_adapter_claude::card::lint_card("literal", &tools, mode).is_ok(),
+                "`{mode}` is a CLI choice ({version} help) and must be admitted"
+            );
+            let text = base.replace(
+                "\"permission_mode\": \"default\"",
+                &format!("\"permission_mode\": \"{mode}\""),
+            );
+            assert!(
+                AuthoredCard::from_file("probe", &text).is_ok(),
+                "`{mode}` must load ({version} help)"
+            );
+        }
+        let mut want: Vec<&str> = admitted.iter().map(String::as_str).collect();
+        want.sort_unstable();
+        let mut set: Vec<&str> = rk_adapter_claude::card::PERMISSION_MODES.to_vec();
+        set.sort_unstable();
+        assert_eq!(
+            set, want,
+            "the closed set is the {version} help's choices plus `default`, seven in all"
+        );
+    }
 }

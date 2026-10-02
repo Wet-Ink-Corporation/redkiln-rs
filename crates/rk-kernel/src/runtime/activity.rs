@@ -628,6 +628,14 @@ impl Runtime {
             });
         }
 
+        // *(dated 2026-10-02, `s8h` build, package P5-kernel-envelope; `s8h` §8h.9; Record B =
+        // ADR-0198 decision 4, proposed.)* **THE PER-ITEM ENVELOPE, before the cost row and before
+        // the port.** The item's prior `dispatch` rows and its charged tokens are read from the
+        // STORE on every dispatch, so a second process, or a second runtime in this one, counts
+        // what the first wrote; nothing here is held between dispatches. A refusal writes no row.
+        if let Some(envelope) = self.envelope() {
+            envelope.admit(&self.journal(item)?, item)?;
+        }
         self.append(dispatch_event(&key, step_id))?;
         let outcome = {
             // THE CALL BOUNDARY (ADR-0115 clause 4). The guard is taken here and dropped at the end

@@ -629,6 +629,28 @@ is `Some` on every path that read a `system/init` carrying `model`, and `None` o
 one was read. It is never the requested id copied in. That would be Halt 11's shape, the same reasoning that gives
 `cli_version` its `Observed`/`Pinned` arms. This is Record A's supersession of ADR-0126 decision 1 in part.
 
+*(dated 2026-10-02, s8h build, package P3-adapter-argv-models)* Built: `card::ModelRow` (`id`, `accepts_effort`, `deny_unknown_fields`) and
+`card::Models`; `card::Tier` deleted; `binder::Role.model` and `RoleExtras.model` are row keys; `BindRequest.models`
+is the pack's table (`PackExtras.models`, `#[serde(default)]`); a key the table lacks is `ConfigError::ModelKeyAbsent`
+naming the card, the role and the key; the bound card carries the row's full id. The eight `pack-min` fixture packs
+gained Record A's three rows. The SHIPPED packs' `[models]` tables and role rows are not written by this package
+(`cards::` is rk-cli's package); until they are, a shipped-pack bind refuses at `ModelUntraceable`, as it did at
+entry (their `[role.*]` rows carry `family` alone). `model_belongs_to_tier` (adoption) is the isolation package's
+(M3); with the full id on the card, its `reported == tier` arm is exact equality already.
+
+*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes)* **Adoption is exact equality, and `observed_model` is read.** `init::decide` compares the reported
+`model` to the bound card's full id on BOTH agent readings (an `agent` key equal to the card, or the 2.1.277
+`agents` list carrying it); an absent `model` is `NotAdopted`, and so is a different spelling of the same model
+(`claude-haiku-4-5` for `claude-haiku-4-5-20251001`). `model_belongs_to_tier` is deleted (Checkpoint 8h (9):
+0 code hits). The drain records the init's `model` before any decision, so `DispatchRecord.observed_model` is
+`Some(reported)` on every path that read an init carrying it (a refused one too) and `None` otherwise (pre-spawn,
+no init, an init without `model`); mutant check I3 (the requested id copied in) is killed. Every scripted init in
+`rk-adapter-claude`'s `tests/fixtures/streams/` now reports the full id (twelve files, README dated), and the seven
+`rk-cli` `*frames.jsonl` transcripts' init lines report `claude-sonnet-5` and `acceptEdits` (the `pack-min`
+implementer card's row and mode; JSONL carries no comment, so recorded here): `cost/run-frames.jsonl`,
+`exit/{findings-block,platform-is-error,schema-invalid-structured-output,schema-no-structured-output}/frames.jsonl`,
+`pack-min/lane/implement-frames.jsonl`, `slice/approved/frames.jsonl`.
+
 ### 8h.4 Schemas — Rust types in `EXPORTED`, read by name (D21-41 (g); ADR-0084, ADR-0095, AC-133)
 
 **The kinds the two lanes reach.** These are enumerated mechanically, with the rule stated so it reproduces:
@@ -716,6 +738,10 @@ none, so the type cannot supply it. The authoring does:
 - **The test** is `classify::a_spec_criterion_without_an_authored_verification_is_a_schema_failure` (§8h.12), and
   mutant M29 skips the check (§8h.13). `s8j`'s fixture proof asserts the same over each lane's `Spec` before verify,
   which is `s8g` §8g.3's second owner.
+  *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes)* Built: `classify::extract_digest` refuses a `Spec`-kind (`classify::SPEC_KIND`, the
+  `EXPORTED` key the binder gives `value:Spec`) structured output AFTER the schema validation when a criterion's
+  `verification` is absent, `null`, not a string or blank, naming the criterion, as `StepError::Schema`. Red, green
+  and M29 in §8h.12 and §8h.13. The `spec-author` card's prompt sentence is the cards package's.
 
 **`Finding` gains `severity`** (D21-47 cross #4: *"ADD `severity` to rk-types `Finding`, typed by s8b's 11c
 vocabulary, with tests"*). The facts:
@@ -752,6 +778,15 @@ stage's severity test to a fixture:** *"`s8h`'s severity test re-points to a fix
 `quality_block::a_severity_row_reads_the_typed_member_over_a_non_empty_list` (§8h.12) reads a fixture activity
 carrying `findings.none(severity in [...])` (`rk-kernel`'s `tests/fixtures/activities/`, beside
 `terminal_condition_is_severity_only.toml`), never a shipped row. Its name and its place in the counts do not move.
+*(dated 2026-10-02, s8h build, package P5-kernel-envelope)* Built: the fixture is `crates/rk-kernel/tests/fixtures/activities/terminal_condition_reads_typed_severity.toml`,
+whose `policy` check binds `findings = "${adversary.outputs.items?}"` (the LIST: `Findings` serialises as `{ items: [...] }`
+and a quantifier over the record is `NotAList`) and reads `findings.none(severity in ['blocking'])`. The test ingests the
+finding through `rk_types::artifact::findings::Findings::ingest`, serialises the TYPED value, binds it through the kernel's
+own `runtime::reference::check_context` and evaluates it with the one `predicate::evaluate`: one `blocking` finding is
+`false`, one `advisory` finding is `true`, and the empty list (the control) is `true`. P2 landed `Finding.severity` before
+this test was written, so its red was taken from an instrument (I6 in §8h.13: the member kept off the wire), which reads
+*"a severity row over one blocking finding must read the typed member and be false, got Err(UnknownField("severity"))"* —
+the stated reason.
 
 **`RootCause` carries `discriminating_test`** (D21-47 cross #5). `s8b` §8b.5's (C) rows bind
 `${compare.outputs.discriminating_test}` and `${analyse.outputs.discriminating_test}`. Both steps output `RootCause`,
@@ -878,6 +913,23 @@ defect."*
 - **The segment list is one `const`** in `rk-adapter-claude`, copied from D21-45 with that citation. A CLI release
   that changes the list is Halt 2's concern, through the pin, and not this guard's.
 
+*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes)* **Built as written.** Guard 2 (`init.rs`): after the tool set, `permissionMode` must equal the
+card's mode (the card's `default`, never the argv's `manual`: an init reporting `default` under a `Config` pinned
+`2.1.287`, whose argv carries `manual`, is adopted) and `apiKeySource` must equal `init::API_KEY_SOURCE_NONE`;
+absent keys refuse; each is `NotIsolated { surface: Env }` with N17 Q1's digests. Guard 3 (`classify.rs` step 5b,
+after the platform arms 3-5 and before the exit code, so it holds whatever the exit code and outranks step 10's
+`structured_output`): channel (a) `denials_from_result`, channel (b) every `system` / `classify::PERMISSION_DENIED_SUBTYPE`
+line the drain collects (`denial_from_event`, keyed by `type`/`subtype`, its `decision_reason_code` kept), the union
+de-duplicated by `tool_use_id` (`denial_digest`). Paths per tool (`denial_path`): `file_path` for Read/Edit/Write;
+Glob's `pattern` when absolute, else its `path`; Grep's `path`; the worktree when the key is absent; `""` for any
+other tool. The list is `classify::PROTECTED_SEGMENTS` (D21-45, quoted with its citation) plus
+`PROTECTED_SEGMENT_PAIR` (`.config` then `git`, matched as a pair); segments are lexically normalised and
+case-folded, a relative path resolves against the worktree, and only segments BELOW the worktree root count. The note
+`ProtectedSegmentDenial { segment, tool_name }` rides `Classified.notes` / `Run.notes`; `dispatch` prints
+`ProtectedSegmentDenial::warning()` (naming D21-45's known limit) to stderr and keeps it on
+`ClaudeHarness::denial_warnings()`. The channel-(b) frame is the DRAFT this section describes, in
+`tests/fixtures/streams/permission-denied-outside-read.scripted.ndjson`, unmeasured live until probe 0.
+
 ### 8h.6 Settings isolation and confinement (D21-42 21b, 21d)
 
 **`--setting-sources ""`, always.** The 2.1.281 help reads *"Comma-separated list of setting sources to load (user,
@@ -935,6 +987,20 @@ other run worktree is a denied sibling too.
 
 **Nothing is carried into the worktree for the child's settings.** D21-45 records the same choice from the other
 side: `settings.local.json` is not copied, *"because children run with isolated settings (s8h)"*.
+
+*(dated 2026-10-02, s8h build, package P3-adapter-argv-models)* **BLOCKED in part: the `--settings` element is built and tested, and not
+yet wired into a production assembly.** `command::ChildSettings` builds the element from a `ConfinementChain`
+(`ConfinementChain::read` lists each ancestor level from the filesystem) and `assemble` emits it in Record A's
+position when the `CommandSpec` carries one; `--setting-sources ""` is unconditional. But the complement's size is
+the sum of every ancestor level's entry count, and the element rides the argv, under RT-1's 32,767-unit cap
+[measured 2026-10-02 by `P3-measure-settings.py`, the rule restated]: a run worktree at
+`D:/repos/redkiln-rs/.redkiln/worktrees/bug-1` is 115 deny paths, 345 rules, about 11,989 units (37% of the cap
+before the schema and the card); under `%TEMP%` (4,660 entries on this machine), where every adapter and `rk-cli`
+test's worktree or scratch repository lives, it is 4,999 paths and about 1,068,619 units; under `target/tmp` it is
+1,104 paths and about 243,048 units. Wiring `ChildSettings::for_worktree` into `Binder::bind` and `dispatch` would
+refuse every such bind at the cap. Neither this section nor Record A decision 9 (*"one `--settings <json>`
+element"*) foresaw the cap, so the delivery is returned for a ruling; until then `Binder::bind` and `dispatch` pass
+`settings: None`, by dated comment at each site.
 
 ### 8h.7 The launcher — the only entry to a real run (D21-42 17a, 17b)
 
@@ -1102,6 +1168,15 @@ before it runs"*. Once the cards bind, a bare `redkiln run` refuses before any s
 not a security boundary: the variable can be forged, and that is stated. §8h.14 says which old checkpoints this
 makes provisional and how each is re-run.
 
+*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes)* **The `live::` half is built.** All eight `#[ignore]` tests in `live.rs` open with
+`require_launch_record();` (its body asserts `REDKILN_LAUNCH_RECORD` names an existing file), and each ignore
+reason names `tools/live-run.sh probe live::<its name>` and no `cargo test` (`live_dispatch_probe`'s raw `cargo`
+line is struck from its reason; the module doc keeps the history). `live_guard::every_live_test_opens_with_the_launch_record_guard`
+lints the code lines (comment lines dropped first), proves each rule on six synthetic files first (a conforming
+file passes; an unguarded test, a guard second, a guard in a comment, a `cargo test` reason and a no-op guard
+function are each refused), and asserts the eight names as a PREMISE. The launcher, the `rk-cli` launch check and
+its spawn helper are other packages'.
+
 **`s8`'s three `redkiln run` sites.** `s8-exit-criterion.md` invokes `./target/debug/redkiln run` at three sites.
 After this stage, each one refuses without a launch record, so each must go through `tools/live-run.sh run`. That
 edit is `s8j`'s (D21-43). This stage states the constraint and does not touch `s8-exit-criterion.md`. The same holds
@@ -1187,6 +1262,34 @@ recorded from measurement"*. The first real run's `dispatch_completed` usage rev
 
 Every `NO RECORD` marker is replaced by a comment naming Record B as `ADR-<id>`, on the `gate_deadline_secs`, K,
 `expiry_secs`, `[margins]` and `appetite` lines at least, and `grep -c 'NO RECORD'` reaches 0 in both packs.
+
+*(dated 2026-10-02, s8h build, package P5-kernel-envelope)* **Built, per Record B (ADR-0198, proposed) decision 4.**
+- **The class.** Finding 12 is answered as Record B decided it: a kernel class, never `StepError::Overage`.
+  `rk_kernel::workflow::envelope::EnvelopeRefusal` has one variant per counter, `DispatchCapReached { item, count, cap }`
+  and `TokenAppetiteReached { item, sum, appetite }`, and reaches the CLI as `RuntimeError::Envelope` →
+  `ReplayError::Runtime`. `rk-cli`'s `resume_and_read` maps it, by an explicit arm beside ADR-0144's, to `Exit::Overage`
+  (20). `StepError`, `Exit`, `ALL` and the exit snapshot do not move.
+- **The count.** `Runtime::dispatch_once_at` reads the item's journal (`journal(item)`, `query(ByItem)`) on every dispatch,
+  before the `dispatch` cost row and before the port, and calls `ItemEnvelope::admit`. That counts the `dispatch` rows KEYED
+  to the item and sums the four `Usage` counters (the two cache counters fall back to their `ephemeral_*` namings, as
+  `rk_types::usage::Usage`'s readers do) over its keyed `dispatch_completed` rows. A row with `usage` absent or `null`
+  charges nothing and still counts against the cap. The refusal writes no row. Nothing is held between dispatches.
+- **Declared, never defaulted.** `Pack::dispatch_cap()` reads `appetite.dispatches`. `Pack::require_dispatch_cap()` refuses
+  with `EnvelopeError::DispatchCapNotDeclared { pack }` (tag `dispatch_cap_not_declared`), and `Pack::require_item_envelope()`
+  refuses with the cap's error, then the token appetite's. `replay::resume_routed` calls `require_item_envelope()` beside
+  `require_attempt_cap()`, refusing as `ReplayError::Malformed` (exit 3, as an undeclared `N` already does), and binds
+  `Runtime::with_envelope` beside the `with_item` key the count reads. The envelope is bound only on that production path.
+  The recording seam (`replay`'s private `derive`, whose dispatching arm reads `N` the same way) binds none and is a stated residual, like `with_item`'s.
+- **The packs.** Both installed packs now read `appetite = { points = 40|60, tokens = 24000000, dispatches = 40 }`, with a
+  comment naming ADR-0198 on the line above. Their other `NO RECORD` lines, the other four ADR-0198 mentions and the
+  `[[gate_expiry]]` rows are the cards package's (`cards::shipped_rt57_scalars_carry_no_no_record_marker`). Because
+  `resume_routed` now requires the envelope, the fixture packs it resumes gained the two keys by dated comment, valued far
+  above anything they dispatch:
+  - `rk-kernel`'s `resume-gate.toml`, `lane-advance.toml` and `pass-owed.toml` (`tokens = 200000, dispatches = 40`);
+  - `rk-cli`'s eight `pack-min/pack*.toml` (`dispatches = 40` beside their `tokens = 200000`).
+  Measured: before those edits, eight `lane_order::`/`resume::` tests refused at *"pack `resume-gate-fixture` declares no
+  `appetite.dispatches`"*. A new fixture `runtime-item-envelope.toml` declares five different numbers (cap 3, tokens 5000,
+  `N` 4, `K` 2, points 50).
 
 ### 8h.10 Gate expiry, fail-closed, and the two load-time guards (D21-42 21a, 21c)
 
@@ -1378,6 +1481,41 @@ structured value.
 **What the (g) record's acceptance cites:** all three probes' printed values, the corpus commit SHA and the frames'
 sha256, and the launch records' paths and sha256.
 
+*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes)* **The three probes are AUTHORED, compiled under `--features live`, listed as ignored, and NOT RUN**
+(D21-105 item 2: *"Every other live or paid step (the live probes of `s8h` and `s8j` …) is prepared to its go-ahead
+line and deferred to the review packet"*). `cargo test -p rk-adapter-claude --features live --test it -- --list
+--ignored` lists `live::live_denial_channel_preprobe`, `live::live_confinement_and_denial_probe` and
+`live::live_init_equality_probe` (listing only). Each opens with the launch-record guard, binds the SHIPPED cards
+through the SHIPPED `[role.*]` rows and `[models]` table of `.redkiln/packs/bug-standard.toml` (read by a flat-table
+reader in `live.rs`: the crate takes no `toml` edge), prints its values one per line, and writes its raw frames and
+retained stdout under the printed `PROBE_DIR` for O-9's route. Probes 0 and 1 read their premises BEFORE spending:
+`ClaudeHarness::argv_for` (the dispatch's own assembly site, spawning nothing) must carry `--setting-sources ""`
+and §8h.6's `--settings` element for their worktree, and probe 0's `ARGV_MODE_SPELLING` must equal the pin's
+`PERMISSION_MODE_ARGV` row. Their worktree is `<repo>/.redkiln/worktrees/rk-probe-<token>` (`git worktree add
+--detach … HEAD` under `LC_ALL=C`, realpath asserted under `.redkiln/worktrees/`), removed by the probe (only the
+tree it created) with `git worktree prune --dry-run` asserted empty.
+
+**Deferred gate — the go-ahead, for the review packet.** Preconditions, each a STOP if unmet: (a) `tools/live-run.sh`
+exists with its `probe` mode (the launcher package); (b) `s8j` §8j.6 step 1's pin move is done (§8h.8); (c) §8h.6's
+`--settings` element is wired into `Binder::bind`/`dispatch` — BLOCKED at this build on RT-1's cap (§8h.6's dated
+note), so probes 0 and 1 refuse at their premise, costing nothing, until it is ruled; (d) the shipped packs carry
+Record A's `[models]` table and role rows (the `cards::` package). From a plain terminal, never a Claude Code session
+(§8h.7), in this order, each on its own line of the operator's go-ahead:
+
+```text
+tools/live-run.sh probe live::live_denial_channel_preprobe       # one haiku dispatch; HALT rules as above
+tools/live-run.sh probe live::live_confinement_and_denial_probe  # one Sonnet dispatch; only after probe 0 passes
+tools/live-run.sh probe live::live_init_equality_probe           # three dispatches: haiku, sonnet, opus
+```
+
+The launcher runs `cargo test -p rk-adapter-claude --features live --test it -- --ignored --nocapture <test> --exact`
+and asserts `test <test> ... ok` and `1 passed` (§8h.7 step 7). Fixtures: the shipped cards
+`.redkiln/cards/{implementer,planner,investigator,reviewer}.json`, probe 0's test-local card in `live.rs`, the
+sentinels each probe creates (`outside-read.txt` directly under `.redkiln/worktrees/`, `outside-write.txt` in a temp
+directory outside the repository). The go-ahead line the operator writes, dated, in the ledger: *"GO-AHEAD: run `s8h`
+§8h.11 probe <0|1|2> as authored at <commit>; this spend is outside D21-105 item 2 (S-BIN only) and is authorised by
+this line, not by the AFK session."*
+
 ### 8h.12 Red first — the named tests
 
 Each test is authored and **run red for the named reason** before its code, per golden constraint 12. Names are
@@ -1450,6 +1588,56 @@ record and no fixture `harness_binary` would otherwise dispatch on the terminal'
   pass 2026-09-24: a `Spec` structured output with one criterion whose `verification` is absent, and one whose
   `verification` is `""`, each fails as `StepError::Schema`; today both are `Ok`. Control: the same `Spec` with a
   non-empty `verification` on every criterion is `Ok`]
+  *(dated 2026-10-02, s8h build, package P3-adapter-argv-models)* Ten of these ran red first through D21-47's wrapper (`nd.sh`), each for its
+  stated reason, then green: `card::permission_mode_outside_the_cli_closed_set_is_refused` *"`acceptEdit` must be
+  refused at load (s8h §8h.2), got Ok(AuthoredCard { name: "probe", … })"*; `command::setting_sources_is_explicit_and_empty`
+  *"--setting-sources occurs exactly once in ["-p", …]"* (left 0, right 1); `command::child_settings_carry_the_worktree_confinement`
+  *"the read fence is set"* (left `Null`, right `Bool(true)`) and `command::child_settings_disable_auto_memory`
+  *"autoMemoryEnabled is present and false"* (left `Null`, right `Bool(false)`), both with the element pushed over a `{}`
+  scaffold; `command::argv_permission_mode_reads_the_row_of_the_configs_pin` *"2.1.287: a `default` card's
+  --permission-mode is the row's spelling"* (left `"default"`, right `"manual"`); `command::a_pin_without_a_spelling_row_is_refused`
+  *"a pin with no spelling row must be refused naming 9.9.9 (X12), got Ok(["-p", …])"*;
+  `binder::the_full_model_id_reaches_argv_and_the_card_digest` *"the bound card carries the row's full id"* (left
+  `"sonnet"`, right `"claude-sonnet-5"`); `binder::a_tier_absent_from_the_models_table_is_refused` *"a role naming a key
+  absent from [models] must be refused at bind (s8h §8h.3), got Ok(ActivitySpec { … })"*. The two control tests,
+  `card::every_cli_permission_mode_is_admitted_by_the_closed_set` and
+  `command::permission_mode_spelling_rows_are_listed_by_their_help_fixtures`, were green over the declared table and
+  set before any enforcing code (a control reads a declaration), so their reds were taken against the failure each
+  exists for, in the private worktree (§8h.13's driver): the set narrowed to the shipped pair, *"`auto` is a CLI
+  choice (2.1.287 help) and must be admitted"*; the `2.1.287` row removed, *"PREMISE: at least one help-warranted row
+  was checked"*. Green: the ten `... ok`, `test result: ok. 10 passed; 0 failed`; `rk-adapter-claude --test it` whole
+  122 passed / 0 failed (112 before + 10). The help-warranted arm is keyed `2.1.287`, not `2.1.281` (§8h.2's dated
+  note). `argv_permission_mode_reads_the_row_of_the_configs_pin`'s clause *"guard 2 adopts an init reporting
+  `default`"* is not asserted by this package: no init permission-mode guard exists in its tree; it is the isolation
+  package's (`isolation::permission_mode_reported_unequal_to_the_card_is_refused`). Regressions moved by dated line:
+  `command::ac214_permission_mode_explicit` (the table's spelling at the fixture pin, §8h.2), the AC-216 matrix
+  (`KNOWN_FLAGS` gains `--setting-sources`/`--settings`; the mode axis is the closed set, since a free spelling is now
+  refused before an argv exists), `command::argv_cap_refuses_before_spawn` (`at-the-cap.card.json`'s prompt
+  re-trimmed by 1,825 characters, the measure the new elements add), the two `binder::` full-id readings, and the
+  golden fixtures and both `insta` snapshots, which moved by the four new elements only (`--permission-mode` stays
+  `default` at 2.1.278).
+  *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes)* **Fifteen ran red first through D21-47's wrapper (`nd.sh`), each for its stated reason, then
+  green.** Red, at runtime over a scaffold (the new `Evidence`/`Classified`/`Run` members and the classify helpers
+  present as stubs, no behaviour): the six `isolation::` guards *"… must be NotIsolated { surface: env } … got Ok(…)"*
+  (mode unequal, mode absent, `apiKeySource` other, `apiKeySource` absent) and *"requested claude-sonnet-5, reported
+  claude-sonnet-4-6: adoption is EXACT equality … expected NotAdopted, got Ok(…)"*;
+  `classify::permission_denials_non_empty_is_a_typed_failure` *"exit Some(0): a non-empty permission_denials must be
+  NotIsolated … got Err(Schema { … no structured_output … })"*; `…outrank_a_valid_structured_output` *"… never Ok … got
+  Ok(…)"*; `…a_denial_under_a_protected_worktree_segment_is_named_the_known_limit` (left `None`, right the digest);
+  `…a_permission_denied_stream_event_is_a_typed_failure` *"… got Ok(…)"*; `…denial_paths_are_extracted_per_tool` (left
+  `""`, right `"/a/r.txt"`); `…a_spec_criterion_without_an_authored_verification_is_a_schema_failure` *"absent: … must
+  be StepError::Schema at ingest … got Ok(…)"*; `dispatch::observed_model_is_recorded_on_every_path_that_read_init`
+  (left `None`, right `Some(ObservedModel("claude-haiku-4-5-20251001"))`); `live_guard::…` *"5 #[ignore] tests but 0 guard
+  statements"*, *"live_dispatch_probe: its #[ignore] reason names `cargo test`"*. The two controls,
+  `isolation::model_equal_to_the_requested_id_proceeds` and `classify::permission_denials_empty_is_not_a_failure`, were
+  green before any enforcing code (a control), so their reds were taken against the failure each exists for in the
+  private worktree (§8h.13: I1, I2). Green: the fifteen `... ok`, `test result: ok. 15 passed; 0 failed`;
+  `rk-adapter-claude --test it` whole 137 passed / 0 failed (122 + 15); Checkpoint 8h (3)'s 31-name selection `test
+  result: ok. 31 passed; 0 failed`; (7)'s listing names the three probes; (9)'s floors `permission_denials` 1,
+  `apiKeySource` 1, `model_belongs_to_tier` 0, each filter proved on its synthetic pair; `rk-cli --test it` 310 passed /
+  0 failed after the seven frame fixtures moved (§8h.3's note). Regressions: `classify::ac229_…` went red once on two
+  `_ =>` arms in the new helpers (rewritten as an if-chain and a `filter`), and `isolation::ac204_adoption_at_2_1_277_…`
+  carries a dated doc line; the `exit::ac438_*` snapshots did not move (no `StepError` variant was added).
 
 **`rk-types` (4 new).**
 - `dispatch_record::observed_model_is_a_typed_member_absent_before_init`
@@ -1484,6 +1672,19 @@ regressions. They go red until the entries exist.
 - `quality_block::a_severity_row_reads_the_typed_member_over_a_non_empty_list` [cross #4: a
   `findings.none(severity in [...])` row over one finding reads the typed member; today it is `UnknownField`.
   Control: over an empty list the row is true]
+  *(dated 2026-10-02, s8h build, package P5-kernel-envelope)* Red, each through D21-47's wrapper (`nd.sh`). First, with the new API
+  absent, the binary failed to compile (19 errors, among them `unresolved imports ... DispatchCap, ... EnvelopeRefusal, ...
+  ItemEnvelope`, `no method named with_envelope`, `no variant named DispatchCapNotDeclared`). Then, with the types and
+  accessors present and no check in `dispatch_once_at`, the runtime reds were each the dispatch past a limit reaching the port:
+  - `the_dispatch_past_the_cap_…`, `a_dispatch_with_no_usage_…` and `the_dispatch_count_survives_…` read `left: Ok(true)`,
+    `right: Err(Envelope(DispatchCapReached { item: "INC-1", count: 3, cap: DispatchCap(3) }))`;
+  - `token_appetite_past_the_appetite_…` read `left: Ok(true)`, `right: Err(Envelope(TokenAppetiteReached { item: "INC-1",
+    sum: Tokens(5000), appetite: Tokens(5000) }))`;
+  - `dispatch_cap_is_declared_never_defaulted` read `left: None`, `right: Some(DispatchCap(3))` with the parse stubbed, then
+    `left: None`, `right: Some(DispatchCap(40))` on `bug-standard.toml` before the installed packs carried the key.
+  `the_dispatch_at_the_cap_proceeds` is the control: red by compile only, and its discrimination is instrument I1 (§8h.13).
+  The quality_block red is I6 (§8h.4's note). Green: Checkpoint 8h (5)'s nine-name selection `test result: ok. 9 passed;
+  0 failed`. `rk-kernel` (whole package) 417 passed / 0 failed / 5 ignored in `it`, plus 12 in its lib.
 
 **`rk-cli` (18 new).**
 - `cards::shipped_cards_are_the_least_privilege_table`
@@ -1514,6 +1715,12 @@ regressions. They go red until the entries exist.
 - `answer::a_binary_answer_with_a_launch_record_passes_the_launch_check` [the control: the same gate is answered]
 - `exit::an_envelope_refusal_leaves_through_overage` [N17's Q3: a dispatch refused at the cap exits 20, and
   `exit::ac438_exit_table_snapshot` does not move]
+  *(dated 2026-10-02, s8h build, package P5-kernel-envelope)* Over `pack-min` (`appetite.dispatches = 40`), the counting store holds 40
+  keyed `dispatch` rows of `bug-1` written by an earlier process. Red, with the explicit `Envelope` arm removed (the catch-all
+  then maps the refusal to row 3): `left: Ok(ConfigError)`, `right: Ok(Overage)`. The verb's own stderr was *"redkiln: the
+  runtime boundary refused a dispatch: the per-item envelope refused the dispatch: item `bug-1` has made 40 dispatches …"*.
+  Green with the arm: `ok`, the harness reached 0 times and no `dispatch` row appended. `exit::ac438_exit_table_snapshot`
+  and `exit::ac438_step_error_mapping_is_exhaustive` are `ok` and unmoved. `rk-cli` (whole package) 311 passed / 0 failed.
 
 **Live (authored, compiled, listed, never run here).** `live::live_confinement_and_denial_probe` and
 `live::live_init_equality_probe`, and probe 0's `live::live_denial_channel_preprobe`, each
@@ -1579,6 +1786,64 @@ made an `Option` (`root_cause::discriminating_test_is_a_required_member`); `obse
 registry row renamed away (`judgement_registry::ac133_every_exported_enum_is_registered`, AC-133's completeness red,
 the instrument §8h.4 names); and `RootCause`'s `rationale` deleted beside the judgement-bearing `Confidence`
 (`judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails`).
+
+*(dated 2026-10-02, s8h build, package P3-adapter-argv-models)* **M1, M7, M8, M24, M30, M31, M32 and M33 KILLED**, from the Python driver
+`D:/repos/redkiln-sev/afk-tools/sp/s8h/P3-adapter-argv-models-mutants.py` in a private worktree (`target/wt-P3`,
+HEAD plus this build's working diff, removed afterwards; the main checkout's `git diff HEAD` sha256 equal before and
+after), through D21-47's wrapper, each after an unmutated control run of all eight named tests (`... ok`), each
+rc 101 with exactly its named test `FAILED`, and each file's sha256 restored and verified: M1 *"`acceptEdit` must be
+refused at load"*; M7 *"--setting-sources occurs exactly once"* (left 0); M8 *"the bound card carries the row's
+full id"* (left `"sonnet"`); M24 *"autoMemoryEnabled is present and false (golden-static)"* (left `Null`); M30 and
+M32 *"2.1.287: a `default` card's --permission-mode is the row's spelling"* (left `"default"`, right `"manual"`);
+M31 *"a pin with no spelling row must be refused naming 9.9.9 (X12), got Ok(…)"*; M33 *"CONTROL: a spelling absent
+from the parsed choices must be reported absent"*. The same driver ran two instrument checks for the control tests
+(both KILLED, quoted in §8h.12's note) and three negative controls for Checkpoint 8h (9)'s READ-ONLY fragment (the
+block's own lines, the five guards other packages own dropped), each passing unmutated and firing mutated: the
+`--setting-sources` push commented out, *"command.rs pushes no --setting-sources on a code line"*; the table made
+`pub const`, *"does not declare PERMISSION_MODE_ARGV in its one stated form"*; the `2.1.287` row removed, *"the
+--help capture for 2.1.287 has no row in PERMISSION_MODE_ARGV"*. `rustfmt` folds the table's rows onto one line, which
+the declared-form guard refuses, so the table carries `#[rustfmt::skip]`.
+
+*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes)* **M2, M3, M4, M5, M6, M16, M23, M25 and M29 KILLED**, from the Python driver
+`D:/repos/redkiln-sev/afk-tools/sp/s8h/P4-adapter-guards-and-probes-mutants.py` in a private worktree (`target/wt-P4`:
+HEAD, the main checkout's tracked working diff, and its untracked crate files copied; removed afterwards; the main
+checkout's state sha256 — `git diff HEAD --binary` plus every untracked crate file — equal before and after), through
+D21-47's wrapper, after an unmutated control run of all thirteen named tests (`... ok`), each rc 101 with its named
+test `FAILED` and each file's sha256 restored and verified: M2 *"an init reporting permissionMode acceptEdits … got
+Ok"*; M3 (the segment match over the row key, `sonnet` a segment of `claude-sonnet-4-6`) *"… expected NotAdopted, got
+Ok"*; M4 (the `apiKeySource` row deleted); M5 *"… got Err(Schema …)"*; M6 (the `structured_output` validation taken
+before the denial arm) *"… never Ok … got Ok"*; M16 (left `[]`, right the `.cargo` note); M23 *"… got Ok"*; M25 (the
+S-RETRY throttle driver's guard deleted) *"every live:: test must open with the launch-record guard"*; M29 *"absent: …
+got Ok"*. Six instrument checks, all KILLED: I1 (model compared to the card name) and I2 (an empty list counted as a
+denial), the two controls' reds; I3 (the requested id copied into `observed_model`); I4 (Glob's absolute pattern
+ignored); I5 (`.config` matched as one segment) *".config alone is not protected"*; I6 (the mode compared to the argv's
+`manual` spelling) — the digest moves.
+
+*(dated 2026-10-02, s8h build, package P5-kernel-envelope)* **M9, M10 and M17 KILLED**, from the Python driver
+`D:/repos/redkiln-sev/afk-tools/sp/s8h/P5-kernel-envelope-mutants.py`. It ran in a private worktree (`target/wt-P5`: HEAD,
+the main checkout's tracked working diff and its untracked crate files, plus a `cargo build --workspace --bins` so
+`rk-cli`'s fixture child exists), which was removed afterwards. The main checkout's state sha256 was equal before and after.
+Every run went through D21-47's wrapper and came after an unmutated control of every named test (`... ok`). Each mutant
+exited rc 101 with exactly its named test `FAILED`, and each file's sha256 was restored and verified.
+- M9 (`count >= cap` → `count > cap`) killed `envelope::the_dispatch_past_the_cap_is_refused_with_its_class`: `left: Ok(true)`,
+  `right: Err(Envelope(DispatchCapReached { … count: 3 … }))`.
+- M10 (the count taken from a per-runtime `AtomicU32` on `Runtime` instead of the store) killed
+  `envelope::the_dispatch_count_survives_a_second_process` the same way.
+- M17 (the arm returns `Exit::ConfigError`) killed `exit::an_envelope_refusal_leaves_through_overage`: `left: Ok(ConfigError)`,
+  `right: Ok(Overage)`.
+
+Six instrument checks were all KILLED:
+- I1 (the cap one low) — *"dispatch 3 of a cap of 3 must proceed"*, the at-the-cap control's red;
+- I2 (an unkeyed row counted by its payload `item`) — the keyed-only control;
+- I3 (cache reads left out of the sum) — the token test;
+- I4 (the cap counting `dispatch_completed` rows that carry `usage`) — the usage-less test;
+- I5 (`resume_routed` no longer binding the envelope) — the exit test read `Ok(Transport)`, so the production wiring is
+  guarded;
+- I6 (`Finding.severity` kept off the wire) — *"… got Err(UnknownField("severity"))"*.
+
+A process-static counter, rather than a per-runtime one, would not be killed by the second-process test, which runs both
+runtimes in one test process. Production builds one `Runtime` per stage of each `run` process, and M10 is the counter held
+on it.
 
 ### 8h.14 What this stage may not do, what it makes provisional, and what it hands on
 

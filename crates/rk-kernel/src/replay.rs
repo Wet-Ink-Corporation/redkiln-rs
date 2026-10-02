@@ -2042,6 +2042,18 @@ pub fn resume_routed(
             path: format!("inputs/pack/{}", inputs.pack.0),
             detail: e.to_string(),
         })?;
+    // *(dated 2026-10-02, `s8h` build, package P5-kernel-envelope; `s8h` §8h.9; Record B =
+    // ADR-0198 decision 4, proposed.)* **The per-item envelope, declared, never defaulted**, read
+    // beside `N` and refused the same way: a pack that declares no `appetite.dispatches` or no
+    // `appetite.tokens` cannot drive a dispatch. Bound with the run's item (`with_item` above), so
+    // every dispatch this run makes is counted, from the store, against the item's cap and appetite.
+    let envelope = pack
+        .require_item_envelope()
+        .map_err(|e| ReplayError::Malformed {
+            path: format!("inputs/pack/{}", inputs.pack.0),
+            detail: e.to_string(),
+        })?;
+    let rt = rt.with_envelope(envelope);
     let now = runtime.require_results_at()?;
 
     // Only the rows this run minted go through the port — `prior` is already in the store, and

@@ -19,7 +19,10 @@ gate_deadline_secs = 900
 [pack]
 id = "pack-min"
 applies = "kind == bug or kind == story"
-appetite = { points = 50, tokens = 200000 }
+# (dated 2026-10-02, s8h build, package P5-kernel-envelope) `dispatches`: the per-item dispatch cap
+# `replay::resume_routed` now requires beside `tokens` (Record B = ADR-0198 decision 4, proposed),
+# the installed packs' 40.
+appetite = { points = 50, tokens = 200000, dispatches = 40 }
 
 # AC-029: DECLARED, never defaulted in code. `replay`'s loop calls `require_attempt_cap` BEFORE it
 # dispatches and refuses a pack that declares none. It is 1 so a one-element `FakeHarness` script is
@@ -109,3 +112,20 @@ timeout_secs = 900
 
 [activity.two-agents]
 timeout_secs = 900
+
+# *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3; ADR-0197 decision 4, proposed.)*
+# THE MODEL TABLE: a role's `model` is a KEY here, and the row's full `id` is what reaches `--model`,
+# the `--agents` JSON and the card digest. `Binder::bind` refuses a role whose key is absent.
+# haiku: accepts_effort = false is the lifted rule (`tiers.mjs`: EFFORTLESS_TIERS = ['haiku'] --
+# "haiku rejects the parameter, so an effort on haiku is a spec error rather than a runtime one").
+[models.haiku]
+id = "claude-haiku-4-5-20251001"
+accepts_effort = false
+
+[models.sonnet]
+id = "claude-sonnet-5"
+accepts_effort = true
+
+[models.opus]
+id = "claude-opus-5-5"
+accepts_effort = true

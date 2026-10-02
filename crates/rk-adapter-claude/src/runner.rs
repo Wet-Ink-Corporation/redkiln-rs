@@ -154,10 +154,18 @@ pub struct Prepared<'a> {
     pub worktree: PathBuf,
     pub timeout: Duration,
     pub expected_agent: &'a str,
-    /// The `--model` element the builder passed — the bound card's tier (AC-212), which the
-    /// 2.1.277 adoption reading compares the reported model id against (RT-27).
-    pub expected_tier: &'a str,
+    /// The `--model` element the builder passed — the bound card's model (AC-212). *(dated
+    /// 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.3.)* The FULL id of
+    /// the pack's `[models]` row, which the reported model must EQUAL (RT-27 settled by equality,
+    /// ADR-0197, proposed).
+    pub expected_model: &'a str,
+    /// The bound card's permission mode — what the init's `permissionMode` must equal (`s8h`
+    /// §8h.5), never the argv's spelling of it (D21-48 X12).
+    pub expected_permission_mode: &'a str,
     pub declared_tools: &'a [String],
+    /// The spec's worktree, which a relative denied path resolves against and below which a
+    /// protected segment names the known limit (`s8h` §8h.5; D21-45).
+    pub worktree_root: PathBuf,
     pub schema_id: &'a SchemaId,
     pub schema: &'a serde_json::Value,
     pub pinned: &'a str,
@@ -193,8 +201,15 @@ pub struct Run {
     pub last_reading: Option<RateLimitReading>,
     /// The CLI version the child's `system/init` reported, if it reported one.
     pub observed_version: Option<String>,
+    /// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.3.)* The
+    /// model the child's `system/init` reported, exactly as printed; `None` on every path that
+    /// terminated before an init carrying `model` was read. Never the requested id copied in.
+    pub observed_model: Option<String>,
     /// `system/api_retry` events counted (AC-232).
     pub api_retry_events: u32,
+    /// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.5.)* The
+    /// classifier's protected-segment notes (D21-45's known limit), for the adapter to print.
+    pub notes: Vec<classify::ProtectedSegmentDenial>,
     /// A kill through the group that did not complete, rendered (R5-4 / S5-11).
     pub kill_error: Option<String>,
     /// The group's kill-then-drop probe (test support, `#[doc(hidden)]` on the harness).
@@ -208,7 +223,8 @@ struct Expect {
     pinned: String,
     policy: MismatchPolicy,
     expected_agent: String,
-    expected_tier: String,
+    expected_model: String,
+    expected_permission_mode: String,
     declared_tools: Vec<String>,
 }
 
@@ -227,7 +243,10 @@ struct Drained {
     last_reading: Option<RateLimitReading>,
     last_non_allowed: Option<RateLimitReading>,
     observed_version: Option<String>,
+    observed_model: Option<String>,
     api_retry_events: u32,
+    /// Every `system` / `permission_denied` line, raw (guard 3's channel (b), `s8h` §8h.5).
+    denial_events: Vec<String>,
     /// An init-time refusal (`init::decide`).
     decided: Option<StepError>,
     /// A `rate_limit_event` the scanner refused (a third decimal, one window of two), rendered
@@ -248,7 +267,9 @@ impl Drained {
             last_reading: None,
             last_non_allowed: None,
             observed_version: None,
+            observed_model: None,
             api_retry_events: 0,
+            denial_events: Vec::new(),
             decided: None,
             reading_refused: None,
         }
@@ -309,7 +330,9 @@ const fn failed_before_stream(err: StepError) -> Run {
         api_ms: None,
         last_reading: None,
         observed_version: None,
+        observed_model: None,
         api_retry_events: 0,
+        notes: Vec::new(),
         kill_error: None,
         kill_drop_order: None,
     }
@@ -376,13 +399,20 @@ async fn drain_stdout(
                 st.init_seen = true;
                 st.init_raw = Some(parsed.raw.clone());
                 st.observed_version.clone_from(&cfg.version);
+                // *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h`
+                // §8h.3.)* The REPORTED model, read before any decision so a refused path that
+                // read the init carries it too; never the requested id.
+                st.observed_model.clone_from(&cfg.model);
                 match init::decide(
                     &cfg,
-                    &expect.pinned,
-                    expect.policy,
-                    &expect.expected_agent,
-                    &expect.expected_tier,
-                    &expect.declared_tools,
+                    &init::Expected {
+                        pinned: &expect.pinned,
+                        policy: expect.policy,
+                        agent: &expect.expected_agent,
+                        model: &expect.expected_model,
+                        permission_mode: &expect.expected_permission_mode,
+                        declared_tools: &expect.declared_tools,
+                    },
                 ) {
                     Decision::Proceed { .. } => {}
                     Decision::Refuse(err) => {
@@ -414,6 +444,11 @@ async fn drain_stdout(
                         }
                     }
                 }
+            }
+            // *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.5.)*
+            // Guard 3's channel (b): every `permission_denied` system event, raw, for classify.rs.
+            EventKind::System(subtype) if subtype == classify::PERMISSION_DENIED_SUBTYPE => {
+                st.denial_events.push(parsed.raw.clone());
             }
             EventKind::System(_)
             | EventKind::Assistant
@@ -516,7 +551,8 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
             pinned: prepared.pinned.to_owned(),
             policy: prepared.policy,
             expected_agent: prepared.expected_agent.to_owned(),
-            expected_tier: prepared.expected_tier.to_owned(),
+            expected_model: prepared.expected_model.to_owned(),
+            expected_permission_mode: prepared.expected_permission_mode.to_owned(),
             declared_tools: prepared.declared_tools.to_vec(),
         };
         tokio::spawn(drain_stdout(stdout, expect, Arc::clone(&state)))
@@ -655,6 +691,8 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
         last_non_allowed: drained.last_non_allowed.as_ref(),
         schema_id: prepared.schema_id,
         schema: prepared.schema,
+        denial_events: &drained.denial_events,
+        worktree: Some(&prepared.worktree_root),
     });
     // ADR-0118's principle: a poisoned accumulator is a holder that panicked mid-update; the data
     // behind it is not trusted, so the dispatch fails closed — WITH its row (AC-360 stands).
@@ -684,7 +722,9 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
             drained.last_reading
         },
         observed_version: drained.observed_version,
+        observed_model: drained.observed_model,
         api_retry_events: drained.api_retry_events,
+        notes: classified.notes,
         kill_error,
         kill_drop_order,
     }

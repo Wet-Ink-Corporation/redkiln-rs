@@ -1594,6 +1594,8 @@ fn dispatch_completed_carries_activity_id_at_version_or_null() {
                 worktree: worktree.path(),
                 inputs: vec![("prompt".to_owned(), serde_json::json!("hello"))],
                 activity_id_at_version: member.map(str::to_owned),
+                // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3.)*
+                models: &crate::support::models(),
             })
             .expect("the probe card binds")
     };
@@ -1607,4 +1609,77 @@ fn dispatch_completed_carries_activity_id_at_version_or_null() {
         with.card_digest, without.card_digest,
         "the member moved the card digest"
     );
+}
+
+/// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)* `s8h` §8h.3:
+/// `DispatchRecord.observed_model` is `Some` on every path that read a `system/init` carrying
+/// `model` — the reported id EXACTLY as printed, on a refused path too — and `None` on every path
+/// that terminated before one was read (pre-spawn, a child that wrote no init) or whose init
+/// carried no `model`. It is never the requested id copied in (Halt 11's shape, the reasoning that
+/// gives `cli_version` its two arms). The stored row carries the same member.
+#[test]
+fn observed_model_is_recorded_on_every_path_that_read_init() {
+    use rk_types::usage::ObservedModel;
+    let with = |init: &str| {
+        crate::support::transcript(&[
+            crate::support::Part::File(&format!("streams/{init}")),
+            crate::support::Part::File("streams/result-ok.scripted.ndjson"),
+        ])
+    };
+    let haiku = "claude-haiku-4-5-20251001";
+    // Ok, through the init
+    let r = dispatch_replay(&with("init.scripted.ndjson"), 30);
+    assert!(r.outcome.result.is_ok(), "{:?}", r.outcome.result);
+    assert_eq!(
+        r.outcome.record.observed_model,
+        Some(ObservedModel::new(haiku)),
+        "a path that read an init carrying `model` records it (s8h §8h.3)"
+    );
+    assert_eq!(
+        completed_payload(&r.store)["observed_model"],
+        serde_json::json!(haiku),
+        "the stored row carries it"
+    );
+    // a refusal decided ON the init line still read it
+    let r = dispatch_replay(&with("init-wrong-agent.scripted.ndjson"), 30);
+    assert!(r.outcome.result.is_err(), "{:?}", r.outcome.result);
+    assert_eq!(
+        r.outcome.record.observed_model,
+        Some(ObservedModel::new(haiku)),
+        "an init-time refusal read the init: Some"
+    );
+    // the reported id, never the requested one
+    let r = dispatch_replay(&with("init-model-haiku-undated.scripted.ndjson"), 30);
+    assert_eq!(
+        r.outcome.record.observed_model,
+        Some(ObservedModel::new("claude-haiku-4-5")),
+        "the REPORTED id, never the requested {haiku} copied in"
+    );
+    // an init with no `model` key: nothing measured
+    let r = dispatch_replay(&with("init-no-model.scripted.ndjson"), 30);
+    assert_eq!(
+        r.outcome.record.observed_model, None,
+        "an init without `model` measured no model"
+    );
+    // a child that wrote no init at all
+    let r = crate::support::dispatch_mode("exit:0", 30, "hello");
+    assert!(r.outcome.result.is_err(), "{:?}", r.outcome.result);
+    assert_eq!(
+        r.outcome.record.observed_model, None,
+        "a path that terminated before any init was read is None"
+    );
+    assert_eq!(
+        completed_payload(&r.store)["observed_model"],
+        serde_json::Value::Null
+    );
+    // pre-spawn: nothing was spawned
+    let markers = crate::support::Markers::new();
+    let wt = tempfile::tempdir().expect("wt");
+    let mut v = crate::support::spawn_values(&markers, "exit:0");
+    v.harness_binary = markers.path().join("absent.exe");
+    let (config, spec) =
+        crate::support::bind_probe(Config::new(v).expect("constructs"), 30, wt.path(), "x");
+    let mut store = VecStore::default();
+    let o = crate::support::harness(config).dispatch(&spec, &mut store);
+    assert_eq!(o.record.observed_model, None, "pre-spawn is None");
 }

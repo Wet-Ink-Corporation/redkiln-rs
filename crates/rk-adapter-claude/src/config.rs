@@ -429,6 +429,40 @@ pub enum ConfigError {
          injected by the binder; an authored card never carries it (AC-118, AC-418)"
     )]
     TierLeak { card: String, member: String },
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.2; ADR-0197
+    /// decision 2, proposed.)* The card's `permission_mode` is outside the CLI's own closed set
+    /// (`card::PERMISSION_MODES`: the `--help` choices plus `default`). A misspelling is refused.
+    #[error(
+        "card {card}: permission_mode `{mode}` is outside the CLI's closed set (the `claude --help` \
+         choices plus `default`; s8h §8h.2) — a misspelt mode is refused, never passed through"
+    )]
+    PermissionModeOutsideSet { card: String, mode: String },
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.3; ADR-0197
+    /// decision 4, proposed.)* The role names a model key the pack's `[models]` table lacks.
+    #[error(
+        "card {card}: role {role} names model `{key}`, which the pack's [models] table does not \
+         declare — the full id has no source (s8h §8h.3)"
+    )]
+    ModelKeyAbsent {
+        card: String,
+        role: String,
+        key: String,
+    },
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.2; D21-48 X12;
+    /// ADR-0197 decision 3, proposed.)* The `Config`'s pin has no row in
+    /// `command::PERMISSION_MODE_ARGV`, so the argv spelling of a card's `default` is unknown.
+    /// There is no fallback to the card's spelling.
+    #[error(
+        "the CLI pin {version} has no row in PERMISSION_MODE_ARGV — the argv spelling of a card's \
+         `default` is unknown at this pin, and the card's own spelling is never used in its place \
+         (s8h §8h.2; D21-48 X12)"
+    )]
+    NoPermissionModeSpelling { version: String },
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.6.)* The child's
+    /// confinement settings cannot be assembled from the worktree (a relative or non-drive path, or
+    /// an ancestor level that cannot be listed).
+    #[error("the child's confinement settings cannot be assembled (s8h §8h.6): {detail}")]
+    Confinement { detail: String },
     /// AC-269: a tool on the card exposes the answer, mint or resolve path.
     #[error(
         "card {card}: tool `{tool}` exposes the answer API — no card exposes the answer, mint or \
@@ -624,6 +658,18 @@ impl Config {
     #[must_use]
     pub fn tested_cli_version(&self) -> &str {
         &self.tested_cli_version
+    }
+
+    /// This `Config` at another pin.
+    ///
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.2; D21-48 X12.)*
+    /// The argv spelling lookup is keyed by [`Config::tested_cli_version`], never by
+    /// [`TESTED_CLI_VERSION`] directly, *"so a test can build a `Config` at another pin"*. The
+    /// composition root never calls this: `Config::new` fills the pin from the constant.
+    #[must_use]
+    pub fn at_pin(mut self, version: &str) -> Self {
+        version.clone_into(&mut self.tested_cli_version);
+        self
     }
 
     /// The card store: every bound card, by the digest the spec carries (the module doc).

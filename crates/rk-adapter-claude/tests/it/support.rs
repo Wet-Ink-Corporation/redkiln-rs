@@ -27,7 +27,7 @@ use rk_types::typed::SchemaId;
 
 use rk_adapter_claude::ClaudeHarness;
 use rk_adapter_claude::binder::{BindRequest, Binder, Role, Schema};
-use rk_adapter_claude::card::{AgentCard, AuthoredCard, Effort, Tier};
+use rk_adapter_claude::card::{AgentCard, AuthoredCard, Effort, ModelRow, Models};
 use rk_adapter_claude::config::{Config, ConfigValues, Margins, MismatchPolicy};
 
 /// `tests/fixtures/`, absolute — through the compile-time manifest dir, never the process cwd.
@@ -105,6 +105,29 @@ pub fn red_card(stem: &str) -> Result<AuthoredCard, rk_adapter_claude::config::C
 pub fn role(stem: &str) -> Role {
     let text = fixture(&format!("cards/roles/{stem}.json"));
     serde_json::from_str(&text).unwrap_or_else(|e| panic!("role {stem} must parse: {e}"))
+}
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3.)* The `[models]` table every bind in this binary
+/// resolves a role's row key through: ADR-0197 decision 4's three rows (proposed), the spellings
+/// `s8h` §8h.3 fixes. `haiku` rejects `--effort` (the lifted `EFFORTLESS_TIERS = ['haiku']`).
+#[must_use]
+pub fn models() -> Models {
+    [
+        ("haiku", "claude-haiku-4-5-20251001", false),
+        ("sonnet", "claude-sonnet-5", true),
+        ("opus", "claude-opus-5-5", true),
+    ]
+    .into_iter()
+    .map(|(k, id, accepts_effort)| {
+        (
+            k.to_owned(),
+            ModelRow {
+                id: id.to_owned(),
+                accepts_effort,
+            },
+        )
+    })
+    .collect()
 }
 
 /// The one-field schema every bind in this binary carries: `{ ok: boolean }`, required. Its JSON
@@ -382,15 +405,32 @@ pub fn bind_probe_with_inputs(
     prompt: &str,
     extra: &[(&str, serde_json::Value)],
 ) -> (Config, ActivitySpec) {
+    bind_probe_as(config, "haiku", timeout_secs, worktree, prompt, extra)
+}
+
+/// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.5.)* As
+/// [`bind_probe_with_inputs`], with the probe card bound under the role fixture `role_stem`
+/// (`tests/fixtures/cards/roles/<role_stem>.json`) — so a test can request another `[models]`
+/// row's full id (`sonnet-high` → `claude-sonnet-5`).
+#[must_use]
+pub fn bind_probe_as(
+    config: Config,
+    role_stem: &str,
+    timeout_secs: u64,
+    worktree: &Path,
+    prompt: &str,
+    extra: &[(&str, serde_json::Value)],
+) -> (Config, ActivitySpec) {
     let mut inputs = vec![("prompt".to_owned(), serde_json::json!(prompt))];
     inputs.extend(extra.iter().map(|(k, v)| ((*k).to_owned(), v.clone())));
     let card = catalog_card("probe");
-    let r = role("haiku");
+    let r = role(role_stem);
     let sch = schema();
+    let models = models();
     let mut binder = Binder::new(config);
     let spec = binder
         .bind(BindRequest {
-            role_name: "haiku",
+            role_name: role_stem,
             role: &r,
             card: &card,
             schema: &sch,
@@ -398,6 +438,7 @@ pub fn bind_probe_with_inputs(
             worktree,
             inputs,
             activity_id_at_version: None,
+            models: &models,
         })
         .expect("the probe card binds");
     (binder.into_config(), spec)
@@ -516,6 +557,32 @@ pub fn dispatch_replay_with_inputs(
     let config = spawn_config(&markers, &format!("replay:{}", t.path.display()));
     let (config, spec) =
         bind_probe_with_inputs(config, timeout_secs, worktree.path(), "hello", extra);
+    let h = harness(config);
+    let mut store = VecStore::default();
+    let outcome = h.dispatch(&spec, &mut store);
+    Replayed {
+        outcome,
+        store,
+        markers,
+        worktree,
+    }
+}
+
+/// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)* As [`dispatch_replay`],
+/// with the probe card bound under the role fixture `role_stem` ([`bind_probe_as`]).
+#[must_use]
+pub fn dispatch_replay_as(t: &Transcript, role_stem: &str, timeout_secs: u64) -> Replayed {
+    let markers = Markers::new();
+    let worktree = tempfile::tempdir().expect("a temp worktree");
+    let config = spawn_config(&markers, &format!("replay:{}", t.path.display()));
+    let (config, spec) = bind_probe_as(
+        config,
+        role_stem,
+        timeout_secs,
+        worktree.path(),
+        "hello",
+        &[],
+    );
     let h = harness(config);
     let mut store = VecStore::default();
     let outcome = h.dispatch(&spec, &mut store);
@@ -679,19 +746,20 @@ pub fn first_marker_pid_in(dir: &Path) -> u32 {
 }
 
 /// The belt for a CARD-level refusal whose load / lint returned `Ok`: bind the authored card
-/// under a role of `tier` over a spawn config (the fixture child in `exit:0` mode, a fresh marker
+/// under a role naming the `[models]` row `tier` over a spawn config (the fixture child in `exit:0` mode, a fresh marker
 /// dir), dispatch once if the bind passes, and return the marker count — 0 unless something
 /// spawned. A bind that refuses spawns nothing and counts 0 (the refusal is the test's own
 /// assertion; this is the belt behind it).
 #[must_use]
-pub fn belt_dispatch_authored(card: &AuthoredCard, tier: Tier, effort: Option<Effort>) -> usize {
+pub fn belt_dispatch_authored(card: &AuthoredCard, tier: &str, effort: Option<Effort>) -> usize {
     let markers = Markers::new();
     let worktree = tempfile::tempdir().expect("a temp worktree");
     let sch = schema();
     let r = Role {
-        model: Some(tier),
+        model: Some(tier.to_owned()),
         effort,
     };
+    let models = models();
     let mut binder = Binder::new(spawn_config(&markers, "exit:0"));
     let bound = binder.bind(BindRequest {
         role_name: "belt",
@@ -702,6 +770,7 @@ pub fn belt_dispatch_authored(card: &AuthoredCard, tier: Tier, effort: Option<Ef
         worktree: worktree.path(),
         inputs: vec![("prompt".to_owned(), serde_json::json!("belt"))],
         activity_id_at_version: None,
+        models: &models,
     });
     if let Ok(spec) = bound {
         let h = harness(binder.into_config());
@@ -723,14 +792,66 @@ pub fn belt_dispatch_agent(card: &AgentCard) -> usize {
         cache_profile: card.cache_profile,
         permission_mode: card.permission_mode.clone(),
     };
-    let tier = match card.model.as_str() {
-        "haiku" => Tier::Haiku,
-        "sonnet" => Tier::Sonnet,
-        _ => Tier::Opus,
+    // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3.)* The bound card's model is a row key (a card a
+    // test built by literal) or a row's full id (a card the binder bound); either maps back to
+    // its row key, and anything else to `opus`.
+    let rows = models();
+    let tier = if rows.contains_key(&card.model) {
+        card.model.clone()
+    } else {
+        rows.iter()
+            .find(|(_, r)| r.id == card.model)
+            .map_or_else(|| "opus".to_owned(), |(k, _)| k.clone())
     };
     let effort = card
         .effort
         .as_deref()
         .and_then(|e| serde_json::from_value(serde_json::json!(e)).ok());
-    belt_dispatch_authored(&authored, tier, effort)
+    belt_dispatch_authored(&authored, &tier, effort)
+}
+
+/// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.2; D21-48 X12.)* The
+/// `--permission-mode` choices of a captured `claude --help` (`tests/fixtures/cli-help/`), in their
+/// listed order: the quoted names between `(choices:` and the next `)` after the first
+/// `--permission-mode`, read across line breaks (the help wraps the list). `None` when the capture
+/// has no `--permission-mode` line or no choices list after it — Checkpoint 8h (9)'s `hchoices`,
+/// restated in Rust.
+#[must_use]
+pub fn help_permission_mode_choices(text: &str) -> Option<Vec<String>> {
+    let at = text.find("--permission-mode")?;
+    let rest = &text[at..];
+    let open = rest.find("(choices:")?;
+    // the flag's own description runs up to the list: no `(` between them (the checkpoint's `[^(]*`)
+    if rest[..open].contains('(') {
+        return None;
+    }
+    let list = &rest[open + "(choices:".len()..];
+    let close = list.find(')')?;
+    let names: Vec<String> = list[..close]
+        .split('"')
+        .skip(1)
+        .step_by(2)
+        .map(str::to_owned)
+        .collect();
+    if names.is_empty() { None } else { Some(names) }
+}
+
+/// The help captures under `tests/fixtures/cli-help/`, as `(version, text)`, sorted by version.
+#[must_use]
+pub fn help_captures() -> Vec<(String, String)> {
+    let dir = fixtures().join("cli-help");
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display())) {
+        let path = entry.expect("entry").path();
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if let Some(version) = name.strip_suffix(".permission-mode.txt") {
+            let text = std::fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            out.push((version.to_owned(), text));
+        }
+    }
+    out.sort();
+    out
 }

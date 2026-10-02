@@ -76,6 +76,12 @@ pub struct PackExtras {
     /// The role table step (8) resolves a card's tier from.
     #[serde(default)]
     pub role: BTreeMap<String, RoleExtras>,
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3; ADR-0197 decision 4, proposed.)*
+    /// `[models.<key>]`: each row the full model id and whether it takes `--effort`. A role's
+    /// `model` is a KEY of this table, resolved by `Binder::bind`, which refuses a key the table
+    /// lacks naming the role and the key. Each installed pack carries its own table.
+    #[serde(default)]
+    pub models: rk_adapter_claude::card::Models,
 }
 
 /// `[margins]`.
@@ -114,8 +120,11 @@ pub struct RoleExtras {
     /// model — *"role implementer declares no model — the tier is traceable only through the role
     /// (AC-212; AC-118)"* — and the CARD may not carry one (`ConfigError::TierLeak`). So it is
     /// read here, beside the kernel's `family`, and nowhere else.
+    ///
+    /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3; ADR-0197 decision 4, proposed.)* A `[models]` row KEY (the open set that
+    /// replaced the closed `card::Tier`), never a full id.
     #[serde(default)]
-    pub model: Option<rk_adapter_claude::card::Tier>,
+    pub model: Option<String>,
     /// The reasoning effort the binder injects, from the same single source as [`Self::model`].
     #[serde(default)]
     pub effort: Option<rk_adapter_claude::card::Effort>,
@@ -2655,6 +2664,18 @@ fn resume_and_read(
                 now,
                 inputs.run_id().ok().as_deref().unwrap_or_default(),
             ));
+        }
+        // *(dated 2026-10-02, `s8h` build, package P5-kernel-envelope; `s8h` §8h.9; D21-43 N17 Q3;
+        // Record B = ADR-0198 decision 4, proposed.)* **The per-item envelope refused the next
+        // dispatch** (the cap or the token appetite, counted from the store), before any spawn and
+        // writing no row. It leaves through `Overage` (20): *"A budget or billing state that does
+        // not improve by being repeated"*. An explicit arm, for ADR-0144's reason: the catch-all
+        // below is row `3`, a configuration error, which this is not. No row of the table moves.
+        Err(rk_kernel::replay::ReplayError::Runtime(
+            rk_kernel::runtime::RuntimeError::Envelope(refusal),
+        )) => {
+            eprintln!("redkiln: {refusal}");
+            return Ok(Exit::Overage);
         }
         Err(rk_kernel::replay::ReplayError::StepFailedAfterCommit {
             step_id,
@@ -5919,7 +5940,7 @@ fn bind_one(
         Exit::ConfigError
     })?;
     let role = rk_adapter_claude::binder::Role {
-        model: declared.model,
+        model: declared.model.clone(),
         effort: declared.effort,
     };
     binder
@@ -5935,6 +5956,7 @@ fn bind_one(
             worktree: owned,
             inputs: vec![("item".to_owned(), serde_json::json!(resolved.item.id()))],
             activity_id_at_version,
+            models: &resolved.extras.models,
         })
         .map_err(|e| {
             eprintln!("redkiln: the binder refused `{node_id}`: {e}");

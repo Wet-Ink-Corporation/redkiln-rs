@@ -10,7 +10,10 @@
 [pack]
 id = "pass-owed-fixture"
 applies = "kind == incident"
-appetite = { points = 50 }
+# (dated 2026-10-02, s8h build, package P5-kernel-envelope) `tokens` and `dispatches`: the per-item
+# envelope `replay::resume_routed` now requires, declared and never defaulted (Record B = ADR-0198
+# decision 4, proposed). Values far above anything this fixture dispatches.
+appetite = { points = 50, tokens = 200000, dispatches = 40 }
 
 [policy]
 stages = { check = "mandatory", closeout = "optional" }

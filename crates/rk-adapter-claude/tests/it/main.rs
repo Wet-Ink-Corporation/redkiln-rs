@@ -16,6 +16,9 @@ mod headroom;
 mod isolation;
 #[cfg(feature = "live")]
 mod live;
+// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)* `s8h` §8h.7's lint over
+// `live.rs`, OUTSIDE the `live` feature so every suite runs it.
+mod live_guard;
 mod reading;
 mod registry;
 mod stream;

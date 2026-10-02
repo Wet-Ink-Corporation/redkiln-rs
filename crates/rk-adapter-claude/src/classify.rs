@@ -84,6 +84,7 @@
 //! `Schema` means the agent spoke"* was the runner's `step.rs` semantics and was wrong).
 
 use std::collections::BTreeSet;
+use std::path::Path;
 
 use rk_types::digest::Digest;
 use rk_types::error::{CancelledBy, IsolationSurface, StepError, TransportKind};
@@ -113,6 +114,236 @@ pub const TEXT_MARKERS: &[&str] = &[
     "plan limit",
     "rate limit exceeded",
 ];
+
+/// The `system` subtype of guard 3's channel (b), the stream's denial event (`s8h` §8h.5; D21-47,
+/// s8h review #2).
+///
+/// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)* **DRAFTED from the
+/// binary, UNMEASURED as a live frame**: the 2.1.281 binary carries the literals
+/// `permission_denied`, `decision_reason_code` and `outside_reads_blocked` [measured 2026-09-24 by
+/// string search, `s8h` §8h.5]. The frame's shape — `{"type":"system","subtype":"permission_denied",
+/// "tool_name", "tool_use_id", "tool_input", "decision_reason_code"}` — is the reviewer's reading;
+/// `s8h` §8h.11's probe 0 retains the real frame, and `s8j` corrects this arm and its fixture by a
+/// dated line if it differs. The arm is never widened to match text.
+pub const PERMISSION_DENIED_SUBTYPE: &str = "permission_denied";
+
+/// The segments Claude Code's `checkPathSafetyForAutoEdit` treats as sensitive, case-folded.
+///
+/// Copied from D21-45 (*"The path is sensitive if ANY segment is one of
+/// `[".git",".vscode",".idea",".claude",".husky",".cargo",".devcontainer",".yarn",".mvn"]` or
+/// `.config/git`"*, quoted from the 2.1.281 code), with that citation (`s8h` §8h.5). A CLI release
+/// that changes the list is Halt 2's concern, through the pin, never this guard's.
+pub const PROTECTED_SEGMENTS: &[&str] = &[
+    ".git",
+    ".vscode",
+    ".idea",
+    ".claude",
+    ".husky",
+    ".cargo",
+    ".devcontainer",
+    ".yarn",
+    ".mvn",
+];
+
+/// D21-45's `.config/git`: TWO consecutive segments, `.config` then `git`, matched as a pair and
+/// never as one segment name (s8h review #10). The note names it `.config/git`.
+pub const PROTECTED_SEGMENT_PAIR: [&str; 2] = [".config", "git"];
+
+/// Which of guard 3's two typed channels carried a denial (`s8h` §8h.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DenialChannel {
+    /// (a) the result frame's `permission_denials` list.
+    Result,
+    /// (b) a `system` / [`PERMISSION_DENIED_SUBTYPE`] stream event.
+    Event,
+}
+
+/// One denial, as guard 3 reads it from either channel: the tool, its use id, the path extracted
+/// from its `tool_input` per tool ([`denial_path`]), and the event's `decision_reason_code`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Denial {
+    pub channel: DenialChannel,
+    pub tool_name: String,
+    pub tool_use_id: Option<String>,
+    pub path: String,
+    pub decision_reason_code: Option<String>,
+}
+
+/// The typed note beside a denial under a protected segment of the spec's worktree — D21-45's
+/// standing limit, named (`s8h` §8h.5). It never changes the class or the digest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProtectedSegmentDenial {
+    /// The protected segment as [`PROTECTED_SEGMENTS`] spells it, or `.config/git` for the pair.
+    pub segment: String,
+    pub tool_name: String,
+}
+
+impl ProtectedSegmentDenial {
+    /// The warning the adapter prints for the note, naming D21-45's known limit.
+    #[must_use]
+    pub fn warning(&self) -> String {
+        format!(
+            "warning: {} was denied a path under the run worktree's protected segment {} — the \
+             known limit D21-45 names (Claude Code's checkPathSafetyForAutoEdit protects it in \
+             every run worktree); the dispatch fails as NotIsolated {{ surface: env }}, not a defect",
+            self.tool_name, self.segment
+        )
+    }
+}
+
+/// Is `p` absolute in any form a denial or a deny rule carries: `/x`, `\\x`, `D:/x`, `D:\\x`?
+fn is_absolute_str(p: &str) -> bool {
+    let b = p.as_bytes();
+    p.starts_with('/')
+        || p.starts_with('\\')
+        || (b.len() >= 3
+            && b[0].is_ascii_alphabetic()
+            && b[1] == b':'
+            && (b[2] == b'/' || b[2] == b'\\'))
+}
+
+/// A path's segments, lexically normalised and case-folded (`checkPathSafetyForAutoEdit` reads
+/// case-folded segments, D21-45): split on both separators, `.` and empty segments dropped, `..`
+/// popping, and a drive's `D:` read as `d` so `D:/x`, `//d/x` and `/d/x` agree.
+fn segments(p: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for seg in p.split(['/', '\\']) {
+        match seg {
+            "" | "." => {}
+            ".." => {
+                out.pop();
+            }
+            s => {
+                let folded = s.to_ascii_lowercase();
+                let drive = folded
+                    .strip_suffix(':')
+                    .filter(|d| out.is_empty() && d.len() == 1)
+                    .map(str::to_owned);
+                out.push(drive.unwrap_or(folded));
+            }
+        }
+    }
+    out
+}
+
+/// The path a denial names, extracted from its `tool_input` per tool.
+///
+/// (`s8h` §8h.5; s8h review #10.) `file_path` for `Read`, `Edit` and `Write`; for `Glob`, its `pattern` when that is absolute, else
+/// its `path` (the search root); for `Grep`, its `path`; for both, the working directory `cwd` when
+/// the key is absent. Every other tool, and a missing key, is `""`.
+#[must_use]
+pub fn denial_path(tool_name: &str, tool_input: &serde_json::Value, cwd: Option<&Path>) -> String {
+    let key = |k: &str| tool_input.get(k).and_then(serde_json::Value::as_str);
+    let cwd = || cwd.map_or_else(String::new, |c| c.display().to_string());
+    // an if-chain, not a `match` with a catch-all: this file carries no `_ =>` (AC-229's ban)
+    if ["Read", "Edit", "Write"].contains(&tool_name) {
+        key("file_path").map_or_else(String::new, str::to_owned)
+    } else if tool_name == "Glob" {
+        key("pattern")
+            .filter(|p| is_absolute_str(p))
+            .or_else(|| key("path"))
+            .map_or_else(cwd, str::to_owned)
+    } else if tool_name == "Grep" {
+        key("path").map_or_else(cwd, str::to_owned)
+    } else {
+        String::new()
+    }
+}
+
+/// The protected segment `path` passes through BELOW `worktree`, if any.
+///
+/// The note's segment, as [`PROTECTED_SEGMENTS`] spells it or `.config/git` for [`PROTECTED_SEGMENT_PAIR`]. A relative
+/// path resolves against the worktree; a path outside it, or a protected segment at or above its
+/// root, is `None`.
+#[must_use]
+pub fn protected_segment(path: &str, worktree: &Path) -> Option<String> {
+    let root = segments(&worktree.display().to_string());
+    let full = if is_absolute_str(path) {
+        segments(path)
+    } else {
+        let mut joined = root.clone();
+        joined.extend(segments(path));
+        joined
+    };
+    let below = full.strip_prefix(root.as_slice())?;
+    below.iter().enumerate().find_map(|(i, seg)| {
+        if let Some(name) = PROTECTED_SEGMENTS.iter().find(|n| **n == seg.as_str()) {
+            return Some((*name).to_owned());
+        }
+        (seg.as_str() == PROTECTED_SEGMENT_PAIR[0]
+            && below.get(i + 1).map(String::as_str) == Some(PROTECTED_SEGMENT_PAIR[1]))
+        .then(|| PROTECTED_SEGMENT_PAIR.join("/"))
+    })
+}
+
+/// One denial entry's members, from a `permission_denials` element or a `permission_denied`
+/// event (the same three keys).
+fn denial_of(v: &serde_json::Value, channel: DenialChannel, cwd: Option<&Path>) -> Denial {
+    let s = |k: &str| {
+        v.get(k)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    };
+    let tool_name = s("tool_name").unwrap_or_default();
+    let path = v
+        .get("tool_input")
+        .map_or_else(String::new, |input| denial_path(&tool_name, input, cwd));
+    Denial {
+        channel,
+        tool_use_id: s("tool_use_id"),
+        decision_reason_code: s("decision_reason_code"),
+        tool_name,
+        path,
+    }
+}
+
+/// Channel (a): the result payload's `permission_denials` entries.
+///
+/// (`[{ tool_name, tool_use_id, tool_input }]`; documented in `headless`: *"the final result message lists them in
+/// `permission_denials`"*). An absent or non-list key is no entry.
+#[must_use]
+pub fn denials_from_result(payload: &serde_json::Value, cwd: Option<&Path>) -> Vec<Denial> {
+    payload
+        .get("permission_denials")
+        .and_then(serde_json::Value::as_array)
+        .map_or_else(Vec::new, |list| {
+            list.iter()
+                .map(|v| denial_of(v, DenialChannel::Result, cwd))
+                .collect()
+        })
+}
+
+/// Channel (b): one `system` / [`PERMISSION_DENIED_SUBTYPE`] stream line, or `None` when the line
+/// is not one. Keyed by its `type` and `subtype`, never by text.
+#[must_use]
+pub fn denial_from_event(raw: &str, cwd: Option<&Path>) -> Option<Denial> {
+    let v: serde_json::Value = serde_json::from_str(raw).ok()?;
+    (v.get("type").and_then(serde_json::Value::as_str) == Some("system")
+        && v.get("subtype").and_then(serde_json::Value::as_str) == Some(PERMISSION_DENIED_SUBTYPE))
+    .then(|| denial_of(&v, DenialChannel::Event, cwd))
+}
+
+/// The union of both channels, de-duplicated by `tool_use_id` (the first carrier kept; a denial
+/// with no id is kept as itself).
+fn dedup(denials: &[Denial]) -> Vec<Denial> {
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    denials
+        .iter()
+        .filter(|d| d.tool_use_id.as_deref().is_none_or(|id| seen.insert(id)))
+        .cloned()
+        .collect()
+}
+
+/// The digest over the union of both channels' `(tool_name, path)` entries, de-duplicated by
+/// `tool_use_id`, against the empty set (`s8h` §8h.0 Q1 (iv); §8h.5).
+#[must_use]
+pub fn denial_digest(denials: &[Denial]) -> Digest {
+    let entries: BTreeSet<String> = dedup(denials)
+        .iter()
+        .map(|d| format!("{}\u{1e}{}", d.tool_name, d.path))
+        .collect();
+    set_digest(&entries, &BTreeSet::new())
+}
 
 /// What the runner observed, handed to the classifier as one value.
 #[derive(Debug)]
@@ -145,13 +376,24 @@ pub struct Evidence<'a> {
     /// The one output schema the dispatch carried.
     pub schema_id: &'a SchemaId,
     pub schema: &'a serde_json::Value,
+    /// Every `system` / [`PERMISSION_DENIED_SUBTYPE`] line the drain read, raw — guard 3's channel
+    /// (b) (`s8h` §8h.5).
+    pub denial_events: &'a [String],
+    /// The spec's worktree: the working directory a relative denied path resolves against, and the
+    /// root below which a protected segment carries the note (`s8h` §8h.5). `None` when unknown.
+    pub worktree: Option<&'a Path>,
 }
 
-/// The classifier's answer: the step's outcome, and how a usage limit was detected if one was.
+/// The classifier's answer: the step's outcome, how a usage limit was detected if one was, and
+/// the typed notes beside it.
 #[derive(Debug)]
 pub struct Classified {
     pub result: Result<Typed, StepError>,
     pub detected_by: Option<DetectedBy>,
+    /// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.5.)* One per
+    /// denied path under a protected segment of the worktree (D21-45's known limit). The class and
+    /// the digest do not move for it.
+    pub notes: Vec<ProtectedSegmentDenial>,
 }
 
 fn contains_marker(hay: &str, markers: &[&str]) -> bool {
@@ -175,6 +417,7 @@ pub fn classify(ev: &Evidence<'_>) -> Classified {
     let plain = |result: Result<Typed, StepError>| Classified {
         result,
         detected_by: None,
+        notes: Vec::new(),
     };
     // 1. the arm that fired
     if let Some(by) = ev.cancelled {
@@ -199,6 +442,7 @@ pub fn classify(ev: &Evidence<'_>) -> Classified {
             return Classified {
                 result: Err(StepError::RateLimited { resets_at }),
                 detected_by: Some(DetectedBy::Subtype),
+                notes: Vec::new(),
             };
         }
         // 4. is_error / api_error_status, regardless of the exit code
@@ -221,6 +465,7 @@ pub fn classify(ev: &Evidence<'_>) -> Classified {
             return Classified {
                 result: Err(StepError::RateLimited { resets_at }),
                 detected_by: Some(DetectedBy::TextMarker),
+                notes: Vec::new(),
             };
         }
     } else if contains_marker(&stderr_text, TEXT_MARKERS) {
@@ -228,6 +473,45 @@ pub fn classify(ev: &Evidence<'_>) -> Classified {
         return Classified {
             result: Err(StepError::RateLimited { resets_at }),
             detected_by: Some(DetectedBy::TextMarker),
+            notes: Vec::new(),
+        };
+    }
+    // 5b. guard 3 (*(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.5;
+    //     N17 Q1 (iv).)*): a denial on EITHER typed channel — (a) the result frame's
+    //     `permission_denials`, (b) a `permission_denied` stream event — fails the dispatch as
+    //     `NotIsolated { surface: Env }`, whatever the exit code, and OUTRANKS a valid
+    //     `structured_output` (step 10): a child that was denied has not done what it reported.
+    //     After the platform arms; an errored `tool_result` naming a denial is NOT a third detector.
+    //     A denied path under a protected segment of the worktree carries D21-45's typed note; the
+    //     class and the digest do not move for it.
+    let mut denials = frame
+        .as_ref()
+        .map_or_else(Vec::new, |f| denials_from_result(payload(f), ev.worktree));
+    denials.extend(
+        ev.denial_events
+            .iter()
+            .filter_map(|raw| denial_from_event(raw, ev.worktree)),
+    );
+    if !denials.is_empty() {
+        let denials = dedup(&denials);
+        let notes = ev.worktree.map_or_else(Vec::new, |wt| {
+            denials
+                .iter()
+                .filter_map(|d| {
+                    protected_segment(&d.path, wt).map(|segment| ProtectedSegmentDenial {
+                        segment,
+                        tool_name: d.tool_name.clone(),
+                    })
+                })
+                .collect()
+        });
+        return Classified {
+            result: Err(StepError::NotIsolated {
+                surface: IsolationSurface::Env,
+                diff_digest: denial_digest(&denials),
+            }),
+            detected_by: None,
+            notes,
         };
     }
     // 6. the child's own verdict
@@ -300,7 +584,48 @@ fn extract_digest(
             last_error: e.to_string(),
         });
     }
+    // *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.4; D21-43 N24.)*
+    // The `Spec` ingest check, AFTER the schema validation: every authored criterion carries a
+    // non-blank `verification` — the type admits `None` (AC-137), the authoring does not. The class
+    // is `Schema`, the one a structured output that fails its contract already takes, so ADR-0112's
+    // closed set does not move. It reads the authored value only: a `Spec` read back from the store
+    // is not re-checked.
+    if schema_id.as_str() == SPEC_KIND
+        && let Some(ac) = spec_criterion_without_verification(candidate)
+    {
+        return Err(StepError::Schema {
+            attempts: 1,
+            last_error: format!(
+                "the Spec's criterion {ac} carries no authored verification (absent or blank): \
+                 every criterion a specifying activity emits states how it is shown to hold \
+                 (s8h §8h.4; D21-43 N24)"
+            ),
+        });
+    }
     Ok(Typed::new(schema_id.clone(), candidate.clone()))
+}
+
+/// The kind name a `Spec` structured output is bound under (`rk_types::registry::EXPORTED`'s key,
+/// the schema id `rk-cli`'s binder gives an agent step whose output is `value:Spec`).
+pub const SPEC_KIND: &str = "Spec";
+
+/// The first criterion of a `Spec` value whose `verification` is absent, `null`, not a string or
+/// blank — named by its `id`, or its position when it carries none.
+fn spec_criterion_without_verification(spec: &serde_json::Value) -> Option<String> {
+    let list = spec
+        .get("acceptance_criteria")
+        .and_then(serde_json::Value::as_array)?;
+    list.iter().enumerate().find_map(|(i, ac)| {
+        let authored = ac
+            .get("verification")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|v| !v.trim().is_empty());
+        (!authored).then(|| {
+            ac.get("id")
+                .and_then(serde_json::Value::as_str)
+                .map_or_else(|| format!("#{i}"), str::to_owned)
+        })
+    })
 }
 
 /// The cancel cause the row carries — `Some` only on the `Cancelled { by }` path.

@@ -22,7 +22,7 @@
 //! | [`config`] | `Config` (the pins, the TTL pair, `Margins`, the captured map, `harness_binary`, the mismatch policy, the digest-keyed card store only the binder fills) as a VALUE (ADR-0083); `Config::new`'s lints; `ConfigError`; `TESTED_CLI_VERSION` (D17-11) | AC-217, AC-488, AC-526, AC-377/AC-220, AC-226 (config arms) |
 //! | [`env_denylist`] | the ONE committed list (decision #16 of 2026-09-11; RT-25's tracker names) | AC-217, AC-422, AC-488, AC-509 |
 //! | [`env`] | the child environment: the captured map plus both TTLs, one value — a refusal upstream, never a subtraction here | AC-210, AC-385, AC-526's AND |
-//! | [`card`] | the lift from `runner/src/step.rs` at the pin: `Tier`, `Effort`, `AgentCard`; the authored card record and its validator | AC-493, AC-383, AC-214, AC-118/AC-418, AC-269 |
+//! | [`card`] | the lift from `runner/src/step.rs` at the pin: `Effort`, `AgentCard` (`Tier` left the binding path for the `[models]` row, `ModelRow` — dated 2026-10-02, s8h build); the closed permission-mode set; the authored card record and its validator | AC-493, AC-383, AC-214, AC-118/AC-418, AC-269 |
 //! | [`command`] | ONE builder, the golden argv in ONE order, per-profile delivery, the argv lints and the cap (`ARGV_CAP_BYTES`, RT-1); `CANCEL_POLL_MS` beside it (RT-3) | AC-203, AC-205/AC-417, AC-132, AC-209, AC-211 (PROVISIONAL), AC-214, AC-215 (argv half), AC-216/AC-511, AC-523's cap, AC-383 |
 //! | [`binder`] | D-11: role tier → bound card → `ActivitySpec`; owns the `Config` while it fills its card store; RT-21's `"worktree"` key | AC-212, AC-204's declared list |
 //! | [`registry`] | the dated capability registry — the `dispatch` row, and nothing else | AC-238, AC-489, AC-492 (RT-24) |
@@ -157,6 +157,7 @@ pub struct ClaudeHarness {
     guard: Mutex<Guard>,
     append_warnings: AppendWarnings,
     kill_warnings: Mutex<Vec<String>>,
+    denial_warnings: Mutex<Vec<classify::ProtectedSegmentDenial>>,
     last_kill_drop_order: Mutex<Option<std::sync::Arc<rk_containment::KillDropOrder>>>,
     last_raw_frames: Mutex<Option<RawFrames>>,
 }
@@ -201,6 +202,7 @@ impl ClaudeHarness {
             guard: Mutex::new(Guard::empty()),
             append_warnings: AppendWarnings::default(),
             kill_warnings: Mutex::new(Vec::new()),
+            denial_warnings: Mutex::new(Vec::new()),
             last_kill_drop_order: Mutex::new(None),
             last_raw_frames: Mutex::new(None),
         })
@@ -251,6 +253,21 @@ impl ClaudeHarness {
         self.kill_warnings
             .lock()
             .expect("the kill-warning counter's lock is poisoned: a halt (ADR-0118)")
+            .clone()
+    }
+
+    /// Every protected-segment note a dispatch printed, in order (`s8h` §8h.5; D21-45's known
+    /// limit) — the typed list beside the printed warnings.
+    ///
+    /// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)*
+    ///
+    /// # Panics
+    /// On a poisoned lock (ADR-0118).
+    #[must_use]
+    pub fn denial_warnings(&self) -> Vec<classify::ProtectedSegmentDenial> {
+        self.denial_warnings
+            .lock()
+            .expect("the denial-warning list's lock is poisoned: a halt (ADR-0118)")
             .clone()
     }
 
@@ -392,6 +409,59 @@ impl ClaudeHarness {
                 observed_model: None,
             },
         )
+    }
+
+    /// The command one dispatch of `card` assembles — the ONE assembly site, shared by `dispatch`
+    /// and [`Self::argv_for`].
+    ///
+    /// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.11.)* Moved
+    /// out of `dispatch` unchanged, so the live probes read the argv a dispatch WILL carry before
+    /// they spend (probe 0's `ARGV_MODE_SPELLING` and probe 1's settings premise).
+    fn command_for(
+        &self,
+        card: &card::AgentCard,
+        schema: &serde_json::Value,
+        user_message: &str,
+    ) -> Result<command::Assembled, ConfigError> {
+        assemble(
+            &self.config,
+            &CommandSpec {
+                card,
+                schema,
+                adopt_agent: true,
+                strict_tools: &[],
+                user_message,
+                // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.6.)* NOT YET
+                // WIRED: `ChildSettings::for_worktree` lists every ancestor level of the worktree, and
+                // over a worktree under %TEMP% (4,660 entries on this machine) the element measures
+                // ~1,068,619 units against RT-1's 32,767 cap, so every temp-dir bind would refuse. The
+                // delivery (argv JSON vs a settings file) is BLOCKED for a ruling; until then the
+                // argv carries `--setting-sources ""` and no `--settings` element.
+                settings: None,
+            },
+        )
+    }
+
+    /// The argv a dispatch of `spec` would carry, assembled by the same site `dispatch` uses —
+    /// spawning nothing. The live probes' pre-dispatch premise (`s8h` §8h.11): a premise that fails
+    /// here costs nothing.
+    ///
+    /// # Errors
+    /// A rendered refusal when the spec names no bound card or schema, or the command does not
+    /// assemble.
+    #[doc(hidden)]
+    pub fn argv_for(&self, spec: &ActivitySpec) -> Result<Vec<String>, String> {
+        let bound = self
+            .config
+            .bound(&spec.card_digest)
+            .ok_or_else(|| "the spec's card_digest names no bound card".to_owned())?;
+        let schema = bound
+            .schemas
+            .get(&spec.schema)
+            .ok_or_else(|| "the bound card was not bound with the spec's schema".to_owned())?;
+        self.command_for(&bound.card, schema, &Self::user_message(spec))
+            .map(|a| a.argv)
+            .map_err(|e| e.to_string())
     }
 
     /// Append the row through the handed-in store (AC-360; ADR-0126's forbids) — a failure is
@@ -545,16 +615,7 @@ impl Harness for ClaudeHarness {
             return self.finish(store, spec, record, result);
         }
         let user_message = Self::user_message(spec);
-        let assembled = match assemble(
-            &self.config,
-            &CommandSpec {
-                card: &bound.card,
-                schema,
-                adopt_agent: true,
-                strict_tools: &[],
-                user_message: &user_message,
-            },
-        ) {
+        let assembled = match self.command_for(&bound.card, schema, &user_message) {
             Ok(a) => a,
             Err(e) => {
                 let (record, result) = pre(
@@ -574,10 +635,12 @@ impl Harness for ClaudeHarness {
         let prepared = runner::Prepared {
             assembled,
             env: child_env,
+            worktree_root: worktree.clone(),
             worktree,
             timeout: Duration::from_secs(spec.timeout_secs),
             expected_agent: &bound.card.name,
-            expected_tier: &bound.card.model,
+            expected_model: &bound.card.model,
+            expected_permission_mode: &bound.card.permission_mode,
             declared_tools: &bound.card.tools,
             schema_id: &spec.schema,
             schema,
@@ -635,6 +698,17 @@ impl Harness for ClaudeHarness {
                 .expect("the kill-warning counter's lock is poisoned: a halt (ADR-0118)")
                 .push(e.clone());
         }
+        // *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.5.)* D21-45's
+        // known limit, named: each protected-segment note is printed as a warning and kept on the
+        // harness's own list; the outcome's class and digest are unchanged by it.
+        for note in &run.notes {
+            let warning = note.warning();
+            eprintln!("rk-adapter-claude: {warning}");
+            self.denial_warnings
+                .lock()
+                .expect("the denial-warning list's lock is poisoned: a halt (ADR-0118)")
+                .push(note.clone());
+        }
         let cli_version = run.observed_version.as_ref().map_or_else(
             || CliVersion::Pinned(pin.to_owned()),
             |v| CliVersion::Observed(v.clone()),
@@ -677,7 +751,10 @@ impl Harness for ClaudeHarness {
                 // adapter alone writes it, on its own row (ADR-0126).
                 activity_id_at_version: spec.activity_id_at_version.clone(),
                 // *(dated 2026-10-02, s8h build, package P2-rk-types.)* The type half only (s8h §8h.3): the adapter's reading of the init `model` is §8h.12's rk-adapter-claude test `dispatch::observed_model_is_recorded_on_every_path_that_read_init`, red first in its own package.
-                observed_model: None,
+                // *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)* Read: the
+                // model the child's init REPORTED, `Some` on every path that read an init carrying
+                // `model` (a refused one too), `None` otherwise — never the requested id.
+                observed_model: run.observed_model.map(rk_types::usage::ObservedModel::new),
             },
         );
         // ADR-0163 clause 2: ONE rate_limit_reading per dispatch through the child, from the
