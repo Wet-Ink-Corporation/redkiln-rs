@@ -1373,7 +1373,9 @@ pub(crate) fn answer(
     rk_cli::verbs::answer::run(
         &cli,
         &args,
-        &support::clean_env(),
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; s8h §8h.7.)* The fixture
+        // launch record, explicitly: `answer::run` is bound by the launch check.
+        &support::launched_env(),
         rk_cli::verbs::Startup::real(),
     )
     .unwrap_or_else(|halt| panic!("`answer {item}` halted: {halt:?}"))
@@ -3338,6 +3340,9 @@ fn a_tracked_exclusion_leaves_the_next_gates_answer_applied() {
         "[question.\"probe.accept\"]\ntext = \"Accept the probe?\"\noptions = [\"accept\", \"reject\"]\n",
     )
     .expect("the question is declared");
+    // *(dated 2026-10-02, s8h build, package P7; `s8h` §8h.10.)* The catalog now reaches
+    // `probe.accept`, so the packs carry its fail-closed row (ADR-0146's load-time lint).
+    support::add_gate_expiry_row(root, "probe.accept");
     let tree = crate::run_tree(root, item).path;
     let fork = rev(root, "HEAD").expect("the checkout's HEAD");
 
@@ -3709,16 +3714,10 @@ fn closeout_lane(kind: &str, id: &str, activity: &str) -> tempfile::TempDir {
         ));
     }
     std::fs::write(rk.join("artifacts.toml"), artifacts).expect("artifacts writes");
-    for k in ["DebtRegisterEntry", "ClosureRecord", "SelfCheck"] {
-        std::fs::write(
-            rk.join("schemas").join(format!("{k}.json")),
-            format!(
-                "{{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \
-                 \"title\": \"{k}\",\n  \"type\": \"object\"\n}}\n"
-            ),
-        )
-        .expect("the schema writes");
-    }
+    // *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.4.)* The
+    // three `.redkiln/schemas/<kind>.json` files this wrote (`DebtRegisterEntry`, `ClosureRecord`,
+    // `SelfCheck`) are no longer written: the binder reads each step's schema from
+    // `rk_types::registry::EXPORTED` by name, and no `.redkiln/schemas/` exists to write into.
     let pin = "0123456789abcdef0123456789abcdef01234567";
     std::fs::write(
         rk.join("registry.toml"),
@@ -3952,20 +3951,33 @@ fn add_probe_gate(root: &Path) {
         "[question.\"probe.accept\"]\ntext = \"Accept the probe?\"\noptions = [\"accept\", \"reject\"]\n",
     )
     .expect("the question is declared");
+    // *(dated 2026-10-02, s8h build, package P7; `s8h` §8h.10.)* The catalog now reaches
+    // `probe.accept`, so the packs carry its fail-closed row (ADR-0146's load-time lint).
+    support::add_gate_expiry_row(root, "probe.accept");
 }
 
 /// Declare `escalate` as the expiry action of gate class `class`, in both installed pack files.
+///
+/// *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.10.)* Every
+/// reachable class now carries a `fail` row (ADR-0146's load-time lint refuses one without), so the
+/// class's ONE `fail` row is re-declared `escalate`, where this appended a first row before. It
+/// read: assert no row for `class`, then append `class` / `action = "escalate"`.
 fn escalate_on_expiry(root: &Path, class: &str) {
     for name in ["bug-standard.toml", "story.toml"] {
         let path = root.join(".redkiln").join("packs").join(name);
         let src = std::fs::read_to_string(&path).expect("the pack reads");
-        assert!(
-            !src.contains(&format!("class = \"{class}\"")),
-            "PREMISE: {name} declares no expiry row for `{class}` yet"
+        let row = format!("class = \"{class}\"\naction = \"fail\"\n");
+        assert_eq!(
+            src.matches(&row).count(),
+            1,
+            "PREMISE: {name} declares exactly one `fail` expiry row for `{class}`"
         );
         std::fs::write(
             &path,
-            format!("{src}\n[[gate_expiry]]\nclass = \"{class}\"\naction = \"escalate\"\n"),
+            src.replace(
+                &row,
+                &format!("class = \"{class}\"\naction = \"escalate\"\n"),
+            ),
         )
         .expect("the expiry row is written");
     }

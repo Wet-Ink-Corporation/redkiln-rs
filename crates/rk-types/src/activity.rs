@@ -152,6 +152,25 @@ pub struct DispatchRecord {
     /// row written before this member existed reads back as `None`.
     #[serde(default)]
     pub observed_model: Option<ObservedModel>,
+    /// *(dated 2026-10-02, `s8h` build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY;
+    /// ADR-0197 decision 9 as amended, proposed.)* The child's settings file as delivered: the
+    /// path the `--settings` element named and the SHA-256 of the bytes written there, so a reader
+    /// asserts what was delivered without inferring it from the argv. `Some` on every path that
+    /// wrote the file (it is written immediately before the spawn), `None` on every path that
+    /// refused first. Serialised on EVERY row (`null` for `None`); a row written before this
+    /// member existed reads back as `None`.
+    #[serde(default)]
+    pub settings_file: Option<SettingsFile>,
+}
+
+/// The child's settings file one dispatch delivered (D21-137): where it was written and the
+/// SHA-256 of its bytes. *(dated 2026-10-02, `s8h` build, package P6-cli-launch-gate.)*
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SettingsFile {
+    /// The absolute path the `--settings` element named, as written on the argv.
+    pub path: String,
+    /// The SHA-256 of the file's bytes, which are exactly the assembled settings JSON.
+    pub sha256: Digest,
 }
 
 /// Everything [`DispatchRecord::new`] cannot derive from the raw material: the members the adapter
@@ -181,6 +200,9 @@ pub struct RecordTail {
     /// *(dated 2026-10-02, `s8h` build, package P2-rk-types; Record A = ADR-0197, proposed.)* The
     /// init's reported model, or `None` before init ([`DispatchRecord::observed_model`]).
     pub observed_model: Option<ObservedModel>,
+    /// *(dated 2026-10-02, `s8h` build, package P6-cli-launch-gate; D21-137.)* The settings file
+    /// the dispatch wrote, or `None` ([`DispatchRecord::settings_file`]).
+    pub settings_file: Option<SettingsFile>,
 }
 
 impl DispatchRecord {
@@ -244,6 +266,7 @@ impl DispatchRecord {
             detected_by,
             activity_id_at_version,
             observed_model,
+            settings_file,
         } = tail;
         Self {
             argv_digest: sha256(argv_joined.as_bytes()),
@@ -264,6 +287,7 @@ impl DispatchRecord {
             detected_by,
             activity_id_at_version,
             observed_model,
+            settings_file,
         }
     }
 }

@@ -408,6 +408,10 @@ records Checkpoint 8g passed whole at `4777941` and re-run green at `d5bfc4f`, 1
   `run.rs` (2), `run_worktree.rs`, `slice_verdict.rs` and `verify_pass.rs`, and one `Command::new(env!("CARGO_BIN_EXE_redkiln"))`
   in `surface.rs`. The other `Command::new` sites (`support.rs`'s `taskkill`/`kill`/`tasklist` and its fixture child) do
   not spawn `redkiln`.
+- *(dated 2026-10-02, s8h build, package P6-cli-launch-gate)* **Item 11, folded.** The 21 code sites listed above now construct no `Command`: each calls
+  `crate::redkiln_command(crate::Launch::…)` (§8h.7's dated note names each arm), and
+  `run::every_binary_spawn_withholds_or_supplies_the_launch_record` reads one site, `main.rs`'s helper
+  (`THE_ONE_REDKILN_COMMAND=main.rs:<line>`). The three in-process `answer::run` callers are listed in §8h.7's note.
 - **Item 12.** The 11c record is **ADR-0168** (recorded id; accepted on D21-65). Its decision 1: *"The severity vocabulary
   is `blocking | advisory`."* Its paragraph `**The severity field's source and owner.**` reads *"The owner is **`s8h`**"*.
   `spikes/p9/schemas.toml`'s `[value.RootCause]` still reads `fields = ["cause", "contributing_factors", "confidence",
@@ -587,6 +591,14 @@ lists.
   move does not touch it again.
 - Record A states the table as a construction under D21-41 (g), and cites X12.
 
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **The eight shipped cards are this table.** Each
+`.redkiln/cards/<role>.json` carries exactly the table's `tools` (as a set, no duplicate) and its `permission_mode`
+(`acceptEdits` for `implementer`, `default` for the other seven), no `model` or `effort`, and loads through
+`AuthoredCard::from_file` (the closed-set lint included). The `spec-author` prompt now reads *"Write the enumerated,
+testable acceptance criteria; every criterion carries an authored, non-empty verification stating how the criterion is
+shown to hold. …"* (D21-43 N24; §8h.4). `cards::shipped_cards_are_the_least_privilege_table` reads them with
+`serde_json`; `RK-D-CARD-GRANT` (§8h.10) is the doctor half. All eight files stay LF.
+
 ### 8h.3 Models — the `[models]` table, full ids, and `observed_model` (D21-42 15a, 15b)
 
 Each installed pack gains one table, so both packs stay independently complete, as their timeout rows already are:
@@ -650,6 +662,14 @@ no init, an init without `model`); mutant check I3 (the requested id copied in) 
 implementer card's row and mode; JSONL carries no comment, so recorded here): `cost/run-frames.jsonl`,
 `exit/{findings-block,platform-is-error,schema-invalid-structured-output,schema-no-structured-output}/frames.jsonl`,
 `pack-min/lane/implement-frames.jsonl`, `slice/approved/frames.jsonl`.
+
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **The shipped packs' `[models]` tables and role rows are
+written.** Both installed packs carry `[models.haiku]` (`claude-haiku-4-5-20251001`, `accepts_effort = false`),
+`[models.sonnet]` (`claude-sonnet-5`, `true`) and `[models.opus]` (`claude-opus-5-5`, `true`), and the eight `[role.*]`
+rows above carry `model` (a row KEY) and `effort` as this section's table states, `family = "claude"` kept; the three
+haiku roles carry no effort. `cards::the_models_table_pins_the_three_full_ids` and
+`cards::shipped_role_rows_resolve_through_the_models_table` read them through `rk-cli`'s own `PackExtras`. A
+shipped-pack bind therefore no longer refuses at `ModelUntraceable` (P3's note above).
 
 ### 8h.4 Schemas — Rust types in `EXPORTED`, read by name (D21-41 (g); ADR-0084, ADR-0095, AC-133)
 
@@ -810,6 +830,28 @@ and its stand-in lacks the field.
 refusal naming the kind and the step (`Exit::ConfigError`), before any spawn. `.redkiln/schemas/` is not created,
 and the file read is deleted.
 
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **Built.** `bind_one` (`crates/rk-cli/src/verbs/run.rs`, reached
+from `bind_nodes` once per agent step with the step's own `value:<Kind>`, §8h.0 item 2) takes the schema from
+`rk_types::registry::EXPORTED` by that kind name (`exported_schema(kind)`); the `.join("schemas")` /
+`.join(format!("{kind}.json"))` read is deleted (Checkpoint 8h (9)'s floor reads 0 code hits, its filter proved on a
+synthetic pair first). A kind `EXPORTED` lacks refuses with `Exit::ConfigError` naming the step, the node and the
+kind, before any spawn. Fixture consequences, each by dated line: `pack-min/schemas/` (`Findings.json`,
+`ImplReport.json`) is DELETED and `support::pack_min_repo` creates no `.redkiln/schemas/`; `root.rs`'s direct `Binder`
+test takes `EXPORTED`'s `ImplReport`; `landing.rs` writes no schema files; and, because the real adapter validates
+a structured output against the bound schema, `pack-min/lane/implement-frames.jsonl`'s result frame now carries
+`EXPORTED`'s `ImplReport` shape, `{"status":"implemented","files":[],"summary":"the lane fixture's implement stage",
+"tests_added":[]}` (was `{"item":"lane-1","summary":…}`; JSONL carries no comment, so recorded here). The two
+`{"item":7}` frames (`cost/run-frames.jsonl`, `exit/schema-invalid-structured-output/frames.jsonl`) still fail the
+schema, which is what they exist for.
+
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **The universe rule, made to reproduce.** The 2026-09-24 reading
+(18 / 17 / 24) reproduces at this tree only when the closure follows REQUIRED inputs: a `requires` entry spelt
+`X?` is optional and does not extend the closure. Following the optional entries too reaches 19 / 19 / 26
+(`DataMigrationPlan` through `design-doc`'s and `rollout-plan`'s `DataMigrationPlan?`, `UXDesign` through
+`design-doc`'s `UXDesign?`). `schemas::every_agent_output_kind_the_two_lanes_reach_is_exported` states the rule in
+its helper and asserts 18, 17 and 24 as premises. The candidate activities now number 45 (`kind:bug`) and 47
+(`kind:story`), not 38, and the 24 does not move.
+
 *(dated 2026-10-02, s8h build, package P2-rk-types; Record A = ADR-0197 decisions 6 and 7, `proposed`.)* **The type half
 is built.** `rk_types::registry::EXPORTED` now registers 25 entries: `Findings` and `AcceptanceCriterion` (`s8g`'s,
 registered once, never redeclared) and the 23 new kinds of `crates/rk-types/src/artifact/lane.rs`, each under its kind
@@ -939,8 +981,15 @@ The element joins the golden argv in a fixed position that Record A states. `gol
 move, and the cap measure counts the quoted empty element. The docs site does not document the flag [a docs-reading
 pass, 2026-09-24], so its effect is asserted from the init line (tools and mode equal; probe 2) and never inferred.
 
-**The child's confinement settings.** They go in one `--settings <json>` element, assembled per dispatch from the
-spec's worktree. [documented, `code.claude.com/docs/en/headless.md`, via the same pass: `--settings` *"can set any key
+**The child's confinement settings.** ~~They go in one `--settings <json>` element, assembled per dispatch from the
+spec's worktree.~~ *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* They go in one `--settings <path>` element. The path names a read-only file
+whose bytes are the JSON. It is written per dispatch, with create_new and a unique name, into a caller-supplied
+directory outside the worktree (rk-cli: ~~`<common_dir>/redkiln/runs/<run_id>/`~~ `<common_dir>/redkiln/child-settings/<run_id>/`,
+the dated note at this section's end). Its sha256 and path are recorded in the dispatch's launch evidence, and it is
+retained with the run. The file's location is fenced three ways: it is a denied sibling (this section's *"the main
+checkout's own files are denied siblings. That includes its `.git` common directory"*), it sits under a protected
+`.git` segment (D21-45: *"The path is sensitive if ANY segment is one of"* a list that begins `".git"`), and *"The child has no
+`Bash`"*. [documented, `code.claude.com/docs/en/headless.md`, via the same pass: `--settings` *"can set any key
 your user settings file can set"*.] It carries three things:
 
 - **`permissions.blockReadsOutsideWorkingDirectories: true`** — [documented, `permissions.md`: *"Set
@@ -1000,7 +1049,46 @@ test's worktree or scratch repository lives, it is 4,999 paths and about 1,068,6
 1,104 paths and about 243,048 units. Wiring `ChildSettings::for_worktree` into `Binder::bind` and `dispatch` would
 refuse every such bind at the cap. Neither this section nor Record A decision 9 (*"one `--settings <json>`
 element"*) foresaw the cap, so the delivery is returned for a ruling; until then `Binder::bind` and `dispatch` pass
-`settings: None`, by dated comment at each site.
+`settings: None`, by dated comment at each site. **RULED provisionally 2026-10-02 (panel, AFK rule): option (1), file
+delivery; see the D-entry** (D21-137). The measured figures above (11,989 / 1,068,619 / 243,048 units) are the reason.
+
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* **Built.** `Binder::bind` and `dispatch` carry `settings: Some(SettingsArg { settings, path })`, and
+the dated interim comments are gone. `Config::with_settings_dir` carries the directory (an input: the adapter never runs
+git to find it and has no default).
+- **Bind writes no file.** It builds `ChildSettings::for_worktree` (fail closed), checks the directory
+  (`command::check_settings_dir`), and assembles with `command::settings_stand_in(dir)`, the directory joined with a name
+  of the dispatch form at its fixed maximum length. `assemble` checks the settings against the CLI's 2 MiB file limit
+  and the argv against RT-1's cap. Dispatch rebuilds the settings, re-checks the directory, assembles with the real
+  path (both checks again), then writes the file LAST before the spawn.
+- **The file.** `child-settings-<pid:010>-<seq:020>-<sha256 prefix:16>.json`, written with `create_new`, synced, then
+  read-only; `DispatchRecord.settings_file { path, sha256 }` (rk-types, on the `dispatch_completed` row; `null` on a
+  pre-spawn row).
+- **The typed refusals, none falling back to `settings: None`:** `SettingsDirUnset` (none supplied);
+  `SettingsDirMissing`; `SettingsDirUnderWorktree` (the worktree itself or anything under it, compared with `\\?\`
+  stripped, `\` read as `/`, ASCII case-folded on Windows); `SettingsPathRefused` (not UTF-8, verbatim, relative, or
+  carrying `.`/`..`); `SettingsTooLarge` (over 2,097,152 bytes, the CLI's `Kp`, found by string search, not executed);
+  `SettingsWrite` (an existing name under `create_new`, or any I/O failure). At dispatch each is a pre-spawn
+  `Transport { Spawn }` row, nothing spawned.
+- **The red-first tests (D21-137 (a)-(g)), all in `rk-adapter-claude`:** (a)
+  `command::a_five_thousand_sibling_chain_assembles_under_the_cap`; (b)
+  `dispatch::the_settings_file_is_the_json_and_its_sha256_is_recorded`; (c)
+  `command::a_settings_dir_under_the_worktree_is_refused`; (d)
+  `dispatch::two_dispatches_write_two_distinct_settings_files`; (e)
+  `command::settings_over_two_mib_are_refused_before_spawn`; (f) `command::a_missing_settings_dir_is_refused`
+  (including a dispatch whose directory was removed after bind); (g)
+  `binder::binds_over_temp_and_target_tmp_worktrees_succeed_and_write_nothing`; and two for the remaining refusals,
+  `command::a_relative_or_verbatim_settings_dir_is_refused` and
+  `command::a_settings_file_write_failure_is_refused_and_overwrites_nothing`. Nine new tests; Checkpoint 8h (12)'s
+  floor gains nine by dated edit. `golden_argv_per_profile`'s snapshots and the at-the-cap fixture now count the path
+  element (the fixture's prompt re-grown by 1,707 characters, the measure the shorter element gave back).
+
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* **rk-cli's directory is NOT `<common_dir>/redkiln/runs/<run_id>/` (RAISED for a ruling).** D21-137
+names that directory and also says *"Keep the file with the run's evidence. Never delete it during the run or after
+spawn."* The two cannot both hold: `rk_kernel::replay::write_run(&runs_dir, …)` begins
+`let _ = std::fs::remove_dir_all(&dir);` on `<runs_dir>/<run_id>` and runs after the stage's dispatches, so every
+settings file written there would be deleted at the stage's end. Built provisionally, as the most reversible option:
+`run.rs`'s `child_settings_dir` passes `<common_dir>/redkiln/child-settings/<run_id>/` (same `run_id`, a sibling root,
+created before the first bind, never emptied). The alternatives are listed in the package report.
 
 ### 8h.7 The launcher — the only entry to a real run (D21-42 17a, 17b)
 
@@ -1177,6 +1265,95 @@ file passes; an unguarded test, a guard second, a guard in a comment, a `cargo t
 function are each refused), and asserts the eight names as a PREMISE. The launcher, the `rk-cli` launch check and
 its spawn helper are other packages'.
 
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate)* **The `rk-cli` half of "the only entry" is built** (the launcher script is another package's).
+- **The check.** `verbs::launch_check(env, verb)` is `Ok` only when the captured `Env` carries `REDKILN_LAUNCH_RECORD`
+  naming an existing file, read through `env.rs` (`env::LAUNCH_RECORD`, `Env::launch_record`, the one read). Otherwise
+  it prints the variable, why, and `tools/live-run.sh <verb>`, and returns `Exit::ConfigError`. `run::run` calls it
+  FIRST when `startup.harness.builds_the_real_harness()` (a required `HarnessFactory` method: `ClaudeHarnessFactory`
+  says `true`, `lane_e2e`'s `ScriptedFactory` says `false`), so before `through_step_seven` appends `reconcile_started`
+  and before any worktree operation. `answer::run` calls it FIRST, before `run::through_step_seven`; `answer::run_with`
+  is not subject.
+- **The helper.** `tests/it/main.rs`'s `redkiln_command(Launch)` is the one `Command` over the binary: it calls
+  `.env_remove(rk_cli::env::LAUNCH_RECORD)` and sets the variable only for `Launch::Fixture`, the committed record
+  `tests/fixtures/launch/fixture-launch-record.txt` (`KEY=value` lines in step 8's form, `MODE=fixture`). All 21 code
+  sites folded into it (item 11's count): every binary `run` and `answer` spawn takes `Launch::Fixture`
+  (`adapter_selection`, `answer::spawn_answer`, `config`'s AC-486 arm, `cost`'s two runs, `lane_e2e`'s binary arm
+  `spawn_run_replaying`, `review_pass`, `run` (2), `run_worktree`, `slice_verdict`, `surface`'s `run --resume`,
+  `verify_pass`); `cost`, `doctor` (3), `doctor_journal`, `explain`, `root`'s `status` and `main`'s `init` take
+  `Launch::Withheld`. The `#[expect(clippy::disallowed_types)]` each folded site carried went unfulfilled and was
+  removed; `redkiln_command` carries the one. `spawn_answer_launched` lets the refusal's own test withhold the record.
+- **In-process callers of `answer::run`** (`doctor_journal`'s vouch case, `landing::answer` and `lane_e2e::answer_item`)
+  build their `Env` explicitly with `support::launched_env()` (D21-47: built, never inherited). No in-process
+  `run::run` uses the real factory (each passes `lane_e2e::seam`'s scripted one), so none needed a record.
+- **Not covered by the helper, stated:** `surface.rs`'s `trycmd::TestCases` runs `redkiln … --help` cases with the
+  inherited environment. Every case is `--help`, which clap answers before any verb runs, so no case reaches the check.
+
+*(dated 2026-10-02, s8h build, package P8-launcher-checkpoint-edits-and-packet)* **The launcher is built: `tools/live-run.sh`** (LF, 0 CR
+bytes read by `od -c` and by a Python byte count; `bash -n` rc 0; POSIX sh, run by Git Bash). It follows the table above
+step by step. What it settles that the table leaves open, so that a reader need not infer it:
+- **Refusal names beyond the four listed above.** Checkpoint 8h (10) reads only those four: the variable,
+  `CLI_VERSION`, `ANSWER_USAGE` and `WRAP_ARGV`. Every other refusal keeps the same anchored form, under these names:
+  - `USAGE`: no mode, or an unknown one.
+  - `RUN_USAGE`: an absent item, an item beginning with `-`, or anything other than `--lane fix|story` after it.
+  - `PROBE_USAGE`: anything other than one `live::<identifier>` name.
+  - `PLATFORM`: step 1.
+  - `DENYLIST`: step 3's extraction failed. Either an anchor matched other than once, or a list came out empty.
+  - `HOME` and `CLAUDE_CONFIG_DIR`: step 4.
+  - `TESTED_CLI_VERSION`: the pin's anchored form was unreadable.
+  - `GIT_COMMON_DIR`, `HEAD` and `LAUNCHER_ROOT`.
+  - `LAUNCH_RECORD`: a `set -C` collision.
+
+  Two further failures take the `failed:` form. `failed: BUILD … (Halt 1)` covers `run`'s and `answer`'s build.
+  `failed: PROBE_SELECTION` fires when a `probe` run did not print `test <test> ... ok` and a `1 passed` result line.
+- **Step 2 compares names upper-cased, as step 3 does.** That is the fail-closed direction for Windows names, so no
+  spelling of `CLAUDE_CODE_…` passes.
+- **Step 3 reads the committed lists by anchor.** It takes the quoted names from the line that begins
+  `pub const DENYLIST: &[&str] = &[`, and from the line that begins `pub const DENYLIST_PREFIXES: &[&str] = &[`. Each
+  list runs through the first line that closes with `];`. Each anchor must match exactly once, and each list must be
+  non-empty.
+- **Under `--check`, `run` and `probe` may omit their arguments**, because (10)'s bare `--check` names no item. When
+  arguments are given, they are validated. `answer`'s and `wrap`'s arguments are always validated, which is what lets
+  (10)'s `ANSWER_USAGE` and `WRAP_ARGV` controls run under `--check`.
+- **`wrap`'s screen is slightly wider than the bullet above.** It treats `--include-ignored` as `--ignored`, since that
+  flag runs ignored tests too. It treats a feature token of `live` or `<crate>/live` as the live feature.
+- **Step 6 resolves `claude` with `command -v` after `hash -r`.** It adds `.exe` when only that file exists, and reads
+  `<v> (Claude Code)` with any CR dropped. It refuses as `CLI_VERSION` in three cases: no claude was found; no
+  version line was printed; or, for `run`, `probe` and `answer`, the version is unequal to either the pin or
+  `RUNBOOK-instrument.txt`, which names Halt 2. The pin and the instrument file are read from the launcher's own tree,
+  the script's parent directory, so a launcher started from another directory still reads the committed values beside
+  it.
+- **Step 8 writes two members beyond the table: `ITEM` (for `run` and `answer`) and `CLAUDE_PATH_AFTER`.**
+  - A multi-line argv word is recorded with its newlines turned to spaces. The argv itself is run exactly as given.
+  - `REDKILN_LAUNCH_RECORD` is exported in `cygpath -m` form (`D:/…`), which both Git Bash and the Rust binary open.
+  - `run` and `answer` build before the record is written, so a failed build leaves no record.
+- **Step 7 for `probe` writes the test run's output to `<UTC>-probe.output.txt` beside the record, and prints it
+  afterwards**, because the selection is asserted on that output. A probe is not interactive. `wrap`, `run` and
+  `answer` run in the foreground with the launcher's own stdin, stdout and stderr.
+- **Step 9 re-resolves `claude`.** If the path, the version or the sha256 differs, it appends the after-readings and
+  the child's `RC` to the record, prints `failed: CLI_MOVED — Halt 2`, and exits 3.
+- **No new `[[bin]]`.** The launcher is a script, so Checkpoint 7d's manifest loop (three `rk-cli` `[[bin]]` targets,
+  wi-b846d9) is unchanged.
+
+**Checkpoint 8h (10), run alone.**
+- **Where it ran.** It was extracted from this file's own bytes
+  (`D:/repos/redkiln-sev/afk-tools/sp/s8h/P8-extract-cp10.py`) and run under D21-47's wrapper in a private worktree.
+  The worktree, `target/wt-P8`, was detached at `d692e71`, had the launcher and its three inputs' working bytes copied
+  in, and was removed afterwards.
+- **The result.** It ran to its sentinel, rc 0, with `nd_check` clean and every control included:
+  - the clean `--check` for `run`, `wrap` and `answer`;
+  - the nine environment refusals;
+  - `CLI_VERSION` with Halt 2;
+  - `wrap` accepting 9.9.9 and recording it;
+  - the three `WRAP_ARGV` refusals and the three `ANSWER_USAGE` refusals;
+  - the scratch `wrap` pair: every record member, stdin reaching the child, and the moved CLI failing as
+    `failed: CLI_MOVED`.
+- **One departure: `HOME`.** It was a scratch home whose `.claude-personal/.credentials.json` is an EMPTY placeholder
+  (`D:/repos/redkiln-sev/afk-tools/sp/s8h/P8-home`). The permission classifier refused an existence probe of the
+  operator's own `~/.claude-personal/.credentials.json` (AFK rule 8: recorded, not worked around). The reading over the
+  operator's `HOME` therefore belongs to the formal run, from a plain terminal.
+- **No launch record.** None was written under this repository: `.git/redkiln/launches/` does not exist after the
+  runs.
+
 **`s8`'s three `redkiln run` sites.** `s8-exit-criterion.md` invokes `./target/debug/redkiln run` at three sites.
 After this stage, each one refuses without a launch record, so each must go through `tools/live-run.sh run`. That
 edit is `s8j`'s (D21-43). This stage states the constraint and does not touch `s8-exit-criterion.md`. The same holds
@@ -1219,6 +1396,15 @@ commit and in `PROGRESS.md` §1/§3/§6.
    wrong-capture HALT.
 5. Only then probe 0, and after it probes 1 and 2 (§8h.11), each in its own block on its own go-ahead (D21-47).
    `MismatchPolicy::Refuse` stays hard-coded in `real_harness_config`.
+
+*(dated 2026-10-02, s8h build, package P8-launcher-checkpoint-edits-and-packet)* **Written to the review packet, not executed.** The freeze instruction and the
+five-step procedure above are copied into the session review packet's deferred-gate list, in its `s8h` section
+(`D:/repos/redkiln-sev/afk-tools/sp/s8h/P8-review-packet-s8h.md`, for the packet's (c) list). Nothing here was run:
+- the settings file is the operator's user configuration;
+- the pin moves at `s8j`;
+- `claude --version` was read at stage open only, under D21-48.
+
+The launcher steps that the procedure relies on are built (§8h.7's dated note).
 
 ### 8h.9 The per-item envelope, and the RT-57 scalar record (D21-42 19a, 19c)
 
@@ -1291,6 +1477,14 @@ Every `NO RECORD` marker is replaced by a comment naming Record B as `ADR-<id>`,
   `appetite.dispatches`"*. A new fixture `runtime-item-envelope.toml` declares five different numbers (cap 3, tokens 5000,
   `N` 4, `K` 2, points 50).
 
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **No `NO RECORD` marker remains in either pack (Record B decision
+5).** The four comment markers the P5 note left are rewritten to name `ADR-0198`: the `gate_deadline_secs` comment
+(the 240 h warrant and AC-039's correction, stated), the banner above `[breaker]`, the K comment and the two inline
+comments on `consecutive_platform_failures` and `expiry_secs`; and a comment naming `ADR-0198` stands directly above
+`[margins]`. `raw.count("NO RECORD")` reads 0 and `ADR-0198` occurs 8 times in each pack.
+`cards::shipped_rt57_scalars_carry_no_no_record_marker` asserts each of the five lines carries the name on itself or
+in the comment block directly above it, and the values (864000, 3, 600, 10 / 10).
+
 ### 8h.10 Gate expiry, fail-closed, and the two load-time guards (D21-42 21a, 21c)
 
 **The reachable classes.**
@@ -1362,6 +1556,35 @@ It also refuses any shipped card mode outside `{default, acceptEdits}`. The inst
 [measured: `CLAUDE_CODE_USE_POWERSHELL_TOOL` in the binary], which is a command channel of the same class as `Bash`.
 A union allowlist refuses it without naming a list that goes stale. `ac415_every_rule_id_has_a_rejecting_fixture`
 requires the row's fixture.
+
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **Built, all three.**
+- **The rows.** `bug-standard` carries 54 `[[gate_expiry]]` rows and `story` 56, in Record B decision 6's order (the
+  45 questions, the axes, `escalation`, the three minted kinds), each `action = "fail"` and each under a one-line
+  comment naming its kind of class (never a trailing comment on the header line, which the kernel's `toml_subset`
+  walker would have to accept). Checkpoint 8h (8)'s parser block, run as a read-only fragment with this block's
+  `MINTED_CLASSES` and `REC_B` literals, prints `SHIPPED_DATA_OK`; its synthetic controls (a `Bash` grant planted
+  in a scratch copy's `implementer.json`, and `story`'s `escalation` row dropped) each print `BAD`.
+- **The lint.** `run::lint_gate_expiry` (`crates/rk-cli/src/verbs/run.rs`) runs in `through_step_seven`, after the
+  facet registry is read and before `Resolved` is handed on, so `run` and `answer` both refuse with
+  `Exit::ConfigError` (and AC-172's one `reconcile_started` row) before any dispatch. Its reachable set is: every
+  catalog `question` value (`.redkiln/catalog/*.toml`, plus a `[trial]`'s extended activity); `unknown_facet:<root>`
+  for every facet ROOT a `require` row's predicate reads, parsed by the kernel's own `predicate::parse`; the same for
+  every DERIVED facet (R6's gate, so a pack registering `change` as derived reaches `unknown_facet:change` whatever
+  its rows read); `escalation`; and the three minted kinds through `MINTED_GATE_KINDS`, which is built from the three
+  constants and copies no spelling. The minted kinds are reachable in EVERY pack, the fail-closed reading: any lane
+  can land, drift at entry or reach verify. A row is admissible when its class is reachable or is
+  `unknown_facet:<registered facet>`; any other is refused as misspelt. A pack the kernel cannot parse is left to the
+  kernel's refusal a step later, so no second message is printed for it. Fixtures that reach a class now carry its
+  row, each by dated line: `pack-min`'s eight packs gain `escalation` and the three minted kinds;
+  `support::add_gate_expiry_row` appends one where a test makes its catalog reach a class (`probe.accept` in
+  `processes.rs` and `landing.rs`, `unknown_facet:change` in `change_deriver.rs`); and `landing.rs`'s
+  `escalate_on_expiry` re-declares the class's one `fail` row `escalate` instead of appending a first row.
+- **The doctor row.** `RK-D-CARD-GRANT` (`crates/rk-cli/src/doctor/rules.rs`, after `RK-D-CARD-TOOLS-ABSENT`, `error`)
+  refuses a card tool outside `GRANT_UNION` and a card `permission_mode` outside `SHIPPED_MODES`; a card with no mode
+  is the adapter's refusal, not this row's. Its rejecting fixture is `doctor/RK-D-CARD-GRANT/` (six cards: `Bash`,
+  `PowerShell`, `WebFetch`, `WebSearch`, `mcp__x__y`, and a `plan` mode), so
+  `doctor::ac415_every_rule_id_has_a_rejecting_fixture` is green over 39 ids. Checkpoint 7d's doctor FLOOR is a floor,
+  not an equality, and does not move.
 
 ### 8h.11 The two live probes — authored here, run at `s8j` after the fixture proofs
 
@@ -1497,8 +1720,9 @@ tree it created) with `git worktree prune --dry-run` asserted empty.
 
 **Deferred gate — the go-ahead, for the review packet.** Preconditions, each a STOP if unmet: (a) `tools/live-run.sh`
 exists with its `probe` mode (the launcher package); (b) `s8j` §8j.6 step 1's pin move is done (§8h.8); (c) §8h.6's
-`--settings` element is wired into `Binder::bind`/`dispatch` — BLOCKED at this build on RT-1's cap (§8h.6's dated
-note), so probes 0 and 1 refuse at their premise, costing nothing, until it is ruled; (d) the shipped packs carry
+`--settings` element is wired into `Binder::bind`/`dispatch` — ~~BLOCKED at this build on RT-1's cap (§8h.6's dated
+note), so probes 0 and 1 refuse at their premise, costing nothing, until it is ruled~~ *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* wired by
+file delivery per the 2026-10-02 ruling; (d) the shipped packs carry
 Record A's `[models]` table and role rows (the `cards::` package). From a plain terminal, never a Claude Code session
 (§8h.7), in this order, each on its own line of the operator's go-ahead:
 
@@ -1515,6 +1739,35 @@ sentinels each probe creates (`outside-read.txt` directly under `.redkiln/worktr
 directory outside the repository). The go-ahead line the operator writes, dated, in the ledger: *"GO-AHEAD: run `s8h`
 §8h.11 probe <0|1|2> as authored at <commit>; this spend is outside D21-105 item 2 (S-BIN only) and is authorised by
 this line, not by the AFK session."*
+
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* **The probes under file delivery.** Unmeasured until `s8j` (D21-105 item 2); each is owed to the
+probe named.
+- **The pre-dispatch premise** (probes 0 and 1, `settings_premise`): the `--settings` element of the argv
+  `ClaudeHarness::argv_for` assembles is an absolute path outside the worktree, in the live settings directory
+  `<repo>/.git/redkiln/child-settings/live-probes/` (the stand-in name: `argv_for` writes nothing), and the settings fit
+  the 2 MiB limit. **After each dispatch** (`settings_delivered`, probes 0, 1, 2 and `live_dispatch_probe`): the
+  record's `settings_file` names a file that exists outside the worktree, whose bytes hash to the recorded sha256;
+  `SETTINGS_FILE` and `SETTINGS_FILE_SHA256` are printed.
+- **Probe 2** asserts that the file-delivered settings took effect: the init's tools and mode (its existing checks) and
+  the auto-memory file set (unchanged). It now reads them as evidence that the file was honoured.
+- **Probe 1 gains an arm (built):** step 5 tells the child to Read the settings file itself, its path predicted before
+  the bind from the name's three parts (`settings_file_name(pid, next_settings_seq(), …)`) and checked against the
+  record after the dispatch (a miss is INCONCLUSIVE, printed as `SETTINGS_READ_AIMED_AT_THE_DELIVERED_FILE`). The read
+  must be denied: a `blockReadsOutsideWorkingDirectories` key in the retained stream is a HALT (containment finding),
+  and guard 3's channels must now name four denials, not three.
+- **Owed arms, authored as text here and NOT built:** a negative arm with a missing or unparsable `--settings` path,
+  where the CLI must fail closed (non-zero exit or an error), never drop the flag silently; and a size arm near
+  2 MiB. Each needs an argv the adapter refuses to build, so each is a `wrap` child at `s8j`, written there.
+- **Exploratory only, never a fence of record without a new record:** option (3)'s `[!...]` negated-class patterns
+  (only after probe 1 measures `[!...]` matching and Windows case-folding against a sibling sentinel) and 2.1.287's
+  `--restricted` flag.
+
+*(dated 2026-10-02, s8h build, package P8-launcher-checkpoint-edits-and-packet)* **Precondition (a) is met, and nothing was run.** `tools/live-run.sh` exists with its
+`probe` mode (§8h.7's dated note). Precondition (d) is met by the cards package. Preconditions (b) and (c) are as dated
+above: (b) is `s8j`'s pin move, and (c) is wired. The three go-ahead lines above, `live_dispatch_probe`'s
+(§8h.8 step 4), the fixtures and the go-ahead sentence citing D21-105 item 2 are copied verbatim into the review
+packet's `s8h` section (`D:/repos/redkiln-sev/afk-tools/sp/s8h/P8-review-packet-s8h.md`), together with §8h.8's freeze instruction. No probe ran: D21-105 item 2
+authorises no spend outside S-BIN.
 
 ### 8h.12 Red first — the named tests
 
@@ -1726,6 +1979,48 @@ regressions. They go red until the entries exist.
 `live::live_init_equality_probe`, and probe 0's `live::live_denial_channel_preprobe`, each
 `#[ignore = "PAID; run only as: tools/live-run.sh probe live::<its name>"]`.
 
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate)* **The launch tests, red then green, through D21-47's wrapper.**
+- `run::every_binary_spawn_withholds_or_supplies_the_launch_record`: red *"the real tree: 21 code lines construct a
+  `Command` over the `redkiln` binary; exactly one may, inside the helper"* (its six synthetic controls passed first);
+  green after the helper and the fold.
+- `run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn` (in process, `Startup::real()`, an `Env`
+  built explicitly): red before the check, `left: Transport`, `right: ConfigError` (the run reconciled and
+  dispatched). A second arm, added with the check, hands a record path that names no file.
+- `run::a_real_harness_run_with_a_launch_record_passes_the_launch_check` (`harness_binary` rewritten to
+  `env!("CARGO_BIN_EXE_rk-fixture-child-cli")`, `CLAUDE_CONFIG_DIR` at an empty trap): red against a check that refused
+  every invocation, *"a real-harness run with a launch record spawns the fixture child: left: 0 right: 1"*.
+- `answer::a_binary_answer_without_a_launch_record_refuses_before_any_row`: red before the check, `left: Some(0)`,
+  `right: Some(3)`.
+- `answer::a_binary_answer_with_a_launch_record_passes_the_launch_check`: red against an `answer`-only refusing check,
+  `left: Some(3)`, `right: Some(0)`.
+
+All five green together, then `rk-cli`'s suite whole (`lane_e2e`'s binary arm and every binary `answer` test
+included).
+
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **The twelve `cards::`, `schemas::`, `doctor::` and load-lint
+`run::` tests, red then green, through D21-47's wrapper (`nd.sh`).** Red, all twelve in one run before any data or
+code (`test result: FAILED. 1 passed; 11 failed`):
+- `cards::shipped_cards_are_the_least_privilege_table` *"architect: tools ["StructuredOutput"], want {…}"*,
+  *"permission_mode None, want "default""*, *"does not load through AuthoredCard::from_file: … no
+  `permission_mode`"*;
+- `cards::the_models_table_pins_the_three_full_ids` `left: {}`; `cards::shipped_role_rows_resolve_through_the_models_table`
+  *"architect: model None, want "opus""*; `cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class`
+  *"bug-standard: 0 rows; missing ["adr.accept", …]"*; `cards::shipped_rt57_scalars_carry_no_no_record_marker`
+  *"bug-standard still carries a `NO RECORD` marker"* (`left: 5`);
+- `doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set` and `…_a_mode_outside_the_shipped_pair`
+  *"RK-D-CARD-GRANT is not in RULES — no rule to run over RK-D-CARD-GRANT"*;
+- `schemas::bind_reads_the_schema_from_exported_by_name` *"ImplReport: the binder read the decoy file (§8h.4)"*;
+  `schemas::a_kind_absent_from_exported_refuses_at_bind` (after its anchor was corrected to the step's own line)
+  *"the run spawned the harness over a kind absent from EXPORTED"*, `left: 1`, `right: 0`;
+- `run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load` and
+  `run::a_gate_expiry_row_naming_no_reachable_class_is_refused` `left: Success`, `right: ConfigError`.
+
+`schemas::every_agent_output_kind_the_two_lanes_reach_is_exported` was green at its first run: P2 had registered the
+23 types before this test existed. Its red is instrument I5 (§8h.13): `Spec` removed from `EXPORTED` in the private
+worktree. Green: the twelve `... ok`, `test result: ok. 12 passed; 0 failed`; Checkpoint 8h (6)'s 22-name selection
+`test result: ok. 22 passed; 0 failed`, each `test <name> ... ok` line present; `rk-cli` whole 328 passed / 0 failed
+(316 + 12).
+
 ### 8h.13 Mutants — named, each run from Python in a throwaway worktree, restore verified
 
 Each mutant is applied by a Python script with an anchor assertion (golden constraint 7) in a
@@ -1845,6 +2140,75 @@ A process-static counter, rather than a per-runtime one, would not be killed by 
 runtimes in one test process. Production builds one `Runtime` per stage of each `run` process, and M10 is the counter held
 on it.
 
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate)* **M14, M18 and M26 KILLED, and D21-137's guards each
+killed**, from the Python driver `D:/repos/redkiln-sev/afk-tools/sp/s8h/P6-cli-launch-gate-mutants.py` (and its D6
+re-run, `…-mutants-d6.py`). Each ran in a private worktree (`target/wt-P6`: HEAD, the main checkout's tracked working
+diff and its one untracked fixture, `cargo build --workspace` so `rk-cli`'s fixture child exists), removed afterwards;
+the main checkout's `git diff HEAD` sha256 was equal before and after. Every cargo run went through D21-47's wrapper,
+after an unmutated control of every named test, and each file's sha256 was restored and verified.
+- M14 (`run::run`'s launch check deleted) killed `run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn`:
+  `left: Transport`, `right: ConfigError`. Two siblings were killed by the same test: `ClaudeHarnessFactory`'s
+  `builds_the_real_harness` made `false`, and the existence check reduced to an emptiness check (*"a launch record
+  naming no existing file refuses too"*).
+- M18 (`answer::run`'s check deleted) killed `answer::a_binary_answer_without_a_launch_record_refuses_before_any_row`:
+  `left: Some(0)`, `right: Some(3)`.
+- M26 (the helper's `env_remove` deleted) killed `run::every_binary_spawn_withholds_or_supplies_the_launch_record`:
+  *"the real tree: the helper's body does not `.env_remove` the launch record"*.
+- D21-137 (§8h.6), seventeen mutants, all killed: the JSON inlined again (D1: (a) and (g)); the recorded sha256 not
+  the bytes' (D2: (b) and the write test); the under-worktree comparison always false (D3), without case-folding
+  (D4) or without the `\\?\` strip (D5), each by (c); `create_new` made `create` + `truncate` (D6: it SURVIVED the
+  first run, because the read-only flag refused the overwrite on its own; the write test then gained a writable file
+  at the name and the re-run killed it, *"a writable file at the name is refused, never truncated"*); one name for
+  every dispatch (D7: (d)); no size cap (D8: (e)); an unset directory falling back (D9), no existence check (D10) and
+  no re-check at dispatch (D11), each by (f); the verbatim (D12), relative (D13) and `..` (D17) refusals dropped, each
+  by the relative-or-verbatim test; no read-only flag (D14: (b) and the write test); bind writing the file (D15: (g),
+  *"bind writes nothing … left: 1 right: 0"*); the record's `settings_file` dropped (D16: (b)).
+
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **M11, M12 and M13 KILLED**, from the Python driver
+`D:/repos/redkiln-sev/afk-tools/sp/s8h/P7-cli-binding-data-and-amendments-mutants.py`, in a private worktree
+(`target/wt-P7`: HEAD, the main checkout's tracked working diff and its untracked files, `cargo build --workspace`),
+removed afterwards; the main checkout's state sha256 (`git diff HEAD --binary` plus every untracked file) was equal
+before and after. Every cargo run went through D21-47's wrapper, after an unmutated control of all seven named tests
+(`... ok`, 7 passed); each mutant exited rc 101 with its named test `FAILED`, and each file's sha256 was restored and
+verified.
+- M11 (the lint's refusal skipped, `if false && !refusals.is_empty()`) killed
+  `run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load`: `left: Success`, `right: ConfigError`.
+- M12 (the grant row admits the `mcp__` prefix) killed
+  `doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set`: *"RK-D-CARD-GRANT did not name
+  `mcp__x__y` on `cards/mcp.json`"*.
+- M13 (`bind_one` reads `.redkiln/schemas/<kind>.json` again, falling back to `EXPORTED`) killed
+  `schemas::bind_reads_the_schema_from_exported_by_name`: *"ImplReport: the binder read the decoy file (§8h.4)"*.
+
+Five instrument checks, all KILLED: I1 (the Unmatched half alone disabled) and I2 (the misspelt-row half alone
+disabled), each by its own `run::` test; I3 (the mode half of `RK-D-CARD-GRANT` disabled) by
+`doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair`; I4 (an absent kind bound to a stand-in schema) by
+`schemas::a_kind_absent_from_exported_refuses_at_bind` (*"the run spawned the harness"*); I5 (`Spec` removed from
+`EXPORTED`) by `schemas::every_agent_output_kind_the_two_lanes_reach_is_exported` (*"1 lane-reached kind(s) have no
+EXPORTED type … ["Spec"]"*), that test's red.
+
+*(dated 2026-10-02, s8h build, package P8-launcher-checkpoint-edits-and-packet)* **M15, M19, M20, M21, M22 and M27 KILLED**, from the Python driver
+`D:/repos/redkiln-sev/afk-tools/sp/s8h/P8-launcher-mutants.py`.
+- **How each mutant was run.** Each was applied to a COPY of the script: the private worktree `target/wt-P8`'s
+  `tools/live-run.sh`, whose sha256 was asserted equal to the main checkout's before the run. Each was restored and
+  its sha256 verified after it ran. The main checkout's launcher was unchanged at the end, sha256 `329a7db5…`.
+- **The control.** Every mutant ran Checkpoint 8h (10), extracted alone, under D21-47's wrapper. The unmutated
+  baseline ran first: rc 0, and the sentinel was reached. Each mutant's run then exited rc 1, and its named control
+  was the first `FAIL`:
+  - **M15** (step 2's `CLAUDE_CODE_*` arm deleted): *"FAIL: the launcher accepted CLAUDE_CODE_ENTRYPOINT=cli"*. That
+    name is not on the denylist, so step 3 does not mask the mutant. `CLAUDE_CODE_USE_BEDROCK` would have been
+    masked.
+  - **M19** (`wrap` given the pin comparison): *"FAIL: --check wrap refused a CLI unequal to the adapter pin …"*.
+  - **M20** (`answer`'s comparison deleted): *"FAIL: --check answer accepted a CLI unequal to the pin …"*.
+  - **M21** (`${CLAUDE_CONFIG_DIR:-…}`): *"FAIL: --check did not print 'CLAUDE_CONFIG_DIR=…'"*. A per-arm reading in
+    a scratch repository also showed the `wrap` child receiving `CHILD_CFG=D:/rk-inherited-elsewhere`. Unmutated,
+    the child receives the scratch home's directory.
+  - **M22** (step 9's comparison made `if false`): *"FAIL: a wrap whose child moved the CLI exited 0 — step 9 did
+    not compare (M22)"*.
+  - **M27** (the screen's call deleted): *"FAIL: --check wrap accepted './target/debug/redkiln run rk-x' …"*. A
+    per-arm reading found all three `WRAP_ARGV` argvs ACCEPTED under the mutant, and each REFUSED unmutated.
+- **Records and side effects.** No launch record was written under this repository. The scratch repositories were
+  removed.
+
 ### 8h.14 What this stage may not do, what it makes provisional, and what it hands on
 
 - It may not dispatch, run a `live::` test, move the pin, or edit the operator's user settings.
@@ -1900,6 +2264,19 @@ plus two edits in `s8a` Checkpoint 8a (11):
   `env -u` control and trap already feed, and not the cards' lack of a mode.
 
 8a is listed as provisional in this stage's tracker row, and `s8j` re-runs it whole.
+
+*(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **Done, in this stage's work change.** `s8a` Checkpoint 8a (11),
+`s8c` Checkpoint 8c (15) and `s8d` Checkpoint 8d (12a) each carry a dated comment and, in place of the card-mode guard
+(whose replaced lines are quoted in the comment): an assertion that all eight shipped cards carry `permission_mode`
+(`grep -l '"permission_mode"'` lists exactly eight), and
+`run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn` run by name through `nodispatch`, asserting
+its `... ok` line and `1 passed; 0 failed`, followed by `nd_check`. Each stays inside its block's non-nested branch;
+8a's gains a synthetic control (a card without a mode is not listed), 8c's keeps its planted-mode control, and 8d's
+fixture-child half stands. The three amended fragments, extracted from their own bytes and run read-only under the
+shared wrapper, printed `AMENDED 8a OK`, `AMENDED 8c OK`, `AMENDED 8d OK`; the all-eight assertion refuses a
+scratch copy with one card's mode removed (7 listed). `s8a`'s two prose statements of the old premise carry dated
+strikes. 8d-ii's and 8e's stops are NOT amended (the table above; `s8j`'s A10): both sit in non-nested branches, so
+Checkpoint 8h (13)'s nested replays do not reach them.
 
 *Final consistency pass 2026-09-24:* **the same amendment reaches Checkpoints 8c (15) and 8d (12a)**, in the same
 commit, because the same cards falsify the same premise there (the table above). In each, the card-mode guard is
@@ -1994,6 +2371,23 @@ Each re-run checkpoint carries its own ids the same way, so a re-runner supplies
 unset. `BASE_8G` in (12) is edited at stage open (§8h.0 item 8). Budget hours: (13) runs six checkpoints whole, unless
 `RK_CP_NESTED=1` is set, in which case it runs none (D21-46). The block needs `rustc` on PATH for the shared wrapper's
 compiled fake `claude`, which cargo's toolchain provides.
+
+*(dated 2026-10-02, s8h build, package P8-launcher-checkpoint-edits-and-packet)* **The literal inputs, confirmed, and no FLIP_PENDING form.**
+- **The inputs are confirmed to have landed as dated literals.** These are:
+  - `REC_A=0197` and `REC_B=0198`;
+  - `MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"`;
+  - `A_SUPERSEDES` and `TOKENS_APPETITE`, as drafted;
+  - in (12), `BASE_8G=1337` with `FLOOR` at 1337 + 54 + 9.
+- **(2) needs no FLIP_PENDING form.** It asserts `status: proposed` for Record A and `status: (proposed|accepted)` for
+  Record B. No line of the block asserts `status: accepted` for this stage's own records, so the FLIP_PENDING form
+  (Checkpoint 8f (2), dated 2026-09-29) is not needed and is not added.
+- **(10) passed in isolation** (§8h.7's dated note).
+- **The replayed checkpoints' guard lines.** The read-only, context-free single-line guards of the checkpoints that
+  (13) replays (8g, 5, 7b, 7b-ii, 7d and 8b) were run one by one on the main checkout, from
+  `D:/repos/redkiln-sev/afk-tools/sp/s8h/P8-readonly-guards.py`. That script's synthetic red control fired first.
+  - 65 lines ran green and 0 ran red.
+  - 314 lines that read a variable set elsewhere in their block were not run alone. They run in the formal replays.
+- **No new `[[bin]]` was added**, so Checkpoint 7d's manifest loop needs no amendment.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -2125,6 +2519,8 @@ sel rk-adapter-claude 31 command::permission_mode_spelling_rows_are_listed_by_th
 sel rk-types 10 findings::severity_is_a_required_member_typed_by_the_11c_vocabulary findings::a_severity_outside_the_11c_vocabulary_is_refused root_cause::discriminating_test_is_a_required_member dispatch_record::observed_model_is_a_typed_member_absent_before_init schema_snapshot::schema_snapshot schema_no_oneof::no_oneof_at_any_node schema_caps::union_and_optional_caps dispatch_record::ac360_dispatch_record_carries_the_usage_fields judgement_registry::ac133_every_exported_enum_is_registered judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails
 sel rk-kernel 9 quality_block::a_severity_row_reads_the_typed_member_over_a_non_empty_list envelope::dispatch_cap_is_declared_never_defaulted envelope::the_dispatch_at_the_cap_proceeds envelope::the_dispatch_past_the_cap_is_refused_with_its_class envelope::the_dispatch_count_survives_a_second_process envelope::token_appetite_past_the_appetite_refuses_the_next_dispatch envelope::a_dispatch_with_no_usage_still_counts_against_the_cap envelope::ac029_n_is_declared_never_defaulted conformance::shipped_pack_loads
 sel rk-cli 22 run::every_binary_spawn_withholds_or_supplies_the_launch_record cards::shipped_cards_are_the_least_privilege_table cards::shipped_role_rows_resolve_through_the_models_table cards::the_models_table_pins_the_three_full_ids cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class cards::shipped_rt57_scalars_carry_no_no_record_marker schemas::every_agent_output_kind_the_two_lanes_reach_is_exported schemas::bind_reads_the_schema_from_exported_by_name schemas::a_kind_absent_from_exported_refuses_at_bind doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load run::a_gate_expiry_row_naming_no_reachable_class_is_refused run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn run::a_real_harness_run_with_a_launch_record_passes_the_launch_check answer::a_binary_answer_without_a_launch_record_refuses_before_any_row answer::a_binary_answer_with_a_launch_record_passes_the_launch_check exit::an_envelope_refusal_leaves_through_overage doctor::ac415_every_rule_id_has_a_rejecting_fixture exit::ac438_exit_table_snapshot exit::ac438_step_error_mapping_is_exhaustive surface::ac400_help_snapshot_every_verb
+# *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* The nine D21-137 tests, an exact count (> 0: a filter that matches nothing is a green).
+sel rk-adapter-claude 9 command::a_five_thousand_sibling_chain_assembles_under_the_cap dispatch::the_settings_file_is_the_json_and_its_sha256_is_recorded command::a_settings_dir_under_the_worktree_is_refused dispatch::two_dispatches_write_two_distinct_settings_files command::settings_over_two_mib_are_refused_before_spawn command::a_missing_settings_dir_is_refused binder::binds_over_temp_and_target_tmp_worktrees_succeed_and_write_nothing command::a_relative_or_verbatim_settings_dir_is_refused command::a_settings_file_write_failure_is_refused_and_overwrites_nothing
 nd_check "(3)-(6) named tests" || exit 1
 
 # ---- (7) THE TWO PROBES EXIST, COMPILE UNDER `live`, AND ARE IGNORED — LISTED, NEVER RUN (`--list` runs nothing).
@@ -2291,6 +2687,13 @@ printf 'let a = "--setting-sources";\n// "--setting-sources" in prose\n' > "$ctl
 [ "$(codehits 'REDKILN_LAUNCH_RECORD' crates/rk-cli/src)" -ge 1 ] || { echo "FAIL: rk-cli names no REDKILN_LAUNCH_RECORD on a code line"; exit 1; }
 [ "$(codehits 'model_belongs_to_tier' crates/rk-adapter-claude/src crates/rk-cli/src)" -eq 0 ] || { echo "FAIL: the segment-match adoption survives on a code line (RT-27 is settled by equality)"; exit 1; }
 [ "$(codehits 'join\("schemas"\)' crates/rk-cli/src)" -eq 0 ] || { echo "FAIL: rk-cli still reads a schemas directory (§8h.4)"; exit 1; }
+# *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* No `settings: None` on the non-test bind and dispatch paths, and the
+# file delivery present at both (code lines only: a `settings: None` in a comment must neither fail nor pass this).
+printf 'settings: None,\n// settings: None,\n' > "$ctl/s.rs"
+[ "$(codehits 'settings: None' "$ctl/s.rs")" -eq 1 ] || { echo "FAIL: CONTROL — the code-line filter did not give exactly one hit on a synthetic settings: None pair"; exit 1; }
+[ "$(codehits 'settings: None' crates/rk-adapter-claude/src/binder.rs crates/rk-adapter-claude/src/lib.rs)" -eq 0 ] || { echo "FAIL: a non-test bind or dispatch path passes settings: None — the child would run without its settings (§8h.6; D21-137)"; exit 1; }
+[ "$(codehits 'settings: Some\(SettingsArg \{' crates/rk-adapter-claude/src/binder.rs)" -eq 1 ] || { echo "FAIL: Binder::bind does not assemble with the settings file (§8h.6; D21-137)"; exit 1; }
+[ "$(codehits 'settings: Some\(settings\)' crates/rk-adapter-claude/src/lib.rs)" -eq 1 ] && [ "$(codehits 'write_settings_file\(&settings_path, &settings\)' crates/rk-adapter-claude/src/lib.rs)" -eq 1 ] || { echo "FAIL: dispatch does not assemble with, and write, the settings file (§8h.6; D21-137)"; exit 1; }
 # D21-48 X12 (2026-09-24): the argv spelling table is declared on a code line in its one stated form, and every --help
 # capture parses, lists acceptEdits and a spelling of the card's `default`, and has its row (§8h.2). Each reader is
 # proved on a synthetic input first.
@@ -2511,8 +2914,10 @@ nd_check "(12) fmt, clippy and the whole suite" || exit 1
 # 1171 + 54, before s8c 78, s8d 62, s8d-ii 50 and s8f 85.)
 # *(dated 2026-10-02, s8h build, package P1-records)* BASE_8G 1189 -> 1337, Checkpoint 8g's RECORDED count (D21-129:
 # 1337 passed / 0 failed / 9 ignored over 44 at 4777941), so FLOOR = 1337 + 54 = 1391.
+# *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* FLOOR 1391 -> 1400: D21-137 adds nine tests beyond §8h.12's 54 (§8h.6's dated
+# note), so FLOOR = 1337 + 54 + 9. The floor is raised, never lowered.
 BASE_8G=1337
-FLOOR=$((BASE_8G + 54))
+FLOOR=$((BASE_8G + 54 + 9))
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

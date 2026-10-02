@@ -121,6 +121,12 @@ impl HarnessFactory for ScriptedFactory {
         self.builds.fetch_add(1, Ordering::SeqCst);
         Ok(Arc::clone(&self.harness) as Arc<dyn Harness>)
     }
+
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate.)* A scripted `FakeHarness`: not
+    /// subject to the launch check (`s8h` §8h.7).
+    fn builds_the_real_harness(&self) -> bool {
+        false
+    }
 }
 
 /// `implement`'s one dispatch (`emit-report`, `value:ImplReport`).
@@ -184,7 +190,9 @@ pub(crate) fn answer_item(root: &Path, item: &str, option: &str) -> Exit {
         explain_sufficed: rk_cli::cli::YesNo::Yes,
         toml_opened: rk_cli::cli::YesNo::No,
     };
-    rk_cli::verbs::answer::run(&cli, &args, &support::clean_env(), Startup::real())
+    // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; s8h §8h.7.)* The fixture launch
+    // record, explicitly: `answer::run` is bound by the launch check.
+    rk_cli::verbs::answer::run(&cli, &args, &support::launched_env(), Startup::real())
         .unwrap_or_else(|halt| panic!("`answer {item}` halted: {halt:?}"))
 }
 
@@ -877,11 +885,6 @@ impl Rerun {
 
 /// Spawn `redkiln -C <root> run <item>` over the fixture child replaying the lane's implement
 /// transcript.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the terminal read's stdout is read AS A PROCESS: an in-process run's stdout is the \
-              test harness's captured stream"
-)]
 fn spawn_run_replaying(root: &Path, item: &str) -> std::process::Output {
     let frames = support::pack_min_dir()
         .join("lane")
@@ -893,7 +896,7 @@ fn spawn_run_replaying(root: &Path, item: &str) -> std::process::Output {
     );
     let markers = root.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C")
         .arg(root)
         .arg("run")

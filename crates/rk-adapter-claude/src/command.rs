@@ -376,6 +376,207 @@ impl ChildSettings {
     }
 }
 
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY.)* The
+/// CLI's settings-file limit, `Kp=2097152` [found by string search of the 2.1.287 binary, not
+/// executed]. Settings over it are refused before any spawn ([`ConfigError::SettingsTooLarge`]).
+pub const SETTINGS_FILE_CAP_BYTES: usize = 2_097_152;
+
+/// The settings file's name prefix (D21-137): `child-settings-<pid>-<seq>-<sha256 prefix>.json`.
+const SETTINGS_FILE_PREFIX: &str = "child-settings-";
+
+/// The process-wide dispatch sequence a settings file's name carries, so two dispatches in one
+/// process never share a name (D21-137: `create_new` with a per-dispatch unique name).
+static SETTINGS_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The sequence the next per-dispatch settings file in this process will carry — read by the live
+/// probe 1, which predicts the file it tells the child to Read (D21-137 item 8). Spawns and writes
+/// nothing.
+#[doc(hidden)]
+#[must_use]
+pub fn next_settings_seq() -> u64 {
+    SETTINGS_SEQ.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The settings file's name for `pid`, `seq` and `settings` — every field fixed-width, so every
+/// name is as long as [`settings_stand_in`]'s.
+#[must_use]
+pub fn settings_file_name(pid: u32, seq: u64, settings: &ChildSettings) -> String {
+    let sha = rk_types::digest::sha256(settings.json().as_bytes());
+    format!(
+        "{SETTINGS_FILE_PREFIX}{pid:010}-{seq:020}-{}.json",
+        &sha.as_str()[..16]
+    )
+}
+
+/// The stand-in path bind measures the argv with (D21-137 item 4): `dir` joined with a name of the
+/// dispatch form at its fixed maximum length. Nothing is written there.
+#[must_use]
+pub fn settings_stand_in(dir: &Path) -> PathBuf {
+    dir.join(format!(
+        "{SETTINGS_FILE_PREFIX}{:010}-{:020}-{}.json",
+        u32::MAX,
+        u64::MAX,
+        "f".repeat(16)
+    ))
+}
+
+/// The settings directory, checked (D21-137 item 2): present as an input, absolute and not
+/// verbatim, carrying no `.` or `..`, outside the worktree, and an existing directory — in that
+/// order, so a directory under the worktree is refused as such whether or not it exists.
+///
+/// # Errors
+/// [`ConfigError::SettingsDirUnset`]; [`ConfigError::SettingsPathRefused`] (not UTF-8, verbatim,
+/// relative, or carrying `.`/`..`); [`ConfigError::SettingsDirUnderWorktree`];
+/// [`ConfigError::SettingsDirMissing`].
+pub fn check_settings_dir<'d>(
+    dir: Option<&'d Path>,
+    worktree: &Path,
+) -> Result<&'d Path, ConfigError> {
+    use std::path::Component;
+    let dir = dir.ok_or(ConfigError::SettingsDirUnset)?;
+    let refuse = |why: &'static str| ConfigError::SettingsPathRefused {
+        path: dir.to_path_buf(),
+        why,
+    };
+    let text = dir
+        .to_str()
+        .ok_or_else(|| refuse("the path is not valid UTF-8"))?;
+    if text.starts_with(r"\\?\") || text.starts_with("//?/") {
+        return Err(refuse(
+            "the path is verbatim (`\\\\?\\`); the plain absolute form is required",
+        ));
+    }
+    if !dir.is_absolute() {
+        return Err(refuse("the path is not absolute"));
+    }
+    if dir
+        .components()
+        .any(|c| matches!(c, Component::CurDir | Component::ParentDir))
+    {
+        return Err(refuse("the path carries `.` or `..`"));
+    }
+    if is_at_or_under(dir, worktree) {
+        return Err(ConfigError::SettingsDirUnderWorktree {
+            dir: dir.to_path_buf(),
+            worktree: worktree.to_path_buf(),
+        });
+    }
+    if !dir.is_dir() {
+        return Err(ConfigError::SettingsDirMissing {
+            dir: dir.to_path_buf(),
+        });
+    }
+    Ok(dir)
+}
+
+/// A path's comparison form (D21-137 item 2): the verbatim prefix stripped, `\` read as `/`, no
+/// trailing separator, and on Windows ASCII-lower-cased, as the filesystem folds case.
+fn comparison_form(path: &Path) -> String {
+    let text = path.to_string_lossy();
+    let text = text
+        .strip_prefix(r"\\?\UNC\")
+        .map(|rest| format!(r"\\{rest}"))
+        .unwrap_or_else(|| {
+            text.strip_prefix(r"\\?\")
+                .or_else(|| text.strip_prefix("//?/"))
+                .unwrap_or(&text)
+                .to_owned()
+        });
+    let text = text.replace('\\', "/");
+    let text = text.trim_end_matches('/').to_owned();
+    if cfg!(windows) {
+        text.to_ascii_lowercase()
+    } else {
+        text
+    }
+}
+
+/// Is `dir` the worktree itself or anything under it, compared in [`comparison_form`]?
+fn is_at_or_under(dir: &Path, worktree: &Path) -> bool {
+    let dir = comparison_form(dir);
+    let worktree = comparison_form(worktree);
+    dir == worktree || dir.starts_with(&format!("{worktree}/"))
+}
+
+/// The settings' size against [`SETTINGS_FILE_CAP_BYTES`]: over it is refused.
+///
+/// # Errors
+/// [`ConfigError::SettingsTooLarge`] naming the measure and the limit.
+pub fn check_settings_size(settings: &ChildSettings) -> Result<(), ConfigError> {
+    let bytes = settings.json().len();
+    if bytes > SETTINGS_FILE_CAP_BYTES {
+        return Err(ConfigError::SettingsTooLarge {
+            bytes,
+            cap: SETTINGS_FILE_CAP_BYTES,
+        });
+    }
+    Ok(())
+}
+
+/// The `--settings` element for `path`: its UTF-8 text, refused when it has none.
+fn settings_path_element(path: &Path) -> Result<String, ConfigError> {
+    path.to_str()
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| ConfigError::SettingsPathRefused {
+            path: path.to_path_buf(),
+            why: "the path is not valid UTF-8",
+        })
+}
+
+/// The path of the next per-dispatch settings file in `dir`, after the directory checks.
+///
+/// # Errors
+/// [`check_settings_dir`]'s.
+pub fn next_settings_path(
+    dir: Option<&Path>,
+    worktree: &Path,
+    settings: &ChildSettings,
+) -> Result<PathBuf, ConfigError> {
+    let dir = check_settings_dir(dir, worktree)?;
+    let seq = SETTINGS_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    Ok(dir.join(settings_file_name(std::process::id(), seq, settings)))
+}
+
+/// Write `settings` to `path` with `create_new`, mark it read-only, and return what was delivered:
+/// the path as the `--settings` element names it and the SHA-256 of the bytes written, which are
+/// exactly [`ChildSettings::json`] (D21-137 item 3). The file is never deleted here: it is kept
+/// with the run's evidence.
+///
+/// # Errors
+/// [`ConfigError::SettingsTooLarge`]; [`ConfigError::SettingsPathRefused`] (not UTF-8);
+/// [`ConfigError::SettingsWrite`] for a name that already exists (`create_new`: nothing is ever
+/// overwritten) or any other I/O failure. No caller spawns without the file.
+pub fn write_settings_file(
+    path: &Path,
+    settings: &ChildSettings,
+) -> Result<rk_types::activity::SettingsFile, ConfigError> {
+    use std::io::Write as _;
+    check_settings_size(settings)?;
+    let element = settings_path_element(path)?;
+    let failed = |e: &std::io::Error| ConfigError::SettingsWrite {
+        path: path.to_path_buf(),
+        detail: e.to_string(),
+    };
+    let bytes = settings.json().as_bytes();
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|e| failed(&e))?;
+    file.write_all(bytes).map_err(|e| failed(&e))?;
+    file.sync_all().map_err(|e| failed(&e))?;
+    drop(file);
+    let mut perms = std::fs::metadata(path)
+        .map_err(|e| failed(&e))?
+        .permissions();
+    perms.set_readonly(true);
+    std::fs::set_permissions(path, perms).map_err(|e| failed(&e))?;
+    Ok(rk_types::activity::SettingsFile {
+        path: element,
+        sha256: rk_types::digest::sha256(bytes),
+    })
+}
+
 /// What one assembly takes.
 ///
 /// The bound card, the ONE output schema, adoption, the strict tools a spec would add (always
@@ -395,7 +596,22 @@ pub struct CommandSpec<'a> {
     pub user_message: &'a str,
     /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; `s8h` §8h.6.)* The child's
     /// confinement settings, the `--settings` element, assembled from the spec's worktree.
-    pub settings: Option<&'a ChildSettings>,
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY.)*
+    /// The settings AND the path of the file that carries them: the element is the path, and the
+    /// settings are what the file's bytes are (checked against [`SETTINGS_FILE_CAP_BYTES`] here).
+    pub settings: Option<SettingsArg<'a>>,
+}
+
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY;
+/// ADR-0197 decision 9 as amended, proposed.)* The `--settings` element's two halves: the
+/// settings the file carries and the absolute path the element names. At bind the path is
+/// [`settings_stand_in`] (nothing is written); at dispatch it is the real per-dispatch file.
+#[derive(Debug, Clone, Copy)]
+pub struct SettingsArg<'a> {
+    /// What the file's bytes are: exactly [`ChildSettings::json`].
+    pub settings: &'a ChildSettings,
+    /// The file the `--settings` element names.
+    pub path: &'a Path,
 }
 
 /// What the builder produced: the program, the argv (the golden vector), the stdin payload, and
@@ -519,9 +735,13 @@ pub fn assemble(config: &Config, spec: &CommandSpec<'_>) -> Result<Assembled, Co
     argv.push("--setting-sources".to_owned());
     argv.push(String::new());
     // The child's confinement, one element, assembled from the spec's worktree (§8h.6).
-    if let Some(settings) = spec.settings {
+    // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY.)*
+    // The element is the settings FILE's path, never the JSON: the CLI reads the file. The
+    // settings are checked against the CLI's file limit here, on the path bind and dispatch share.
+    if let Some(arg) = spec.settings {
+        check_settings_size(arg.settings)?;
         argv.push("--settings".to_owned());
-        argv.push(settings.json().to_owned());
+        argv.push(settings_path_element(arg.path)?);
     }
     // AC-383 / AC-211: the delivery route, LAST under static (h1-sysprompt's position).
     let stdin = match card.cache_profile {

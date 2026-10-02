@@ -215,6 +215,14 @@ pub fn managed_exclusion_refusal(
 /// # Errors
 /// [`Halt::PoisonedLock`] from the store acquisition. Every other refusal is a value.
 pub fn run(cli: &Cli, args: &AnswerArgs, env: &Env, startup: Startup<'_>) -> Result<Exit, Halt> {
+    // ---- THE LAUNCH CHECK (`s8h` §8h.7; D21-46). *(dated 2026-10-02, s8h build, package
+    // P6-cli-launch-gate.)* The binary's `answer` spends a gate answer (ADR-0123) inside a real
+    // run's launched window, so it is entered only through `tools/live-run.sh answer`: without a
+    // launch record it refuses here, before `run::through_step_seven`, so before any row. Its
+    // in-process twin `run_with` is not subject.
+    if let Err(exit) = crate::verbs::launch_check(env, "answer") {
+        return Ok(exit);
+    }
     // Steps (1)-(6). `answer` takes no `--lane`: the lane is derived from the item record exactly
     // as `run` derives it, because the pack is what declares the gate's expiry action.
     let run_args = RunArgs {

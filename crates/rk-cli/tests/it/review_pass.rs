@@ -1094,17 +1094,13 @@ fn a_shipped_lane_reaching_review_without_a_slice_is_refused_at_entry() {
     );
 }
 
-#[expect(
-    clippy::disallowed_types,
-    reason = "the refusal's NAME is on stderr, which an in-process run cannot capture"
-)]
 fn spawn_run(root: &std::path::Path, item: &str) -> std::process::Output {
     let frames = crate::support::pack_min_dir()
         .join("lane")
         .join("implement-frames.jsonl");
     let markers = root.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C")
         .arg(root)
         .arg("run")

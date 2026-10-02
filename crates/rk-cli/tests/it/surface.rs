@@ -251,12 +251,7 @@ fn ac400_denylist_absent_from_parser_tree() {
 /// item also exits non-zero, and that is the implementation this test exists to refuse.
 #[test]
 fn ac400_resume_refused_as_unknown_argument() {
-    #[expect(
-        clippy::disallowed_types,
-        reason = "the process-level refusal AC-400's Verified-by names: the binary is spawned, not \
-                  the parser called (rk-git's git_exec.rs is the house form for this attribute)"
-    )]
-    let mut cmd = std::process::Command::new(env!("CARGO_BIN_EXE_redkiln"));
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.args(["run", "an-item", "--resume"]);
     let out = crate::support::output_bounded(&mut cmd);
 

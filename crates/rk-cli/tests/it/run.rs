@@ -58,7 +58,7 @@ fn run_command_in_mode(
 ) -> std::process::Command {
     let markers = repo.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C").arg(repo).arg("run").arg(item);
     if let Some(lane) = lane {
         cmd.arg("--lane").arg(lane);
@@ -899,11 +899,6 @@ struct ExitCase {
 /// EMPTY directory. The names are listed here and compared against what is on disk, in both
 /// directions.
 #[test]
-#[expect(
-    clippy::disallowed_types,
-    reason = "every row of this table is driven AS A PROCESS; that is what makes it the BINARY \
-              arm (s7d §7d.4)"
-)]
 fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
     const CASES: [&str; 10] = [
         "cancelled-timeout",
@@ -1005,7 +1000,7 @@ fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
 
         let markers = root.join(".rk-markers");
         std::fs::create_dir_all(&markers).expect("the marker directory is created");
-        let mut cmd = std::process::Command::new(crate::redkiln());
+        let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
         cmd.arg("-C").arg(root);
         for arg in &case.args {
             cmd.arg(arg);
@@ -1372,4 +1367,523 @@ fn no_cli_flag_skips_the_entry_reconcile() {
         offending.is_empty(),
         "an argument names a way around the entry's reconcile (AC-126): {offending:?}"
     );
+}
+
+// ------------------------------------------------------------ s8h §8h.7: the launch record's lint
+//
+// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.7; D21-47: "Launch-gate
+// tests build their `Env` explicitly, enforced by a lint".)*
+
+/// The arguments a `Command` constructor code line under `tests/it` may carry that do NOT spawn
+/// the `redkiln` binary: `support.rs`'s process-tree tools and its fixture child. Any other
+/// argument is refused by name, so a `redkiln` spawn cannot hide behind a variable.
+const NON_REDKILN_PROGRAMS: &[&str] = &["\"taskkill\"", "\"kill\"", "\"tasklist\"", "&child"];
+
+/// The ONE helper every `redkiln` spawn under `tests/it` goes through (`main.rs`).
+const SPAWN_HELPER: &str = "pub fn redkiln_command(";
+
+/// The constructor the lint counts, spelt in two halves so this file's own code lines never carry
+/// it (a lint satisfied, or broken, by its own text is the failure the code-line rule exists for).
+const NEW: &str = concat!("Command", "::new(");
+
+/// The `assert_cmd` spawn the lint refuses outright, spelt the same way.
+const CARGO_BIN: &str = concat!("cargo", "_bin(");
+
+/// The lint over `files` (`(name, text)` pairs): exactly one code line constructs a `Command` over
+/// the `redkiln` binary; it is `main.rs`'s, inside [`SPAWN_HELPER`]'s body; and that body removes
+/// `REDKILN_LAUNCH_RECORD` before it sets anything. `Ok` names the one site.
+fn launch_record_lint(files: &[(String, String)]) -> Result<String, String> {
+    let mut sites: Vec<(String, usize, String)> = Vec::new();
+    for (name, text) in files {
+        for (n, line) in crate::code_lines(text) {
+            if line.contains(CARGO_BIN) {
+                return Err(format!(
+                    "{name}:{n}: `{CARGO_BIN}` spawns a binary outside the helper: {}",
+                    line.trim()
+                ));
+            }
+            let Some(at) = line.find(NEW) else {
+                continue;
+            };
+            let arg = line[at + NEW.len()..].trim_start();
+            if arg.contains("redkiln") {
+                sites.push((name.clone(), n, line.trim().to_owned()));
+            } else if !NON_REDKILN_PROGRAMS.iter().any(|p| arg.starts_with(p)) {
+                return Err(format!(
+                    "{name}:{n}: a `{NEW}` whose program is not a known non-`redkiln` one: {}",
+                    line.trim()
+                ));
+            }
+        }
+    }
+    let [(name, n, line)] = sites.as_slice() else {
+        return Err(format!(
+            "{} code lines construct a `Command` over the `redkiln` binary; exactly one may, inside \
+             the helper: {sites:?}",
+            sites.len()
+        ));
+    };
+    let main = files
+        .iter()
+        .find(|(f, _)| f == "main.rs")
+        .map(|(_, t)| t.as_str())
+        .ok_or("no main.rs among the scanned files")?;
+    let lines: Vec<&str> = main.lines().collect();
+    let start = lines
+        .iter()
+        .position(|l| l.contains(SPAWN_HELPER))
+        .ok_or("main.rs declares no `pub fn redkiln_command(`")?;
+    let end = lines[start..]
+        .iter()
+        .position(|l| *l == "}")
+        .map(|i| start + i)
+        .ok_or("the helper's body never closes at column 0")?;
+    if name != "main.rs" || *n <= start + 1 || *n > end + 1 {
+        return Err(format!(
+            "{name}:{n}: the one `redkiln` `Command` is not inside the helper (main.rs lines {}-{}): \
+             {line}",
+            start + 1,
+            end + 1
+        ));
+    }
+    let body: Vec<(usize, String)> = crate::code_lines(&lines[start..=end].join("\n"));
+    let removed = body
+        .iter()
+        .find(|(_, l)| l.contains(".env_remove(") && l.contains("LAUNCH_RECORD"))
+        .map(|(i, _)| *i)
+        .ok_or("the helper's body does not `.env_remove` the launch record")?;
+    if let Some((set, _)) = body
+        .iter()
+        .find(|(_, l)| l.contains(".env(") && l.contains("LAUNCH_RECORD"))
+        && *set < removed
+    {
+        return Err("the helper sets the launch record before it removes it".to_owned());
+    }
+    Ok(format!("{name}:{n}"))
+}
+
+/// **D21-47's lint (§8h.7): every `redkiln` spawn under `tests/it` withholds or supplies the launch
+/// record, and none inherits one.** Exactly one code line constructs a `Command` over the binary,
+/// inside `main.rs`'s `redkiln_command`, whose body calls `.env_remove(LAUNCH_RECORD)` and sets the
+/// variable only for the explicit fixture record. Code lines only: a constructor in a comment is
+/// neither a site nor an excuse. Each rule is proved on a synthetic tree first (a conforming tree
+/// passes; a second site, a helper without the removal, a helper that sets before it removes, the
+/// one site outside the helper, an indirection through a variable, and no site at all are each
+/// refused), then the real tree is read, and both arms of the helper are asserted used (a PREMISE:
+/// a helper nothing calls with the fixture would leave the binary-level gate unexercised).
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, before the helper): *"the real tree: 21 code
+/// lines construct a `Command` over the `redkiln` binary; exactly one may, inside the helper"*.
+#[test]
+fn every_binary_spawn_withholds_or_supplies_the_launch_record() {
+    let helper = [
+        "pub fn redkiln() -> &'static str {",
+        "    env!(\"CARGO_BIN_EXE_redkiln\")",
+        "}",
+        "pub fn redkiln_command(launch: Launch) -> std::process::Command {",
+        &format!("    let mut cmd = std::process::{NEW}redkiln());"),
+        "    cmd.env_remove(rk_cli::env::LAUNCH_RECORD);",
+        "    if launch == Launch::Fixture {",
+        "        cmd.env(rk_cli::env::LAUNCH_RECORD, fixture_launch_record());",
+        "    }",
+        "    cmd",
+        "}",
+    ]
+    .join("\n");
+    let caller = [
+        "fn spawn() {",
+        "    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);",
+        &format!("    // let c = std::process::{NEW}crate::redkiln());"),
+        &format!("    let _ = std::process::{NEW}\"taskkill\");"),
+        "}",
+    ]
+    .join("\n");
+    let site = format!("fn x() {{ let c = std::process::{NEW}crate::redkiln()); }}");
+    let siteless = helper.replace(
+        &format!("std::process::{NEW}redkiln())"),
+        "std::process::Command::default()",
+    );
+    let removal = "    cmd.env_remove(rk_cli::env::LAUNCH_RECORD);";
+    let tree = |main: &str, other: &str| {
+        vec![
+            ("main.rs".to_owned(), main.to_owned()),
+            ("other.rs".to_owned(), other.to_owned()),
+        ]
+    };
+    launch_record_lint(&tree(&helper, &caller)).expect("CONTROL: a conforming tree passes");
+    for (what, main, other) in [
+        ("a second site", helper.clone(), format!("{caller}\n{site}")),
+        (
+            "a helper without the removal",
+            helper.replace(&format!("{removal}\n"), ""),
+            caller.clone(),
+        ),
+        (
+            "a helper that sets the record before it removes it",
+            helper.replace(
+                removal,
+                &format!("    cmd.env(rk_cli::env::LAUNCH_RECORD, \"x\");\n{removal}"),
+            ),
+            caller.clone(),
+        ),
+        (
+            "the one site outside the helper",
+            siteless.clone(),
+            format!("{caller}\n{site}"),
+        ),
+        (
+            "an indirection through a variable",
+            helper.clone(),
+            format!("{caller}\nfn y(bin: &str) {{ let c = std::process::{NEW}bin); }}"),
+        ),
+        ("no site at all", siteless, caller),
+    ] {
+        assert!(
+            launch_record_lint(&tree(&main, &other)).is_err(),
+            "CONTROL: {what} must be refused"
+        );
+    }
+
+    let it = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("it");
+    let files: Vec<(String, String)> = crate::rs_files(&it)
+        .into_iter()
+        .map(|p| {
+            let text =
+                std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("read {}: {e}", p.display()));
+            let name = p
+                .strip_prefix(&it)
+                .expect("under tests/it")
+                .to_string_lossy()
+                .replace('\\', "/");
+            (name, text)
+        })
+        .collect();
+    let site = launch_record_lint(&files).unwrap_or_else(|e| panic!("the real tree: {e}"));
+    println!("THE_ONE_REDKILN_COMMAND={site}");
+    let calls = |arm: &str| {
+        files
+            .iter()
+            .flat_map(|(_, t)| crate::code_lines(t))
+            .filter(|(_, l)| l.contains("redkiln_command(") && l.contains(arm))
+            .count()
+    };
+    assert!(
+        calls("Launch::Fixture") >= 1 && calls("Launch::Withheld") >= 1,
+        "PREMISE: the helper is called with the fixture record ({}) and with it withheld ({})",
+        calls("Launch::Fixture"),
+        calls("Launch::Withheld")
+    );
+}
+
+// ------------------------------------------------------------ s8h §8h.7: `run`'s launch check
+//
+// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.7; D21-42 17a.)* Both drive
+// `run::run` IN PROCESS with `Startup::real()` (the real `ClaudeHarnessFactory`) and an `Env` built
+// explicitly (D21-47: "Launch-gate tests build their `Env` explicitly"), so nothing is inherited.
+
+/// `git worktree list --porcelain`'s `worktree` lines, sorted: the worktree set.
+fn worktree_set(root: &Path) -> Vec<String> {
+    let out = crate::support::git_ok(root, &["worktree", "list", "--porcelain"]);
+    let mut set: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|l| l.starts_with("worktree "))
+        .map(str::to_owned)
+        .collect();
+    set.sort();
+    set
+}
+
+/// The `.marker` files in `dir`: one per fixture-child spawn.
+fn marker_files(dir: &Path) -> Vec<std::path::PathBuf> {
+    let mut out: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
+        .map(|d| {
+            d.flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|x| x == "marker"))
+                .collect()
+        })
+        .unwrap_or_default();
+    out.sort();
+    out
+}
+
+/// `run <item>` in process over the REAL harness factory, with `vars` as the whole environment.
+fn run_real_in_process(root: &Path, item: &str, vars: &[(&str, String)]) -> rk_cli::exit::Exit {
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let args = rk_cli::cli::RunArgs {
+        item: item.to_owned(),
+        lane: None,
+    };
+    let env = rk_cli::env::Env::from_map(
+        vars.iter()
+            .map(|(k, v)| ((*k).to_owned(), v.clone()))
+            .collect(),
+    );
+    rk_cli::verbs::run::run(&cli, &args, &env, rk_cli::verbs::Startup::real())
+        .unwrap_or_else(|halt| panic!("`run {item}` halted: {halt:?}"))
+}
+
+/// **§8h.7: `run` over the real harness, without a launch record, refuses before any spawn.** A
+/// first, LAUNCHED binary run makes the store and the run-owned tree exist (so "unchanged" is a
+/// count, not an emptiness); then `run::run` in process over `Startup::real()`, with an `Env` that
+/// carries the fixture child's two names and NO `REDKILN_LAUNCH_RECORD`, exits `ConfigError`, and
+/// the store's row count, the worktree set and the marker count are all unchanged: no
+/// `reconcile_started`, no worktree operation, no spawn. A second arm hands a record path that
+/// names no file, and is refused the same way (its killing mutant drops the existence check). *(dated 2026-10-02, s8h build, package
+/// P6-cli-launch-gate.)*
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, before the check): *"a real-harness run
+/// without a launch record refuses (s8h §8h.7)"*, `left: Transport`, `right: ConfigError` — the run
+/// reconciled and dispatched.
+#[test]
+fn a_real_harness_run_without_a_launch_record_refuses_before_any_spawn() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+    let first = spawn_run(root, "bug-1", None);
+    let markers = root.join(".rk-markers");
+    let rows_before = crate::support::store_rows(root).len();
+    let trees_before = worktree_set(root);
+    let markers_before = marker_files(&markers).len();
+    assert!(
+        rows_before > 0 && markers_before > 0 && trees_before.len() > 1,
+        "PREMISE: the launched first run made a store ({rows_before} rows), spawned \
+         ({markers_before} markers) and entered a run tree ({trees_before:?}). stderr:\n{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+
+    let exit = run_real_in_process(
+        root,
+        "bug-1",
+        &[
+            ("RK_FIXTURE_MODE", "exit:0".to_owned()),
+            ("RK_FIXTURE_MARKER_DIR", markers.display().to_string()),
+        ],
+    );
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::ConfigError,
+        "a real-harness run without a launch record refuses (s8h §8h.7)"
+    );
+    assert_eq!(
+        crate::support::store_rows(root).len(),
+        rows_before,
+        "the refusal wrote a row: it must come before `reconcile_started`"
+    );
+    assert_eq!(
+        worktree_set(root),
+        trees_before,
+        "the refusal touched a worktree"
+    );
+    assert_eq!(
+        marker_files(&markers).len(),
+        markers_before,
+        "the refusal spawned the harness"
+    );
+    // A record that names no file is no record: the same refusal, the same nothing.
+    let absent = root.join("no-such-launch-record.txt");
+    assert!(!absent.exists(), "PREMISE: {} is absent", absent.display());
+    let exit = run_real_in_process(
+        root,
+        "bug-1",
+        &[
+            (rk_cli::env::LAUNCH_RECORD, absent.display().to_string()),
+            ("RK_FIXTURE_MODE", "exit:0".to_owned()),
+            ("RK_FIXTURE_MARKER_DIR", markers.display().to_string()),
+        ],
+    );
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::ConfigError,
+        "a launch record naming no existing file refuses too (s8h §8h.7)"
+    );
+    assert_eq!(crate::support::store_rows(root).len(), rows_before);
+    assert_eq!(marker_files(&markers).len(), markers_before);
+}
+
+/// **The control (§8h.7; s8h review #5): the same run WITH a launch record passes the launch check
+/// and spawns the fixture child, and nothing else.** The repository's `harness_binary` is
+/// rewritten to `rk-cli`'s own fixture child, `env!("CARGO_BIN_EXE_rk-fixture-child-cli")`, by
+/// absolute path; the `Env` carries the fixture launch record and `CLAUDE_CONFIG_DIR` pointing at an
+/// empty trap. The run spawns exactly that program (the marker's `arg=` program element is its
+/// path) and the trap stays empty: no real `claude` was reached. *(dated 2026-10-02, s8h build,
+/// package P6-cli-launch-gate.)*
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against a check that refused every
+/// invocation): *"a real-harness run with a launch record spawns the fixture child: left: 0
+/// right: 1"*.
+#[test]
+fn a_real_harness_run_with_a_launch_record_passes_the_launch_check() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+    let child = std::path::PathBuf::from(env!("CARGO_BIN_EXE_rk-fixture-child-cli"));
+    assert!(child.is_absolute() && child.is_file(), "PREMISE: {child:?}");
+    let config = root.join(".redkiln").join("config.toml");
+    let text = std::fs::read_to_string(&config).expect("the fixture configuration reads");
+    let escaped = child.display().to_string().replace('\\', "\\\\");
+    let rewritten: Vec<String> = text
+        .lines()
+        .map(|l| {
+            if l.trim_start().starts_with("harness_binary") {
+                format!("harness_binary = \"{escaped}\"")
+            } else {
+                l.to_owned()
+            }
+        })
+        .collect();
+    let rewritten = rewritten.join("\n") + "\n";
+    assert_ne!(
+        rewritten, text,
+        "PREMISE: the harness_binary row was rewritten"
+    );
+    std::fs::write(&config, rewritten).expect("the configuration is rewritten");
+    let markers = root.join(".rk-markers");
+    std::fs::create_dir_all(&markers).expect("the marker directory");
+    let trap = tempfile::tempdir().expect("an empty trap configuration directory");
+
+    let _exit = run_real_in_process(
+        root,
+        "bug-1",
+        &[
+            (
+                rk_cli::env::LAUNCH_RECORD,
+                crate::fixture_launch_record().display().to_string(),
+            ),
+            ("RK_FIXTURE_MODE", "exit:0".to_owned()),
+            ("RK_FIXTURE_MARKER_DIR", markers.display().to_string()),
+            ("CLAUDE_CONFIG_DIR", trap.path().display().to_string()),
+        ],
+    );
+    let spawned = marker_files(&markers);
+    assert_eq!(
+        spawned.len(),
+        1,
+        "a real-harness run with a launch record spawns the fixture child"
+    );
+    let marker = std::fs::read_to_string(&spawned[0]).expect("the marker reads");
+    let program = marker
+        .lines()
+        .find_map(|l| l.strip_prefix("arg="))
+        .expect("the marker records the child's argv");
+    assert!(
+        Path::new(program) == child || program.eq_ignore_ascii_case(&child.display().to_string()),
+        "the spawned harness is rk-cli's fixture child {}, not {program}",
+        child.display()
+    );
+    assert_eq!(
+        std::fs::read_dir(trap.path())
+            .expect("the trap lists")
+            .count(),
+        0,
+        "the trap configuration directory stays empty: no real claude was reached"
+    );
+}
+
+// ================================================== s8h §8h.10: ADR-0146's load-time lint, both halves
+//
+// *(Added 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; D21-42 21c; Record B
+// = ADR-0198 decision 7, proposed.)* At pack load (`through_step_seven`, which `run` and `answer`
+// both call), a reachable gate class of the enabled pack with no `[[gate_expiry]]` row, and a row
+// whose class nothing reaches, each refuse with `Exit::ConfigError` BEFORE any dispatch. Both run
+// over `pack-min`'s fixture lane in process, through a COUNTING scripted harness, beside a control
+// over the unedited lane that dispatches.
+
+/// The fixture lane's two installed packs (`bug-standard.toml`, `story.toml`: one file, twice),
+/// rewritten by `edit`, which must change each.
+fn edit_installed_packs(root: &Path, edit: impl Fn(&str) -> String) {
+    for name in ["bug-standard.toml", "story.toml"] {
+        let path = root.join(".redkiln").join("packs").join(name);
+        let src = std::fs::read_to_string(&path).expect("the installed pack reads");
+        let out = edit(&src);
+        assert_ne!(out, src, "PREMISE: the edit changed {name}");
+        std::fs::write(&path, out).expect("the installed pack writes");
+    }
+}
+
+/// `run lane-2` in process over a fresh counting scripted harness: `(exit, dispatches)`.
+fn run_lane_counting(root: &Path) -> (rk_cli::exit::Exit, usize) {
+    let factory = crate::lane_e2e::ScriptedFactory::new(crate::lane_e2e::through());
+    let exit = crate::lane_e2e::ran(
+        rk_cli::verbs::run::run(
+            &crate::lane_e2e::cli(root, crate::lane_e2e::THROUGH_ITEM),
+            &crate::lane_e2e::args(crate::lane_e2e::THROUGH_ITEM),
+            &crate::support::clean_env(),
+            crate::lane_e2e::seam(&factory),
+        ),
+        crate::lane_e2e::THROUGH_ITEM,
+    );
+    (exit, factory.dispatches())
+}
+
+/// The control: the unedited fixture lane (every reachable class has its row) walks and dispatches.
+fn assert_the_unedited_lane_dispatches() {
+    let control = crate::lane_e2e::lane_repo();
+    let (exit, dispatches) = run_lane_counting(control.path());
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::Success,
+        "PREMISE: the unedited lane walks"
+    );
+    assert!(
+        dispatches > 0,
+        "PREMISE: the unedited lane dispatches, so a refusal below is not the fixture's"
+    );
+}
+
+/// **§8h.10: a reachable gate class with no `[[gate_expiry]]` row refuses at load, before any
+/// dispatch** — the fixture lane with its `escalation` row deleted (a reachable class of every
+/// pack: `gate::ESCALATION_CLASS`) exits `ConfigError`, and the counting fake sees 0 dispatches.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, before the lint): the run walked the lane,
+/// `left: Success`, `right: ConfigError`.
+#[test]
+fn a_reachable_gate_class_without_an_expiry_row_refuses_at_load() {
+    assert_the_unedited_lane_dispatches();
+    let repo = crate::lane_e2e::lane_repo();
+    let root = repo.path();
+    let row = "[[gate_expiry]]\nclass = \"escalation\"\naction = \"fail\"\n";
+    edit_installed_packs(root, |src| {
+        assert_eq!(src.matches(row).count(), 1, "PREMISE: one escalation row");
+        src.replace(row, "")
+    });
+    let (exit, dispatches) = run_lane_counting(root);
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::ConfigError,
+        "an unmatched reachable class refuses at load (ADR-0146; Record B decision 7)"
+    );
+    assert_eq!(dispatches, 0, "the refusal came after a dispatch");
+}
+
+/// **§8h.10: a `[[gate_expiry]]` row naming no reachable class refuses at load** — a misspelt
+/// minted kind (`landing.refused-paths`) and an unregistered axis (`unknown_facet:no_such_facet`),
+/// each added beside the complete set in its own fresh lane: each exits `ConfigError` with 0
+/// dispatches, because a misspelt class leaves the real class uncovered.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, before the lint): both runs walked the lane,
+/// `left: Success`, `right: ConfigError`.
+#[test]
+fn a_gate_expiry_row_naming_no_reachable_class_is_refused() {
+    assert_the_unedited_lane_dispatches();
+    for class in ["landing.refused-paths", "unknown_facet:no_such_facet"] {
+        let repo = crate::lane_e2e::lane_repo();
+        let root = repo.path();
+        edit_installed_packs(root, |src| {
+            format!("{src}\n[[gate_expiry]]\nclass = \"{class}\"\naction = \"fail\"\n")
+        });
+        let (exit, dispatches) = run_lane_counting(root);
+        assert_eq!(
+            exit,
+            rk_cli::exit::Exit::ConfigError,
+            "a row naming `{class}`, which nothing reaches, refuses at load"
+        );
+        assert_eq!(
+            dispatches, 0,
+            "`{class}`: the refusal came after a dispatch"
+        );
+    }
 }

@@ -597,6 +597,42 @@ pub fn clean_env() -> rk_cli::env::Env {
     rk_cli::env::Env::from_map(std::collections::BTreeMap::new())
 }
 
+/// [`clean_env`] plus `REDKILN_LAUNCH_RECORD` naming the committed fixture launch record — the
+/// `Env` an in-process call of a binary composition root bound by the launch check is handed
+/// (`s8h` §8h.7: `answer::run`). Built explicitly, never inherited (D21-47). *(dated 2026-10-02, s8h
+/// build, package P6-cli-launch-gate.)*
+#[must_use]
+pub fn launched_env() -> rk_cli::env::Env {
+    rk_cli::env::Env::from_map(std::collections::BTreeMap::from([(
+        rk_cli::env::LAUNCH_RECORD.to_owned(),
+        crate::fixture_launch_record().display().to_string(),
+    )]))
+}
+
+/// Append a `fail` `[[gate_expiry]]` row for `class` to both installed pack files of the fixture
+/// repository at `root` — the row a test owes when it makes its catalog reach a new gate class,
+/// because ADR-0146's load-time lint refuses a reachable class without one (`s8h` §8h.10; Record B
+/// = ADR-0198 decision 7, proposed). PREMISE: neither file declares the class yet. *(Added
+/// 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments.)*
+///
+/// # Panics
+/// If a pack file does not read or write, or already declares the class.
+pub fn add_gate_expiry_row(root: &Path, class: &str) {
+    for name in ["bug-standard.toml", "story.toml"] {
+        let path = root.join(".redkiln").join("packs").join(name);
+        let src = std::fs::read_to_string(&path).expect("the installed pack reads");
+        assert!(
+            !src.contains(&format!("class = \"{class}\"")),
+            "PREMISE: {name} declares no expiry row for `{class}` yet"
+        );
+        std::fs::write(
+            &path,
+            format!("{src}\n[[gate_expiry]]\nclass = \"{class}\"\naction = \"fail\"\n"),
+        )
+        .expect("the installed pack writes");
+    }
+}
+
 /// The `pack-min/` fixture directory, read in place and copied from.
 #[must_use]
 pub fn pack_min_dir() -> PathBuf {
@@ -622,7 +658,7 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
     let root = repo.path();
     let src = pack_min_dir();
     let rk = root.join(".redkiln");
-    for sub in ["packs", "catalog", "items", "cards", "schemas"] {
+    for sub in ["packs", "catalog", "items", "cards"] {
         std::fs::create_dir_all(rk.join(sub)).expect("the .redkiln subdirectory is created");
     }
 
@@ -661,23 +697,28 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
     // that RAISES `fulfils`), and an unfiltered copy would plant a non-card file in the directory
     // Slice 4's `doctor/roles.rs` is specified to SCAN — a fixture defect authored here and paid
     // for one slice later.
+    //
+    // *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.4;
+    // Record A = ADR-0197 decision 6, proposed.)* ~~The cards and schemas~~ The CARDS only: the
+    // binder reads each step's schema from `rk_types::registry::EXPORTED` by its `value:<Kind>`,
+    // and the `.redkiln/schemas/<kind>.json` read is deleted, so `pack-min/schemas/` is deleted and
+    // no `.redkiln/schemas/` is created here. `schemas::bind_reads_the_schema_from_exported_by_name`
+    // plants its own decoy there.
     let mut installed_bindables = 0_usize;
-    for sub in ["cards", "schemas"] {
-        for entry in std::fs::read_dir(src.join(sub)).expect("the fixture subdirectory reads") {
-            let path = entry.expect("an entry").path();
-            if path.extension().is_none_or(|e| e != "json") {
-                continue;
-            }
-            let name = path.file_name().expect("a file name");
-            std::fs::copy(&path, rk.join(sub).join(name)).expect("the fixture file installs");
-            installed_bindables += 1;
+    for entry in std::fs::read_dir(src.join("cards")).expect("the fixture subdirectory reads") {
+        let path = entry.expect("an entry").path();
+        if path.extension().is_none_or(|e| e != "json") {
+            continue;
         }
+        let name = path.file_name().expect("a file name");
+        std::fs::copy(&path, rk.join("cards").join(name)).expect("the fixture file installs");
+        installed_bindables += 1;
     }
     assert!(
-        installed_bindables >= 2,
-        "only {installed_bindables} card/schema files installed; step (8)'s binder reads one card \
-         per role and one schema per provided kind, and a binder that finds neither refuses on the \
-         FIXTURE rather than on anything a test names"
+        installed_bindables >= 1,
+        "only {installed_bindables} card files installed; step (8)'s binder reads one card per \
+         role, and a binder that finds none refuses on the FIXTURE rather than on anything a test \
+         names"
     );
 
     let config_src = std::fs::read_to_string(src.join("config.toml"))

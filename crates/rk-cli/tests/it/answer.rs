@@ -199,21 +199,31 @@ fn ac405_gate_answer_has_exactly_one_call_site() {
 /// `RK_FIXTURE_MODE` is set even though `answer` dispatches nothing: leaving it unset would make an
 /// UNEXPECTED dispatch park for 600 s (the fixture child's default is `hold`) instead of failing
 /// fast. `Command::env`, never `set_var`, which is banned workspace-wide including this tree.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS — golden constraint 4's 'a stub never replaced' is \
-              caught only by driving the real binary (s7d §7d.13's temp-repository rule); \
-              run::spawn_run_in_mode's form, and its reason"
-)]
+///
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.7, §8h.0 item 11.)* The
+/// binary's `answer` refuses without a launch record, so this shared helper supplies the fixture
+/// record on every call: each binary-level `answer` test exercises the launch check, and none
+/// bypasses it. [`spawn_answer_launched`] withholds it, for the refusal's own test.
 pub(crate) fn spawn_answer(
     repo: &std::path::Path,
     item: &str,
     option: &str,
     flags: &[&str],
 ) -> std::process::Output {
+    spawn_answer_launched(repo, item, option, flags, crate::Launch::Fixture)
+}
+
+/// [`spawn_answer`], with the launch record `launch` chooses (`s8h` §8h.7).
+pub(crate) fn spawn_answer_launched(
+    repo: &std::path::Path,
+    item: &str,
+    option: &str,
+    flags: &[&str],
+    launch: crate::Launch,
+) -> std::process::Output {
     let markers = repo.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(launch);
     cmd.arg("-C").arg(repo).arg("answer").arg(item).arg(option);
     for flag in flags {
         cmd.arg(flag);
@@ -1418,4 +1428,92 @@ fn answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher() {
         Some(spent.token()),
         "with no gate awaited, AC-407 requires the spent token to be PRESENTED"
     );
+}
+
+// ------------------------------------------------------------ s8h §8h.7: the launch check
+
+/// **D21-46 (§8h.7): the binary's `answer`, without a launch record, refuses before any row.** An
+/// answerable gate is open; the binary's `answer`, driven through the shared spawn helper with its
+/// fixture record WITHHELD, exits `3` naming `REDKILN_LAUNCH_RECORD`, and the store's row count is
+/// unchanged (not even the invocation's `reconcile_started`: the refusal precedes
+/// `run::through_step_seven`), the gate is still open and no answer row exists. *(dated 2026-10-02,
+/// s8h build, package P6-cli-launch-gate.)*
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, before the check): *"the binary answer
+/// without a launch record must refuse (s8h §8h.7): left: Some(0) right: Some(3)"*.
+#[test]
+fn a_binary_answer_without_a_launch_record_refuses_before_any_row() {
+    let repo = repo_with_open_gate();
+    let root = repo.path();
+    let before = crate::support::store_rows(root);
+    let out = spawn_answer_launched(
+        root,
+        "gate-1",
+        "approve",
+        &BOTH_FLAGS,
+        crate::Launch::Withheld,
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+        out.status.code(),
+        Some(3),
+        "the binary answer without a launch record must refuse (s8h §8h.7). stderr:\n{stderr}"
+    );
+    assert!(
+        stderr.contains(rk_cli::env::LAUNCH_RECORD),
+        "the refusal names the launch record's variable. stderr:\n{stderr}"
+    );
+    let after = crate::support::store_rows(root);
+    assert_eq!(
+        after.len(),
+        before.len(),
+        "the refusal wrote rows: {:?}",
+        after[before.len()..]
+            .iter()
+            .map(|e| e.kind)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        after.iter().filter(|e| is_answerable_gate(e)).count(),
+        1,
+        "the gate is still open"
+    );
+    assert!(
+        !after
+            .iter()
+            .any(|e| e.kind == rk_types::event_kind::EventKind::GateAnswered),
+        "no answer was recorded"
+    );
+}
+
+/// **The control (D21-46, §8h.7): the same gate, answered through the same helper WITH the
+/// fixture launch record, is answered** — exit `0` and exactly one `gate_answered` row. So the
+/// refusal above is the launch check's, not a broken `answer`. *(dated 2026-10-02, s8h build,
+/// package P6-cli-launch-gate.)*
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against a check that refused every
+/// invocation): *"the binary answer with a launch record passes the launch check: left: Some(3)
+/// right: Some(0)"*.
+#[test]
+fn a_binary_answer_with_a_launch_record_passes_the_launch_check() {
+    let repo = repo_with_open_gate();
+    let root = repo.path();
+    let out = spawn_answer_launched(
+        root,
+        "gate-1",
+        "approve",
+        &BOTH_FLAGS,
+        crate::Launch::Fixture,
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "the binary answer with a launch record passes the launch check. stderr:\n{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let answered = crate::support::store_rows(root)
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::GateAnswered)
+        .count();
+    assert_eq!(answered, 1, "the gate was answered once");
 }

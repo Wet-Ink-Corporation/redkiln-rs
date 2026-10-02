@@ -307,6 +307,10 @@ pub struct Config {
     on_version_mismatch: MismatchPolicy,
     tested_cli_version: String,
     cards: BTreeMap<Digest, Bound>,
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY.)*
+    /// The caller-supplied directory each dispatch writes its child-settings file into; `None`
+    /// until [`Config::with_settings_dir`] sets it, and then every bind refuses.
+    settings_dir: Option<PathBuf>,
 }
 
 /// The captured map as `Debug` renders it in this crate: `{ keys: [..], count: n }` — the names,
@@ -345,6 +349,7 @@ impl std::fmt::Debug for Config {
             .field("on_version_mismatch", &self.on_version_mismatch)
             .field("tested_cli_version", &self.tested_cli_version)
             .field("cards", &self.cards.keys().collect::<Vec<_>>())
+            .field("settings_dir", &self.settings_dir)
             .finish()
     }
 }
@@ -463,6 +468,50 @@ pub enum ConfigError {
     /// an ancestor level that cannot be listed).
     #[error("the child's confinement settings cannot be assembled (s8h §8h.6): {detail}")]
     Confinement { detail: String },
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY.)*
+    /// No settings directory was supplied: the child's settings have nowhere to be written, and
+    /// nothing falls back to an argv without them.
+    #[error(
+        "no settings directory was supplied for the child's settings file — the caller supplies \
+         one outside the worktree, and no dispatch runs without its settings (s8h §8h.6; D21-137)"
+    )]
+    SettingsDirUnset,
+    /// The settings directory does not exist (D21-137).
+    #[error(
+        "the settings directory {} does not exist — the caller creates it before the first \
+         dispatch (s8h §8h.6; D21-137)",
+        dir.display()
+    )]
+    SettingsDirMissing { dir: PathBuf },
+    /// The settings directory lies under the worktree, where the child could reach its own fence
+    /// (D21-137: compared with `\\?\` stripped, case-folded on Windows).
+    #[error(
+        "the settings directory {} lies under the worktree {} — the child's settings are written \
+         outside the worktree (s8h §8h.6; D21-137)",
+        dir.display(),
+        worktree.display()
+    )]
+    SettingsDirUnderWorktree { dir: PathBuf, worktree: PathBuf },
+    /// The settings path is not an absolute, non-verbatim UTF-8 path (D21-137).
+    #[error(
+        "the settings path {} is refused: {why} (s8h §8h.6; D21-137)",
+        path.display()
+    )]
+    SettingsPathRefused { path: PathBuf, why: &'static str },
+    /// The settings JSON is over the CLI's settings-file limit (D21-137).
+    #[error(
+        "the child's settings measure {bytes} bytes, over the CLI's {cap}-byte settings-file limit \
+         (`Kp`, found by string search, not executed) — refused before spawn (s8h §8h.6; D21-137)"
+    )]
+    SettingsTooLarge { bytes: usize, cap: usize },
+    /// The settings file could not be written (D21-137): a name that already exists (`create_new`),
+    /// or any I/O failure. Nothing is spawned without the file.
+    #[error(
+        "the child's settings file {} could not be written: {detail} — nothing was spawned \
+         (s8h §8h.6; D21-137)",
+        path.display()
+    )]
+    SettingsWrite { path: PathBuf, detail: String },
     /// AC-269: a tool on the card exposes the answer, mint or resolve path.
     #[error(
         "card {card}: tool `{tool}` exposes the answer API — no card exposes the answer, mint or \
@@ -621,6 +670,7 @@ impl Config {
             on_version_mismatch: values.on_version_mismatch,
             tested_cli_version: TESTED_CLI_VERSION.to_owned(),
             cards: BTreeMap::new(),
+            settings_dir: None,
         })
     }
 
@@ -670,6 +720,25 @@ impl Config {
     pub fn at_pin(mut self, version: &str) -> Self {
         version.clone_into(&mut self.tested_cli_version);
         self
+    }
+
+    /// This `Config` with the directory each dispatch writes its child-settings file into.
+    ///
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.6; D21-137, TAKEN
+    /// PROVISIONALLY.)* The location is an input: the adapter never runs git to find it and has
+    /// no default. `rk-cli`'s `run` passes a run directory outside the worktree, created before
+    /// the first bind; a test passes a temp directory. It is checked at every bind and every
+    /// dispatch (`command::check_settings_dir`).
+    #[must_use]
+    pub fn with_settings_dir(mut self, dir: PathBuf) -> Self {
+        self.settings_dir = Some(dir);
+        self
+    }
+
+    /// The settings directory, or `None` when none was supplied (every bind then refuses).
+    #[must_use]
+    pub fn settings_dir(&self) -> Option<&Path> {
+        self.settings_dir.as_deref()
     }
 
     /// The card store: every bound card, by the digest the spec carries (the module doc).

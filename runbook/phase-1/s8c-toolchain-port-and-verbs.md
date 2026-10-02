@@ -3014,8 +3014,21 @@ ctl=$(grep -l 'permission_mode' "$scratch/ctl-card.json"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$ctl" ] || { echo "FAIL: SYNTHETIC CONTROL — the card guard cannot see permission_mode (rc=$rc)"; exit 1; }
 set -- .redkiln/cards/*.json
 [ "$#" -eq 8 ] && [ -f "$1" ] || { echo "FAIL: expected 8 shipped cards, found $#"; exit 1; }
-pm=$(grep -l 'permission_mode' "$@"); rc=$?
-[ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc: $pm) — a whole re-run reaching redkiln run could dispatch for real; stop (D21-40 decision 2)"; exit 1; }
+# *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; s8h §8h.14; D21-47's time-bound rule)*
+# AMENDED in s8h's work commit: the eight shipped cards now carry permission_mode (s8h §8h.2), so the guard below is
+# replaced by two assertions: all eight cards carry a mode, and the launch-check refusal test, run by name under this
+# block's wrapper (REDKILN_LAUNCH_RECORD removed), reports ok. From s8h on that test is the no-dispatch premise the
+# replays rest on (s8h §8h.7). The synthetic control above still proves the probe sees a planted mode. The two lines
+# this replaces read:
+#   pm=$(grep -l 'permission_mode' "$@"); rc=$?
+#   [ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc: $pm) — a whole re-run reaching redkiln run could dispatch for real; stop (D21-40 decision 2)"; exit 1; }
+pm=$(grep -l '"permission_mode"' "$@"); rc=$?
+[ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$pm" | grep -c .)" -eq 8 ] || { echo "FAIL: not all eight shipped cards carry permission_mode (rc=$rc): $pm — s8h §8h.2's cards are not in place"; exit 1; }
+out=$(nodispatch cargo test -p rk-cli --test it -- run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn --exact 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the launch-check refusal test rc=$rc — the replays' no-dispatch premise (s8h §8h.7) is not proved"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qxF 'test run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn ... ok' || { echo "FAIL: run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn did not report ok — renamed, deleted or not selected"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo "FAIL: the launch-check selection did not run exactly 1 test (a filter that matches nothing is a green)"; exit 1; }
+nd_check "8c (15) launch-check premise" || exit 1
 out=$(python -c "$xb" runbook/phase-1/s8b-catalog-quality.md 'CP8B-END-OF-BLOCK reached' "$scratch/cp8b.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8b's block could not be extracted: $out"; exit 1; }
 out=$(nodispatch env RK_CP_NESTED=1 bash "$scratch/cp8b.sh" 2>&1); rc=$?

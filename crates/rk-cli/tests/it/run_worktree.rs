@@ -699,15 +699,10 @@ fn a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries() {
 /// `redkiln -C <repo> run <item>` with `env` added to the child's environment (never `set_var`,
 /// §7d.13), and the fixture child's mode set as [`crate::run::spawn_run`] sets it: an absent mode
 /// is a 600 s park.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS, so the value rk-cli reads from its own \
-              environment and hands rk-git is the one under test"
-)]
 fn spawn_run_with_env(repo: &Path, item: &str, env: &[(&str, &str)]) -> std::process::Output {
     let markers = repo.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C").arg(repo).arg("run").arg(item);
     cmd.env("RK_FIXTURE_MODE", "exit:0")
         .env("RK_FIXTURE_MARKER_DIR", &markers);

@@ -322,13 +322,8 @@ fn ac413_store_opened_from_other_repo_refused_zero_rows() {
 }
 
 /// Spawn `redkiln [args…] status` with stdin closed (D-15: no verb reads stdin), from `cwd`.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS — the inherited cwd and the -C flag are process \
-              facts a library call cannot observe (s7d §7d.3's own instrument)"
-)]
 fn spawn_status(cwd: &Path, args: &[&str]) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Withheld);
     cmd.args(args).arg("status").current_dir(cwd);
     crate::support::output_bounded(&mut cmd)
 }
@@ -1372,6 +1367,7 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
     // The captured map the adapter hands the child. `RK_FIXTURE_MODE=hold` is what makes the child
     // park instead of returning, which is the only way a dispatch is still running when the token
     // fires. Neither name is on the adapter's env denylist.
+    let settings_dir = tempfile::tempdir().expect("a settings dir");
     let mut captured = std::collections::BTreeMap::new();
     captured.insert("RK_FIXTURE_MODE".to_owned(), "hold".to_owned());
     captured.insert(
@@ -1389,7 +1385,10 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         },
         on_version_mismatch: rk_adapter_claude::config::MismatchPolicy::Refuse,
     })
-    .expect("the fixture harness configuration constructs");
+    .expect("the fixture harness configuration constructs")
+    // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The settings file's
+    // directory, outside the worktree.
+    .with_settings_dir(settings_dir.path().to_path_buf());
 
     // Bound through the REAL binder: it is what fills the card store `dispatch` reads, and an
     // unbound `card_digest` is a pre-spawn `Transport { Spawn }` rather than a cancellation.
@@ -1399,15 +1398,14 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
             .expect("the fixture card is installed");
     let card = rk_adapter_claude::card::AuthoredCard::from_file("implementer", &card_text)
         .expect("the fixture card loads");
-    let schema_json: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(
-            root.join(".redkiln")
-                .join("schemas")
-                .join("ImplReport.json"),
-        )
-        .expect("the fixture schema is installed"),
-    )
-    .expect("the schema is JSON");
+    // *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.4.)* The
+    // schema is `EXPORTED`'s `ImplReport`, as `run`'s binder reads it; it read the fixture's
+    // `.redkiln/schemas/ImplReport.json`, which no longer exists.
+    let schema_json: serde_json::Value = rk_types::registry::EXPORTED
+        .iter()
+        .find(|(name, _)| *name == "ImplReport")
+        .map(|(_, export)| export())
+        .expect("ImplReport is EXPORTED");
     let declared = resolved
         .extras
         .role

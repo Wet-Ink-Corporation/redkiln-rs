@@ -2240,7 +2240,7 @@ fn ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger() {
 fn redkiln_run(root: &Path) -> std::process::Command {
     let markers = root.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C").arg(root).arg("run").arg(ITEM);
     cmd.env("RK_FIXTURE_MODE", "exit:0")
         .env("RK_FIXTURE_MARKER_DIR", &markers);

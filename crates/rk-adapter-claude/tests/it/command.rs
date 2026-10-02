@@ -12,13 +12,18 @@ use std::path::{Path, PathBuf};
 use proptest::prelude::*;
 use rk_types::digest::sha256;
 
-use rk_adapter_claude::card::{AgentCard, CacheProfile, Effort};
+use rk_adapter_claude::binder::{BindRequest, Binder, Role, Schema};
+use rk_adapter_claude::card::{AgentCard, AuthoredCard, CacheProfile, Effort, Models};
 use rk_adapter_claude::command::{
-    ARGV_CAP_BYTES, Assembled, ChildSettings, CommandSpec, ConfinementChain, Sibling, assemble,
-    command_line_units,
+    ARGV_CAP_BYTES, Assembled, ChildSettings, CommandSpec, ConfinementChain,
+    SETTINGS_FILE_CAP_BYTES, SettingsArg, Sibling, assemble, check_settings_dir,
+    command_line_units, settings_file_name, settings_stand_in, write_settings_file,
 };
 use rk_adapter_claude::config::{Config, ConfigError, MismatchPolicy};
 use rk_adapter_claude::env_denylist::is_denylisted;
+use rk_ports::fakes::VecStore;
+use rk_ports::harness::Harness;
+use rk_types::error::StepError;
 
 use crate::support::{
     Markers, belt_dispatch_agent, belt_dispatch_authored, catalog_card, config, fixture, schema,
@@ -56,9 +61,21 @@ fn spec<'a>(
         adopt_agent: true,
         strict_tools: &[],
         user_message,
-        settings: Some(golden_settings()),
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The element is
+        // the settings FILE's path; the settings are what its bytes are.
+        settings: Some(SettingsArg {
+            settings: golden_settings(),
+            path: Path::new(GOLDEN_SETTINGS_PATH),
+        }),
     }
 }
+
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.6; D21-137, TAKEN
+/// PROVISIONALLY.)* The `--settings` element every `spec` here carries: a settings file's path of
+/// the dispatch form (`settings_stand_in`'s length), as a literal so the golden vectors are the same
+/// bytes on every machine. Nothing is read or written there: `assemble` writes no file.
+const GOLDEN_SETTINGS_PATH: &str =
+    "D:/rk/runs/run-1/child-settings-4294967295-18446744073709551615-ffffffffffffffff.json";
 
 /// *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3, §8h.6.)* The golden worktree's ancestor chain, as a
 /// literal so the `--settings` element is the same bytes on every platform and machine: the
@@ -973,9 +990,18 @@ fn value_of<'v>(argv: &'v [String], flag: &str) -> &'v str {
         .unwrap_or_else(|| panic!("{flag} has no value in {argv:?}"))
 }
 
-/// The `--settings` element of a built argv, parsed.
+/// The settings a built argv delivers, parsed.
+///
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The `--settings` element
+/// is the file's path, asserted to be `spec`'s; the settings are [`golden_settings`], the bytes
+/// that file carries.
 fn settings_of(argv: &[String]) -> serde_json::Value {
-    serde_json::from_str(value_of(argv, "--settings")).expect("the --settings element is JSON")
+    assert_eq!(
+        value_of(argv, "--settings"),
+        GOLDEN_SETTINGS_PATH,
+        "the --settings element is the settings file's path (D21-137)"
+    );
+    serde_json::from_str(golden_settings().json()).expect("the settings are JSON")
 }
 
 /// `s8h` §8h.6: every argv carries `--setting-sources ""` — explicit and EMPTY, so none of the
@@ -1359,4 +1385,378 @@ fn a_pin_without_a_spelling_row_is_refused() {
     }
     assemble(&config(), &spec(&card, &schema.json, ""))
         .expect("CONTROL: the fixture pin assembles");
+}
+
+// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate.)* `s8h` §8h.6 as ruled by D21-137
+// (TAKEN PROVISIONALLY under D21-105): the child's settings go as `--settings <path>`, a read-only
+// file written per dispatch into a caller-supplied directory outside the worktree. ADR-0197
+// decision 9 as amended, proposed.
+
+/// The golden chain with `extra` more sibling directories at the worktree's own level.
+fn chain_with_siblings(extra: usize, name_len: usize) -> ConfinementChain {
+    let mut chain = golden_chain();
+    let last = chain
+        .listings
+        .last_mut()
+        .expect("the golden chain has levels");
+    for i in 0..extra {
+        let stem = format!("sibling-{i:06}-");
+        let pad = name_len.saturating_sub(stem.len());
+        last.push(Sibling {
+            name: format!("{stem}{}", "x".repeat(pad)),
+            is_dir: true,
+        });
+    }
+    chain
+}
+
+/// D21-137 (a): a synthetic chain with 5,000 siblings at one level (no filesystem) assembles UNDER
+/// RT-1's cap, because the element is the file's path and not the JSON. The settings alone are
+/// over the argv cap (a PREMISE: inline delivery could not carry them) and under the CLI's 2 MiB
+/// file limit, and the measure is the same as the small golden chain's, since both carry a path of
+/// one length.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the inline scaffold): *"a
+/// 5,000-sibling chain assembles under RT-1's cap (D21-137 (a)): ArgvAtOrOverCap { units: …, cap:
+/// 32767 }"*.
+#[test]
+fn a_five_thousand_sibling_chain_assembles_under_the_cap() {
+    let cfg = config();
+    let schema = schema();
+    let card = bound("golden-default", "haiku", None);
+    let settings = ChildSettings::from_chain(&chain_with_siblings(5_000, 16));
+    assert!(
+        settings.json().len() > ARGV_CAP_BYTES,
+        "PREMISE: the settings alone ({} bytes) exceed RT-1's cap, so an inline element could not \
+         carry them",
+        settings.json().len()
+    );
+    assert!(
+        settings.json().len() <= SETTINGS_FILE_CAP_BYTES,
+        "PREMISE: the settings fit the CLI's settings-file limit"
+    );
+    let big = CommandSpec {
+        settings: Some(SettingsArg {
+            settings: &settings,
+            path: Path::new(GOLDEN_SETTINGS_PATH),
+        }),
+        ..spec(&card, &schema.json, "")
+    };
+    let built = assemble(&cfg, &big).unwrap_or_else(|e| {
+        panic!("a 5,000-sibling chain assembles under RT-1's cap (D21-137 (a)): {e:?}")
+    });
+    assert!(built.command_line_units < ARGV_CAP_BYTES);
+    assert_eq!(value_of(&built.argv, "--settings"), GOLDEN_SETTINGS_PATH);
+    let small = assemble(&cfg, &spec(&card, &schema.json, "")).expect("the golden chain builds");
+    assert_eq!(
+        built.command_line_units, small.command_line_units,
+        "the measure counts the path, not the JSON (D21-137 item 5)"
+    );
+}
+
+/// D21-137 (e): settings over the CLI's 2,097,152-byte settings-file limit are refused by
+/// `assemble` — the path bind and dispatch both take — with a typed error naming the measure,
+/// before anything is written or spawned. Control: the same builder takes a chain under it.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the scaffold, which had no size
+/// check and still inlined the JSON): *"the refusal is SettingsTooLarge; got ArgvAtOrOverCap { units:
+/// 2858407, cap: 32767 }"*. Mutant D8 (the cap never reached) reads *"settings over 2 MiB are refused
+/// (D21-137 (e)); got Ok"*.
+#[test]
+fn settings_over_two_mib_are_refused_before_spawn() {
+    assert_eq!(
+        SETTINGS_FILE_CAP_BYTES, 2_097_152,
+        "the CLI's `Kp` (D21-137)"
+    );
+    let cfg = config();
+    let schema = schema();
+    let card = bound("golden-default", "haiku", None);
+    let settings = ChildSettings::from_chain(&chain_with_siblings(12_000, 48));
+    let bytes = settings.json().len();
+    assert!(
+        bytes > SETTINGS_FILE_CAP_BYTES,
+        "PREMISE: the chain is over the limit ({bytes})"
+    );
+    let over = CommandSpec {
+        settings: Some(SettingsArg {
+            settings: &settings,
+            path: Path::new(GOLDEN_SETTINGS_PATH),
+        }),
+        ..spec(&card, &schema.json, "")
+    };
+    match assemble(&cfg, &over) {
+        Err(ConfigError::SettingsTooLarge { bytes: b, cap }) => {
+            assert_eq!((b, cap), (bytes, SETTINGS_FILE_CAP_BYTES));
+        }
+        Err(other) => panic!("the refusal is SettingsTooLarge; got {other:?}"),
+        Ok(_) => panic!("settings over 2 MiB are refused (D21-137 (e)); got Ok"),
+    }
+    let under = ChildSettings::from_chain(&chain_with_siblings(5_000, 16));
+    assemble(
+        &cfg,
+        &CommandSpec {
+            settings: Some(SettingsArg {
+                settings: &under,
+                path: Path::new(GOLDEN_SETTINGS_PATH),
+            }),
+            ..spec(&card, &schema.json, "")
+        },
+    )
+    .expect("CONTROL: settings under the limit assemble");
+}
+
+/// D21-137 (c): a settings directory UNDER the worktree is refused — the worktree itself, a
+/// directory inside it, the same path in another case (Windows folds case) and the worktree
+/// written in its verbatim `\\?\` form — by the check and by `Binder::bind`. Controls: a sibling
+/// of the worktree, and one sharing the worktree's name as a prefix, are not under it.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the scaffold's check): *"a settings
+/// dir under the worktree is refused (D21-137 (c)); got Ok("…\\wt\\.settings")"*.
+#[test]
+fn a_settings_dir_under_the_worktree_is_refused() {
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let wt = tmp.path().join("wt");
+    let inside = wt.join(".settings");
+    std::fs::create_dir_all(&inside).expect("a directory inside the worktree");
+    let mut under = vec![inside.clone(), wt.clone()];
+    if cfg!(windows) {
+        let upper = inside.to_str().expect("UTF-8").to_uppercase();
+        under.push(PathBuf::from(upper));
+    }
+    for dir in &under {
+        match check_settings_dir(Some(dir), &wt) {
+            Err(ConfigError::SettingsDirUnderWorktree { .. }) => {}
+            other => panic!(
+                "a settings dir under the worktree is refused (D21-137 (c)); got {other:?} for {}",
+                dir.display()
+            ),
+        }
+    }
+    if cfg!(windows) {
+        let verbatim_wt = PathBuf::from(format!(r"\\?\{}", wt.display()));
+        assert!(
+            matches!(
+                check_settings_dir(Some(&inside), &verbatim_wt),
+                Err(ConfigError::SettingsDirUnderWorktree { .. })
+            ),
+            "a verbatim worktree path is compared with `\\\\?\\` stripped"
+        );
+    }
+    // Through the binder: the refusal is bind's, before any card enters the store.
+    let mut binder = Binder::new(config().with_settings_dir(inside.clone()));
+    let card = catalog_card("probe");
+    let role = crate::support::role("haiku");
+    let models = crate::support::models();
+    match binder.bind(probe_request(&wt, &role, &card, &models)) {
+        Err(ConfigError::SettingsDirUnderWorktree { .. }) => {}
+        other => panic!("bind refuses a settings dir under the worktree; got {other:?}"),
+    }
+    assert!(binder.config().cards().is_empty(), "nothing was bound");
+    // Controls: outside the worktree.
+    for name in ["settings", "wt-settings"] {
+        let outside = tmp.path().join(name);
+        std::fs::create_dir_all(&outside).expect("a directory beside the worktree");
+        assert_eq!(
+            check_settings_dir(Some(&outside), &wt).expect("CONTROL: beside the worktree"),
+            outside.as_path()
+        );
+    }
+}
+
+/// D21-137 (f): a missing settings directory is refused — none supplied (`SettingsDirUnset`, at
+/// the check and at `Binder::bind`), or one that does not exist (`SettingsDirMissing`). And at
+/// DISPATCH: a spec bound while the directory existed, dispatched after it is removed, is refused
+/// before spawn (no marker, a pre-spawn row with no settings file), never dispatched without its
+/// settings.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the scaffold's check): *"no settings
+/// dir is refused as SettingsDirUnset (D21-137 (f)); got Ok("")"*.
+#[test]
+fn a_missing_settings_dir_is_refused() {
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let wt = tmp.path().join("wt");
+    std::fs::create_dir_all(&wt).expect("the worktree");
+    match check_settings_dir(None, &wt) {
+        Err(ConfigError::SettingsDirUnset) => {}
+        other => {
+            panic!("no settings dir is refused as SettingsDirUnset (D21-137 (f)); got {other:?}")
+        }
+    }
+    let absent = tmp.path().join("absent");
+    match check_settings_dir(Some(&absent), &wt) {
+        Err(ConfigError::SettingsDirMissing { dir }) => assert_eq!(dir, absent),
+        other => panic!("an absent settings dir is refused as SettingsDirMissing; got {other:?}"),
+    }
+    // Bind over a Config that carries none.
+    let mut binder = Binder::new(Config::new(values()).expect("constructs"));
+    let card = catalog_card("probe");
+    let role = crate::support::role("haiku");
+    let models = crate::support::models();
+    match binder.bind(probe_request(&wt, &role, &card, &models)) {
+        Err(ConfigError::SettingsDirUnset) => {}
+        other => panic!("bind refuses a Config with no settings dir; got {other:?}"),
+    }
+    // Dispatch: bound while the directory existed, then the directory is removed.
+    let markers = Markers::new();
+    let dir = tmp.path().join("settings");
+    std::fs::create_dir_all(&dir).expect("the settings dir");
+    let mut binder = Binder::new(
+        crate::support::spawn_config(&markers, "exit:0").with_settings_dir(dir.clone()),
+    );
+    let spec = binder
+        .bind(probe_request(&wt, &role, &card, &models))
+        .expect("binds while the dir exists");
+    std::fs::remove_dir(&dir).expect("the settings dir is removed");
+    let h = crate::support::harness(binder.into_config());
+    let mut store = VecStore::default();
+    let outcome = h.dispatch(&spec, &mut store);
+    match &outcome.result {
+        Err(StepError::Transport { detail, .. }) => assert!(
+            detail.contains("does not exist"),
+            "the pre-spawn refusal names the missing directory: {detail}"
+        ),
+        other => panic!("a dispatch whose settings dir is gone is refused; got {other:?}"),
+    }
+    assert_eq!(
+        markers.count(),
+        0,
+        "nothing was spawned without the settings"
+    );
+    assert_eq!(outcome.record.settings_file, None, "no file was written");
+}
+
+/// The probe card's bind request over `worktree` (the one schema, a fixed prompt).
+fn probe_request<'a>(
+    worktree: &'a Path,
+    role: &'a Role,
+    card: &'a AuthoredCard,
+    models: &'a Models,
+) -> BindRequest<'a> {
+    static SCHEMA: std::sync::OnceLock<Schema> = std::sync::OnceLock::new();
+    BindRequest {
+        role_name: "haiku",
+        role,
+        card,
+        schema: SCHEMA.get_or_init(schema),
+        timeout_secs: 30,
+        worktree,
+        inputs: vec![("prompt".to_owned(), serde_json::json!("x"))],
+        activity_id_at_version: None,
+        models,
+    }
+}
+
+/// D21-137 item 2: the settings path must be absolute and must not be verbatim (`\\?\`); a relative
+/// directory, and on Windows a verbatim one, are refused by the check with the typed error.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the scaffold's check): *"a relative
+/// settings dir is refused as SettingsPathRefused (D21-137); got Ok("relative/settings")"*.
+#[test]
+fn a_relative_or_verbatim_settings_dir_is_refused() {
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let wt = tmp.path().join("wt");
+    std::fs::create_dir_all(&wt).expect("the worktree");
+    let rel = Path::new("relative/settings");
+    match check_settings_dir(Some(rel), &wt) {
+        Err(ConfigError::SettingsPathRefused { path, .. }) => assert_eq!(path, rel),
+        other => panic!(
+            "a relative settings dir is refused as SettingsPathRefused (D21-137); got {other:?}"
+        ),
+    }
+    let dotted = tmp.path().join("wt").join("..").join("settings");
+    assert!(
+        matches!(
+            check_settings_dir(Some(&dotted), &wt),
+            Err(ConfigError::SettingsPathRefused { .. })
+        ),
+        "a path carrying `..` is refused, never resolved"
+    );
+    if cfg!(windows) {
+        let outside = tmp.path().join("settings");
+        std::fs::create_dir_all(&outside).expect("a directory beside the worktree");
+        let verbatim = PathBuf::from(format!(r"\\?\{}", outside.display()));
+        assert!(
+            matches!(
+                check_settings_dir(Some(&verbatim), &wt),
+                Err(ConfigError::SettingsPathRefused { .. })
+            ),
+            "a verbatim settings dir is refused"
+        );
+        check_settings_dir(Some(&outside), &wt).expect("CONTROL: its plain form is accepted");
+    }
+}
+
+/// D21-137 item 3: the file is written with `create_new` and marked read-only, its bytes are
+/// exactly the settings JSON and the returned sha256 is theirs. A path that already exists is a
+/// typed `SettingsWrite` refusal that leaves the existing bytes as they were (never overwritten),
+/// and so is a path whose directory does not exist.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the scaffold's writer): *"the
+/// settings file is written (D21-137 item 3): No such file or directory"* (os error 2).
+#[test]
+fn a_settings_file_write_failure_is_refused_and_overwrites_nothing() {
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let settings = golden_settings();
+    let path = tmp.path().join(settings_file_name(7, 1, settings));
+    let written = write_settings_file(&path, settings).expect("a fresh path is written");
+    let bytes = std::fs::read(&path)
+        .unwrap_or_else(|e| panic!("the settings file is written (D21-137 item 3): {e}"));
+    assert_eq!(bytes, settings.json().as_bytes(), "the bytes are the JSON");
+    assert_eq!(
+        written.sha256,
+        sha256(&bytes),
+        "the recorded sha256 is the bytes'"
+    );
+    assert_eq!(written.path, path.to_str().expect("UTF-8"));
+    assert!(
+        std::fs::metadata(&path)
+            .expect("meta")
+            .permissions()
+            .readonly(),
+        "the file is read-only"
+    );
+    // A second write to the same name: refused, and the bytes are unchanged.
+    let other = ChildSettings::from_chain(&chain_with_siblings(3, 16));
+    match write_settings_file(&path, &other) {
+        Err(ConfigError::SettingsWrite { path: p, .. }) => assert_eq!(p, path),
+        other => panic!("an existing name is a SettingsWrite refusal (create_new); got {other:?}"),
+    }
+    assert_eq!(
+        std::fs::read(&path).expect("still there"),
+        settings.json().as_bytes(),
+        "the existing file was not overwritten"
+    );
+    // A WRITABLE file already at the name (the read-only flag above would refuse an overwrite on
+    // its own, and so hide a writer that truncates): `create_new` refuses it all the same.
+    let writable = tmp.path().join(settings_file_name(7, 2, settings));
+    std::fs::write(&writable, b"sentinel").expect("a writable file at the name");
+    assert!(
+        matches!(
+            write_settings_file(&writable, settings),
+            Err(ConfigError::SettingsWrite { .. })
+        ),
+        "a writable file at the name is refused, never truncated (create_new)"
+    );
+    assert_eq!(
+        std::fs::read(&writable).expect("still there"),
+        b"sentinel",
+        "the writable file was not overwritten"
+    );
+    let nowhere = tmp.path().join("absent").join("child-settings.json");
+    assert!(
+        matches!(
+            write_settings_file(&nowhere, settings),
+            Err(ConfigError::SettingsWrite { .. })
+        ),
+        "a write failure is a typed refusal"
+    );
+    // The name is fixed-width: as long as the stand-in bind measures with.
+    assert_eq!(
+        settings_file_name(7, 1, settings).len(),
+        settings_stand_in(Path::new(""))
+            .to_str()
+            .expect("UTF-8")
+            .len(),
+        "every settings file name is as long as the stand-in's (D21-137 item 4)"
+    );
 }

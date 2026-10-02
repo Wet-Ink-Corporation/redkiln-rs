@@ -2,7 +2,11 @@
   "description": "Step 7e's v0 card for the `reviewer` role.",
   "prompt": "Give an independent verdict on the work under review. Emit the artifacts the activity declares, as StructuredOutput.",
   "tools": [
+    "Read",
+    "Glob",
+    "Grep",
     "StructuredOutput"
   ],
+  "permission_mode": "default",
   "cache_profile": "static"
 }

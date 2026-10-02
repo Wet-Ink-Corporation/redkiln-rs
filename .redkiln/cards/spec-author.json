@@ -1,8 +1,12 @@
 {
   "description": "Step 7e's v0 card for the `spec-author` role.",
-  "prompt": "Write the enumerated, testable acceptance criteria. Emit the artifacts the activity declares, as StructuredOutput.",
+  "prompt": "Write the enumerated, testable acceptance criteria; every criterion carries an authored, non-empty verification stating how the criterion is shown to hold. Emit the artifacts the activity declares, as StructuredOutput.",
   "tools": [
+    "Read",
+    "Glob",
+    "Grep",
     "StructuredOutput"
   ],
+  "permission_mode": "default",
   "cache_profile": "static"
 }

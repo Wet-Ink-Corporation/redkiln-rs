@@ -129,7 +129,10 @@ pub mod throttle;
 pub mod ttl;
 
 use crate::binder::WORKTREE_KEY;
-use crate::command::{CommandSpec, assemble};
+use crate::command::{
+    ChildSettings, CommandSpec, SettingsArg, assemble, check_settings_dir, next_settings_path,
+    settings_stand_in, write_settings_file,
+};
 use crate::config::{Config, ConfigError};
 use crate::env::{PROMPT_CACHE_TTL, SUBAGENT_PROMPT_CACHE_TTL};
 use crate::record::AppendWarnings;
@@ -407,6 +410,10 @@ impl ClaudeHarness {
                 activity_id_at_version: spec.activity_id_at_version.clone(),
                 // *(dated 2026-10-02, s8h build, package P2-rk-types.)* The type half only (s8h §8h.3): the adapter's reading of the init `model` is §8h.12's rk-adapter-claude test `dispatch::observed_model_is_recorded_on_every_path_that_read_init`, red first in its own package.
                 observed_model: None,
+                // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* A
+                // pre-spawn path wrote no settings file; the one path that wrote it and then
+                // failed (the runtime panic arm) sets the member on the record it builds here.
+                settings_file: None,
             },
         )
     }
@@ -417,11 +424,17 @@ impl ClaudeHarness {
     /// *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes; `s8h` §8h.11.)* Moved
     /// out of `dispatch` unchanged, so the live probes read the argv a dispatch WILL carry before
     /// they spend (probe 0's `ARGV_MODE_SPELLING` and probe 1's settings premise).
+    ///
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; s8h §8h.6; D21-137, TAKEN
+    /// PROVISIONALLY.)* The child's settings travel as `--settings <path>`: `settings` names the
+    /// settings and the file that carries them (a stand-in path for [`Self::argv_for`], the real
+    /// per-dispatch file for `dispatch`).
     fn command_for(
         &self,
         card: &card::AgentCard,
         schema: &serde_json::Value,
         user_message: &str,
+        settings: SettingsArg<'_>,
     ) -> Result<command::Assembled, ConfigError> {
         assemble(
             &self.config,
@@ -431,13 +444,7 @@ impl ClaudeHarness {
                 adopt_agent: true,
                 strict_tools: &[],
                 user_message,
-                // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.6.)* NOT YET
-                // WIRED: `ChildSettings::for_worktree` lists every ancestor level of the worktree, and
-                // over a worktree under %TEMP% (4,660 entries on this machine) the element measures
-                // ~1,068,619 units against RT-1's 32,767 cap, so every temp-dir bind would refuse. The
-                // delivery (argv JSON vs a settings file) is BLOCKED for a ruling; until then the
-                // argv carries `--setting-sources ""` and no `--settings` element.
-                settings: None,
+                settings: Some(settings),
             },
         )
     }
@@ -459,9 +466,26 @@ impl ClaudeHarness {
             .schemas
             .get(&spec.schema)
             .ok_or_else(|| "the bound card was not bound with the spec's schema".to_owned())?;
-        self.command_for(&bound.card, schema, &Self::user_message(spec))
-            .map(|a| a.argv)
-            .map_err(|e| e.to_string())
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The settings
+        // element is the stand-in path: this premise writes nothing; the dispatch writes the file
+        // and records its path and sha256 on its row.
+        let worktree = Self::worktree(spec)
+            .ok_or_else(|| format!("the spec's inputs carry no string {WORKTREE_KEY:?}"))?;
+        let settings = ChildSettings::for_worktree(&worktree).map_err(|e| e.to_string())?;
+        let dir =
+            check_settings_dir(self.config.settings_dir(), &worktree).map_err(|e| e.to_string())?;
+        let stand_in = settings_stand_in(dir);
+        self.command_for(
+            &bound.card,
+            schema,
+            &Self::user_message(spec),
+            SettingsArg {
+                settings: &settings,
+                path: &stand_in,
+            },
+        )
+        .map(|a| a.argv)
+        .map_err(|e| e.to_string())
     }
 
     /// Append the row through the handed-in store (AC-360; ADR-0126's forbids) — a failure is
@@ -615,7 +639,47 @@ impl Harness for ClaudeHarness {
             return self.finish(store, spec, record, result);
         }
         let user_message = Self::user_message(spec);
-        let assembled = match self.command_for(&bound.card, schema, &user_message) {
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; s8h §8h.6; D21-137, TAKEN
+        // PROVISIONALLY.)* The child's settings, rebuilt from the worktree as it stands now, and
+        // the per-dispatch file's path in the caller-supplied directory (checked again here: unset,
+        // missing, under the worktree or not absolute is refused). Any failure is a pre-spawn row;
+        // nothing falls back to an argv without the settings.
+        let settings = match ChildSettings::for_worktree(&worktree) {
+            Ok(s) => s,
+            Err(e) => {
+                let (record, result) = pre(
+                    StepError::Transport {
+                        kind: TransportKind::Spawn,
+                        detail: format!("the child's settings could not be built: {e}"),
+                    },
+                    &[],
+                );
+                return self.finish(store, spec, record, result);
+            }
+        };
+        let settings_path =
+            match next_settings_path(self.config.settings_dir(), &worktree, &settings) {
+                Ok(p) => p,
+                Err(e) => {
+                    let (record, result) = pre(
+                        StepError::Transport {
+                            kind: TransportKind::Spawn,
+                            detail: format!("the child's settings file has no place: {e}"),
+                        },
+                        &[],
+                    );
+                    return self.finish(store, spec, record, result);
+                }
+            };
+        let assembled = match self.command_for(
+            &bound.card,
+            schema,
+            &user_message,
+            SettingsArg {
+                settings: &settings,
+                path: &settings_path,
+            },
+        ) {
             Ok(a) => a,
             Err(e) => {
                 let (record, result) = pre(
@@ -629,6 +693,22 @@ impl Harness for ClaudeHarness {
             }
         };
         let argv = assembled.argv.clone();
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The file, written
+        // LAST before the spawn (create_new, then read-only): a write failure spawns nothing. Its
+        // path and sha256 ride the row as the dispatch's launch evidence.
+        let settings_file = match write_settings_file(&settings_path, &settings) {
+            Ok(f) => f,
+            Err(e) => {
+                let (record, result) = pre(
+                    StepError::Transport {
+                        kind: TransportKind::Spawn,
+                        detail: format!("the child's settings file was not written: {e}"),
+                    },
+                    &argv,
+                );
+                return self.finish(store, spec, record, result);
+            }
+        };
 
         // ---- the child, through rk-containment, on the adapter's own runtime, from a scoped
         // thread (the module doc: callable from any context; a panic is caught at the join)
@@ -670,6 +750,8 @@ impl Harness for ClaudeHarness {
                     },
                     &argv,
                 );
+                let mut record = record;
+                record.settings_file = Some(settings_file);
                 return self.finish(store, spec, record, result);
             }
         };
@@ -755,6 +837,8 @@ impl Harness for ClaudeHarness {
                 // model the child's init REPORTED, `Some` on every path that read an init carrying
                 // `model` (a refused one too), `None` otherwise — never the requested id.
                 observed_model: run.observed_model.map(rk_types::usage::ObservedModel::new),
+                // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)*
+                settings_file: Some(settings_file),
             },
         );
         // ADR-0163 clause 2: ONE rate_limit_reading per dispatch through the child, from the

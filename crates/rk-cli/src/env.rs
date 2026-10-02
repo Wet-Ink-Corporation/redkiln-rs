@@ -18,6 +18,13 @@
 
 use std::collections::BTreeMap;
 
+/// **The launch record's variable** (`s8h` §8h.7; D21-42 17a; ADR-0197 decision 10, proposed).
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate.)* `tools/live-run.sh` exports it to
+/// its child as the path of the launch record it wrote (step 8). `run` over the real harness and
+/// the binary's `answer` refuse unless it names an existing file, read here through
+/// [`Env::launch_record`], the one read.
+pub const LAUNCH_RECORD: &str = "REDKILN_LAUNCH_RECORD";
+
 /// The process environment as it was at startup.
 ///
 /// `BTreeMap` and not `HashMap`: ordering is observable wherever this is rendered or digested, and
@@ -65,5 +72,14 @@ impl Env {
     #[must_use]
     pub fn lfs_skip_smudge(&self) -> Option<&str> {
         self.0.get("GIT_LFS_SKIP_SMUDGE").map(String::as_str)
+    }
+
+    /// **[`LAUNCH_RECORD`], as captured** (`s8h` §8h.7): the path the launcher exported, or `None`.
+    /// Whether it names an existing file is the launch check's question
+    /// (`crate::verbs::launch_check`), not this read's. *(dated 2026-10-02, s8h build, package
+    /// P6-cli-launch-gate.)*
+    #[must_use]
+    pub fn launch_record(&self) -> Option<&str> {
+        self.0.get(LAUNCH_RECORD).map(String::as_str)
     }
 }

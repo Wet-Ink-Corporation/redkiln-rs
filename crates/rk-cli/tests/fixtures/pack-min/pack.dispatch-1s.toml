@@ -96,6 +96,28 @@ subagent_prompt_ttl = "1h"
 class = "unknown_facet:has_repro"
 action = "fail"
 
+# (dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments) ADR-0146's load-time
+# lint (s8h §8h.10; Record B = ADR-0198 decision 7, proposed): `run` and `answer` refuse a
+# reachable gate class of the enabled pack with no row. Every pack reaches `escalation`
+# (gate::ESCALATION_CLASS) and the three kernel-minted kinds, read by the lint from their
+# constants: tier_one::LANDING_REFUSED_KIND, fsm::DRIFT_GATE_KIND, verify::ac_gate::AC_GATE_KIND.
+# Each is drafted `fail`, as the installed packs' rows are.
+[[gate_expiry]]
+class = "escalation"
+action = "fail"
+
+[[gate_expiry]]
+class = "landing.refused-path"
+action = "fail"
+
+[[gate_expiry]]
+class = "render.structured-drift"
+action = "fail"
+
+[[gate_expiry]]
+class = "verify.ac-discriminates"
+action = "fail"
+
 # `timeout_secs` on EVERY activity (`BindRequest.timeout_secs`).
 # 🛑 ONE SECOND, AND IT IS THE DISPATCH'S BOUND RATHER THAN THE GATE'S.
 # `gate_deadline_secs` above still reads 900: it feeds `GateToken::derive` and the expiry

@@ -3288,9 +3288,21 @@ else
   # SYNTHETIC CONTROL: the probe must see a planted mode.
   printf '{"permission_mode": "default"}\n' > "$tmpd/card.json"
   grep -qF '"permission_mode"' "$tmpd/card.json" || { echo "FAIL: synthetic control — the card-mode probe cannot see a planted permission_mode"; exit 1; }
+  # *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; s8h §8h.14; D21-47's time-bound rule)*
+  # AMENDED — the card-mode half only — in s8h's work commit, as §8d.11 asks: the eight shipped cards now carry
+  # permission_mode (s8h §8h.2), so the "no card carries a mode" precondition is replaced by two assertions: all eight
+  # cards carry a mode, and the launch-check refusal test, run by name under this block's wrapper (REDKILN_LAUNCH_RECORD
+  # removed), reports ok. From s8h on that test is the no-dispatch premise the replays rest on (s8h §8h.7). The
+  # fixture-child half below stands. The line this replaces read:
+  #   [ -z "$moded" ] || { echo "FAIL (PRECONDITION): a shipped card carries permission_mode, so s8h has landed without its dated amendment of (12a):"; printf '%s\n' "$moded"; exit 1; }
   moded=$(grep -lF '"permission_mode"' .redkiln/cards/*.json); rc=$?
   [ "$rc" -le 1 ] || { echo "FAIL: the card-mode precondition could not run (grep rc=$rc)"; exit 1; }
-  [ -z "$moded" ] || { echo "FAIL (PRECONDITION): a shipped card carries permission_mode, so s8h has landed without its dated amendment of (12a):"; printf '%s\n' "$moded"; exit 1; }
+  [ "$(printf '%s\n' "$moded" | grep -c .)" -eq "$ncards" ] && [ "$ncards" -eq 8 ] || { echo "FAIL (PRECONDITION): not all eight shipped cards carry permission_mode — s8h §8h.2's cards are not in place:"; printf '%s\n' "$moded"; exit 1; }
+  out=$(nodispatch cargo test -p rk-cli --test it -- run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn --exact 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL (PRECONDITION): the launch-check refusal test rc=$rc — the replays' no-dispatch premise (s8h §8h.7) is not proved"; printf '%s\n' "$out" | tail -20; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'test run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn ... ok' || { echo "FAIL (PRECONDITION): run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn did not report ok — renamed, deleted or not selected"; exit 1; }
+  printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo "FAIL (PRECONDITION): the launch-check selection did not run exactly 1 test (a filter that matches nothing is a green)"; exit 1; }
+  nd_check "8d (12a) launch-check premise" || exit 1
   # (12a), second half: every rk-cli fixture config that names a harness_binary names a FIXTURE CHILD, and pack-min's
   # names the canonical one, rk-fixture-child-claude (D21-47). SYNTHETIC CONTROL first: a planted `claude` is seen.
   hb_bad() { grep -rhE '^[[:space:]]*harness_binary[[:space:]]*=' "$@" | grep -vE '^[[:space:]]*harness_binary[[:space:]]*=[[:space:]]*"rk-fixture-child[A-Za-z0-9_-]*"[[:space:]]*(#.*)?$'; }

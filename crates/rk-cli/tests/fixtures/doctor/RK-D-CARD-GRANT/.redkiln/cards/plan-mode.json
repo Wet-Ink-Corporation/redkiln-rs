@@ -1,0 +1,9 @@
+{
+  "description": "RK-D-CARD-GRANT's rejecting card `plan-mode`.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": [
+    "StructuredOutput"
+  ],
+  "permission_mode": "plan",
+  "cache_profile": "static"
+}

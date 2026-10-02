@@ -177,6 +177,13 @@ pub trait HarnessFactory {
         config: rk_adapter_claude::config::Config,
         token: rk_ports::cancel::CancelToken,
     ) -> Result<std::sync::Arc<dyn rk_ports::harness::Harness>, String>;
+
+    /// Does this factory build the REAL harness (`rk_adapter_claude::ClaudeHarness`)?
+    ///
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.7.)* `run::run` refuses
+    /// a real-harness run without a launch record ([`launch_check`]); a fake-harness path is not
+    /// subject. No default: every factory states which it is.
+    fn builds_the_real_harness(&self) -> bool;
 }
 
 /// The one implementor on the product path: `ClaudeHarness::new(config, token)`, exactly as `run`
@@ -195,6 +202,43 @@ impl HarnessFactory for ClaudeHarnessFactory {
                 std::sync::Arc::new(harness) as std::sync::Arc<dyn rk_ports::harness::Harness>
             })
             .map_err(|e| e.to_string())
+    }
+
+    fn builds_the_real_harness(&self) -> bool {
+        true
+    }
+}
+
+/// **The launch check** (`s8h` §8h.7; D21-42 17a; D21-46; ADR-0197 decision 10, proposed): `Ok`
+/// only when the captured `Env` carries `REDKILN_LAUNCH_RECORD` naming an existing file, read
+/// through `env.rs` (ADR-0083's one read). *(dated 2026-10-02, s8h build, package
+/// P6-cli-launch-gate.)*
+///
+/// Called first by the two binary composition roots it binds: `run::run` when its factory builds
+/// the real harness, and `answer::run` (the binary's `answer`; its in-process twin
+/// `answer::run_with` is not subject). So the refusal comes before `reconcile_started` is appended
+/// and before any worktree operation. It is a guard against accident, not a security boundary:
+/// the variable can be forged, and that is stated.
+///
+/// # Errors
+/// [`Exit::ConfigError`], printed naming the variable and the launcher.
+pub fn launch_check(env: &Env, verb: &str) -> Result<(), Exit> {
+    let refused = |why: String| {
+        eprintln!(
+            "redkiln: `{verb}` refused before any row or worktree: {why}. A real run and a gate \
+             answer go through `tools/live-run.sh {verb}`, from a plain terminal, which writes the \
+             launch record and exports {} (s8h §8h.7)",
+            crate::env::LAUNCH_RECORD
+        );
+        Err(Exit::ConfigError)
+    };
+    match env.launch_record() {
+        None => refused(format!("{} is not set", crate::env::LAUNCH_RECORD)),
+        Some(path) if !Path::new(path).is_file() => refused(format!(
+            "{} names `{path}`, which is not an existing file",
+            crate::env::LAUNCH_RECORD
+        )),
+        Some(_) => Ok(()),
     }
 }
 

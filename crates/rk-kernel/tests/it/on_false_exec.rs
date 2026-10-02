@@ -130,6 +130,7 @@ impl Harness for LoopHarness {
                 activity_id_at_version: None,
                 // *(dated 2026-10-02, s8h build, package P2-rk-types; ADR-0197, proposed.)* No init read here.
                 observed_model: None,
+                settings_file: None,
             },
             result: next.map_or_else(
                 || {

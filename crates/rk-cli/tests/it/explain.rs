@@ -158,13 +158,8 @@ fn field<'a>(block: &'a str, label: &str) -> &'a str {
 }
 
 /// Spawn `redkiln -C <repo> explain <item>` with stdin closed (D-15).
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS, which is what carries its stderr — golden \
-              constraint 4's 'a stub never replaced'; run::spawn_run_in_mode's form"
-)]
 fn spawn_explain(repo: &std::path::Path, item: &str) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Withheld);
     cmd.arg("-C").arg(repo).arg("explain").arg(item);
     crate::support::output_bounded(&mut cmd)
 }

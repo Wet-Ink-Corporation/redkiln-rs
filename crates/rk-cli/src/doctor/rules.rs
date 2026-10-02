@@ -113,6 +113,13 @@ pub static RULES: &[Rule] = &[
         severity: Severity::Error,
         check: card_tools_absent,
     },
+    // *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.10;
+    // D21-42 21c; Record A = ADR-0197, proposed.)* The least-privilege grant row.
+    Rule {
+        id: "RK-D-CARD-GRANT",
+        severity: Severity::Error,
+        check: card_grant,
+    },
     Rule {
         id: "RK-D-TIER-LEAK",
         severity: Severity::Error,
@@ -339,6 +346,9 @@ struct CardView {
     model: Option<String>,
     #[serde(default)]
     effort: Option<String>,
+    /// *(dated 2026-10-02, s8h build, package P7.)* Read by `RK-D-CARD-GRANT` only.
+    #[serde(default)]
+    permission_mode: Option<String>,
 }
 
 /// Every `.redkiln/cards/*.json`, by file name, in path order.
@@ -462,6 +472,53 @@ fn card_tools_absent(ctx: &Ctx) -> Vec<Finding> {
             )
         })
         .collect()
+}
+
+/// The (g) union every card's tools must sit inside (`s8h` §8h.10; D21-41 (g)). A UNION allowlist,
+/// so the row names no list of forbidden tools that could go stale: `Bash`, `PowerShell` (the
+/// installed CLI offers one: `CLAUDE_CODE_USE_POWERSHELL_TOOL` in the binary), `Web*` and `mcp__*`
+/// are all outside it.
+const GRANT_UNION: [&str; 6] = ["Read", "Glob", "Grep", "Edit", "Write", "StructuredOutput"];
+
+/// The shipped pair of permission modes (`s8h` §8h.2). The adapter's closed set admits the CLI's
+/// seven; a SHIPPED card is held to these two, and that is this row's job.
+const SHIPPED_MODES: [&str; 2] = ["default", "acceptEdits"];
+
+/// **`RK-D-CARD-GRANT`** — `s8h` §8h.10 (D21-42 21c; Record A = ADR-0197, proposed): a card tool
+/// outside the least-privilege union, or a card `permission_mode` outside the shipped pair. A card
+/// with no mode is not this row's (the adapter refuses it at load, `PermissionModeAbsent`).
+/// *(Added 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments.)*
+fn card_grant(ctx: &Ctx) -> Vec<Finding> {
+    let mut out = Vec::new();
+    for (name, card) in cards(ctx) {
+        for tool in card.tools.iter().flatten() {
+            if !GRANT_UNION.contains(&tool.as_str()) {
+                out.push(finding(
+                    "RK-D-CARD-GRANT",
+                    Severity::Error,
+                    format!(
+                        "`cards/{name}` grants `{tool}`, outside the least-privilege union \
+                         {GRANT_UNION:?} — no card gets a command channel (`Bash`, `PowerShell`), \
+                         a `Web*` tool or an `mcp__*` tool; build and test stay on the Toolchain \
+                         port"
+                    ),
+                ));
+            }
+        }
+        if let Some(mode) = card.permission_mode.as_deref()
+            && !SHIPPED_MODES.contains(&mode)
+        {
+            out.push(finding(
+                "RK-D-CARD-GRANT",
+                Severity::Error,
+                format!(
+                    "`cards/{name}` carries `permission_mode` `{mode}`, outside the shipped pair \
+                     {SHIPPED_MODES:?}"
+                ),
+            ));
+        }
+    }
+    out
 }
 
 /// **`RK-D-CACHE-PROFILE`** — ADR-0113's doctor half (`s7c` ARMED).

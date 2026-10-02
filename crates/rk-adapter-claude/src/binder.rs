@@ -69,7 +69,9 @@ use rk_types::typed::SchemaId;
 use serde::Deserialize;
 
 use crate::card::{AgentCard, AuthoredCard, Effort, Models};
-use crate::command::{CommandSpec, assemble};
+use crate::command::{
+    ChildSettings, CommandSpec, SettingsArg, assemble, check_settings_dir, settings_stand_in,
+};
 use crate::config::{Config, ConfigError};
 
 pub use crate::config::Bound;
@@ -214,6 +216,15 @@ impl Binder {
             permission_mode: card.permission_mode.clone(),
             cache_profile: card.cache_profile,
         };
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; s8h §8h.6; D21-137, TAKEN
+        // PROVISIONALLY.)* The child's settings, built from the worktree (fail closed on its
+        // error), delivered as a FILE: bind writes nothing. It checks the settings directory, and
+        // `assemble` checks the settings against the CLI's 2 MiB file limit and the argv, carrying
+        // a stand-in path of the dispatch form, against RT-1's cap. Dispatch repeats both with the
+        // real path.
+        let settings = ChildSettings::for_worktree(req.worktree)?;
+        let settings_dir = check_settings_dir(config.settings_dir(), req.worktree)?;
+        let stand_in = settings_stand_in(settings_dir);
         // The argv-level lints, through the one builder (§7c.5): the user message is stdin, not
         // argv (AC-209), so an empty one measures what every dispatch of this card will.
         assemble(
@@ -224,13 +235,10 @@ impl Binder {
                 adopt_agent: true,
                 strict_tools: &[],
                 user_message: "",
-                // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.6.)* NOT YET
-                // WIRED: `ChildSettings::for_worktree` lists every ancestor level of the worktree, and
-                // over a worktree under %TEMP% (4,660 entries on this machine) the element measures
-                // ~1,068,619 units against RT-1's 32,767 cap, so every temp-dir bind would refuse. The
-                // delivery (argv JSON vs a settings file) is BLOCKED for a ruling; until then the
-                // argv carries `--setting-sources ""` and no `--settings` element.
-                settings: None,
+                settings: Some(SettingsArg {
+                    settings: &settings,
+                    path: &stand_in,
+                }),
             },
         )?;
         // RT-21: the worktree onto the inputs, refusing a collision or a path with no UTF-8 form.

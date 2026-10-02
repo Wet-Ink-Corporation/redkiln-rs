@@ -4,5 +4,6 @@
   "tools": [
     "StructuredOutput"
   ],
+  "permission_mode": "default",
   "cache_profile": "static"
 }

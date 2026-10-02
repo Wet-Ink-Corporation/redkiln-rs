@@ -69,9 +69,50 @@ pub fn values() -> ConfigValues {
 }
 
 /// A `Config` over `values()` — the construction every lint-free path starts from.
+///
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* With the shared settings
+/// directory ([`shared_settings_dir`]): every bind checks one, and a bind writes nothing there.
 #[must_use]
 pub fn config() -> Config {
-    Config::new(values()).expect("the baseline values construct")
+    Config::new(values())
+        .expect("the baseline values construct")
+        .with_settings_dir(shared_settings_dir())
+}
+
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.6; D21-137.)* The settings
+/// directory a test `Config` that owns no marker directory carries:
+/// `<CARGO_TARGET_TMPDIR>/rk-adapter-claude-settings`, emptied once per test process and outside
+/// every test's worktree (each worktree is its own temp directory). A bind writes nothing here; a dispatch over such a
+/// `Config` writes its file here, and the next test process's first call removes it.
+#[must_use]
+pub fn shared_settings_dir() -> PathBuf {
+    static DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("rk-adapter-claude-settings");
+        if dir.exists() {
+            // A settings file is written read-only: clear the flag before removing it.
+            for entry in std::fs::read_dir(&dir)
+                .expect("the shared settings dir lists")
+                .flatten()
+            {
+                let path = entry.path();
+                if let Ok(meta) = std::fs::metadata(&path) {
+                    let mut perms = meta.permissions();
+                    #[expect(
+                        clippy::permissions_set_readonly_false,
+                        reason = "test cleanup: a settings file is written read-only (D21-137) and \
+                                  the shared directory is emptied once per test process"
+                    )]
+                    perms.set_readonly(false);
+                    let _ = std::fs::set_permissions(&path, perms);
+                }
+                let _ = std::fs::remove_file(&path);
+            }
+        }
+        std::fs::create_dir_all(&dir).expect("the shared settings dir");
+        dir
+    })
+    .clone()
 }
 
 /// A `Config` whose captured map is `pairs`, everything else `values()`.
@@ -83,7 +124,7 @@ pub fn config_with_env(
         .iter()
         .map(|(k, val)| ((*k).to_owned(), (*val).to_owned()))
         .collect();
-    Config::new(v)
+    Config::new(v).map(|c| c.with_settings_dir(shared_settings_dir()))
 }
 
 /// A catalog card by stem (`tests/fixtures/cards/catalog/<stem>.json`), validated.
@@ -173,6 +214,10 @@ pub const MARKER_DIR_KEY: &str = "RK_FIXTURE_MARKER_DIR";
 /// and *"exactly one spawn"* are FILE COUNTS. Halt 6: every test makes its own.
 pub struct Markers {
     dir: tempfile::TempDir,
+    /// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The settings
+    /// directory a spawn `Config` over these markers carries: its own temp directory, beside and
+    /// never under the marker directory or the worktree, removed with the test.
+    settings: tempfile::TempDir,
 }
 
 /// One marker file, parsed.
@@ -189,12 +234,19 @@ impl Markers {
     pub fn new() -> Self {
         Self {
             dir: tempfile::tempdir().expect("a temp marker dir"),
+            settings: tempfile::tempdir().expect("a temp settings dir"),
         }
     }
 
     #[must_use]
     pub fn path(&self) -> &Path {
         self.dir.path()
+    }
+
+    /// The settings directory a spawn `Config` over these markers carries (D21-137).
+    #[must_use]
+    pub fn settings_dir(&self) -> &Path {
+        self.settings.path()
     }
 
     /// Every `*.marker` file, parsed, in directory order.
@@ -260,7 +312,9 @@ pub fn spawn_values(markers: &Markers, mode: &str) -> ConfigValues {
 /// A `Config` over [`spawn_values`].
 #[must_use]
 pub fn spawn_config(markers: &Markers, mode: &str) -> Config {
-    Config::new(spawn_values(markers, mode)).expect("the spawn values construct")
+    Config::new(spawn_values(markers, mode))
+        .expect("the spawn values construct")
+        .with_settings_dir(markers.settings_dir().to_path_buf())
 }
 
 /// A transcript file composed from parts, written to a temp file the fixture child replays
@@ -423,6 +477,14 @@ pub fn bind_probe_as(
 ) -> (Config, ActivitySpec) {
     let mut inputs = vec![("prompt".to_owned(), serde_json::json!(prompt))];
     inputs.extend(extra.iter().map(|(k, v)| ((*k).to_owned(), v.clone())));
+    // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* A test `Config` built
+    // by `Config::new` alone carries no settings directory; the shared one is supplied here, and
+    // one the test supplied is kept.
+    let config = if config.settings_dir().is_some() {
+        config
+    } else {
+        config.with_settings_dir(shared_settings_dir())
+    };
     let card = catalog_card("probe");
     let r = role(role_stem);
     let sch = schema();
@@ -629,7 +691,8 @@ pub fn belt_dispatch_count(mut values: ConfigValues) -> usize {
         markers.path().to_string_lossy().into_owned(),
     );
     let config = Config::new(values)
-        .expect("the belt re-validates what the test's Config::new accepted, plus two seam names");
+        .expect("the belt re-validates what the test's Config::new accepted, plus two seam names")
+        .with_settings_dir(markers.settings_dir().to_path_buf());
     let worktree = tempfile::tempdir().expect("a temp worktree");
     let (config, spec) = bind_probe(config, 30, worktree.path(), "belt");
     let h = harness(config);

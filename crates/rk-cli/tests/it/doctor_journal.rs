@@ -77,13 +77,8 @@ const fn reading(payload: serde_json::Value) -> Event {
 }
 
 /// Spawn `redkiln -C <repo> doctor` with the fixture child's two names on its `Command`.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS: which journal the SHIPPED binary reads is only \
-              observable through the binary (`doctor.rs`'s `spawn_doctor` is the same form)"
-)]
 fn spawn_doctor(repo: &Path, markers: &Path) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Withheld);
     cmd.arg("-C")
         .arg(repo)
         .arg("doctor")
@@ -451,7 +446,9 @@ options = ["approve", { id = "vouch", attaches = "Findings" }]
             explain_sufficed: rk_cli::cli::YesNo::Yes,
             toml_opened: rk_cli::cli::YesNo::No,
         },
-        &support::clean_env(),
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; s8h §8h.7.)* The binary's
+        // `answer` composition root, so the fixture launch record, explicitly.
+        &support::launched_env(),
         rk_cli::verbs::Startup::real(),
     )
     .expect("answer does not halt");

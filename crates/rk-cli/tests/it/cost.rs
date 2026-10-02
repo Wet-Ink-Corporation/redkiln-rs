@@ -97,12 +97,8 @@ fn nothing_line(item: &str, dispatches: usize) -> String {
 /// `RK_FIXTURE_MODE` is set to `exit:0` although `cost` dispatches nothing: left unset, an
 /// UNEXPECTED dispatch would park for 600 s in the fixture child's `hold` default instead of
 /// failing — the reason `answer`'s spawner carries it too.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS — the binary arm of ADR-0163 decision 6"
-)]
 fn spawn_cost(root: &Path, item: &str) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Withheld);
     cmd.arg("-C")
         .arg(root)
         .arg("cost")
@@ -132,10 +128,6 @@ fn spawn_cost(root: &Path, item: &str) -> std::process::Output {
 /// (the key line reads `1788300000`); `cost` quoting a delta at `n < 10`; `cost` rendering a
 /// sampled shape for an item that never ran.
 #[test]
-#[expect(
-    clippy::disallowed_types,
-    reason = "the run is driven AS A PROCESS, exactly as AC-438's binary arm drives it"
-)]
 fn cost_after_a_real_run_renders_low_sample_through_the_binary() {
     let repo = pack_min_repo(PackVariant::Base);
     let root = repo.path();
@@ -149,7 +141,7 @@ fn cost_after_a_real_run_renders_low_sample_through_the_binary() {
     // ---- (1) THE RUN, mirrored from `ac438_table_driven_exit_codes_over_fixtures_binary_arm`.
     let markers = root.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C").arg(root).arg("run").arg("bug-1");
     cmd.env("RK_FIXTURE_MODE", format!("replay:{}", frames.display()))
         .env("RK_FIXTURE_MARKER_DIR", &markers);
@@ -1309,17 +1301,13 @@ fn a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected() {
 /// Red by `M16b` (`bind_nodes` hands the binder `None`: the row reads `null` and the breakdown
 /// groups under `(none)`); by the row left item-less (no breakdown at all).
 #[test]
-#[expect(
-    clippy::disallowed_types,
-    reason = "the run is driven AS A PROCESS, exactly as AC-438's binary arm drives it"
-)]
 fn a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed() {
     let repo = pack_min_repo(PackVariant::Base);
     let root = repo.path();
     let frames = cost_dir().join("run-frames.jsonl");
     let markers = root.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C").arg(root).arg("run").arg("bug-1");
     cmd.env("RK_FIXTURE_MODE", format!("replay:{}", frames.display()))
         .env("RK_FIXTURE_MARKER_DIR", &markers);

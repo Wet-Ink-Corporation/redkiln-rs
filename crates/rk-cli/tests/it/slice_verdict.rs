@@ -56,15 +56,10 @@ fn corpus(parts: &[&str]) -> PathBuf {
 }
 
 /// Run `redkiln -C <root> run review-1` with the child replaying `<corpus>/frames.jsonl`.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the seal is exercised AS A PROCESS: ADR-0162's precedent is a real `redkiln run` over a \
-              fixture corpus, and that is what discharges the ARMED lint"
-)]
 fn run_over(root: &Path, corpus: &Path) -> std::process::Output {
     let markers = root.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C")
         .arg(root)
         .args(["run", ITEM])

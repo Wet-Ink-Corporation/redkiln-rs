@@ -2,7 +2,13 @@
   "description": "Step 7e's v0 card for the `implementer` role.",
   "prompt": "Make the change the step describes, and report it. Emit the artifacts the activity declares, as StructuredOutput.",
   "tools": [
+    "Read",
+    "Glob",
+    "Grep",
+    "Edit",
+    "Write",
     "StructuredOutput"
   ],
+  "permission_mode": "acceptEdits",
   "cache_profile": "static"
 }

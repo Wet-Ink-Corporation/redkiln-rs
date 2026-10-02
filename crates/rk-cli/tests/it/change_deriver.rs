@@ -52,6 +52,10 @@ fn change_repo() -> tempfile::TempDir {
     src.push_str(&shipped_change_facet());
     src.push('\n');
     std::fs::write(&facets, src).expect("facets.toml writes");
+    // *(dated 2026-10-02, s8h build, package P7; `s8h` §8h.10.)* The derived `change` facet makes
+    // R6's `unknown_facet:change` gate reachable, so the packs carry its fail-closed row, as both
+    // shipped packs do (ADR-0146's load-time lint refuses the run at step (7) without it).
+    crate::support::add_gate_expiry_row(root, "unknown_facet:change");
 
     for pack in ["bug-standard.toml", "story.toml"] {
         let path = rk.join("packs").join(pack);

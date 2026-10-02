@@ -1683,3 +1683,161 @@ fn observed_model_is_recorded_on_every_path_that_read_init() {
     let o = crate::support::harness(config).dispatch(&spec, &mut store);
     assert_eq!(o.record.observed_model, None, "pre-spawn is None");
 }
+
+// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate.)* `s8h` §8h.6 as ruled by D21-137
+// (TAKEN PROVISIONALLY under D21-105): the settings FILE a dispatch writes, and its evidence on the
+// row. ADR-0197 decision 9 as amended, proposed.
+
+/// The `--settings` element a marker's argv carries.
+fn settings_element(argv: &[String]) -> String {
+    let at: Vec<usize> = argv
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| *a == "--settings")
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(at.len(), 1, "--settings occurs exactly once in {argv:?}");
+    argv[at[0] + 1].clone()
+}
+
+/// D21-137 (b): a dispatch writes its settings file before the spawn, and the child's
+/// `--settings` element names it. The file is in the caller-supplied directory (beside, never
+/// under, the worktree), read-only, its bytes are the confinement JSON (the worktree's own sibling
+/// is denied, the read fence and `autoMemoryEnabled: false` are set), and the record AND the
+/// `dispatch_completed` row carry its path and the sha256 of exactly those bytes.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the scaffold's writer): *"the
+/// settings file the child was handed exists (D21-137 (b)): … (os error 2)"*.
+#[test]
+fn the_settings_file_is_the_json_and_its_sha256_is_recorded() {
+    let markers = Markers::new();
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let wt = tmp.path().join("wt");
+    std::fs::create_dir_all(&wt).expect("the worktree");
+    std::fs::create_dir_all(tmp.path().join("sib")).expect("a sibling of the worktree");
+    let t = ok_transcript();
+    let config = spawn_config(&markers, &format!("replay:{}", t.path.display()));
+    let (config, spec) = bind_probe(config, 30, &wt, "hello");
+    let mut store = VecStore::default();
+    let outcome = harness(config).dispatch(&spec, &mut store);
+    assert!(outcome.result.is_ok(), "{:?}", outcome.result);
+    let spawned = markers.read();
+    assert_eq!(spawned.len(), 1, "exactly one spawn");
+    let element = settings_element(&spawned[0].argv);
+    let bytes = std::fs::read(&element).unwrap_or_else(|e| {
+        panic!("the settings file the child was handed exists (D21-137 (b)): {element}: {e}")
+    });
+    let recorded = outcome
+        .record
+        .settings_file
+        .clone()
+        .expect("the record carries the settings file it delivered (D21-137 item 3)");
+    assert_eq!(
+        recorded.path, element,
+        "the record names the file the argv named"
+    );
+    assert_eq!(
+        recorded.sha256,
+        rk_types::digest::sha256(&bytes),
+        "the recorded sha256 is the delivered bytes'"
+    );
+    let payload = completed_payload(&store);
+    assert_eq!(payload["settings_file"]["path"], serde_json::json!(element));
+    assert_eq!(
+        payload["settings_file"]["sha256"],
+        serde_json::json!(recorded.sha256.as_str())
+    );
+    let path = std::path::Path::new(&element);
+    assert!(path.is_absolute(), "the element is an absolute path");
+    assert_eq!(
+        path.parent(),
+        Some(markers.settings_dir()),
+        "the file is in the caller-supplied directory"
+    );
+    assert!(!path.starts_with(&wt), "the file is outside the worktree");
+    assert!(
+        std::fs::metadata(path)
+            .expect("meta")
+            .permissions()
+            .readonly(),
+        "the file is read-only"
+    );
+    let json: serde_json::Value = serde_json::from_slice(&bytes).expect("the bytes are JSON");
+    assert_eq!(
+        json["permissions"]["blockReadsOutsideWorkingDirectories"],
+        serde_json::json!(true)
+    );
+    assert_eq!(json["autoMemoryEnabled"], serde_json::json!(false));
+    let deny: Vec<&str> = json["permissions"]["deny"]
+        .as_array()
+        .expect("deny")
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    let level = tmp
+        .path()
+        .file_name()
+        .and_then(|n| n.to_str())
+        .expect("the temp dir has a UTF-8 name");
+    let sib = format!("/{level}/sib/**)");
+    let own = format!("/{level}/wt");
+    assert!(
+        deny.iter()
+            .any(|r| r.starts_with("Read(") && r.ends_with(&sib)),
+        "the worktree's own sibling is denied: the file is THIS worktree's settings"
+    );
+    assert!(
+        !deny.iter().any(|r| r.contains(&own)),
+        "the worktree itself is never denied"
+    );
+}
+
+/// D21-137 (d): two dispatches of one bound spec through one harness write two DISTINCT files,
+/// and the second leaves the first as it was (`create_new` under a per-dispatch name): each
+/// record's sha256 still matches its own file after both ran.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the scaffold's writer): *"each
+/// dispatch's settings file exists (D21-137 (d)): … (os error 2)"*.
+#[test]
+fn two_dispatches_write_two_distinct_settings_files() {
+    let markers = Markers::new();
+    let wt = tempfile::tempdir().expect("a temp worktree");
+    let t = ok_transcript();
+    let config = spawn_config(&markers, &format!("replay:{}", t.path.display()));
+    let (config, spec) = bind_probe(config, 30, wt.path(), "hello");
+    let h = harness(config);
+    let mut store = VecStore::default();
+    let first = h.dispatch(&spec, &mut store);
+    let second = h.dispatch(&spec, &mut store);
+    let files: Vec<_> = [&first, &second]
+        .iter()
+        .map(|o| {
+            o.record
+                .settings_file
+                .clone()
+                .expect("each dispatch records its settings file")
+        })
+        .collect();
+    assert_ne!(files[0].path, files[1].path, "two dispatches, two files");
+    for f in &files {
+        let bytes = std::fs::read(&f.path).unwrap_or_else(|e| {
+            panic!(
+                "each dispatch's settings file exists (D21-137 (d)): {}: {e}",
+                f.path
+            )
+        });
+        assert_eq!(
+            f.sha256,
+            rk_types::digest::sha256(&bytes),
+            "{}: neither file was overwritten",
+            f.path
+        );
+    }
+    let in_dir = std::fs::read_dir(markers.settings_dir())
+        .expect("the settings dir lists")
+        .count();
+    assert_eq!(
+        in_dir, 2,
+        "exactly the two files, in the supplied directory"
+    );
+}

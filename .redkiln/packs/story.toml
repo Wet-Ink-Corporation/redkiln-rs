@@ -1,8 +1,9 @@
 # v0 pack: story (Node/.NET/text toolchains). Authored 2026-09-07 for P6 before any lattice run.
-# NO RECORD names this number. The corpus anchors the FLOOR: F18/F19's gates
-# had no deadline mechanism and the longest was answered at 226 h (AC register,
-# expiry scope note), so a deadline under that would have expired gates that
-# were in fact answered. 10 days clears it. Authored at Step 7e -- RT-57, OWED.
+# gate_deadline_secs (dated 2026-10-02, s8h build): Record B = ADR-0198 decision 2 (proposed;
+# the operator signs the value). 10 days. The register's expiry scope note says the longest gate
+# was answered at 226 h, and AC-039's evidence line puts that 226 h / 9.4 days on the larger
+# stage->verdict series (n=191), not gate->verdict; 240 h clears the larger series' maximum, the
+# conservative direction for "do not expire an answered gate". Was: an RT-57 OWED marker.
 gate_deadline_secs = 864000
 [pack]
 id = "story"
@@ -204,16 +205,20 @@ attempts = 14
 
 # --- breaker, margins, cache, gate deadline ---
 #
-# 🛑 THE THREE NUMBERS BELOW MARKED `NO RECORD` ARE AUTHORED HERE AND NAMED BY NO
-# RECORD. They are written because `PackExtras` and the doctor rule table require
-# them and a code default is refused; the record that fixes them is RT-57's, OWED.
+# (dated 2026-10-02, s8h build) The breaker, the margins and the gate deadline are
+# RECORDED: Record B = ADR-0198 decisions 2 and 5 (proposed) fixes each value with its
+# warrant and the key spellings RT-57 routed to "7e's pack schema record". The operator
+# signs each value. A code default is still refused for every one of them.
 
 [breaker]
 # AC-033: "K consecutive `Platform` failures for one model family". K is a pack
-# value; NO RECORD names the number.
-consecutive_platform_failures = 3   # NO RECORD -- authored at Step 7e (RT-57)
-expiry_secs = 600                   # NO RECORD -- authored at Step 7e (RT-57)
+# value. K = 3, ADR-0198 decision 2: the one measured Platform episode (results/e3.jsonl,
+# file order) reaches four consecutive; K = 3 trips inside it and the isolated singles never do.
+consecutive_platform_failures = 3   # ADR-0198 decision 2 (K; an episode shape, not a rate)
+expiry_secs = 600                   # ADR-0198 decision 2 (2 x AC-029's 5 min backoff cap; chosen)
 
+# [margins] (dated 2026-10-02, s8h build): recorded by ADR-0198 decision 2 (proposed),
+# 10 / 10 ticks, the prior-art value below; they carried no NO-RECORD marker, and are in RT-57's floor.
 [margins]
 # A margin below 2 ticks is a load-time lint error (AC register: "margin_ticks < 2"),
 # so 2 is the floor. 10 ticks is the PRIOR-ART value moved out of code: the runner's
@@ -234,29 +239,359 @@ subagent_prompt_ttl = "1h"
 # The eight roles the shipped catalog's steps nominate, measured on disk:
 #   architect, implementer, investigator, operator, planner, releaser, reviewer, spec-author
 
+# (dated 2026-10-02, s8h build) `model` and `effort` per role, D21-41 (g) as kept by
+# D21-42 15b (s8h §8h.3; Record A = ADR-0197 decision 4, proposed). `model` is a KEY of
+# this pack's [models] table below, never a full id; `Binder::bind` refuses a key the table
+# lacks. A haiku role carries no effort: the haiku row does not accept one. `family` stays
+# (D-7's partition key).
 [role.architect]
 family = "claude"
+model = "opus"
+effort = "medium"
 
 [role.implementer]
 family = "claude"
+model = "sonnet"
+effort = "high"
 
 [role.investigator]
 family = "claude"
+model = "sonnet"
+effort = "high"
 
 [role.operator]
 family = "claude"
+model = "haiku"
 
 [role.planner]
 family = "claude"
+model = "haiku"
 
 [role.releaser]
 family = "claude"
+model = "haiku"
 
 [role.reviewer]
 family = "claude"
+model = "opus"
+effort = "high"
 
 [role.spec-author]
 family = "claude"
+model = "sonnet"
+effort = "medium"
+
+# --- the model table (s8h §8h.3; Record A = ADR-0197 decision 4, proposed) ---
+#
+# (dated 2026-10-02, s8h build) Each installed pack carries its own table, so each stays
+# independently complete. The row's full id is what reaches `--model`, the `--agents` JSON
+# and the card digest; adoption is exact equality with the init's reported `model` (RT-27).
+# haiku: accepts_effort = false is the lifted rule (tiers.mjs EFFORTLESS_TIERS = ['haiku']:
+# "haiku rejects the parameter").
+
+[models.haiku]
+id = "claude-haiku-4-5-20251001"
+accepts_effort = false
+
+[models.sonnet]
+id = "claude-sonnet-5"
+accepts_effort = true
+
+[models.opus]
+id = "claude-opus-5-5"
+accepts_effort = true
+
+# --- gate expiry, fail-closed for every reachable class (s8h §8h.10) ---
+#
+# (dated 2026-10-02, s8h build) Record B = ADR-0198 decision 6 (proposed): one row per
+# reachable gate class, each drafted `fail` for the operator's row-by-row signature (AC-276).
+# `auto-decide` is not drafted (no verdict carrier; run.rs refuses it by name) and `escalate`
+# is admissible only as a signed exception. The classes: the 45 catalog questions; one
+# `unknown_facet:<axis>` per axis this pack's require rows read (7 here; `change` is also
+# s8d's R6 triage gate); `escalation`; and the three kernel-minted kinds, read from their
+# constants. 56 rows. ADR-0146's load-time lint (Record B decision 7) refuses, at `run` and
+# `answer`, a reachable class with no row here and a row whose class nothing reaches.
+
+# catalog question
+[[gate_expiry]]
+class = "adr.accept"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "api-contract.accept"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "appetite.overrun"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "asvs.level"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "atam.accept-risks"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "bisect.no-culprit"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "bluegreen.cutover"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "canary.degraded"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "canary.proceed"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "change.authorize"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "closure.signoff"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "confirmation.not-fixed"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "dependency.breaking"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "discovery.go-no-go"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "draft.accept"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "hotfix.authorize"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "incident.end"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "inspection.meeting"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "loop.exhausted"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "migration.approve"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "migration.execute"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "mitigation.not-restored"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "mitigation.proceed"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "postmortem.review"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "prototype.user-test"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "prr.accept-gaps"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "repro.cannot-reproduce"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "review.blocking"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "rollback.confirm"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "rollout.approve"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "rollout.ramp"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "root-cause.accept"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "root-cause.no-hypothesis"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "scan.accept-findings"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "seam.cutover"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "slicing.approve"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "spec.ambiguity"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "spec.requirements-conflict"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "spike.decision"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "spike.timebox-exhausted"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "sprint.decide"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "sprint.test-results"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "tdd.green-exhausted"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "threat-model.accept-residual"
+action = "fail"
+
+# catalog question
+[[gate_expiry]]
+class = "vuln.accept-sla"
+action = "fail"
+
+# abstaining axis
+[[gate_expiry]]
+class = "unknown_facet:blast_radius"
+action = "fail"
+
+# abstaining axis
+[[gate_expiry]]
+class = "unknown_facet:change"
+action = "fail"
+
+# abstaining axis
+[[gate_expiry]]
+class = "unknown_facet:criticality"
+action = "fail"
+
+# abstaining axis
+[[gate_expiry]]
+class = "unknown_facet:rigor"
+action = "fail"
+
+# abstaining axis
+[[gate_expiry]]
+class = "unknown_facet:size"
+action = "fail"
+
+# abstaining axis
+[[gate_expiry]]
+class = "unknown_facet:external_dep"
+action = "fail"
+
+# abstaining axis
+[[gate_expiry]]
+class = "unknown_facet:novelty"
+action = "fail"
+
+# gate::ESCALATION_CLASS
+[[gate_expiry]]
+class = "escalation"
+action = "fail"
+
+# kernel-minted, tier_one::LANDING_REFUSED_KIND, ADR-0188
+[[gate_expiry]]
+class = "landing.refused-path"
+action = "fail"
+
+# kernel-minted, fsm::DRIFT_GATE_KIND, ADR-0189
+[[gate_expiry]]
+class = "render.structured-drift"
+action = "fail"
+
+# kernel-minted, verify::ac_gate::AC_GATE_KIND, ADR-0191 decision 10
+[[gate_expiry]]
+class = "verify.ac-discriminates"
+action = "fail"
+
 
 # --- per-activity timeouts (RK-D-TIMEOUT, AC-097) ---
 #

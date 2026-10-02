@@ -1,0 +1,10 @@
+{
+  "description": "RK-D-CARD-GRANT's rejecting card `powershell`.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": [
+    "PowerShell",
+    "StructuredOutput"
+  ],
+  "permission_mode": "default",
+  "cache_profile": "static"
+}

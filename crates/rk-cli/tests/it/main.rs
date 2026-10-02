@@ -63,6 +63,7 @@
 
 mod adapter_selection;
 mod answer;
+mod cards;
 mod catalog;
 mod change_deriver;
 mod checklist_bridge;
@@ -86,6 +87,7 @@ mod review_pass;
 mod root;
 mod run;
 mod run_worktree;
+mod schemas;
 mod slice_verdict;
 mod status;
 mod story_axis;
@@ -237,6 +239,59 @@ pub fn redkiln() -> &'static str {
     env!("CARGO_BIN_EXE_redkiln")
 }
 
+/// Whether a spawned `redkiln` is handed a launch record (`s8h` §8h.7; D21-47). *(dated
+/// 2026-10-02, s8h build, package P6-cli-launch-gate.)*
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Launch {
+    /// The variable is removed and not set: the child sees no launch record, whatever this test
+    /// process inherited (under `s8j`'s `wrap` it would carry a real one).
+    Withheld,
+    /// The variable names the committed fixture record, [`fixture_launch_record`]: every
+    /// binary-level `run` (the real harness at the fixture child) and every binary `answer`.
+    Fixture,
+}
+
+/// The committed fixture launch record (`tests/fixtures/launch/fixture-launch-record.txt`), by
+/// absolute path. The launch check reads only that it names an existing file.
+///
+/// # Panics
+/// If the fixture is absent: a run handed a path to nothing would refuse for the wrong reason.
+#[must_use]
+pub fn fixture_launch_record() -> PathBuf {
+    let path = fixtures_dir()
+        .join("launch")
+        .join("fixture-launch-record.txt");
+    assert!(
+        path.is_file(),
+        "the fixture launch record {} is absent",
+        path.display()
+    );
+    path
+}
+
+/// **The ONE `Command` over the `redkiln` binary in this test tree** (`s8h` §8h.7; D21-47:
+/// *"Launch-gate tests build their `Env` explicitly, enforced by a lint"*). *(dated 2026-10-02,
+/// s8h build, package P6-cli-launch-gate.)*
+///
+/// It removes `REDKILN_LAUNCH_RECORD` first, so no spawn inherits the test process's value, and
+/// sets it only to the fixture record when the caller says so. Every spawn site folds into it, and
+/// `run::every_binary_spawn_withholds_or_supplies_the_launch_record` asserts that exactly one code
+/// line constructs such a `Command`, here, with the removal (mutant M26).
+#[expect(
+    clippy::disallowed_types,
+    reason = "every verb exercised AS A PROCESS goes through this one constructor (golden \
+              constraint 4's 'a stub never replaced'; s7d §7d.13's temp-repository rule), so the \
+              launch record is withheld or supplied at one site (s8h §8h.7)"
+)]
+pub fn redkiln_command(launch: Launch) -> std::process::Command {
+    let mut cmd = std::process::Command::new(redkiln());
+    cmd.env_remove(rk_cli::env::LAUNCH_RECORD);
+    if launch == Launch::Fixture {
+        cmd.env(rk_cli::env::LAUNCH_RECORD, fixture_launch_record());
+    }
+    cmd
+}
+
 /// A temp repository with one commit, and nothing else.
 ///
 /// # 🛑 EVERY REPOSITORY GETS A **DISTINCT ROOT COMMIT**, and that is not decoration
@@ -283,13 +338,8 @@ pub fn git(cwd: &Path, args: &[&str]) {
 }
 
 /// Spawn `redkiln -C <repo> init` with stdin closed (D-15: no verb reads stdin).
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS, which is the only way golden constraint 4's \
-              'a stub never replaced' is caught (s7d §7d.13's temp-repository rule)"
-)]
 pub fn run_init(repo: &Path) -> std::process::Output {
-    let mut cmd = std::process::Command::new(redkiln());
+    let mut cmd = redkiln_command(Launch::Withheld);
     cmd.args(["-C", &repo.display().to_string(), "init"]);
     crate::support::output_bounded(&mut cmd)
 }

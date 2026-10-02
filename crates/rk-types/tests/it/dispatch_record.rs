@@ -8,7 +8,7 @@
 //! binding), `cli_version` is non-optional on both arms, absence is `null` and never `{}` or `0`,
 //! and the whole row round-trips through `serde_json` — which is what `Event.payload` is.
 
-use rk_types::activity::{DispatchRecord, RecordTail};
+use rk_types::activity::{DispatchRecord, RecordTail, SettingsFile};
 use rk_types::error::CancelledBy;
 use rk_types::retention::{HEAD_TAIL, Retained, STDIO_CAP};
 use rk_types::usage::{
@@ -64,6 +64,11 @@ fn full_tail() -> RecordTail {
         activity_id_at_version: Some("emit-report@1".to_owned()),
         // *(dated 2026-10-02, s8h build, package P2-rk-types; Record A = ADR-0197, proposed.)*
         observed_model: Some(ObservedModel::new("claude-haiku-4-5-20251001")),
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)*
+        settings_file: Some(SettingsFile {
+            path: "D:/rk/runs/r1/child-settings.json".to_owned(),
+            sha256: rk_types::digest::sha256(b"{}"),
+        }),
     }
 }
 
@@ -87,6 +92,7 @@ fn pre_spawn_tail() -> RecordTail {
         activity_id_at_version: None,
         // *(dated 2026-10-02, s8h build, package P2-rk-types.)* No init was read before a spawn.
         observed_model: None,
+        settings_file: None,
     }
 }
 
@@ -130,6 +136,8 @@ fn ac360_dispatch_record_carries_the_usage_fields() {
         activity_id_at_version,
         // *(dated 2026-10-02, s8h build, package P2-rk-types; Record A = ADR-0197, proposed.)*
         observed_model,
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)*
+        settings_file,
     } = rec.clone();
 
     // The digests are digests: 64 hex characters, and the secret is in neither.
@@ -180,6 +188,16 @@ fn ac360_dispatch_record_carries_the_usage_fields() {
     assert_eq!(
         observed_model.as_ref().map(ObservedModel::as_str),
         Some("claude-haiku-4-5-20251001")
+    );
+    assert_eq!(
+        settings_file
+            .as_ref()
+            .map(|f| (f.path.as_str(), f.sha256.clone())),
+        Some((
+            "D:/rk/runs/r1/child-settings.json",
+            rk_types::digest::sha256(b"{}")
+        )),
+        "the settings file's path and sha256 travel on the record (D21-137)"
     );
     assert_eq!(
         usage.as_ref().and_then(Usage::ttl_split),
@@ -252,6 +270,9 @@ fn a_pre_spawn_record_carries_the_pin_and_absence_as_null() {
         "activity_id_at_version",
         // *(dated 2026-10-02, s8h build, package P2-rk-types.)* No init before a spawn: `null`.
         "observed_model",
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* No file before a
+        // spawn: `null`.
+        "settings_file",
     ] {
         // `.get()`, not `[]`: `Value`'s `Index<&str>` answers `Null` for a MISSING key too, so the
         // indexed form could not tell "present as null" from "omitted" and a

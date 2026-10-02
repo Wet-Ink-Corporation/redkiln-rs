@@ -316,6 +316,15 @@ pub const DECLARED_FILE: &str = "declared.toml";
 /// # Errors
 /// [`Halt::PoisonedLock`] from the store acquisition. Every other refusal is a value.
 pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result<Exit, Halt> {
+    // ---- THE LAUNCH CHECK (`s8h` §8h.7; D21-42 17a). *(dated 2026-10-02, s8h build, package
+    // P6-cli-launch-gate.)* A run over the REAL harness is entered only through
+    // `tools/live-run.sh run`: without a launch record it refuses here, before steps (1)-(7)
+    // append `reconcile_started` and before any worktree operation. A fake harness is not subject.
+    if startup.harness.builds_the_real_harness()
+        && let Err(exit) = crate::verbs::launch_check(env, "run")
+    {
+        return Ok(exit);
+    }
     let resolved = match through_step_seven(cli, args, env, startup, Entry::Run) {
         Ok(resolved) => resolved,
         Err(exit) => return Ok(exit),
@@ -877,8 +886,16 @@ fn run_lane(
             return Ok(exit);
         }
 
+        // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.6; D21-137, TAKEN
+        // PROVISIONALLY.)* The directory each dispatch of this stage run writes its child-settings
+        // file into: created here, before the first bind, outside the run-owned worktree, and
+        // handed to the adapter as an input (it never runs git to find one).
+        let settings_dir = match child_settings_dir(&resolved, &run_id) {
+            Ok(dir) => dir,
+            Err(exit) => return Ok(exit),
+        };
         let claude = match real_harness_config(&resolved, env) {
-            Ok(config) => config,
+            Ok(config) => config.with_settings_dir(settings_dir),
             Err(exit) => return Ok(exit),
         };
         let mut binder = rk_adapter_claude::binder::Binder::new(claude);
@@ -1674,6 +1691,41 @@ pub fn through_step_seven(
         )
     })?;
 
+    // ---- ADR-0146'S LOAD-TIME LINT, BOTH HALVES (`s8h` §8h.10; D21-42 21c; Record B = ADR-0198
+    // decision 7, proposed). *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments.)*
+    // Here, at pack load, because `run` and `answer` both pass through this function and both must
+    // refuse BEFORE any dispatch: a reachable gate class of the enabled pack with no
+    // `[[gate_expiry]]` row, and a row whose class nothing reaches.
+    let derived_names: Vec<String> = registry
+        .facets()
+        .filter(|f| {
+            f.source == rk_kernel::registry::Source::Derived
+                && f.deriver.as_deref() == Some(crate::change_deriver::DERIVER)
+        })
+        .map(|f| f.name.clone())
+        .collect();
+    let registered: std::collections::BTreeSet<String> =
+        registry.facets().map(|f| f.name.clone()).collect();
+    let refusals = lint_gate_expiry(
+        &extras.gate_expiry,
+        pack_name,
+        &pack_src,
+        &catalog_questions(&root, record.trial.as_ref().map(|t| t.activity.as_str())),
+        &registered,
+        &derived_names,
+    );
+    if !refusals.is_empty() {
+        for refusal in &refusals {
+            eprintln!("redkiln: {}: {refusal}", pack_path.display());
+        }
+        return Err(refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        ));
+    }
+
     Ok(Resolved {
         exec: repo.exec,
         worktree: repo.worktree,
@@ -1698,15 +1750,217 @@ pub fn through_step_seven(
             .adapters
             .toolchain_timeout_secs
             .unwrap_or(DEFAULT_TOOLCHAIN_TIMEOUT_SECS),
-        derived_facets: registry
-            .facets()
-            .filter(|f| {
-                f.source == rk_kernel::registry::Source::Derived
-                    && f.deriver.as_deref() == Some(crate::change_deriver::DERIVER)
-            })
-            .map(|f| f.name.clone())
-            .collect(),
+        derived_facets: derived_names,
     })
+}
+
+/// One refusal of ADR-0146's load-time lint (`s8h` §8h.10; Record B = ADR-0198 decision 7,
+/// proposed). *(Added 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments.)*
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GateExpiryLint {
+    /// A reachable class of the enabled pack has no `[[gate_expiry]]` row (ADR-0146: *"make an
+    /// unmatched step-gate class a load-time refusal rather than a run-time exit 3"*; Record B reads
+    /// "unmatched" as having no row in the enabled process pack).
+    Unmatched {
+        /// The class with no row.
+        class: String,
+    },
+    /// A row whose class is neither a catalog question, nor `unknown_facet:<registered facet>`,
+    /// nor `escalation`, nor a gate kind the kernel mints — a misspelt class leaves the real one
+    /// uncovered.
+    Unreachable {
+        /// The row's class.
+        class: String,
+    },
+}
+
+impl std::fmt::Display for GateExpiryLint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unmatched { class } => write!(
+                f,
+                "the reachable gate class `{class}` has no `[[gate_expiry]]` row; an unmatched \
+                 class is a load-time refusal, never a run-time exit 3 (ADR-0146; ADR-0198 \
+                 decision 7)"
+            ),
+            Self::Unreachable { class } => write!(
+                f,
+                "the `[[gate_expiry]]` row for `{class}` names no class this system reaches (not a \
+                 catalog question, not `unknown_facet:<registered facet>`, not `escalation`, not a \
+                 kernel-minted gate kind), so the class it was meant for is uncovered (ADR-0198 \
+                 decision 7)"
+            ),
+        }
+    }
+}
+
+/// The gate kinds the kernel mints, read from the constants at their mint sites (never a list
+/// copied beside them): `s8f`'s landing refusal and drift gate, and `s8g`'s AC-357 verify gate.
+/// Every pack reaches each of them (any lane can land, drift at entry or reach verify), so every
+/// pack carries their rows.
+const MINTED_GATE_KINDS: [&str; 3] = [
+    rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND,
+    rk_kernel::workflow::fsm::DRIFT_GATE_KIND,
+    rk_kernel::verify::ac_gate::AC_GATE_KIND,
+];
+
+/// **ADR-0146's load-time lint, both halves** (`s8h` §8h.10; D21-42 21c; Record B = ADR-0198
+/// decision 7, proposed). *(Added 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments.)*
+///
+/// The enabled pack's REACHABLE classes are: every catalog question (`questions`); `unknown_facet:
+/// <axis>` for every facet root the pack's `require` rows read (`step2.rs` opens one per abstaining
+/// axis) and for every DERIVED facet (`s8d`'s R6 opens `unknown_facet:<facet>` at the lane's first
+/// stage); `escalation` (`gate::ESCALATION_CLASS`); and [`MINTED_GATE_KINDS`]. Each must have a
+/// row ([`GateExpiryLint::Unmatched`]). A row is ADMISSIBLE when its class is reachable, a catalog
+/// question, `unknown_facet:<registered facet>`, `escalation` or a minted kind; any other is
+/// [`GateExpiryLint::Unreachable`]. A pack the kernel cannot parse is left to the kernel's own
+/// refusal a step later, so this lint adds no second message for it.
+#[must_use]
+pub fn lint_gate_expiry(
+    rows: &[GateExpiryRow],
+    pack_name: &str,
+    pack_src: &str,
+    questions: &std::collections::BTreeSet<String>,
+    registered: &std::collections::BTreeSet<String>,
+    derived: &[String],
+) -> Vec<GateExpiryLint> {
+    use std::collections::BTreeSet;
+    let Ok(pack) = rk_kernel::select::Pack::from_toml(&format!("{pack_name}.toml"), pack_src)
+    else {
+        return Vec::new();
+    };
+    let mut axes: BTreeSet<String> = BTreeSet::new();
+    for (_, spec) in pack.stage_specs() {
+        for row in &spec.require {
+            if let Ok(parsed) = rk_kernel::predicate::parse(&row.when) {
+                predicate_roots(&parsed.expr, &mut axes);
+            }
+        }
+    }
+    axes.extend(derived.iter().cloned());
+
+    let mut reachable: BTreeSet<String> = questions.clone();
+    reachable.extend(axes.iter().map(|a| format!("unknown_facet:{a}")));
+    reachable.insert(rk_kernel::workflow::gate::ESCALATION_CLASS.to_owned());
+    reachable.extend(MINTED_GATE_KINDS.iter().map(|k| (*k).to_owned()));
+
+    let declared: BTreeSet<&str> = rows.iter().map(|r| r.class.as_str()).collect();
+    let mut out: Vec<GateExpiryLint> = reachable
+        .iter()
+        .filter(|class| !declared.contains(class.as_str()))
+        .map(|class| GateExpiryLint::Unmatched {
+            class: class.clone(),
+        })
+        .collect();
+    for row in rows {
+        let admissible = reachable.contains(&row.class)
+            || row
+                .class
+                .strip_prefix("unknown_facet:")
+                .is_some_and(|facet| registered.contains(facet));
+        if !admissible {
+            out.push(GateExpiryLint::Unreachable {
+                class: row.class.clone(),
+            });
+        }
+    }
+    out
+}
+
+/// The facet ROOTS a predicate reads: the first segment of every `Path`. A quantifier's body reads
+/// its bound element, not a facet, so only its source is walked.
+fn predicate_roots(
+    expr: &rk_kernel::predicate::Expr,
+    out: &mut std::collections::BTreeSet<String>,
+) {
+    use rk_kernel::predicate::Expr;
+    match expr {
+        Expr::Or(a, b) | Expr::And(a, b) => {
+            predicate_roots(a, out);
+            predicate_roots(b, out);
+        }
+        Expr::Not(a) | Expr::Group(a) | Expr::Len(a) => predicate_roots(a, out),
+        Expr::Cmp { left, right, .. } => {
+            predicate_roots(left, out);
+            predicate_roots(right, out);
+        }
+        Expr::In { left, list } => {
+            predicate_roots(left, out);
+            predicate_roots(list, out);
+        }
+        Expr::Member { literal, set } => {
+            predicate_roots(literal, out);
+            predicate_roots(set, out);
+        }
+        Expr::Path(path) => {
+            out.insert(path.split('.').next().unwrap_or(path).to_owned());
+        }
+        Expr::List(items) => {
+            for item in items {
+                predicate_roots(item, out);
+            }
+        }
+        Expr::Quant { source, .. } => predicate_roots(source, out),
+        Expr::Ref(_) | Expr::Lit(_) => {}
+    }
+}
+
+/// Every `question = "…"` value in `.redkiln/catalog/*.toml` (inline `escalate` tables too), and
+/// in the one extended activity a `[trial]` admits. Read quietly: a file that does not read or
+/// parse is the catalog loader's to refuse, a step later, by name.
+fn catalog_questions(root: &Path, trial: Option<&str>) -> std::collections::BTreeSet<String> {
+    fn walk(value: &toml::Value, out: &mut std::collections::BTreeSet<String>) {
+        match value {
+            toml::Value::Table(table) => {
+                for (key, inner) in table {
+                    if key == "question"
+                        && let Some(question) = inner.as_str()
+                    {
+                        out.insert(question.to_owned());
+                    }
+                    walk(inner, out);
+                }
+            }
+            toml::Value::Array(items) => {
+                for item in items {
+                    walk(item, out);
+                }
+            }
+            toml::Value::String(_)
+            | toml::Value::Integer(_)
+            | toml::Value::Float(_)
+            | toml::Value::Boolean(_)
+            | toml::Value::Datetime(_) => {}
+        }
+    }
+    let read = |dir: PathBuf| -> Vec<toml::Value> {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return Vec::new();
+        };
+        entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+            .filter_map(|p| std::fs::read_to_string(p).ok())
+            .filter_map(|src| toml::from_str::<toml::Value>(&src).ok())
+            .collect()
+    };
+    let mut out = std::collections::BTreeSet::new();
+    for doc in read(root.join(".redkiln").join("catalog")) {
+        walk(&doc, &mut out);
+    }
+    if let Some(trial) = trial {
+        for doc in read(root.join(".redkiln").join(rk_kernel::catalog::EXTENDED_DIR)) {
+            let id = doc
+                .get("activity")
+                .and_then(|a| a.get("id"))
+                .and_then(toml::Value::as_str);
+            if id == Some(trial) {
+                walk(&doc, &mut out);
+            }
+        }
+    }
+    out
 }
 
 /// **The seed**: the item's latest stage-bearing mark, as `reconcile` folded it.
@@ -5606,6 +5860,36 @@ pub fn toolchain_values(
     )
 }
 
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.6; D21-137, TAKEN
+/// PROVISIONALLY.)* The child-settings directory of one stage run:
+/// `<common_dir>/redkiln/child-settings/<run_id>/`, created if absent, never emptied.
+///
+/// **Why not `<common_dir>/redkiln/runs/<run_id>/`, the directory D21-137 names.** That directory
+/// is the run record's: `rk_kernel::replay::write_run` begins with `remove_dir_all` on it and
+/// runs AFTER the stage's dispatches, so every settings file written there would be deleted at the
+/// stage's end — against D21-137 item 3's *"Keep the file with the run's evidence. Never delete it
+/// during the run or after spawn."* A sibling root keyed by the same `run_id` keeps both clauses
+/// that can hold at once (outside the worktree, a protected `.git` segment, kept with the run) and
+/// is a one-line move back. Raised for a ruling (the package report's blocker).
+///
+/// # Errors
+/// [`Exit::ConfigError`], printed, when the directory cannot be created.
+fn child_settings_dir(resolved: &Resolved, run_id: &str) -> Result<PathBuf, Exit> {
+    let dir = resolved
+        .common_dir
+        .join("redkiln")
+        .join("child-settings")
+        .join(run_id);
+    std::fs::create_dir_all(&dir).map_err(|e| {
+        eprintln!(
+            "redkiln: the child-settings directory {} could not be created: {e}",
+            dir.display()
+        );
+        Exit::ConfigError
+    })?;
+    Ok(dir)
+}
+
 /// The real harness's configuration, from the pack's margins and TTLs and the captured environment.
 ///
 /// # 🛑 `harness_binary` IS THE ONE VALUE HERE WITH A FALLBACK, AND THE FALLBACK IS THE ADAPTER'S
@@ -5850,7 +6134,7 @@ fn bind_nodes(
                 owned,
                 &root,
                 (&node.id, activity.id_at_version()),
-                (&role_name, &kind, timeout_secs),
+                (&role_name, (&step.id, &kind), timeout_secs),
             )?;
             step_specs.insert(step.id.clone(), spec);
         }
@@ -5868,7 +6152,7 @@ fn bind_nodes(
             (&node.id, activity.id_at_version()),
             (
                 first.role.as_deref().unwrap_or_default(),
-                first.output_type.as_deref().unwrap_or_default(),
+                (&first.id, first.output_type.as_deref().unwrap_or_default()),
                 activity_secs,
             ),
         )?;
@@ -5890,7 +6174,14 @@ fn bind_nodes(
 }
 
 /// **One `Binder::bind`**: a role's card, a kind's schema, a bound — the three things a spec binds
-/// that differ between agent steps (R1). `(role, kind, timeout_secs)`.
+/// that differ between agent steps (R1). `(role, (step, kind), timeout_secs)`.
+///
+/// *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.4; Record A
+/// = ADR-0197 decision 6, proposed.)* **The schema is `rk_types::registry::EXPORTED`'s entry named
+/// by the bound step's output kind** (its `value:<Kind>`), derived from the Rust type, never read
+/// from a file: the `.redkiln/schemas/<kind>.json` read is deleted and no such directory is created
+/// or consulted. A kind `EXPORTED` does not register is refused here, naming the kind and the
+/// step, as `Exit::ConfigError` before any spawn.
 ///
 /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190 decision 2,
 /// proposed; D21-107.)* `(node_id, activity_id_at_version)`: the activity's
@@ -5903,7 +6194,7 @@ fn bind_one(
     owned: &Path,
     root: &Path,
     (node_id, activity_id_at_version): (&str, Option<String>),
-    (role_name, kind, timeout_secs): (&str, &str, u64),
+    (role_name, (step_id, kind), timeout_secs): (&str, (&str, &str), u64),
 ) -> Result<rk_types::activity::ActivitySpec, Exit> {
     let card_path = root
         .join(".redkiln")
@@ -5918,16 +6209,12 @@ fn bind_one(
             eprintln!("redkiln: {}: {e}", card_path.display());
             Exit::ConfigError
         })?;
-    let schema_path = root
-        .join(".redkiln")
-        .join("schemas")
-        .join(format!("{kind}.json"));
-    let schema_text = std::fs::read_to_string(&schema_path).map_err(|e| {
-        eprintln!("redkiln: {}: {e}", schema_path.display());
-        Exit::ConfigError
-    })?;
-    let schema_json: serde_json::Value = serde_json::from_str(&schema_text).map_err(|e| {
-        eprintln!("redkiln: {} is not JSON: {e}", schema_path.display());
+    let schema_json = exported_schema(kind).ok_or_else(|| {
+        eprintln!(
+            "redkiln: the `agent` step `{step_id}` of `{node_id}` outputs `value:{kind}`, and \
+             `{kind}` is not a type `rk_types::registry::EXPORTED` registers, so the dispatch has \
+             no schema to validate against (s8h §8h.4; ADR-0197 decision 6)"
+        );
         Exit::ConfigError
     })?;
     // `Role { model, effort }` is THE PACK'S role table, read through `PackExtras`. The card may not
@@ -5962,6 +6249,15 @@ fn bind_one(
             eprintln!("redkiln: the binder refused `{node_id}`: {e}");
             Exit::ConfigError
         })
+}
+
+/// `EXPORTED`'s schema for `kind`, by name, or `None` when no exported type carries that name.
+/// *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.4.)*
+fn exported_schema(kind: &str) -> Option<serde_json::Value> {
+    rk_types::registry::EXPORTED
+        .iter()
+        .find(|(name, _)| *name == kind)
+        .map(|(_, export)| export())
 }
 
 /// **What the entry pass is handed and hands back** beside the seams (`s8f` §8f.5; ADR-0189

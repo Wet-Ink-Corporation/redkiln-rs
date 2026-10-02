@@ -1716,14 +1716,8 @@ fn ac423_probe_is_one_version_spawn_not_a_dispatch() {
 /// Spawn `redkiln -C <repo> doctor` with the fixture child's two names on its `Command`.
 ///
 /// `Command::env`, never `set_var`, which is banned workspace-wide including this tree.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS: the fixture child reads its mode from its own \
-              environment and inherits its parent's, so nothing in-process can set it. \
-              `answer.rs`'s `spawn_answer` is the same form for the same reason."
-)]
 fn spawn_doctor(repo: &std::path::Path, markers: &std::path::Path) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Withheld);
     cmd.arg("-C")
         .arg(repo)
         .arg("doctor")
@@ -2019,14 +2013,8 @@ fn ac438_doctor_error_rule_exits_config_error() {
 ///
 /// `RK_FIXTURE_MODE` is left unset deliberately here: nothing on these paths spawns, because the
 /// probe's program is the adapter's own default and the version rule reports whatever it finds.
-#[expect(
-    clippy::disallowed_types,
-    reason = "AC-438's doctor instance is about the PROCESS's exit code, which only driving the \
-              real binary can observe — golden constraint 4's 'a stub never replaced' is caught \
-              nowhere else."
-)]
 fn spawn_doctor_plain(repo: &std::path::Path) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Withheld);
     cmd.arg("-C")
         .arg(repo)
         .arg("doctor")
@@ -2233,14 +2221,8 @@ fn synthetic_trailer_repo() -> tempfile::TempDir {
 }
 
 /// Spawn `redkiln -C <repo> doctor --rebuild`.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the rebuild is exercised AS A PROCESS: AC-429's fingerprint is a before/after of the \
-              real binary's effect on `.git`, and an in-process call would not be the thing the \
-              criterion is about"
-)]
 fn spawn_doctor_rebuild(repo: &std::path::Path) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Withheld);
     cmd.arg("-C")
         .arg(repo)
         .arg("doctor")
@@ -3434,5 +3416,130 @@ fn ac349_equal_specificity_claim_is_a_doctor_row() {
     assert!(
         over_shipped.is_empty(),
         "the shipped claims tie: {over_shipped:?}"
+    );
+}
+
+// ======================================================= s8h §8h.10: RK-D-CARD-GRANT (two tests)
+//
+// *(Added 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; D21-42 21c; Record A
+// = ADR-0197, proposed.)* The doctor row refuses any card tool outside the (g) union
+// `{Read, Glob, Grep, Edit, Write, StructuredOutput}` and any card mode outside the shipped pair
+// `{default, acceptEdits}`. Each test runs the rule over its rejecting fixture, then over
+// `doctor/clean/`, then over the SHIPPED cards (copied into a materialised clean tree), and the
+// last two must find nothing.
+
+/// `RK-D-CARD-GRANT` over the shipped `.redkiln/cards/*.json`, copied into a materialised
+/// `doctor/clean/` in place of its one card. PREMISE: eight cards copied.
+fn card_grant_over_the_shipped_cards() -> Vec<rk_cli::doctor::Finding> {
+    let dir = materialise("clean");
+    let cards = dir.path().join(".redkiln").join("cards");
+    std::fs::remove_dir_all(&cards).expect("the clean fixture's card directory is removed");
+    std::fs::create_dir_all(&cards).expect("the card directory is re-created");
+    let shipped = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join(".redkiln")
+        .join("cards");
+    let mut n = 0_usize;
+    for entry in std::fs::read_dir(&shipped).expect("the shipped cards read") {
+        let path = entry.expect("an entry").path();
+        if path.extension().is_none_or(|x| x != "json") {
+            continue;
+        }
+        std::fs::copy(&path, cards.join(path.file_name().expect("a name")))
+            .expect("the shipped card copies");
+        n += 1;
+    }
+    assert_eq!(n, 8, "PREMISE: the eight shipped cards were copied");
+    let rule = RULES
+        .iter()
+        .find(|r| r.id == "RK-D-CARD-GRANT")
+        .expect("RK-D-CARD-GRANT is in RULES");
+    (rule.check)(&ctx_for(dir.path()))
+}
+
+/// **§8h.10: `RK-D-CARD-GRANT` refuses a card tool outside the least-privilege union** — the
+/// rejecting fixture's five tool cards (`Bash`, `PowerShell`, `WebFetch`, `WebSearch`,
+/// `mcp__x__y`) are each named, by card and by tool, at `error`; `doctor/clean/` and the shipped
+/// cards are clean (the control).
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, before the row existed): *"RK-D-CARD-GRANT is
+/// not in RULES — no rule to run over RK-D-CARD-GRANT"*.
+#[test]
+fn rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set() {
+    let found = findings("RK-D-CARD-GRANT", "RK-D-CARD-GRANT");
+    for f in &found {
+        assert_eq!(
+            f.id, "RK-D-CARD-GRANT",
+            "a finding carries another id: {f:?}"
+        );
+        assert_eq!(f.severity, rk_cli::doctor::Severity::Error, "{f:?}");
+    }
+    for (card, tool) in [
+        ("bash.json", "Bash"),
+        ("powershell.json", "PowerShell"),
+        ("webfetch.json", "WebFetch"),
+        ("websearch.json", "WebSearch"),
+        ("mcp.json", "mcp__x__y"),
+    ] {
+        assert!(
+            found
+                .iter()
+                .any(|f| f.detail.contains(&format!("cards/{card}"))
+                    && f.detail.contains(&format!("`{tool}`"))),
+            "RK-D-CARD-GRANT did not name `{tool}` on `cards/{card}`: {found:?}"
+        );
+    }
+    assert!(
+        found
+            .iter()
+            .all(|f| !f.detail.contains("cards/plan-mode.json") || f.detail.contains("mode")),
+        "the mode card grants StructuredOutput alone, so it has no tool finding: {found:?}"
+    );
+    let clean = findings("RK-D-CARD-GRANT", "clean");
+    assert!(
+        clean.is_empty(),
+        "RK-D-CARD-GRANT fired over doctor/clean/: {clean:?}"
+    );
+    let shipped = card_grant_over_the_shipped_cards();
+    assert!(
+        shipped.is_empty(),
+        "RK-D-CARD-GRANT fired over the shipped cards: {shipped:?}"
+    );
+}
+
+/// **§8h.10: `RK-D-CARD-GRANT` refuses a card mode outside the shipped pair** — the fixture's
+/// `plan-mode.json` (`plan`, a CLI mode `lint_card` admits) is named at `error`; the five tool
+/// cards carry `default` and draw no mode finding; the shipped cards (`default` and
+/// `acceptEdits`) are clean.
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, before the row existed): *"RK-D-CARD-GRANT is
+/// not in RULES — no rule to run over RK-D-CARD-GRANT"*.
+#[test]
+fn rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair() {
+    let found = findings("RK-D-CARD-GRANT", "RK-D-CARD-GRANT");
+    let mode: Vec<&rk_cli::doctor::Finding> = found
+        .iter()
+        .filter(|f| f.detail.contains("permission_mode"))
+        .collect();
+    assert_eq!(
+        mode.len(),
+        1,
+        "exactly one card carries a mode outside the shipped pair: {found:?}"
+    );
+    assert!(
+        mode[0].detail.contains("cards/plan-mode.json") && mode[0].detail.contains("`plan`"),
+        "the mode finding names the card and the mode: {:?}",
+        mode[0]
+    );
+    assert_eq!(mode[0].severity, rk_cli::doctor::Severity::Error);
+    assert!(
+        rk_adapter_claude::card::PERMISSION_MODES.contains(&"plan"),
+        "PREMISE: `plan` is a mode the adapter's closed set admits, so only the doctor row refuses it"
+    );
+    let shipped = card_grant_over_the_shipped_cards();
+    assert!(
+        shipped.is_empty(),
+        "RK-D-CARD-GRANT fired over the shipped cards: {shipped:?}"
     );
 }

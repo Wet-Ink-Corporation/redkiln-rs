@@ -275,6 +275,10 @@ fn with_gate_step(root: &Path, question: &str) {
         1,
     );
     std::fs::write(&path, out).expect("emit-report.toml writes");
+    // *(dated 2026-10-02, s8h build, package P7; `s8h` §8h.10.)* The catalog now reaches
+    // `question`, so the packs carry its fail-closed row: ADR-0146's load-time lint would otherwise
+    // refuse the run at step (7), before the binding pass whose refusal these tests read.
+    crate::support::add_gate_expiry_row(root, question);
 }
 
 /// **A catalog gate step whose question the registry does not declare refuses `run` by name.**

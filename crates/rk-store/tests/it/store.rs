@@ -455,6 +455,7 @@ fn a_dispatch_record_keeps_digests_and_has_no_environment_field() {
             activity_id_at_version: None,
             // *(dated 2026-10-02, s8h build, package P2-rk-types; ADR-0197, proposed.)* No init read here.
             observed_model: None,
+            settings_file: None,
         },
     );
     assert_eq!(rec.argv_digest.as_str().len(), 64);
@@ -484,6 +485,7 @@ fn a_dispatch_record_keeps_digests_and_has_no_environment_field() {
         activity_id_at_version: _,
         // *(dated 2026-10-02, s8h build, package P2-rk-types; ADR-0197, proposed.)* No init read here.
         observed_model: _,
+        settings_file: _,
     } = rec;
 }
 

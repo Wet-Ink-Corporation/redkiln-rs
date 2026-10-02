@@ -1,0 +1,9 @@
+MODE=fixture
+ARGV=redkiln (a test fixture: no launcher wrote this record)
+CLAUDE_PATH=none
+CLI_VERSION_BEFORE=none
+CLI_SHA256_BEFORE=none
+CLAUDE_CONFIG_DIR=none
+DISABLE_AUTOUPDATER=1
+PIN=none
+HEAD=none

@@ -191,7 +191,7 @@ bare: guard (0)'s fake `claude` first on `PATH` (it prints the pin), `REDKILN_LA
 `CLAUDE_CONFIG_DIR` at guard (0)'s empty trap directory, which must still be empty afterwards. *(re-pointed
 2026-09-24, final consistency pass)* That wrapper is the shared `runbook/tools/nodispatch.sh`: run each reading as
 `nodispatch env RK_CP_NESTED=1 bash <extracted block>` after `nd_setup`, and `nd_check` after each. Guard (11)'s card
-condition (no shipped card carries `permission_mode`) is checked before the first of them. In this session
+condition ~~(no shipped card carries `permission_mode`)~~ *(dated 2026-10-02, s8h build: amended by `s8h` §8h.14 in its work commit — all eight shipped cards carry `permission_mode`, and `run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn` reports its `... ok` line under the wrapper; the no-dispatch premise is the launch check)* is checked before the first of them. In this session
 `CLAUDE_CONFIG_DIR` is the operator's real account, so a bare BEFORE run of 7i or 7f is the accident D21-47's
 replay rule exists to prevent.
 
@@ -856,7 +856,7 @@ terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is m
 - **Checkpoints 7i (entry), 5, 7a, 7b and 7f each run whole from their own bytes and reach their last line.** No
   other checkpoint is re-run. 7c is `s8j`'s (D21-43 N28). Under `RK_CP_NESTED=1`, when another checkpoint runs
   this block as its entry gate, guard (11) skips these runs and says so (D21-46).
-- **Neither whole run that can reach `redkiln run` dispatched.** No shipped card carries `permission_mode`, and
+- **Neither whole run that can reach `redkiln run` dispatched.** ~~No shipped card carries `permission_mode`~~ *(dated 2026-10-02, s8h build: from `s8h` on every shipped card carries one, and the launch-check refusal test reports `ok` instead, `s8h` §8h.14)*, and
   the store and every run journal hold the same number of `dispatch_completed` rows after the runs as before. Each
   run had `CLAUDE_CONFIG_DIR` at an empty trap directory, which is still empty, and had `REDKILN_LAUNCH_RECORD`
   unset (D21-46).
@@ -1760,8 +1760,23 @@ PY
   # (all cards carry a mode, and the launch-check refusal test runs by name), by D21-47's time-bound rule.
   set -- .redkiln/cards/*.json
   [ "$#" -eq 8 ] && [ -f "$1" ] || { echo "FAIL: expected 8 shipped cards"; exit 1; }
-  pm=$(grep -l 'permission_mode' "$@"); rc=$?
-  [ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc) — 7i's or 7f's run could reach a REAL dispatch; stop and re-run through §8a.10's rule (D21-40 decision 2)"; exit 1; }
+  # *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; s8h §8h.14; D21-47's time-bound rule)*
+  # AMENDED in s8h's work commit: the eight shipped cards now carry permission_mode (s8h §8h.2), so "no card carries a
+  # mode" is false and is no longer the no-dispatch premise. The premise is the launch check (s8h §8h.7): every whole
+  # run below starts with REDKILN_LAUNCH_RECORD removed, so a real-harness `run` refuses before any spawn, and the named
+  # test proves that refusal here. The two lines this replaces read:
+  #   pm=$(grep -l 'permission_mode' "$@"); rc=$?
+  #   [ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc) — 7i's or 7f's run could reach a REAL dispatch; stop and re-run through §8a.10's rule (D21-40 decision 2)"; exit 1; }
+  mkdir -p target/s8a-ctl || { echo "FAIL: cannot make the card-mode control directory"; exit 1; }
+  printf '{"tools": ["StructuredOutput"]}\n' > target/s8a-ctl/no-mode.json || { echo "FAIL: cannot write the card-mode control"; exit 1; }
+  if grep -q '"permission_mode"' target/s8a-ctl/no-mode.json; then echo "FAIL: SYNTHETIC CONTROL — the card-mode probe sees a mode in a card that carries none"; exit 1; fi
+  pm=$(grep -l '"permission_mode"' "$@"); rc=$?
+  [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$pm" | grep -c .)" -eq 8 ] || { echo "FAIL: not all eight shipped cards carry permission_mode (rc=$rc): $pm — s8h §8h.2's cards are not in place"; exit 1; }
+  out=$(nodispatch cargo test -p rk-cli --test it -- run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn --exact 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the launch-check refusal test rc=$rc — the replays' no-dispatch premise (s8h §8h.7) is not proved"; printf '%s\n' "$out" | tail -20; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'test run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn ... ok' || { echo "FAIL: run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn did not report ok — renamed, deleted or not selected"; exit 1; }
+  printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo "FAIL: the launch-check selection did not run exactly 1 test (a filter that matches nothing is a green)"; exit 1; }
+  nd_check "8a (11) launch-check premise" || exit 1
   # NO-DISPATCH, MEASURED: dispatch_completed rows in the store AND in every run journal, before and after.
   dcount() {  # $1 = store path; prints "<store rows> <journal rows>"
     python - "$1" "$(dirname "$1")/runs" <<'PY'

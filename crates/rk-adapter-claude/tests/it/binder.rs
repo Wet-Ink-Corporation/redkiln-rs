@@ -581,3 +581,36 @@ fn a_tier_absent_from_the_models_table_is_refused() {
         .bind(request("sonnet-high", &r, &card, &schema, &wt))
         .expect("CONTROL: the same role binds over a table that carries the key");
 }
+
+/// *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; `s8h` §8h.6; D21-137 (g), TAKEN
+/// PROVISIONALLY.)* Binds over a worktree under `%TEMP%` and one under `target/tmp` both SUCCEED
+/// now that the settings travel as a file (inline, P3 measured them at about 1,068,619 and 243,048
+/// units against RT-1's 32,767), and bind WRITES NOTHING: the settings directory is as empty after
+/// both binds as before (D21-137 item 4: bind measures a stand-in path).
+///
+/// RED (observed 2026-10-02, through D21-47's wrapper, against the inline scaffold): *"a bind over a
+/// %TEMP% worktree succeeds (D21-137 (g)): ArgvAtOrOverCap { units: …, cap: 32767 }"*.
+#[test]
+fn binds_over_temp_and_target_tmp_worktrees_succeed_and_write_nothing() {
+    let settings = tempfile::tempdir().expect("a settings dir");
+    let temp_wt = tempfile::tempdir().expect("a worktree under %TEMP%");
+    let target_tmp = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+    std::fs::create_dir_all(&target_tmp).expect("target/tmp");
+    let tmp_wt = tempfile::tempdir_in(&target_tmp).expect("a worktree under target/tmp");
+    let schema = schema();
+    let card = catalog_card("probe");
+    let r = role("haiku");
+    let mut binder = Binder::new(config().with_settings_dir(settings.path().to_path_buf()));
+    for (what, wt) in [("%TEMP%", temp_wt.path()), ("target/tmp", tmp_wt.path())] {
+        binder
+            .bind(request("haiku", &r, &card, &schema, wt))
+            .unwrap_or_else(|e| {
+                panic!("a bind over a {what} worktree succeeds (D21-137 (g)): {e:?}")
+            });
+    }
+    assert_eq!(binder.config().cards().len(), 1, "one card, bound twice");
+    let written = std::fs::read_dir(settings.path())
+        .expect("the settings dir lists")
+        .count();
+    assert_eq!(written, 0, "bind writes nothing (D21-137 item 4)");
+}

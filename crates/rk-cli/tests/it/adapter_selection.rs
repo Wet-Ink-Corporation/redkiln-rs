@@ -464,10 +464,6 @@ fn the_composition_root_binds_the_row_inputs_no_step_declares() {
 /// the environment in which `advisory_db_row_inputs` binds nothing. It must read 19. Otherwise the
 /// case's 10 could come from something other than the binding.
 #[test]
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS: the call site in `run()` is what this test pins"
-)]
 fn run_binds_sca_scans_advisory_databases_before_the_step_reaches_the_port() {
     // One fixture repository, as described above; `strip` removes those variables from the run's
     // environment. Returns the exit code, and stderr for the failure messages.
@@ -502,7 +498,7 @@ fn run_binds_sca_scans_advisory_databases_before_the_step_reaches_the_port() {
         .expect("the registry is written");
         let markers = root.join(".rk-markers");
         std::fs::create_dir_all(&markers).expect("the marker directory is created");
-        let mut cmd = std::process::Command::new(crate::redkiln());
+        let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
         cmd.arg("-C")
             .arg(root)
             .arg("run")

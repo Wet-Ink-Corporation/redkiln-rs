@@ -1,0 +1,10 @@
+{
+  "description": "RK-D-CARD-GRANT's rejecting card `websearch`.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": [
+    "WebSearch",
+    "StructuredOutput"
+  ],
+  "permission_mode": "default",
+  "cache_profile": "static"
+}

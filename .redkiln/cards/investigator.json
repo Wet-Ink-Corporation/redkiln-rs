@@ -2,7 +2,11 @@
   "description": "Step 7e's v0 card for the `investigator` role.",
   "prompt": "Establish what is true about the item, and report it. Emit the artifacts the activity declares, as StructuredOutput.",
   "tools": [
+    "Read",
+    "Glob",
+    "Grep",
     "StructuredOutput"
   ],
+  "permission_mode": "default",
   "cache_profile": "static"
 }

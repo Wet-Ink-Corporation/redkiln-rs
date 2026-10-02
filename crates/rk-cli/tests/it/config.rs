@@ -396,12 +396,8 @@ fn ac422_config_reads_the_one_denylist() {
 /// Spawn `redkiln -C <repo> run <item>` with stdin closed (D-15), for AC-486's spawned arms.
 ///
 /// Module level: `clippy::items_after_statements` is DENIED workspace-wide.
-#[expect(
-    clippy::disallowed_types,
-    reason = "AC-486's spawned arm exercises the refusal AS A PROCESS — 'before any spawn or store               write' is a claim about what a real invocation did not do"
-)]
 fn spawn_run_for_ac486(repo: &std::path::Path, item: &str) -> std::process::Output {
-    let mut cmd = std::process::Command::new(crate::redkiln());
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
     cmd.arg("-C").arg(repo).arg("run").arg(item);
     crate::support::output_bounded(&mut cmd)
 }

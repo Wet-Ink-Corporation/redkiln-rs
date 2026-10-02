@@ -1,0 +1,11 @@
+{
+  "description": "RK-D-CARD-GRANT's rejecting card `bash`.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": [
+    "Read",
+    "Bash",
+    "StructuredOutput"
+  ],
+  "permission_mode": "default",
+  "cache_profile": "static"
+}

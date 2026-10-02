@@ -285,9 +285,12 @@ pin.
 
 **9. Settings isolation and confinement (D21-42 21b, 21d).** Every argv carries `--setting-sources ""` (the empty value
 loads none of `user`, `project`, `local`; the 2.1.287 parser still begins `if(e==="")return[];` [measured 2026-10-02 by
-string search]) and one `--settings <json>` element assembled per dispatch from the spec's worktree. **Position:** the
-four elements `--setting-sources`, `""`, `--settings`, `<json>` follow `--permission-prompts none` and precede
-`--system-prompt`, which stays LAST under the static profile (h1-sysprompt's position). The JSON carries:
+string search]) and ~~one `--settings <json>` element assembled per dispatch from the spec's worktree~~ *(dated
+2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* one `--settings <path>`
+element naming a read-only file written per dispatch outside the worktree into a caller-supplied run directory, whose
+bytes are the assembled JSON. **Position:** the four elements `--setting-sources`, `""`, `--settings`, ~~`<json>`~~
+`<path>` follow `--permission-prompts none` and precede `--system-prompt`, which stays LAST under the static profile
+(h1-sysprompt's position). The JSON carries:
 - `permissions.blockReadsOutsideWorkingDirectories: true`, the primary read fence;
 - `permissions.deny` rules for `Read`, `Edit` and `Write` written as **the complement along the worktree's ancestor
   chain** (at each ancestor level every sibling entry not on the path to the worktree, `//<drive>/**` for every other
@@ -298,6 +301,31 @@ four elements `--setting-sources`, `""`, `--settings`, `<json>` follow `--permis
 
 The effect of each is asserted from the child (the init line and probe 2's memory file set), never inferred from the
 argv. Nothing is carried into the worktree for the child's settings.
+
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105.)* **The file.**
+Inline, the deny complement rode the argv against RT-1's 32,767-unit cap: about 11,989 units for a run worktree under
+`.redkiln/worktrees/`, about 1,068,619 under `%TEMP%` and about 243,048 under `target/tmp` [measured 2026-10-02,
+`s8h` §8h.6's dated note]. So the element names a file, and:
+- **The location is an input.** The adapter never runs git to find it and has no default: `Config::with_settings_dir`
+  carries it. A directory that was not supplied, does not exist, lies under the worktree (compared with `\\?\`
+  stripped, case-folded on Windows), or is not an absolute, non-verbatim path is a typed refusal
+  (`SettingsDirUnset`, `SettingsDirMissing`, `SettingsDirUnderWorktree`, `SettingsPathRefused`), never a fallback to
+  an argv without the settings.
+- **Bind writes nothing.** `Binder::bind` builds the settings from the worktree (fail closed), checks the directory,
+  and assembles with a stand-in path of the dispatch form at its fixed maximum length, so the 2 MiB limit and RT-1's
+  cap are both measured at bind. Dispatch repeats both with the real path.
+- **The 2 MiB refusal.** Settings over 2,097,152 bytes (the CLI's settings-file limit `Kp`, found by string search
+  of the 2.1.287 binary, not executed) are refused before spawn (`SettingsTooLarge`).
+- **The write.** At dispatch only, immediately before the spawn: `create_new` under a per-dispatch unique name
+  `child-settings-<pid>-<seq>-<sha256 prefix>.json`, then read-only. Any failure is a typed refusal
+  (`SettingsWrite`) and nothing is spawned. The file is kept with the run's evidence and never deleted.
+- **The sha256 in evidence.** The dispatch's `DispatchRecord` carries `settings_file { path, sha256 }`, on its
+  `dispatch_completed` row, so what was delivered is asserted byte for byte and not inferred from the argv.
+- **Unmeasured until `s8j`** (D21-105 item 2): whether the CLI honours the file argument (probe 2: the init's tools
+  and mode, the auto-memory file set), whether the child is denied a Read of the file itself (probe 1's added arm),
+  that a missing or unparsable `--settings` path fails closed rather than being dropped silently, and the size arm near
+  2 MiB. The CLI's content pinning (`replaceFlagSettingsFilePinnedContent`) is read from code only and claimed for
+  nothing.
 
 **10. The launcher and its launch record are the only entry to a real run (D21-42 17a, 17b).** `tools/live-run.sh`,
 committed, LF, POSIX for Git Bash, with modes `run`, `probe`, `wrap`, `answer` and `--check`, performs `s8h` §8h.7's
