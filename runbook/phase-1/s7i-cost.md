@@ -65,7 +65,7 @@ already enforces by returning `None` for the flat shape), and no synthesised `re
 ### 7i.2 The verb — the three renderings and nothing else
 
 *(dated 2026-09-29, `s8f` build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; `s8f` §8f.10's `s7i` row and §8f.8;
-the telemetry-key record ADR-0190 decision 4, `proposed`.)* **"Nothing else" no longer holds for the item that owns
+the telemetry-key record ADR-0190 decision 4, `proposed` *(dated 2026-10-02, `s8g` close: ADR-0190 accepted on D21-130)*.)* **"Nothing else" no longer holds for the item that owns
 `dispatch_completed` rows.** The adapter now keys its `dispatch_completed` row with the spec's `item` beside the event
 (ADR-0182's carrier) and writes `activity_id_at_version` in its payload, so `cost <item>` prints AC-395's per-activity
 breakdown after the lines below: a `breakdown <item>: dispatch_completed rows owned: <k>` header and one `activity <A>:

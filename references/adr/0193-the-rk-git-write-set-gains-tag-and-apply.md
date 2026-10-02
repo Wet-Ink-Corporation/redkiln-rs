@@ -1,7 +1,7 @@
 ---
 id: "0193"
 title: "**The `rk-git` write set gains `tag` and `apply`, each scoped, and clause 5's consolidated list is stated once** (`s8g`'s write-set record, R3; D21-42 6b, 10c; D21-47's one reading of clause 5): `GitOp::Tag` makes one annotated local tag `rk-release/<item>` on a commit of the run-owned branch and is never pushed; `GitOp::Apply` applies a criterion's declared mutation patch only in the verify pass's ephemeral `<item>.mut` tree. Supersedes `0105` clause 5 in part, for these two writes, beside `0180` decision 15 and `0188` decision 10, the other two partial supersessions of the clause"
-status: proposed
+status: accepted
 date: 2026-09-29
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 (row 6b — *"The tag is local and never pushed by the run."*; row 10c), D21-47 (*"**ADR-0105 clause 5 has one reading.** A git WRITE not on its closed list is a supersession in part. That covers s8f's `commit-tree`/`update-ref`, s8g's `Tag`/`Apply`, and s8d-ii's lock, unlock, marker, reset and clean. A READ is not a supersession"*; *"Records are located by the id recorded at write time"*); references/adr/0105 (clause 5 and its forbids bullet), 0180 (decision 15), 0188 (decision 10), 0104 (decision 1); runbook/phase-1/s8g-verify-and-restored-demands.md §8g.5, §8g.7, §8g.8 (R3's row)

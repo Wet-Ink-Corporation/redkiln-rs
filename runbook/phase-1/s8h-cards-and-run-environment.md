@@ -294,7 +294,7 @@ write each reading into the stage-open commit:
    - Write `MINTED_CLASSES` into Checkpoint 8h's INPUTS line, by a dated edit in the stage-open commit, as the
      kernel-minted classes only. At this stage that is `s8f`'s two plus `s8g`'s `verify.ac-discriminates` (D21-47 cross
      #7). That is the AC-357 gate `s8g`'s verify pass opens (`s8g` §8g.5). It is declared under `.redkiln/processes/`
-     (`s8g` §8g.6) and is not one of the 45 catalog questions.
+     (`s8g` §8g.6) and is not one of the 45 catalog questions. *(dated 2026-10-02, `s8g` close: the class is spelled by the constant `rk_kernel::verify::ac_gate::AC_GATE_KIND` (`"verify.ac-discriminates"`) on a code line under `crates/*/src`, under ADR-0191 decision 10, accepted on D21-131, and it is declared once in `.redkiln/processes/questions.toml`; `s8g` wrote no expiry row for it (D21-129))*
    - Each minted spelling must be a `&str` constant, or a member of a constant `&[&str]` table, on a code line
      under `crates/*/src`, because (8)'s premise reads it there (s8h review #15). A class that the minting stage
      builds with `format!` and no constant is a stage-open gap. This stage adds the constant beside the mint site,
@@ -599,7 +599,7 @@ it (ADR-0084). An `Option` is not a default: a field the stand-in lists is requi
 judgement-enum registry is built once, by **s8g**. s8h consumes it."* `s8g` builds that registry to AC-133's
 *Verified by* (`s8g` §8g.3): a completeness test over every enum reachable from `EXPORTED`, the rationale-sibling
 rule, and a must-fail fixture. AC-133 wants *"the enum appears in the judgement-enum registry with an explicit
-judgement-bearing yes/no AND every enum marked yes has a sibling free-text `rationale` field"*.
+judgement-bearing yes/no AND every enum marked yes has a sibling free-text `rationale` field"*. *(dated 2026-10-02, `s8g` close: the registry is built, under ADR-0192 decisions 3 and 8, accepted on D21-132; its tests are `judgement_registry::ac133_every_exported_enum_is_registered`, `judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails` and `judgement_registry::the_registry_names_no_enum_that_is_not_exported`, and `rk_types::AcceptanceCriterion` is exported for `Spec` to embed unchanged as `acceptance_criteria`)*
 
 Every type this stage adds to `EXPORTED` brings its enums with it, so `s8g`'s completeness test goes red until each
 enum is entered with a yes/no and every "yes" has its `rationale` sibling. That red is this stage's instrument. No

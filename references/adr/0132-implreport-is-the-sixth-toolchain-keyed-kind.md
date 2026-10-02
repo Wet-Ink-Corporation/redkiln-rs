@@ -6,7 +6,7 @@ date: 2026-09-21
 legacy_id: none
 source: references/adr/0073 — the `## Decision` sentence naming five keyed kinds at :47-52 (*"Artifact kinds that vary meaningfully by toolchain are declared `keyed_by = \"toolchain\"` in `artifacts.toml`: `ChangeSummary`, `TestReport`, `ReproCase`, `Changeset`, `ProfileReport`"*) and the `**What this forbids**` bullet at :69-71 that re-enumerates the same five (*"For the five keyed kinds (`ChangeSummary`, `TestReport`, `ReproCase`, `Changeset`, `ProfileReport`) keyed expansion plus an instance-level predicate replaces it outright"*) — two protected sites of one accepted record; references/adr/0092 rule 1 (*"An erratum … leaves every sentence of `## Decision` and every bullet of `**What this forbids**` standing as written. A correction that would move either is a supersession and takes a new record"*); references/2026-09-07-process-catalog-proposal.md §2.5 step 4 (*"take lowest `method_rank`; a tie is a pack validation error, never a runtime choice"* — where the rule originates); references/adr/0056 `**What this forbids**` (*"Rank ties among admissible producers remain forbidden per the pre-existing rule … and are not reopened here"* — the record that keeps it standing); references/2026-09-08-acceptance-criteria.md AC-047 (`RankTie { kind, context, activities }` fails load before any activity is dispatched); the first `redkiln run` ever attempted on this tree, at Step 8, which refused the shipped catalog at `RankTie` over `ImplReport`; the operator's decision of 2026-09-21, recorded as `spikes/DECISIONS-2026-09-21.md` D21-4
 supersedes: ["0073"]
-superseded_by: []
+superseded_by: ["0191"]
 related: ["0029", "0056", "0092", "0093"]
 evidence: ["F35 §1.3"]
 consumers: []

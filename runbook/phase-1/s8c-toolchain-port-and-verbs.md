@@ -1331,7 +1331,7 @@ that is not a duration, so it carries a `source` rather than a `measured` list. 
 - `s8g`'s `claims` column (AC-349).
 - *(dated 2026-09-29, s8g build, package R-D2122-D2123-8g; D21-123, TAKEN PROVISIONALLY under D21-105.)* A fourth,
   `mutation`, AC-337's feasibility declaration: `s8g` writes the Rust row, `{ feasible = true }`, by record
-  (ADR-0192 decision 2, proposed). `[toolchain.node]` carries none; its row is owed with the first Node
+  (ADR-0192 decision 2, proposed *(dated 2026-10-02, `s8g` close: ADR-0192 accepted on D21-132)*). `[toolchain.node]` carries none; its row is owed with the first Node
   self-hosting run. Checkpoint 8c (11)'s declaration-row set `D` moves by the dated line beside it.
 
 Adding a row is a record's act, like every other change to the table.

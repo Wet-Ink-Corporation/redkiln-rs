@@ -869,7 +869,7 @@ empty stage records `stage_empty { reason }`."*
   its tree is dirty at the mark. That tree is kept, and `s8d-ii`'s named reason is printed. Mutants S8E-M37 and
   S8E-M38 (§8e.12) redden one arm each.
   *(dated 2026-09-28, s8f build, package S8F-P3-LANDING-E2E; D21-108.)* ~~The second item's scripted `FakeHarness`
-  step writes a tracked file that nothing lands~~: under D21-43 N10 and ADR-0188 decision 2 (proposed) that edit
+  step writes a tracked file that nothing lands~~: under D21-43 N10 and ADR-0188 decision 2 (proposed *(dated 2026-10-02, `s8g` close: ADR-0188 accepted on D21-117 at `s8f`'s close)*) that edit
   lands at the step's own commit, so the tree was clean at the mark and ADR-0180's removal rule correctly removed it
   (the arm read red at `afb60ff`, the whole suite 1130/1/9). The dirty arm is rewritten as D21-108 rules, over a
   real `answer … exclude`: the scripted step writes the denylisted untracked `.env` on EVERY dispatch; invocation 1
@@ -1247,7 +1247,7 @@ runs a fix item **and** a story item in one repository.
   `rate_limit_reading.item` stays in the payload where ADR-0163 put it, and the record says whether that kind carries
   the key beside it as well.
   *(dated 2026-09-29, `s8g` build, package S8G-P2-RKTYPES; `s8g` §8g.1 move 2 and §8g.4; D21-47.)* **The list gains
-  `verify_completed`, named item-scoped and carried by `s8g`'s verify record R1 = ADR-0191 decision 8 (proposed)**,
+  `verify_completed`, named item-scoped and carried by `s8g`'s verify record R1 = ADR-0191 decision 8 (proposed *(dated 2026-10-02, `s8g` close: ADR-0191 accepted on D21-131)*)**,
   with its reason: the store cannot scope the row any other way, and D21-46 R3 puts the key beside the payload
   (*"Carried outside the canonical digest"*), never in it. The variant turned
   `fsm::every_item_scoped_kind_carries_the_interim_item_key` red first (*"the record's three lists name every kind"*,

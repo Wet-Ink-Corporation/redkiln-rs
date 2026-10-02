@@ -39,7 +39,7 @@ revision changes the following:
 - **The launcher in `s8`** (§8j.8 A1, A7): all three of `s8`'s `redkiln run` sites go through `tools/live-run.sh run`.
 - **Ownership** (§8j.8 A1, A5.2, A8):
   - the quoted-predicate guard is `s8b`'s form, adopted here and not re-specified;
-  - `verify_completed`'s `item` and `adapter` members are bound from `s8g`;
+  - `verify_completed`'s `item` and `adapter` members are bound from `s8g`; *(dated 2026-10-02, `s8g` close: ADR-0191 decision 8, accepted on D21-131; the payload is `rk_types::verify::VerifyCompleted`, `adapter` a payload member, `item` the interim key beside it, and `origin` (`pass` for the verify stage's own pass) and `stage` the members that tell the pass's row from a step's or the mutation harness's (`mutation/<ac>`))*
   - `s8e`'s anchored rebuild differential joins `s8`'s (2), and `s8`'s walks over `.redkiln/` skip `worktrees/`
     (`s8e` §8e.9; `s8d-ii` §8d-ii.1);
   - AC-114's `curation.decision` lint is this stage's by `s8g`'s assignment, and it is owed with the promotion.
@@ -505,7 +505,7 @@ forks with `.redkiln/catalog` unchanged since the CI-green frozen sha (§8j.8 A1
 cannot sit between them. This file therefore takes the following route:
 
 - The reserved fix item (§8j.5) and the story item each carry `s8g`'s item-record trial declaration,
-  `[trial] activity = "tag-release"`, in the spelling `s8g`'s record fixes.
+  `[trial] activity = "tag-release"`, in the spelling `s8g`'s record fixes. *(dated 2026-10-02, `s8g` close: the record is ADR-0195, accepted on D21-135, whose decision 4 fixes the spelling as written here; the tag is an annotated local `rk-release/<item>` made through `GitOp::Tag` (ADR-0193, accepted on D21-133) and never pushed, and Checkpoint 8g (11) asserts that its block made none in this repository)*
 - Each lane's release stage then admits `tag-release` from `.redkiln/catalog-extended/` for that item's one run.
   That run is the trial's real run. There are two trials, and each is one run of one activity.
 - The §8j.4 proofs carry the same declarations, so the fixture lanes walk `release` through `tag-release` before any

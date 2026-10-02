@@ -285,7 +285,7 @@ names this stage as the candidate owner of its read (`s8c` §8c.12 item 3). D21-
 
 **Order.** (i) The stage-open measurements (§8f.2). (ii) The three records, written `proposed` before any code they
 authorise. *(dated 2026-09-28, s8f build, package S8F-P1-RECORDS)* Done before any code: the landing record is ADR-0188, the render record ADR-0189 and the telemetry-key record
-ADR-0190, each `proposed` (§8f.3's dated note). (iii) The landing: `rk-git`'s primitive, then the kernel wiring on `s8e`'s seam (the step-grain act and
+ADR-0190, each `proposed` *(dated 2026-10-02, `s8g` close: ADR-0190 accepted on D21-130)* (§8f.3's dated note). (iii) The landing: `rk-git`'s primitive, then the kernel wiring on `s8e`'s seam (the step-grain act and
 the boundary act), then the `rk-cli` end-to-end tests. (iv) The render, write and read paths, then the drift gate
 and the stage advance's refusal on it, then the vouched-root store and its advisory, then the emit producer and the
 resolver's read, then the item write, then the `backlog` read and the two feed rows. (v) The `activity_id_at_version` member, then
@@ -604,7 +604,7 @@ to the superseded record's `superseded_by` (ADR-0092).
 
 | record | working title | decides | relation to the accepted set |
 | --- | --- | --- | --- |
-| **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit, the path-length bound and the form of the refusal; how each commit is made; what "due" means, and the gate's tree at a refused landing; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–4 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*, and its reading of clause 4's *"when a checkpoint commit is due"* (§8f.4: a landing that refuses lands nothing, so none is due). **Supersedes in part: ADR-0105 clause 5** (*"Anything not listed is a successor"*) and its bullet *"Forbids a wrapper write not on clause 5's list"*, for three writes: `commit-tree`, `update-ref refs/heads/rk-run/<item>`, and `read-tree HEAD` on the run-owned worktree's own index. D21-47 reads clause 5 one way: *"A git WRITE not on its closed list is a supersession in part"*. Clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* is the design warrant, and it does not substitute for the supersession. **One consolidated clause-5 list**, each part in its own record with no operation in two: `s8d-ii`'s worktree record (`worktree lock`/`unlock`, the `RK_BASE` marker, `reset --hard`, `clean -fd`); `s8g`'s R3 (`tag`, `apply`); this record (the three above). Reads are not supersessions (D21-47), so `status` and `rev-parse` here are none. Clause 6's *"re-created, never reused"* is `s8d-ii`'s D21-44/W2 record's to supersede (D21-46 R1), and this record cites it. *(dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's records minor.)* **It also supersedes in part ADR-0105 clause 4** (package R4FIX-8f; D21-112), for one case only: once the lane's journal records an `exclude`, the no-checkpoint-due derivation is *"the current index plus tracked modifications"* **less the lane's excluded paths**. ADR-0188 decisions 6 and 7 quote the clause and state it; its `supersedes:` already names `0105`, and `0105`'s back-link moves at the flip, as clause 5's does. *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114, TAKEN PROVISIONALLY under D21-105.)* The record gains the entry landing as a third landing point (after the drift pass and the vouched-root pass, when the entry's own writes are unlanded and no drift gate's `Gate:` commit lands them: a trailerless `rk entry <item> <stage> <run_id>` content commit through `commit_act`), as in-record dated notes on its proposed decisions 2 and 3; no supersession is added |
+| **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit, the path-length bound and the form of the refusal; how each commit is made; what "due" means, and the gate's tree at a refused landing; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–4 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*, and its reading of clause 4's *"when a checkpoint commit is due"* (§8f.4: a landing that refuses lands nothing, so none is due). **Supersedes in part: ADR-0105 clause 5** (*"Anything not listed is a successor"*) and its bullet *"Forbids a wrapper write not on clause 5's list"*, for three writes: `commit-tree`, `update-ref refs/heads/rk-run/<item>`, and `read-tree HEAD` on the run-owned worktree's own index. D21-47 reads clause 5 one way: *"A git WRITE not on its closed list is a supersession in part"*. Clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* is the design warrant, and it does not substitute for the supersession. **One consolidated clause-5 list**, each part in its own record with no operation in two: `s8d-ii`'s worktree record (`worktree lock`/`unlock`, the `RK_BASE` marker, `reset --hard`, `clean -fd`); `s8g`'s R3 (`tag`, `apply`); this record (the three above). Reads are not supersessions (D21-47), so `status` and `rev-parse` here are none. Clause 6's *"re-created, never reused"* is `s8d-ii`'s D21-44/W2 record's to supersede (D21-46 R1), and this record cites it. *(dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's records minor.)* **It also supersedes in part ADR-0105 clause 4** (package R4FIX-8f; D21-112), for one case only: once the lane's journal records an `exclude`, the no-checkpoint-due derivation is *"the current index plus tracked modifications"* **less the lane's excluded paths**. ADR-0188 decisions 6 and 7 quote the clause and state it; its `supersedes:` already names `0105`, and `0105`'s back-link moves at the flip, as clause 5's does. *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114, TAKEN PROVISIONALLY under D21-105.)* The record gains the entry landing as a third landing point (after the drift pass and the vouched-root pass, when the entry's own writes are unlanded and no drift gate's `Gate:` commit lands them: a trailerless `rk entry <item> <stage> <run_id>` content commit through `commit_act`), as in-record dated notes on its proposed *(dated 2026-10-02, `s8g` close: ADR-0188 accepted on D21-117 at `s8f`'s close)* decisions 2 and 3; no supersession is added |
 | **the render record** | `render and write path` | §8f.5–§8f.7 and §8f.9's AC-159 rule: layout-C rendering, section stamps, prose, the drift pass (C2) and its drift gate (N11), where the canonical typed value is kept, the managed directory, the write seam, the read seam (N12), one `artifact.write` per write and one `artifact.read` per read, `.redkiln/items/` as a managed tree, and the unrecorded-mutation rule. Under D21-46 R7 it also decides the `backlog` read and its output shape (§8f.7), the vouched root's store and its advisory drift (§8f.5), the carrier of an attach's path (§8f.2 item 12) and `RK-D-DRIFT-KIND` (§8f.9) | It owns AC-411, AC-477 and AC-478, which are RAISED with no owner record. ADR-0005/0006 (as refined by ADR-0075) and ADR-0116 stand. It drives dated register amendments (§8f.10). It states N11's reading of AC-125 and records that AC-127 holds unamended (§8f.5). It states its reading of ADR-0025 for a vouched root's own change, and ADR-0025 stands unamended (§8f.5). *(dated 2026-09-29, s8f build, package R5FIX-8f; D21-113, TAKEN PROVISIONALLY under D21-105.)* **Supersedes in part: ADR-0173** decision 1's `artifact:` row, whose "Resolves to" cell reads *"the committed `emit` binding of the activation that produced `Kind` for this item, read from the journal"*, and decision 8's *"serves the journalled binding"*: only where the served value and the checked digest come from (§8f.5's D21-113 note). The binding's presence gate, the refusal and `?` arms, *"exactly one call"* and the single emitter stand. `0173` gains `0189` in its `superseded_by` at the flip. *(dated 2026-09-29, s8f build, package R5FIX2-8f; D21-114, TAKEN PROVISIONALLY under D21-105.)* Decision 9's R5FIX-8f note is amended by D21-114: the accepted write lands at entry (ADR-0188 decision 2's entry landing), before the first seam's read, and step 3 is built. The ADR-0173 supersession is unchanged |
 | **the telemetry-key record** | `dispatch_completed carries` | §8f.8–§8f.9: the `activity_id_at_version` member and its carrier, the breakdown grammar, the `status` renderer, AC-372's doctor clause read as a renderer test (N12), and `doctor`'s journal source and five-hour reading | **Supersedes in part:** ADR-0131's first forbids bullet, for `dispatch_completed.activity_id_at_version` alone, until 0131's tag is wired: that member is a **payload** member on D21-42 12b's ADR-0163 route. The `item` key is N5's, carried beside the payload by `s8e`'s record under D21-46 R3, which supersedes nothing; this record cites it. It also supersedes in part ADR-0163 decision 4's closed-grammar sentence, decision 5's not-delivered list and its sentence on `doctor`'s journal, and ADR-0163's bullet on *"any other payload correlation key"* for this one member (§8f.8). *Added 2026-09-24 (D21-47, review M5):* it also supersedes in part ADR-0163's bullet *"Forbids reading item ownership off `dispatch_completed` rows, which carry none, or off journal position"*. That covers the first half only: `cost`'s breakdown reads ownership off the `item` key `s8e` carries beside the row. The journal-position half stands. The record quotes the bullet, and Checkpoint 8f (2) reads the quotation |
 
@@ -618,7 +618,7 @@ Checkpoint 8f (2)'s `REC_` lines carry the three ids by the same package's dated
 number reads `0191`. **The `superseded_by` back-links move in each record's flip commit**, not at writing, on
 `s8e`'s stated precedent (D21-97: *"Back-links and the README Supersessions-table rows move in each flip commit, as
 `0181`'s do."*): `0105` gains `0188`, and `0131`, `0138`~~ and `0163`~~, `0163` and `0174` gain `0190`, with the README
-Supersessions rows, when those records flip. *(dated 2026-09-29, `s8f` close: `0105` gained `0188` on D21-117 and `0173` gained `0189` on D21-118, each with its README Supersessions row. `0190` is held `proposed` under D21-107, so its four back-links, on `0131`, `0138`, `0163` and `0174`, have not moved, and (2) names it in `FLIP_PENDING`)* Until then Checkpoint 8f (2) fails on *"not accepted"*, *"no dated
+Supersessions rows, when those records flip. *(dated 2026-09-29, `s8f` close: `0105` gained `0188` on D21-117 and `0173` gained `0189` on D21-118, each with its README Supersessions row. `0190` is held `proposed` *(dated 2026-10-02, `s8g` close: ADR-0190 accepted on D21-130)* under D21-107, so its four back-links, on `0131`, `0138`, `0163` and `0174`, have not moved, and (2) names it in `FLIP_PENDING`)* Until then Checkpoint 8f (2) fails on *"not accepted"*, *"no dated
 DECISIONS heading flips"* and the ~~three~~ ~~five~~ six `superseded_by` lines, and on nothing else *(dated 2026-09-29,
 s8f build, package R5FIX-8f: `0173` gains `0189` too, D21-113)*. *(dated 2026-09-29, s8f
 build (R1FIX-8f-B-RECORDS): `0174` joined ADR-0190's `supersedes` at S8F-P7 under D21-107 item 2, *"`0174` joins
@@ -794,7 +794,7 @@ now derives the working state **less the lane's excluded paths**, read exactly a
 derivation less the same set, so a later refused landing under a tracked exclusion stays answerable (a reading
 D21-112 does not name: without it this fix would void that gate instead). `exclude` stays open to tracked paths
 (D21-112's rejected option B would leave `id_map.rs`, the denylist's own named false hit, with no remedy).
-ADR-0188 decisions 6 and 7 carry it in-record (`proposed`). Pinned by
+ADR-0188 decisions 6 and 7 carry it in-record (`proposed` *(dated 2026-10-02, `s8g` close: ADR-0188 accepted on D21-117 at `s8f`'s close)*). Pinned by
 `landing::a_tracked_exclusion_leaves_the_next_gates_answer_applied`,
 `landing::a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied`,
 `landing::a_refused_landing_under_a_tracked_exclusion_is_answerable` and
@@ -855,7 +855,7 @@ row names a refused path under the item's managed directory, taken from `rk_stor
 and never spelled as a literal, `exclude` prints a refusal naming each such path and `abort` as the remedy, appends
 no row to the item's journal, moves no ref, leaves the gate open, and exits `2`, the usage exit `answer` gives an
 option the gate cannot take. `abort` is unchanged, and so is `exclude` over every other path. **The stated
-reading's `exclude` arm is superseded** (ADR-0188 decision 6's D21-115 note, `proposed`): a refused drift-gate
+reading's `exclude` arm is superseded** (ADR-0188 decision 6's D21-115 note, `proposed` *(dated 2026-10-02, `s8g` close: ADR-0188 accepted on D21-117 at `s8f`'s close)*): a refused drift-gate
 landing's paths are the item's managed `Spec.json` and `Spec.md`, so its `exclude` is refused and `abort` releases
 the lane; the reading's `abort` arm stands. Pinned by `landing::an_exclude_over_a_refused_managed_path_is_refused_by_name_and_abort_stops_the_lane`
 and the re-shaped `landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck` (M-EXCL-MANAGED;
@@ -904,7 +904,7 @@ fixes three things:
    worktree is in-flight dirt: it is named and discarded at the next entry. A committed edit reaches the render pass
    (§8f.5). There prose is accepted, and structure is surfaced, restored and gated.
 
-*(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE)* **What the landing core built** (ADR-0188, `proposed`):
+*(dated 2026-09-28, s8f build, package S8F-P2-LANDING-CORE)* **What the landing core built** (ADR-0188, `proposed` *(dated 2026-10-02, `s8g` close: ADR-0188 accepted on D21-117 at `s8f`'s close)*):
 - `rk-git`'s primitive is `crates/rk-git/src/landing.rs`: `staging_set` ~~(the one function; `worktree.rs`'s
   discard now parses its `status` read through the same `landing::parse_status`)~~ *(dated 2026-09-29, s8f build,
   package R1FIX-8f-A-CODE: as P2 built it the discard shared only the parser and classified the entries by a second
@@ -937,7 +937,7 @@ fixes three things:
   journals it (unanchored) when the latest creation has no read yet. The first act took it before, after the entry
   pass had written, so on a tree re-created on an existing run branch (`Creation::OnExistingBranch`, `reused: false`)
   the stored vouched root and a restored rendering were read as baseline and never landed. An act still takes the read
-  itself when no caller made one. ADR-0188 decision 4 is corrected in-record (`proposed`).
+  itself when no caller made one. ADR-0188 decision 4 is corrected in-record (`proposed` *(dated 2026-10-02, `s8g` close: ADR-0188 accepted on D21-117 at `s8f`'s close)*).
   `landing::a_tree_recreated_on_an_existing_branch_lands_the_entrys_stored_root` pins it (M-BASE, §8f.12). A gate opened by a landing act binds T and its token is re-minted over T (defect (b)), and
   `prepare_inputs` hashes the run-owned tree; the lint
   `tier_one::every_run_commit_resolves_through_the_worktree_resolver` is widened (M51 and a stray-helper M51b
@@ -1126,7 +1126,7 @@ half on that module, and it does not re-claim AC-525.
   PROVISIONALLY under D21-105: the reader's root arm is deferred to `s8j` §8j.2, which authors the first `attaches`
   options. D21-110 ruling 1: *"No code at `s8f`. The interim behaviour stands"*: a mandatory `artifact:` input
   naming a root refuses by name, and an optional one resolves to `null` by ADR-0173's `?` arm, a stated residual.
-  ADR-0189 decision 9's last sentence is corrected in-record to say so, while `proposed` (D21-110 ruling 3).)*
+  ADR-0189 decision 9's last sentence is corrected in-record to say so, while `proposed` *(dated 2026-10-02, `s8g` close: ADR-0189 accepted on D21-118 at `s8f`'s close)* (D21-110 ruling 3).)*
 - **Which edits reach the pass.** An edit to the root is a commit on `rk-run/<item>`, as §8f.4's re-entry item 3
   says of any run artifact. An uncommitted edit is discarded at re-entry, before this pass runs.
 
@@ -1196,7 +1196,7 @@ silent choice of one. On replay the seam serves the recorded digest and appends 
 produces them.
 
 *(dated 2026-09-29, s8f build, package R5FIX-8f; refuting round 5's spec-conformance major; D21-113, TAKEN
-PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed.)* **The reading of *"The seam checks that the
+PROVISIONALLY under D21-105; ADR-0189 decision 9's dated note, proposed *(dated 2026-10-02, `s8g` close: ADR-0189 accepted on D21-118 at `s8f`'s close)*.)* **The reading of *"The seam checks that the
 digest it serves equals the committed `emit` binding's digest"* is replaced, and the replacement is built in part.**
 An accepted prose edit (*"accepted whole as the field's new value"*) and an applied `move-to-prose:<section>` each
 rewrite `<Kind>.json` through the writer, with its own `artifact.write`, and move no `emit` binding; as first built
@@ -1245,7 +1245,7 @@ R6FIX-8f list) journals a reconcile and no `artifact.write` of `Spec.json`: othe
 (M-READ-FALLBACK).
 
 *(dated 2026-09-28, s8f build, package S8F-P5-DRIFT-GATE-VOUCHED.)* **C2's gate and AC-127's vouched-root half are
-built** (ADR-0189 decisions 4, 5, 8 and 10, `proposed`).
+built** (ADR-0189 decisions 4, 5, 8 and 10, `proposed` *(dated 2026-10-02, `s8g` close: ADR-0189 accepted on D21-118 at `s8f`'s close)*).
 - **The drift gate.** `rk-cli`'s `run` opens it right after `stage_seams`' entry pass, over `Reconciled::drifts()`,
   through the stage's tier-1 boundary: class `render.structured-drift` (`rk_kernel::workflow::fsm::DRIFT_GATE_KIND`,
   re-exported as `tier_one::DRIFT_KIND`), the LANDED arm (`tier_one::drift_gate_act`), so its `Gate: … opened`
@@ -1772,7 +1772,7 @@ added to that file would move the number the fixture item is about. The two new 
 reason.
 
 *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL.)* **§8f.8 and the first two paragraphs
-of §8f.9 are built** (ADR-0190 decisions 1–8, `proposed`; D21-107, TAKEN PROVISIONALLY):
+of §8f.9 are built** (ADR-0190 decisions 1–8, `proposed` *(dated 2026-10-02, `s8g` close: ADR-0190 accepted on D21-130)*; D21-107, TAKEN PROVISIONALLY):
 - **The carrier.** `ActivitySpec.activity_id_at_version: Option<String>`, set explicitly at every construction site
   (`bind_nodes` hands `catalog::Activity::id_at_version()` through `BindRequest.activity_id_at_version`; `None` in
   fixtures and fakes; two test sites build a spec by `..spec` from a BOUND spec and so carry the binder's value). The
@@ -1792,7 +1792,7 @@ of §8f.9 are built** (ADR-0190 decisions 1–8, `proposed`; D21-107, TAKEN PROV
   since `37bba5c`, on Checkpoint 8e (10i)'s form.
 
 *(dated 2026-09-29, s8f build, package S8F-P8-DOCTOR-RULES-AND-NOTES.)* **AC-159's and AC-127's rows are built** (`crates/rk-cli/src/doctor/rules.rs`,
-`artifact_mutation` and `drift_kind`; the render record ADR-0189 decision 13, `proposed`, with its *As built* note). The
+`artifact_mutation` and `drift_kind`; the render record ADR-0189 decision 13, `proposed` *(dated 2026-10-02, `s8g` close: ADR-0189 accepted on D21-118 at `s8f`'s close)*, with its *As built* note). The
 rule table moves from **39 ids to 41** (`RULES`; `crates/rk-cli/tests/fixtures/doctor/` holds 41 `RK-D-` directories and
 `clean/`; the raw `RK-D-` token census over `crates/rk-cli/src/doctor/` reads **44**, the stage-open 42 plus two, §8f.2
 item 13). Readings no record settles, each stated for the review packet:
@@ -1933,7 +1933,7 @@ half (the two `doctor_journal` headroom tests); AC-245 (`landing::gate_tree_hash
 is not built, because no resolver path reaches a root; S8F-P8 returns it as a blocker. The exclusions are unchanged.
 *(dated 2026-09-29, s8f build (R1FIX-8f-B-RECORDS): D21-110 ruled on it, TAKEN PROVISIONALLY under D21-105. The arm
 is deferred to `s8j` §8j.2, and ADR-0189 decision 9's last sentence is narrowed by a dated in-record correction, so
-the claim is no longer short against the record: D21-110 ruling 3, *"ADR-0189, while still `proposed`, takes a dated in-record correction to decision 9's last sentence naming this
+the claim is no longer short against the record: D21-110 ruling 3, *(dated 2026-10-02, `s8g` close: ADR-0189 accepted on D21-118 at `s8f`'s close)* *"ADR-0189, while still `proposed`, takes a dated in-record correction to decision 9's last sentence naming this
 deferral and the interim behaviour. It may then flip at `s8f`'s close with the residual stated."* The As-built
 paragraph keeps *"NOT built"* and adds *"(deferred by D21-110 to `s8j`)"*.)*
 
@@ -2807,7 +2807,7 @@ refused by name, exit `2`, nothing appended, and `abort` is the remedy (§8f.4's
 6's D21-115 note, `proposed`). One test joins (4) and the R7FIX-8f test is re-shaped; the floor moves to 1241 (§8f.2
 item 9). The formal Checkpoint 8f waits on the orchestrator.
 
-*(dated 2026-09-29, `s8f` close.)* **Refuting round 8 was dry**: no blocker and no major, its two minors corrected at `2acb35a`. The faithful formal run at `2acb35a` read rc 1 at (2) on the three `proposed` records and nothing else, so `ae38553` gave (2) its `FLIP_PENDING` line (D21-49 option C; s8d-ii (9)'s status-branch form). **The formal Checkpoint 8f passed whole at `ae38553`** with all three records flip-pending: rc 0, 0 `FAIL`, `CP8F-END-OF-BLOCK reached`, (5)'s whole suite 1243 passed / 0 failed / 9 ignored over 44 result lines, FLOOR 1241 (D21-116). ADR-0188 and ADR-0189 flipped `accepted` on D21-117 and D21-118 under D21-105 item 1; ADR-0190 is held `proposed` under D21-107, and (2)'s `FLIP_PENDING` now names only `0190`, by a dated line. Checkpoint 8f is re-run whole after the flip commit.
+*(dated 2026-09-29, `s8f` close.)* **Refuting round 8 was dry**: no blocker and no major, its two minors corrected at `2acb35a`. The faithful formal run at `2acb35a` read rc 1 at (2) on the three `proposed` records and nothing else, so `ae38553` gave (2) its `FLIP_PENDING` line (D21-49 option C; s8d-ii (9)'s status-branch form). **The formal Checkpoint 8f passed whole at `ae38553`** with all three records flip-pending: rc 0, 0 `FAIL`, `CP8F-END-OF-BLOCK reached`, (5)'s whole suite 1243 passed / 0 failed / 9 ignored over 44 result lines, FLOOR 1241 (D21-116). ADR-0188 and ADR-0189 flipped `accepted` on D21-117 and D21-118 under D21-105 item 1; ADR-0190 is held `proposed` *(dated 2026-10-02, `s8g` close: ADR-0190 accepted on D21-130)* under D21-107, and (2)'s `FLIP_PENDING` now names only `0190`, by a dated line. Checkpoint 8f is re-run whole after the flip commit.
 
 - **The three records exist and are accepted.** Each is located by the id written into its `REC_` line at writing,
   never by a title phrase (D21-47). Each has two or more `### Option — ` headings and a **What this forbids** block.
@@ -2965,7 +2965,11 @@ REC_TELEMETRY=0190
 # ---- ADR-0189 on D21-118, so each keeps every accepted check. ADR-0190 stays held under D21-107, which keeps
 # ---- it proposed while D21-107 is unconfirmed (Weigh-In wi-838696 open). The flip commit of ADR-0190, once
 # ---- the operator confirms D21-107, empties this list (struck: FLIP_PENDING="0188 0189 0190").
-FLIP_PENDING="0190"
+# ---- (dated 2026-10-02, s8g close, the flip commit; D21-129 and D21-130) The operator confirmed D21-107 beneath
+# ---- it (Weigh-In wi-838696 decided A) and this FLIP_PENDING form (Weigh-In wi-f613b1 decided A). ADR-0190
+# ---- flipped on D21-130 with its four back-links, so it keeps every accepted check, and the list is empty
+# ---- (struck: FLIP_PENDING="0190").
+FLIP_PENDING=""
 recs='import glob,re,sys
 names=("landing","render","telemetry")
 ids=dict(zip(names,sys.argv[1:4]))
@@ -3359,7 +3363,7 @@ commit, which writes the first commit's hash into `PROGRESS.md` §1 (00-preamble
 full corpus, not a condensation of it.
 
 Each record's id is written into its `REC_` line in Checkpoint 8f (2), by a dated edit, in the commit that writes the
-record (D21-47). The records flip only on the operator's dated lines, and Checkpoint 8f (2) is red until they do. *(dated 2026-09-29, `s8f` close: ADR-0188 and ADR-0189 flipped on D21-117 and D21-118, on the operator's standing authority (D21-105 item 1; D21-64 ruling 10). ADR-0190 is held `proposed` under D21-107, and (2) reads it as flip-pending (D21-49), so (2) is green with it `proposed` and turns red if it is flipped without its `FLIP_PENDING` line being emptied in the same commit)*
+record (D21-47). The records flip only on the operator's dated lines, and Checkpoint 8f (2) is red until they do. *(dated 2026-09-29, `s8f` close: ADR-0188 and ADR-0189 flipped on D21-117 and D21-118, on the operator's standing authority (D21-105 item 1; D21-64 ruling 10). ADR-0190 is held `proposed` *(dated 2026-10-02, `s8g` close: ADR-0190 accepted on D21-130)* under D21-107, and (2) reads it as flip-pending (D21-49), so (2) is green with it `proposed` and turns red if it is flipped without its `FLIP_PENDING` line being emptied in the same commit)*
 The work commit also carries the dated line in `s8d` §8d.9 that flips both `closure-record` rows and both
 `debt-logging` rows to walks. That line marks Checkpoint 8d as provisional, and it is re-run whole in (9).
 

@@ -1,7 +1,7 @@
 ---
 id: "0191"
 title: "**The verify pass is the one `TestReport` route, and it journals `verify_completed`** (`s8g`'s verify record, R1; D21-41 c as superseded by D21-42 1a; D21-42 10b, 10c; D21-43 N23, N25; D21-46 R5; D21-47; D21-48 X9, X15): an `rk-cli` pass on ADR-0162's shape, selected by the required kind `TestReport` and never by a stage literal, calls `Toolchain::test` once, whole-suite, over a run-owned worktree `setup` has prepared, and writes one keyed `TestReport` through `rk-store`; `TestReport` becomes `source = \"pass\"` under a third `KindSource`; the four displaced catalog providers and `integration-tests` are re-homed whole to `implement` over one minted test-authoring kind, `AuthoredTests`, with the test-design escalation and `story.toml`'s `IntegrationReport` row moved with them; `migration-dry-run` is AC-347's single named residual; `verify_completed`, a tier-2 item-scoped kind, is journalled by the kernel once per completed `Toolchain::test` port call with its `origin` and `stage`; the verify block of `s7d` §7d.18 is routed id by id; the mutation harness of ADR-0104 decision 1 runs in an ephemeral `<item>.mut` tree. Supersedes `0162`'s patch clause in part, for the verify gate's declared AC mutations alone"
-status: proposed
+status: accepted
 date: 2026-09-29
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-41 (row c), D21-42 (rows 1a — *"**Widened to an outcome-bearing report**"*; 10b — *"**Mint `verify_completed`**: report digest, selection with `basis_reason`, counts and adapter identity"*; 10c — *"**Claimed whole**"*), D21-43 (N23 — *"**Re-homed to the implement stage** as test-authoring activities under ADR-0072. Verify only measures."*; N25), D21-46 (R3, R5), D21-47 (the review's findings 4, 8, 14 and cross-file 19; *"Records are located by the id recorded at write time"*), D21-48 (X9, X15); runbook/phase-1/s8g-verify-and-restored-demands.md §8g.2, §8g.4, §8g.5, §8g.8 (R1's row); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.5 (the cold measurement, cited)
@@ -11,6 +11,15 @@ related: ["0019", "0072", "0073", "0096", "0104", "0105", "0109", "0116", "0125"
 evidence: []
 consumers: []
 ---
+
+*(Corrected 2026-10-02 in-record at `s8g`'s close, in the flip commit (D21-131); D21-121 and D21-122, each TAKEN
+PROVISIONALLY under D21-105.)* **The title's supersession clause is incomplete: this record supersedes ADR-0132 and
+ADR-0189 in part as well as ADR-0162.** The title, written at writing, reads *"Supersedes `0162`'s patch clause in
+part, for the verify gate's declared AC mutations alone"*. D21-121 added `0132` to the `supersedes:` line (ADR-0132's
+keyed-set enumeration, six → seven with `AuthoredTests`) and D21-122 added `0189` (decision 8's member list, for one
+additive `key` member), each by a dated in-record amendment. The `supersedes:` line already names all three, so the id
+list does not move; ADR-0132's and ADR-0189's `superseded_by` gain `0191` in this commit. No Decision clause and no
+forbids bullet moves with this note, and the title is not re-worded.
 
 ## Context and problem
 

@@ -191,7 +191,7 @@ The following remain true, and the four assertions of §7f.1 are run rather than
 - **`redkiln run` no longer refuses at catalog load**, which is this step's whole externally visible effect.
 - **`artifacts.toml` carries ~~six~~ toolchain-keyed kinds** and `spikes/p9/artifacts.toml` is unchanged. *(dated
   2026-09-30, `s8g` build, package R1FIX-8g: **seven** since `s8g` — D21-121 keeps `keyed_by = "toolchain"` on
-  `AuthoredTests`, and ADR-0191, proposed, supersedes ADR-0132's *"The toolchain-keyed set is **six**"* in part. The
+  `AuthoredTests`, and ADR-0191, proposed *(dated 2026-10-02, `s8g` close: ADR-0191 accepted on D21-131)*, supersedes ADR-0132's *"The toolchain-keyed set is **six**"* in part. The
   block's guard moved 6 -> 7 by a dated line, under D21-47's time-bound rule, with a planted control.)*
 - **No `method_rank` moved** — the tie is resolved by keying, per ADR-0056.
 

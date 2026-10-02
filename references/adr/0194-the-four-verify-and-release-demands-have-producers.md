@@ -1,7 +1,7 @@
 ---
 id: "0194"
 title: "**The four verify and release demands have producers** (`s8g`'s producers record, R4; D21-42 6a; D21-43 N25; D21-46 R6): `SmokeResult`, `ConfirmationResult`, `ScanReport` and `BuildArtifact` are written by walks of the shipped `smoke-test`, `confirmation-test`, `sca-scan` and `build-package` activities under `s8d`'s resolver, each through one `artifact.write`; `smoke-test` gains a `passing` check (`smoke.status == 'passing'`, `on_false = \"fail\"`, version 1 → 2, D21-46 R6); the smoke checklist is authored at `.redkiln/checklists/smoke.toml` and `[checklist.smoke]` flips from `unauthored` to its `path`; the three Rust verb handlers are `0170`'s (record V), `sca-scan`'s `unrated == 0` edit is `s8b`'s changelog row `sca-scan@2`, and `package_binaries` is `0179` decision 4's row, each cited by id and not decided again. Supersedes nothing"
-status: proposed
+status: accepted
 date: 2026-09-29
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 (row 6a — *"**Reversed for five demands:** SmokeResult, ConfirmationResult, ScanReport, BuildArtifact and DebtRegisterEntry. … **Supersedes D21-41(c)/(d)'s narrowings.**"*), D21-43 (N25; the integration call *"The Rust verb handlers are **s8c**'s record (V); the activities are **s8g**'s (R4)"*), D21-46 (R6 — *"**A check on `status == 'passing'` with `on_false = "fail"`**, as an ADR-0072 edit in s8g."*), D21-63, D21-64 (ruling 7), D21-67 (ruling 7), D21-73 (items 4 and 5); references/adr/0170 (record V), 0179 (decision 4); .redkiln/CHANGELOG.md (`sca-scan@2`); runbook/phase-1/s8g-verify-and-restored-demands.md §8g.6, §8g.8 (R4's row)

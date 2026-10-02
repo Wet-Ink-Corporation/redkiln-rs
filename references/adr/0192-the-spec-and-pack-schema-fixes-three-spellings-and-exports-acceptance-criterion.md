@@ -1,7 +1,7 @@
 ---
 id: "0192"
 title: "**The spec/pack schema fixes D17-3's three spellings as they are read today, and exports `rk_types::AcceptanceCriterion`** (`s8g`'s schema record, R2; D21-42 10a; D21-43 N24 and its integration call on AC-133): `[policy] verification_required = [<stages>]` and `[mutation] feasible, reason` are fixed unchanged, the mutation declaration gains its shipped home in the Rust row of `0170`'s per-toolchain table, and the fixture reader's `[ac.mutation] not_feasible` is superseded by `AcceptanceCriterion`'s serde form; `AcceptanceCriterion` enters `registry::EXPORTED` and retires the kernel-local `SpecAc`; AC-139's default is block (fail-closed), recorded as the human decision and shipped as `verification_required = [\"verify\"]` in both packs; AC-133's judgement-enum registry is built once, here, and `s8h` registers into it; the `verification` gap N24's row opens over agent-authored `Spec`s is named, with its owners `s8h` and `s8j`. Supersedes nothing"
-status: proposed
+status: accepted
 date: 2026-09-29
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 (row 10a — *"**One spec/pack schema record** fixes the three spellings and adds `rk_types::AcceptanceCriterion` (with ADR-0104's mutation field) to `EXPORTED`."*), D21-43 (N24 — *"**Block (fail-closed)**, recorded as the human decision AC-139 requires."*; the integration call *"AC-133's judgement-enum registry is built once, by **s8g**. s8h consumes it."*), D21-47 (review findings 5 and 15); runbook/PROGRESS.md §2 D17-3 (*"**OPEN — readings, not decisions.**"*); runbook/phase-1/s8g-verify-and-restored-demands.md §8g.3, §8g.8 (R2's row)

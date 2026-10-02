@@ -1,7 +1,7 @@
 ---
 id: "0195"
 title: "**`tag-release` is a CLI's release, and it enters by ADR-0114's trial** (`s8g`'s tag record, R5; D21-42 6b; D21-46 R4): `ReleaseRecord` is an annotated local tag `rk-release/<item>` on the landed commit, the `BuildArtifact` digest and the rollback target (the nearest earlier `rk-release/*` tag, or explicitly `none`), made by the `release_tag` git-route handler in the composition root through `rk-git` and never pushed; `tag-release` is authored in `.redkiln/catalog-extended/` and admitted by a `[trial] activity = \"tag-release\"` declaration on each lane item, for that item's one run, the promotion following the trials as AC-114's human gate; selection reaches it through a new `declared` facet, `release_form`, keyed in its `applicable_if`, first in the `deploy-pattern` family, with no shipped deploy activity edited; both packs' release goals are amended to the tag they can reach; AC-114's `curation.decision` lint is `s8j`'s. Supersedes nothing"
-status: proposed
+status: accepted
 date: 2026-09-29
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 (row 6b — *"**A new `tag-release` activity.** ReleaseRecord is a release tag on the landed commit, plus the BuildArtifact digest and the rollback target (the previous release tag). The tag is local and never pushed by the run. It enters via ADR-0114 c3's one-run, one-activity trial."*), D21-46 (R4 — *"**Two trials, confirmed.** Each is one run of one activity, which is the clause's constraint."*), D21-47 (review finding 6); references/adr/0114 (decision 3 and its Negative consequence), 0089 (the `declared` facet precedent); runbook/phase-1/s8g-verify-and-restored-demands.md §8g.7, §8g.8 (R5's row)

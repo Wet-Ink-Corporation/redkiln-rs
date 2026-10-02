@@ -1203,7 +1203,7 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   (`SkipReason` has exactly two stage variants, `ForbiddenStage` and `ForbiddenStageViaRequires` [measured 2026-09-18,
   `crates/rk-kernel/src/select/step1.rs`]).
   *(dated 2026-09-29, `s8f` build, package S8F-P8-DOCTOR-RULES-AND-NOTES; `s8f` §8f.4 and §8f.10; the landing record
-  ADR-0188 decision 12, proposed.)* *"prints **from the recorded resolution only**"* now governs the RESOLUTION block,
+  ADR-0188 decision 12, proposed *(dated 2026-10-02, `s8g` close: ADR-0188 accepted on D21-117 at `s8f`'s close)*.)* *"prints **from the recorded resolution only**"* now governs the RESOLUTION block,
   not the whole output. `explain` gains a **landing block** after the recorded resolution (`s8f` §8f.4), and its source
   is not the run record: it is read from git through `GitOp::RevParse` (the tip of `rk-run/<item>`, how many commits it
   is ahead of the base and how many of them carry content) and from the tier-1 rows' `anchor_sha`, and it prints the

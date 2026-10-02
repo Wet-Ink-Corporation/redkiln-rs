@@ -1786,7 +1786,7 @@ and it now also admits a `store` row with no inputs (`backlog`). That row is ser
 `runtime::step::StoreRoute`, which also serves the step-grain `Route::Store` arm (`item_create`). The seam's kernel
 default refuses by name and never answers empty, and the result still passes the closed decode table against the row's
 `outputs`. Every other route or input count keeps the refusal above, byte-unchanged. This widens `s8d`'s code and not a
-record: ADR-0170 decision 8 admits *"a registry verb"*, and ADR-0189 decision 12 (proposed) records the arm.
+record: ADR-0170 decision 8 admits *"a registry verb"*, and ADR-0189 decision 12 (proposed *(dated 2026-10-02, `s8g` close: ADR-0189 accepted on D21-118 at `s8f`'s close)*) records the arm.
 `feed::a_git_route_feed_and_a_store_route_feed_with_an_input_still_refuse` pins the unchanged refusal.
 
 *(dated 2026-09-29, `s8g` build, package S8G-P4-PACK-REHOME; `s8g` §8g.1 move 1; D21-43 N23, D21-46 R5; R1 = ADR-0191
@@ -1804,7 +1804,7 @@ moved in the same change. Checkpoint 8d (6a)'s floors, 10 and 8, still hold. `sm
 `tag-release` replacing `rolling-deploy` are the rest of move 1, and are the `s8g` packages' that build them (R4, R5).
 
 *(dated 2026-09-29, `s8g` build, package S8G-P7-DEMANDS; `s8g` §8g.1 move 1 and §8g.6; D21-46 R6; D21-73 item 4; R4 =
-ADR-0194 decisions 1-3, proposed.)* **`s8g`'s second row move, made: `smoke-test` walks on both lanes, and the fix
+ADR-0194 decisions 1-3, proposed *(dated 2026-10-02, `s8g` close: ADR-0194 accepted on D21-134)*.)* **`s8g`'s second row move, made: `smoke-test` walks on both lanes, and the fix
 lane's `confirmation-test` walks.** `.redkiln/checklists/smoke.toml` is authored and `[checklist.smoke]` names it, so
 `checklist:smoke` resolves and the step reaches the port (the rig's `LaneToolchain` now answers `smoke` passing, as it
 answers `sca_scan` clean); `smoke-test@2`'s `passing` check reads the status. `confirmation-test@2`'s composing emit

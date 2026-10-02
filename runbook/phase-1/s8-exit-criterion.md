@@ -28,7 +28,7 @@ already short by a site. A renumbering would silently move every one. All six, i
 **(1) Self-hosting — AC-473, and AC-521.** Redkiln-RS runs its own fix lane end to end, **and** one story-lane run
 authors a Phase-2 story under it (ADR-0094 decision 3; ADR-0011's exit bar, which ADR-0002's "solely" never
 contradicted). Both run through the **Rust toolchain adapter** (`rk-adapter-toolchain-rust`) — this repository is a
-Cargo workspace, and a Node-only Phase 1 could not have passed this line (PIA-004).
+Cargo workspace, and a Node-only Phase 1 could not have passed this line (PIA-004). *(dated 2026-10-02, `s8g` close: the verify stage's toolchain is now journalled, as `verify_completed` (`s8g` §8g.4; ADR-0191, accepted on D21-131), whose `adapter` member names the adapter `detect` chose and whose `origin = "pass"` marks the verify stage's own pass; (1)'s block below does not read it yet, and that amendment is `s8j`'s (D21-116; D21-129))*
 
 ```bash
 cd D:/repos/redkiln-rs
