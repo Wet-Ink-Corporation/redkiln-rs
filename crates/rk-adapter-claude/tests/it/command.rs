@@ -82,23 +82,42 @@ const GOLDEN_SETTINGS_PATH: &str =
 /// worktree `D:/rk/worktrees/run-1`, whose root lists `rk` beside a directory `repos` and a file
 /// `pagefile.sys`, `rk` lists `worktrees` beside `notes.txt`, and `worktrees` lists `run-1` beside
 /// another run's `run-2`.
+///
+/// *(dated 2026-10-02, s8h build, package R1FIX-8h; Checkpoint 8d-ii (3), D21-44.)* The three
+/// segments are the fixture worktree's own path components ([`crate::support::worktree`]), not a
+/// second spelling of its run-tree directory, and each level's listing names the next segment.
 fn golden_chain() -> ConfinementChain {
     let entry = |name: &str, is_dir: bool| Sibling {
         name: name.to_owned(),
         is_dir,
     };
+    let segments: Vec<String> = crate::support::worktree()
+        .components()
+        .filter_map(|c| match c {
+            std::path::Component::Normal(s) => Some(s.to_str().expect("UTF-8").to_owned()),
+            std::path::Component::Prefix(_)
+            | std::path::Component::RootDir
+            | std::path::Component::CurDir
+            | std::path::Component::ParentDir => None,
+        })
+        .collect();
+    assert_eq!(
+        segments.len(),
+        3,
+        "PREMISE: the fixture worktree is <drive>/rk/<dir>/run-1"
+    );
     ConfinementChain {
         drive: Some('d'),
-        segments: vec!["rk".to_owned(), "worktrees".to_owned(), "run-1".to_owned()],
         listings: vec![
             vec![
                 entry("repos", true),
-                entry("rk", true),
+                entry(&segments[0], true),
                 entry("pagefile.sys", false),
             ],
-            vec![entry("notes.txt", false), entry("worktrees", true)],
-            vec![entry("run-1", true), entry("run-2", true)],
+            vec![entry("notes.txt", false), entry(&segments[1], true)],
+            vec![entry(&segments[2], true), entry("run-2", true)],
         ],
+        segments,
     }
 }
 
@@ -597,10 +616,11 @@ fn ac214_permission_mode_explicit() {
         // does not move here and the pin move does not touch it again.
         let want = rk_adapter_claude::command::argv_permission_mode(&cfg, mode)
             .expect("the fixture pin has a row");
-        assert_eq!(
-            want, mode,
-            "PREMISE: at 2.1.278 the table's spelling is the card's"
-        );
+        // *(dated 2026-10-02, s8h build, package R1FIX-8h; s8h refuting round 1.)* ~~`assert_eq!(want,
+        // mode, "PREMISE: at 2.1.278 the table's spelling is the card's")`~~ removed: it would go red at
+        // `s8j`'s pin move (the 2.1.287 row spells `default` as `manual`), which §8h.2 says does not
+        // touch this test. The comparison below is pin-agnostic; the 2.1.278 spelling is
+        // `argv_permission_mode_reads_the_row_of_the_configs_pin`'s, which the pin move does edit.
         assert_eq!(
             built.argv[i + 1],
             want,
@@ -1006,8 +1026,10 @@ fn settings_of(argv: &[String]) -> serde_json::Value {
 
 /// `s8h` §8h.6: every argv carries `--setting-sources ""` — explicit and EMPTY, so none of the
 /// three file sources loads — in the fixed position ADR-0197 decision 9 states: after
-/// `--permission-prompts none`, then `--settings <json>`, and under `static` before the
-/// `--system-prompt` pair, which stays LAST. The cap measure counts the quoted empty element.
+/// `--permission-prompts none`, then ~~`--settings <json>`~~ `--settings <path>` *(dated 2026-10-02, s8h
+/// build, package R1FIX-8h; D21-137: the element names a read-only file whose bytes are
+/// `ChildSettings::json()`)*, and under `static` before the `--system-prompt` pair, which stays LAST.
+/// The cap measure counts the quoted empty element.
 ///
 /// RED (observed 2026-10-02, through D21-47's wrapper): before the push, *"--setting-sources occurs
 /// exactly once in ["-p", …]: left: 0 right: 1"*.
@@ -1034,7 +1056,7 @@ fn setting_sources_is_explicit_and_empty() {
         assert_eq!(
             pos("--settings"),
             pos("--setting-sources") + 2,
-            "{stem}: then `--settings <json>`"
+            "{stem}: then `--settings <path>` (D21-137)"
         );
         if card.cache_profile == CacheProfile::Static {
             assert_eq!(
@@ -1084,7 +1106,10 @@ fn golden_deny() -> BTreeSet<String> {
     out
 }
 
-/// `s8h` §8h.6: the child's confinement travels in ONE `--settings` element carrying
+/// `s8h` §8h.6: the child's confinement travels in ONE `--settings` element ~~carrying~~ *(dated
+/// 2026-10-02, s8h build, package R1FIX-8h; D21-137: naming a read-only file whose bytes,
+/// `ChildSettings::json()`, are what [`settings_of`] returns, so the assertions below read
+/// [`golden_settings`] built by `ChildSettings::from_chain`, not the argv)* carrying
 /// `permissions.blockReadsOutsideWorkingDirectories: true` and `permissions.deny` rules for `Read`,
 /// `Edit` and `Write` written as the COMPLEMENT ALONG THE WORKTREE'S ANCESTOR CHAIN: at each
 /// ancestor level every sibling not on the path (a directory as `<path>/**`, anything else as

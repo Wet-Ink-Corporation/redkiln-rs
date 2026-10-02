@@ -284,10 +284,17 @@ fn denial_of(v: &serde_json::Value, channel: DenialChannel, cwd: Option<&Path>) 
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned)
     };
-    let tool_name = s("tool_name").unwrap_or_default();
-    let path = v
-        .get("tool_input")
-        .map_or_else(String::new, |input| denial_path(&tool_name, input, cwd));
+    // An entry with no `tool_name` names no tool, so no path is read for it: the empty name is an
+    // explicit branch, not a defaulted absence (AC-362's ban covers this crate's src/, s8h R1).
+    let (tool_name, path) = s("tool_name").map_or_else(
+        || (String::new(), String::new()),
+        |name| {
+            let path = v
+                .get("tool_input")
+                .map_or_else(String::new, |input| denial_path(&name, input, cwd));
+            (name, path)
+        },
+    );
     Denial {
         channel,
         tool_use_id: s("tool_use_id"),

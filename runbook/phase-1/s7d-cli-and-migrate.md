@@ -2968,6 +2968,10 @@ hardening round, the `by_kind=` / `assert by_kind` pair the two added by the thi
 group (`init is idempotent…`, `resume is refused…`, `run on an init-only…`, `explain, status and catalog search…`,
 `migrate v0 dry run…`); and **1** end-marker `echo`.
 2 + 25 + 32 + 22 + 66 + 2 + 5 + 1 = 155; 344 − 155 = 189.
+*(dated 2026-10-02, s8h build, package R1FIX-8h; D21-47's time-bound rule.)* The run-on-init-only amendment adds
+three code statements around the unchanged `run some-item` line: the fixture record's `lrec=` line and the `unset` /
+`rm -f` line each carry their own `exit 1` (the stopping bucket, +2), and the `export REDKILN_LAUNCH_RECORD=` line
+cannot stop (+1). Off the s8d recount: **348 / 192 / 156**. Its comment lines are not counted.
 
 **No line in this block is `[WILL EXIST]`, and the absence is deliberate.** Every binary the block runs is built by the
 block's first gate from this stage's own crates; `halts.md`'s carve-out is for a path a later stage produces, not for a
@@ -3453,9 +3457,19 @@ out=$(cd "$TMP1" && D:/repos/redkiln-rs/target/debug/redkiln run --resume </dev/
 printf '%s\n' "$out" | grep -qiE 'unexpected argument' && printf '%s\n' "$out" | grep -q -- '--resume' || { echo "FAIL: run --resume exited 2 but stderr is not an unknown-argument refusal naming --resume"; printf '%s\n' "$out" | tail -5; exit 1; }
 echo "resume is refused as an unknown argument"
 # run <item> on the init-only repository: a CONFIGURATION outcome — exit 3, "no process pack enabled" (D18-8; RT-46), before any lane derivation.
+# (dated 2026-10-02, s8h build, package R1FIX-8h; D21-47's time-bound rule: "A time-bound guard in an earlier
+# checkpoint is amended by the stage that moves its premise, in the same commit.") s8h's launch check (s8h section 8h.7)
+# refuses a real-harness `run` with no REDKILN_LAUNCH_RECORD BEFORE step (7), with exit 3 and a different message, so
+# this line's subject, step (7)'s 'no process pack enabled', is reached only with a launch record. A FIXTURE record (an
+# empty scratch file beside $TMP1; the check reads only that it is an existing file) is exported for this one invocation
+# and unset and removed after its two assertions. The run line is unchanged, so s8g (12)'s refusal-only list still
+# admits it. No dispatch: step (7) refuses on the empty pack set, and the replays' wrapper still traps any claude.
+lrec=$(cygpath -m "$TMP1.launch-record") && : > "$lrec" && test -f "$lrec" || { echo "FAIL: could not write the fixture launch record"; exit 1; }
+export REDKILN_LAUNCH_RECORD="$lrec"
 out=$(cd "$TMP1" && D:/repos/redkiln-rs/target/debug/redkiln run some-item </dev/null 2>&1); rc=$?
 [ "$rc" -eq 3 ] || { echo "FAIL: run on the init-only repository exited $rc, expected 3 (D18-8: an empty [packs] enabled is a configuration error before any selection)"; printf '%s\n' "$out" | tail -10; exit 1; }
 printf '%s\n' "$out" | grep -qi 'no process pack enabled' || { echo "FAIL: run exited 3 but stderr does not say 'no process pack enabled' — a different refusal fired first"; printf '%s\n' "$out" | tail -10; exit 1; }
+unset REDKILN_LAUNCH_RECORD; rm -f "$lrec" || { echo "FAIL: could not remove the fixture launch record $lrec"; exit 1; }
 n=$(git -C "$TMP1" rev-list --count HEAD | tr -d '[:space:]'); [ "${n:-0}" -eq 1 ] || { echo "FAIL: $TMP1 has ${n:-0} commit(s) after the refused run — one root commit was expected, a refused run writes no commit"; exit 1; }   # → 1
 # step (7)'s refusal precedes step (8)'s worktree re-creation (§7d.5; H-5 / RT-47): the refused run created no rk-run/* branch
 # and no run-owned worktree — the pass condition is an absence, so the rc is checked and the positive control is the

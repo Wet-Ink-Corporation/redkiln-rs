@@ -19,6 +19,9 @@ mod live;
 // *(dated 2026-10-02, s8h build, package P4-adapter-guards-and-probes.)* `s8h` §8h.7's lint over
 // `live.rs`, OUTSIDE the `live` feature so every suite runs it.
 mod live_guard;
+// *(dated 2026-10-02, s8h build, package R1FIX-8h.)* The live probes' denial reading (`s8h`
+// §8h.11), OUTSIDE the `live` feature so its scripted-fixture tests run in every suite.
+mod probe_denials;
 mod reading;
 mod registry;
 mod stream;

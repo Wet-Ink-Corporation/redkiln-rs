@@ -6036,6 +6036,10 @@ owed. The ruling is on the review packet's confirm list.
    bytes) each move something §8h.6 pins. The directory is also unbounded. Whether `remove_dir_all` removes a
    read-only file on Windows is unmeasured; it matters only if the location moves back to `runs/`. The adapter
    never runs git to find the directory and has no default.*
+   *(dated 2026-10-02, s8h build, package R1FIX-8h; s8h refuting round 1.)* The `remove_dir_all` residual above is
+   measured: M-D21-137-loc's run (`s8h` §8h.13) pointed the directory back at `runs/<run_id>/`, and the read-only file
+   `write_settings_file` wrote there was gone after `write_run`. It does delete it; the read-only flag is no
+   protection, which is why the location moved.
 3. **Fail closed, by type.** Each of these refuses before spawning, and none falls back to `settings: None`:
    - a missing directory;
    - a directory under the worktree, compared case-folded on Windows with `\\?\` stripped;

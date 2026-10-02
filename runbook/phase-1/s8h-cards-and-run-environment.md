@@ -589,6 +589,11 @@ lists.
   amends it, by a dated line in the test, to compare against the table's spelling of the card's mode at the fixture
   `Config`'s pin. At 2.1.278 the compared value does not change, so the amendment moves no reading here, and the pin
   move does not touch it again.
+  *(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1)* The build had also added a PREMISE,
+  `assert_eq!(want, mode, …)`, that the 2.1.278 row spells the card's mode as the card does; it would go red at the
+  pin move (2.1.287 spells `default` as `manual`), against the sentence above. It is removed by dated comment in the
+  test: the remaining comparison, `argv[i+1] == argv_permission_mode(&cfg, mode)`, is pin-agnostic, so the sentence
+  above holds and `s8j` §8j.6 step 1's pin-move list needs no new entry.
 - Record A states the table as a construction under D21-41 (g), and cites X12.
 
 *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **The eight shipped cards are this table.** Each
@@ -1792,6 +1797,24 @@ probe named.
   (only after probe 1 measures `[!...]` matching and Windows case-folding against a sibling sentinel) and 2.1.287's
   `--restricted` flag.
 
+*(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1, major)* **Probes 0 and 1 now assert what this
+section prescribes, per denial.** They counted channel entries (`typed.len() >= 4`), so one denial carried on both
+of guard 3's channels counted twice, and their HALT passed once ANY denial was typed. Their denial reading moved to
+a non-live module, `tests/it/probe_denials.rs`: `collect` de-duplicates the denials of channel (a), channel (b) and
+the errored `tool_result`s by `tool_use_id` (§8h.5), each with its channel set (`result:-`,
+`event:<decision_reason_code or ->`, `tool_result:-`; a `tool_result`'s tool and path are its `tool_use` block's);
+`read_target` maps an instructed action's target to a denial by `Denial.tool_name` and `Denial.path` (separators
+unified, case-folded on Windows): named on (a) or (b), `tool_result`-only, or absent; `halts` lists each
+`tool_result`-only denial no typed denial covers. Probe 1 requires all four targets (the outside write, the outside
+read, the settings file, `<wt>/.cargo/rk-probe.txt`) named, HALTs per denial, and prints one `DENIAL_CHANNELS=<set>
+TOOL= PATH= TOOL_USE_ID=` line per denial plus a `DENIAL_TARGET=` line per target; probe 0 requires the outside read
+named and prints `DENIAL_CHANNEL=<channel>:<code or ->` per denial (every carrying channel, comma-joined), without
+the `TOOL=` suffix it had. Both stay `#[ignore]` and NOT RUN; `cargo test -p rk-adapter-claude --features live --test it
+--no-run` compiles them. The helper's three scripted-fixture tests run in every suite, each red first against a stub:
+`probe_denials::tests::a_denial_on_both_typed_channels_counts_once_and_a_tool_result_only_target_halts` (the refuting
+round's scenario), `probe_denials::tests::four_typed_denials_name_every_target_and_print_in_the_stage_files_form` and
+`probe_denials::tests::an_unattempted_target_is_absent_and_a_typed_twin_without_an_id_covers_its_tool_result`.
+
 *(dated 2026-10-02, s8h build, package P8-launcher-checkpoint-edits-and-packet)* **Precondition (a) is met, and nothing was run.** `tools/live-run.sh` exists with its
 `probe` mode (§8h.7's dated note). Precondition (d) is met by the cards package. Preconditions (b) and (c) are as dated
 above: (b) is `s8j`'s pin move, and (c) is wired. The three go-ahead lines above, `live_dispatch_probe`'s
@@ -2264,15 +2287,17 @@ whole, plus the older checkpoints this stage's own edits make provisional. It do
 | 8g | the entry gate | Checkpoint 8h (13), whole |
 | 5 | `rk-types`: `observed_model`, the new `EXPORTED` types | Checkpoint 8h (13), whole |
 | 7b, 7b-ii | `rk-kernel`: the per-item envelope | Checkpoint 8h (13), whole |
-| 7d | `rk-cli`: the launch check, `RK-D-CARD-GRANT`, the load lint, the envelope's exit | Checkpoint 8h (13), whole, under (0c)'s wrapper. *Dated 2026-09-24 (D21-47, s8h review #1):* 7d's Halt 2 line and `doctor`'s `RK-D-CLI-VERSION` meet the fake `claude`, which prints the pin, so here they assert the fake. Both meet the real binary only at `s8j`, after the pin move (§8h.8) |
+| 7d | `rk-cli`: the launch check, `RK-D-CARD-GRANT`, the load lint, the envelope's exit | Checkpoint 8h (13), whole, under (0c)'s wrapper. *Dated 2026-09-24 (D21-47, s8h review #1):* 7d's Halt 2 line and `doctor`'s `RK-D-CLI-VERSION` meet the fake `claude`, which prints the pin, so here they assert the fake. Both meet the real binary only at `s8j`, after the pin move (§8h.8). *(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1, blocker; D21-47's time-bound rule)* **Amended here**: its run-on-init-only line expects step (7)'s *"no process pack enabled"*, and the launch check (§8h.7) now refuses first with exit 3 and another message. The amendment exports a FIXTURE `REDKILN_LAUNCH_RECORD` (an empty scratch file beside `$TMP1`) for that one invocation and unsets and removes it after the two assertions; the run line is byte-identical, so `s8g` (12)'s refusal-only list still admits it (its RUN_GUARD, run over the amended block: `RUN-LINES-CHECKED`, rc 0). Proved in a private worktree with that worktree's binary: the fragment without the three new lines fails *"a different refusal fired first"* on the launch-check text, and with them reaches its end, rc 0 |
 | 8b | `rk-types`: `Finding` gains `severity`, which `s8b`'s severity-reading rows and fixtures meet (D21-47 cross #4) | Checkpoint 8h (13), whole |
-| 7c | `rk-adapter-claude`: argv, init equality, classification | **not here.** Its block carries the live probe. `s8j` re-runs it split (D21-47). The suite portion runs outside `wrap`, under the no-launch-record, trap and fake-`claude` wrapper. Only the live-probe portion runs under `wrap`, from a plain terminal (D21-43 N28). Its non-live regressions are selected by name in (3) |
+| 7c | `rk-adapter-claude`: argv, init equality, classification | **not here.** Its block carries the live probe. `s8j` re-runs it split (D21-47). The suite portion runs outside `wrap`, under the no-launch-record, trap and fake-`claude` wrapper. Only the live-probe portion runs under `wrap`, from a plain terminal (D21-43 N28). Its non-live regressions are selected by name in (3). *(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1, major)* This stage's `classify::denial_of` had put an `unwrap_or_default()` on a code line of `crates/rk-adapter-claude/src`, which 7c's AC-362 `rk_absent` ban and `ci.yml`'s AC-362 rule both cover; it is gone (the absent `tool_name` is an explicit empty branch, not a respelling), and both, extracted from their own bytes and run read-only, print rc 0 with 7c's control passing |
 | 7e | `.redkiln/cards/` and both packs | **not re-runnable whole**: its block ends in `git add .redkiln spikes/p9 && git commit`. Its subject is asserted by (8)'s parser read of the cards and both packs, by the `cards::` tests in (6), and by the load lint's tests. `conformance::shipped_pack_loads` loads the catalog only, so it is not cited for this subject (s8h review #14) |
 | 7f | its `redkiln run` arm now refuses at the launch check. Before that check exists, the same arm would reach a real dispatch once the cards bind | `s8j`'s entry-chain run, as described below |
 | 8a | its (11) guard, *"a card carries permission_mode (rc=$rc) — 7i's or 7f's run could reach a REAL dispatch; stop"*, fires on the eight cards this stage writes | **amended here**, in this stage's work commit (D21-47's time-bound rule; below). `s8j` re-runs it whole |
 | 8c | its (15) guard, the same `pm=$(grep -l 'permission_mode' "$@")` shape, fires on the same cards (final consistency pass 2026-09-24) | **amended here**, in the same commit and the same way. `s8j` re-runs it whole |
 | 8d | its (12a) precondition, *"a shipped card carries permission_mode, so s8h has landed without its dated amendment of (12a)"*, fires on the same cards. `s8d` §8d.11 asks for this: *"**`s8h` amends (12a)** by dated line in the commit that gives the cards their modes, and it lists 8d as provisional"* (final consistency pass 2026-09-24) | **amended here**, card-mode half only; its fixture-child half stands. `s8j` re-runs it whole |
 | 8d-ii, 8e | 8d-ii's non-nested precondition and 8e's (10d) stop once a card carries a mode, because each re-runs Checkpoint 7f directly and 7f's run arm reaches `redkiln run` (final consistency pass 2026-09-24) | **not amended here.** Their stop is right from this stage until `s8j`'s A10 re-points 7f's arm at the fixture child with a fixture launch record. A10 moves their premise, so A10's commit amends them under the same rule (finding 27); `s8j` §8j.8 specifies both edits under *"A10's two dependent amendments"* |
+
+*(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1, blocker)* **Checkpoint 8d-ii (3) is NOT amended, and this stage's tests no longer trip it.** Its one-derivation guard (D21-44) kept ten code lines this stage added: `live.rs`'s probe tree and `outside-read.txt` sentinels joined `.redkiln/worktrees` literally, and `command.rs`'s golden confinement chain spelled the segment `"worktrees"`. As `s8f` did for `doctor_artifact`, the probe tree's path is now `rk_git::worktree::derive(<repo>, rk-probe-<token>).path` and the sentinels sit in its parent; the golden chain's segments are the fixture worktree's own path components (`support::worktree()`), so no literal remains. 8d-ii (3)'s guard lines, extracted from their own bytes and run read-only, kept the ten lines before and print rc 0 after, with both of its controls passing.
 
 **How a later stage re-runs an old checkpoint that executes `redkiln run`.** Of 7f, 7g, 7h and 7i's run arm, only
 7f's block executes `redkiln run` at `a6349b6` [measured by a grep over the four files' bash lines]. Every re-run of
@@ -2960,8 +2985,10 @@ nd_check "(12) fmt, clippy and the whole suite" || exit 1
 # note), so FLOOR = 1337 + 54 + 9. The floor is raised, never lowered.
 # *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* FLOOR 1400 -> 1401 (D21-137 item 2's survival guard,
 # run::a_child_settings_file_survives_write_run_for_its_run_id), so FLOOR = 1337 + 54 + 9 + 1.
+# *(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1)* FLOOR 1401 -> 1404: probe 1's denial reading
+# moved into a non-live module with three scripted-fixture tests (probe_denials::), so FLOOR = 1337 + 54 + 9 + 1 + 3.
 BASE_8G=1337
-FLOOR=$((BASE_8G + 54 + 9 + 1))
+FLOOR=$((BASE_8G + 54 + 9 + 1 + 3))
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

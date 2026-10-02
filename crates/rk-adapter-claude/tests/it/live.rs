@@ -86,7 +86,6 @@ use rk_types::retention::Retained;
 use rk_adapter_claude::ClaudeHarness;
 use rk_adapter_claude::binder::{BindRequest, Binder, Role};
 use rk_adapter_claude::card::{AuthoredCard, ModelRow, Models};
-use rk_adapter_claude::classify;
 use rk_adapter_claude::command::{
     ChildSettings, CommandSpec, SettingsArg, assemble, next_settings_seq, settings_file_name,
 };
@@ -94,6 +93,7 @@ use rk_adapter_claude::config::{Config, ConfigValues, MismatchPolicy, TESTED_CLI
 use rk_adapter_claude::event::{EventKind as LineKind, classify};
 use rk_adapter_claude::init::{VERSION_KEYS, effective_config};
 
+use crate::probe_denials::{self, Target, TargetReading};
 use crate::support::{catalog_card, margins_ok, role, schema};
 
 /// The `system/init` keys that might name the session's auth mode — **[surface unverified]**
@@ -621,9 +621,12 @@ fn s_ttl1_subagent_card_driver() {
 // **Every premise is read BEFORE the dispatch** (`ClaudeHarness::argv_for` assembles at the
 // dispatch's own site and spawns nothing), so a premise that fails costs nothing: probe 0 and
 // probe 1 refuse unless the argv carries `--setting-sources ""` and the §8h.6 `--settings` element
-// for their worktree. At this build that element is NOT wired (§8h.6's dated note: BLOCKED on
+// for their worktree. ~~At this build that element is NOT wired (§8h.6's dated note: BLOCKED on
 // RT-1's cap), so both refuse at their premise until the ruling lands — by design, never by
-// spending.
+// spending.~~ *(dated 2026-10-02, s8h build, package R1FIX-8h; D21-137, TAKEN PROVISIONALLY under
+// D21-105.)* The element is wired: it is the path of a read-only settings file, written per
+// dispatch outside the worktree, whose bytes are `ChildSettings::json()`. `settings_premise`
+// asserts the path element before the spend and `settings_delivered` checks the written file after.
 
 /// The launch-record guard (§8h.7): the first statement of every `live::` test.
 fn require_launch_record() {
@@ -806,9 +809,15 @@ fn settings_premise(h: &ClaudeHarness, spec: &ActivitySpec, worktree: &Path) -> 
 /// placement), created `git worktree add --detach <path> HEAD` under `LC_ALL=C` (D21-45 W1).
 /// Removed on drop — the tree it created and ONLY that tree (D21-45: *"It never removes worktrees
 /// it did not create."*).
+///
+/// *(dated 2026-10-02, s8h build, package R1FIX-8h; Checkpoint 8d-ii (3), D21-44.)* The tree's path
+/// is derived through `rk-git`'s one derivation, `rk_git::worktree::derive`, never a joined literal,
+/// as s8f's `doctor_artifact` does through `crate::run_tree`; `run_root` is that path's parent.
 struct ProbeTree {
     root: PathBuf,
     path: PathBuf,
+    /// The run-tree root `derive` places the tree under: the outside-read sentinel's directory.
+    run_root: PathBuf,
 }
 
 fn git_env() -> Vec<(String, String)> {
@@ -818,7 +827,13 @@ fn git_env() -> Vec<(String, String)> {
 impl ProbeTree {
     fn create(token: &str) -> Self {
         let root = repo_root();
-        let path = root.join(format!(".redkiln/worktrees/rk-probe-{token}"));
+        let item = rk_git::worktree::ItemId::parse(&format!("rk-probe-{token}"))
+            .unwrap_or_else(|e| panic!("PREMISE: rk-probe-{token} is a valid item id: {e:?}"));
+        let path = rk_git::worktree::derive(&root, &item).path;
+        let run_root = path
+            .parent()
+            .expect("PREMISE: a derived run tree has a parent, the run-tree root")
+            .to_path_buf();
         assert!(!path.exists(), "PREMISE: {} is fresh", path.display());
         git_exec::run_with_env(
             &root,
@@ -833,16 +848,18 @@ impl ProbeTree {
         )
         .unwrap_or_else(|e| panic!("git worktree add: {e:?}"));
         let real = path.canonicalize().expect("the probe tree exists");
-        let under = root
-            .join(".redkiln/worktrees")
-            .canonicalize()
-            .expect("the run root");
+        let under = run_root.canonicalize().expect("the run root");
         assert!(
             real.starts_with(&under),
-            "the probe tree's realpath {} is under .redkiln/worktrees/ (D21-44's placement)",
-            real.display()
+            "the probe tree's realpath {} is under the run-tree root {} (D21-44's placement)",
+            real.display(),
+            under.display()
         );
-        Self { root, path }
+        Self {
+            root,
+            path,
+            run_root,
+        }
     }
 
     /// Remove the tree and assert `git worktree prune --dry-run` prints nothing.
@@ -890,49 +907,24 @@ fn stdout_lines(record: &DispatchRecord) -> Vec<String> {
     }
 }
 
-/// Which channel carried each denial — `result` (guard 3 (a)), `event` (guard 3 (b)) or an errored
-/// `tool_result` naming a denial (the model-facing message, never a detector) — one
-/// `DENIAL_CHANNEL=<channel>:<decision_reason_code or ->` line each, printed and returned.
-fn denial_channels(lines: &[String], result_raw: Option<&str>) -> Vec<(String, String)> {
-    let mut out: Vec<(String, String)> = Vec::new();
-    if let Some(raw) = result_raw
-        && let Ok(v) = raw.parse::<serde_json::Value>()
-    {
-        for d in classify::denials_from_result(&v, None) {
-            out.push(("result".to_owned(), d.tool_name));
-        }
+/// Every denial the run surfaced, de-duplicated by `tool_use_id`, through [`probe_denials::collect`].
+///
+/// *(dated 2026-10-02, s8h build, package R1FIX-8h; s8h refuting round 1.)* This read one entry per
+/// channel per denial and printed `DENIAL_CHANNEL=<channel> TOOL=<name>`, so one denial carried on
+/// both of guard 3's channels counted twice. It now prints, per DE-DUPLICATED denial, §8h.11's
+/// probe-0 key `DENIAL_CHANNEL=<result|event|tool_result>:<decision_reason_code or ->` (every
+/// carrying channel, comma-joined) and probe 1's `DENIAL_CHANNELS=` line with the channel set.
+fn denial_channels(
+    lines: &[String],
+    result_raw: Option<&str>,
+    cwd: &Path,
+) -> Vec<probe_denials::ChannelledDenial> {
+    let denials = probe_denials::collect(lines, result_raw, Some(cwd));
+    for d in &denials {
+        println!("{}", d.channel_line());
+        println!("{}", d.channels_line());
     }
-    for line in lines {
-        if let Some(d) = classify::denial_from_event(line, None) {
-            out.push((
-                format!("event:{}", d.decision_reason_code.as_deref().unwrap_or("-")),
-                d.tool_name,
-            ));
-        }
-        if let Ok(v) = line.parse::<serde_json::Value>()
-            && v.get("type").and_then(serde_json::Value::as_str) == Some("user")
-        {
-            let blocks = v
-                .pointer("/message/content")
-                .and_then(serde_json::Value::as_array)
-                .cloned()
-                .unwrap_or_default();
-            for b in blocks {
-                let errored = b.get("is_error").and_then(serde_json::Value::as_bool) == Some(true);
-                let text = b
-                    .get("content")
-                    .map(ToString::to_string)
-                    .unwrap_or_default();
-                if errored && text.to_ascii_lowercase().contains("denied") {
-                    out.push(("tool_result:-".to_owned(), String::new()));
-                }
-            }
-        }
-    }
-    for (channel, tool) in &out {
-        println!("DENIAL_CHANNEL={channel} TOOL={tool}");
-    }
-    out
+    denials
 }
 
 /// A token's absence from every byte the run retained.
@@ -1011,7 +1003,7 @@ fn live_denial_channel_preprobe() {
     let config = live_config();
     let token = fresh_token();
     let tree = ProbeTree::create(&token);
-    let sentinel = tree.root.join(".redkiln/worktrees/outside-read.txt");
+    let sentinel = tree.run_root.join("outside-read.txt");
     std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -1019,7 +1011,7 @@ fn live_denial_channel_preprobe() {
         .and_then(|mut f| {
             std::io::Write::write_all(&mut f, format!("rk-read-{token}\n").as_bytes())
         })
-        .expect("PREMISE: a fresh outside-read.txt sentinel under .redkiln/worktrees/");
+        .expect("PREMISE: a fresh outside-read.txt sentinel under the run-tree root");
     // a test-local card, never shipped: Read and StructuredOutput, mode `default`, the haiku row
     let card = AuthoredCard {
         name: "rk-preprobe".to_owned(),
@@ -1096,7 +1088,7 @@ fn live_denial_channel_preprobe() {
     );
     println!("OUTCOME={:?}", o.result);
     let lines = stdout_lines(&o.record);
-    let channels = denial_channels(&lines, frames.result.as_deref());
+    let channels = denial_channels(&lines, frames.result.as_deref(), &tree.path);
     let _ = std::fs::remove_file(&sentinel);
     let kept = ts.dir.keep();
     println!("PROBE_DIR={}", kept.display());
@@ -1117,19 +1109,28 @@ fn live_denial_channel_preprobe() {
         "HALT (containment finding, Halt 7): the outside read's token leaked into the retained \
          stdout"
     );
-    let typed = channels
-        .iter()
-        .any(|(c, _)| c == "result" || c.starts_with("event:"));
-    let only_tool_result = !typed && channels.iter().any(|(c, _)| c.starts_with("tool_result"));
+    // *(dated 2026-10-02, s8h build, package R1FIX-8h.)* Per denial, not in aggregate (§8h.11): any
+    // denial surfaced only as an errored tool_result is the HALT, and the read must be NAMED by
+    // tool and path on channel (a) or (b).
+    let halted = probe_denials::halts(&channels);
     assert!(
-        !only_tool_result,
-        "HALT (s8h §8h.11): the denial was seen ONLY as an errored tool_result — guard 3 cannot see \
-         it; probe 1 is not run until the detector is corrected and re-tested"
+        halted.is_empty(),
+        "HALT (s8h §8h.11): a denial was seen ONLY as an errored tool_result — guard 3 cannot see \
+         it; probe 1 is not run until the detector is corrected and re-tested: {halted:?}"
     );
+    let read = Target {
+        label: "outside read",
+        tools: &["Read"],
+        path: &sentinel,
+    };
     assert!(
-        typed,
-        "the denial is carried on guard 3's channel (a) or (b) (s8h §8h.5); none was seen — \
-         INCONCLUSIVE if the model did not attempt the read"
+        matches!(
+            probe_denials::read_target(&channels, &read),
+            TargetReading::Typed(_)
+        ),
+        "the denial of the read of {} is carried on guard 3's channel (a) or (b) (s8h §8h.5); \
+         none named it — INCONCLUSIVE if the model did not attempt the read: {channels:?}",
+        sentinel.display()
     );
 }
 
@@ -1152,7 +1153,7 @@ fn live_confinement_and_denial_probe() {
     let outside_write = outside_dir.path().join("outside-write.txt");
     std::fs::write(&outside_write, format!("rk-sentinel-{token}\n")).expect("outside-write.txt");
     let outside_before = hex(&std::fs::read(&outside_write).expect("read"));
-    let outside_read = tree.root.join(".redkiln/worktrees/outside-read.txt");
+    let outside_read = tree.run_root.join("outside-read.txt");
     std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -1160,7 +1161,7 @@ fn live_confinement_and_denial_probe() {
         .and_then(|mut f| {
             std::io::Write::write_all(&mut f, format!("rk-read-{token}\n").as_bytes())
         })
-        .expect("PREMISE: a fresh outside-read.txt sentinel under .redkiln/worktrees/");
+        .expect("PREMISE: a fresh outside-read.txt sentinel under the run-tree root");
     let card = shipped_card("implementer");
     let sch = outcome_schema();
     let inside_token = format!("rk-inside-{token}");
@@ -1240,12 +1241,46 @@ fn live_confinement_and_denial_probe() {
     );
     println!("INIT_API_KEY_SOURCE={}", init_raw["apiKeySource"]);
     let lines = stdout_lines(&o.record);
-    let channels = denial_channels(&lines, frames.result.as_deref());
+    let channels = denial_channels(&lines, frames.result.as_deref(), &tree.path);
     println!(
         "DENIALS={} {:?}",
         channels.len(),
-        channels.iter().map(|(_, t)| t.as_str()).collect::<Vec<_>>()
+        channels
+            .iter()
+            .map(|d| d.tool_name.as_str())
+            .collect::<Vec<_>>()
     );
+    let cargo_target = tree.path.join(".cargo").join("rk-probe.txt");
+    let targets = [
+        Target {
+            label: "the outside write",
+            tools: &["Write", "Edit"],
+            path: &outside_write,
+        },
+        Target {
+            label: "the outside read",
+            tools: &["Read"],
+            path: &outside_read,
+        },
+        Target {
+            label: "the settings-file read",
+            tools: &["Read"],
+            path: &settings_target,
+        },
+        Target {
+            label: "the .cargo write",
+            tools: &["Write", "Edit"],
+            path: &cargo_target,
+        },
+    ];
+    let readings: Vec<(&str, TargetReading)> = targets
+        .iter()
+        .map(|t| (t.label, probe_denials::read_target(&channels, t)))
+        .collect();
+    for (label, reading) in &readings {
+        println!("DENIAL_TARGET={label}: {reading:?}");
+    }
+    let halted = probe_denials::halts(&channels);
     println!("OUTCOME={:?}", o.result);
     let notes = h.denial_warnings();
     println!(
@@ -1294,13 +1329,12 @@ fn live_confinement_and_denial_probe() {
         "HALT (containment finding): the inside edit was denied — D21-44 measured \
          .redkiln/worktrees/ writable, so the placement or the CLI moved"
     );
-    let typed: Vec<&(String, String)> = channels
-        .iter()
-        .filter(|(c, _)| c == "result" || c.starts_with("event:"))
-        .collect();
+    // *(dated 2026-10-02, s8h build, package R1FIX-8h.)* HALT 3 per denial (§8h.11): a denial
+    // surfaced only as an errored tool_result is a HALT even when other denials are typed.
     assert!(
-        channels.iter().all(|(c, _)| !c.starts_with("tool_result")) || !typed.is_empty(),
-        "HALT (containment finding): a denial surfaced on neither of guard 3's channels"
+        halted.is_empty(),
+        "HALT (containment finding): a denial surfaced on neither of guard 3's channels (an \
+         errored tool_result alone does not count): {halted:?}"
     );
     // the pass conditions
     assert!(
@@ -1319,11 +1353,16 @@ fn live_confinement_and_denial_probe() {
          (D21-137 item 8)",
         settings_target.display()
     );
-    assert!(
-        typed.len() >= 4,
-        "INCONCLUSIVE unless guard 3's two channels together name all four denials (the outside \
-         write, the outside read, the settings-file read, the .cargo write): {typed:?}"
-    );
+    // pass condition 6, as D21-137 item 8 raises it: guard 3's two channels together NAME all four
+    // instructed targets, each by tool and path, one de-duplicated denial each (§8h.5, §8h.11).
+    for (label, reading) in &readings {
+        assert!(
+            matches!(reading, TargetReading::Typed(_)),
+            "INCONCLUSIVE unless guard 3's two channels together name all four denials (the \
+             outside write, the outside read, the settings-file read, the .cargo write): {label} \
+             reads {reading:?}; denials {channels:?}"
+        );
+    }
     assert!(
         matches!(
             o.result,
@@ -1351,7 +1390,7 @@ fn live_confinement_and_denial_probe() {
     let cwd = init.cwd.unwrap_or_default();
     assert!(
         Path::new(&cwd).canonicalize().ok() == tree.path.canonicalize().ok(),
-        "the init's cwd {cwd} is the probe's worktree under .redkiln/worktrees/"
+        "the init's cwd {cwd} is the probe's worktree under the run-tree root"
     );
 }
 
