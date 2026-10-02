@@ -2618,9 +2618,9 @@ out=$(python runbook/tools/check-bash-syntax.py 2>&1); rc=$?
 #     bare-word value (`planted`: no path, so it names no launch record) reaches only
 #     `sh -c 'printf …'` or `sh -c 'echo …'`. Every other admitted line is listed, byte for byte and with its reason,
 #     in runbook/phase-1/s8j-screen-exempt.txt: 7f's fixture-route line (A10) always, and any line a chain block runs
-#     against a sandbox the stage that owns it describes (Checkpoint 8h's three, listed in A10). The screen is a FLOOR: a block that assembles another at run
-#     (dated 2026-10-02, s8h build, package R2FIX-8h) and Checkpoint 7d's fixture launch record line, A10's fourth entry.
-#     time is screened by its own parent, and the trap and (12) cover it.
+#     against a sandbox the stage that owns it describes (Checkpoint 8h's three and, dated 2026-10-02 s8h build packages
+#     R2FIX-8h/R3FIX-8h, Checkpoint 7d's fixture launch record line, A10's fourth entry; all listed in A10). The screen is
+#     a FLOOR: a block that assembles another at run time is screened by its own parent, and the trap and (12) cover it.
 #   · DETECTION. The trap and the fake's log below, and (12)'s store, ref, launch-record and transcript readings.
 if [ "${RK_CP_NESTED:-0}" = 1 ]; then
   echo "CP8J (10) SKIPPED: this block is itself an entry-gate re-run (RK_CP_NESTED=1); the chain ran at Checkpoint 8j's own close"
