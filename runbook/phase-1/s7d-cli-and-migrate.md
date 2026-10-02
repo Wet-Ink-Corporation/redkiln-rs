@@ -2972,6 +2972,9 @@ group (`init is idempotent…`, `resume is refused…`, `run on an init-only…`
 three code statements around the unchanged `run some-item` line: the fixture record's `lrec=` line and the `unset` /
 `rm -f` line each carry their own `exit 1` (the stopping bucket, +2), and the `export REDKILN_LAUNCH_RECORD=` line
 cannot stop (+1). Off the s8d recount: **348 / 192 / 156**. Its comment lines are not counted.
+*(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2.)* The `trap 'rm -f "$lrec"' EXIT` line and
+the `trap - EXIT` line around the fixture record cannot stop (+2): **350 / 192 / 158**. The export line is admitted
+by `s8j` Checkpoint 8j (10)'s screen only through its exemption file (`s8j` §8j.8 A10, fourth entry).
 
 **No line in this block is `[WILL EXIST]`, and the absence is deliberate.** Every binary the block runs is built by the
 block's first gate from this stage's own crates; `halts.md`'s carve-out is for a path a later stage produces, not for a
@@ -3465,11 +3468,18 @@ echo "resume is refused as an unknown argument"
 # and unset and removed after its two assertions. The run line is unchanged, so s8g (12)'s refusal-only list still
 # admits it. No dispatch: step (7) refuses on the empty pack set, and the replays' wrapper still traps any claude.
 lrec=$(cygpath -m "$TMP1.launch-record") && : > "$lrec" && test -f "$lrec" || { echo "FAIL: could not write the fixture launch record"; exit 1; }
+# (dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2) An EXIT trap removes the fixture record
+# when either assertion below exits, and is cleared once the record is removed. The export line below is refused by
+# s8j Checkpoint 8j (10)'s dispatch screen (a launch record supplied): its RUN_RE refuses every honest spelling,
+# measured. It is admitted by a reasoned entry under this stem in runbook/phase-1/s8j-screen-exempt.txt (s8j
+# section 8j.8 A10's fourth entry, by dated edit). Keep the line byte-identical, or re-open that entry.
+trap 'rm -f "$lrec"' EXIT
 export REDKILN_LAUNCH_RECORD="$lrec"
 out=$(cd "$TMP1" && D:/repos/redkiln-rs/target/debug/redkiln run some-item </dev/null 2>&1); rc=$?
 [ "$rc" -eq 3 ] || { echo "FAIL: run on the init-only repository exited $rc, expected 3 (D18-8: an empty [packs] enabled is a configuration error before any selection)"; printf '%s\n' "$out" | tail -10; exit 1; }
 printf '%s\n' "$out" | grep -qi 'no process pack enabled' || { echo "FAIL: run exited 3 but stderr does not say 'no process pack enabled' — a different refusal fired first"; printf '%s\n' "$out" | tail -10; exit 1; }
 unset REDKILN_LAUNCH_RECORD; rm -f "$lrec" || { echo "FAIL: could not remove the fixture launch record $lrec"; exit 1; }
+trap - EXIT
 n=$(git -C "$TMP1" rev-list --count HEAD | tr -d '[:space:]'); [ "${n:-0}" -eq 1 ] || { echo "FAIL: $TMP1 has ${n:-0} commit(s) after the refused run — one root commit was expected, a refused run writes no commit"; exit 1; }   # → 1
 # step (7)'s refusal precedes step (8)'s worktree re-creation (§7d.5; H-5 / RT-47): the refused run created no rk-run/* branch
 # and no run-owned worktree — the pass condition is an absence, so the rc is checked and the positive control is the

@@ -5,6 +5,11 @@
 # `item` and `summary`, both strings, and forbids additional properties; the recorded value is
 # `{"item": 7}`, which is wrong on both counts. `classify.rs` reaches `validator.validate(candidate)`
 # and returns `StepError::Schema { last_error }` → row `11`.
+# (dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2) `pack-min/schemas/` is deleted
+# (s8h section 8h.4). The schema is `rk_types::registry::EXPORTED`'s `ImplReport`, read by name from
+# `emit-report`'s bound step (`value:ImplReport`). It requires `status`, `files`, `summary` and
+# `tests_added` and denies unknown fields, so `{"item": 7}` still fails it: every required member is
+# missing and `item` is not allowed. The row is still `11`.
 #
 # Its sibling `schema-no-structured-output/` takes the arm ABOVE this one, where the member is
 # absent altogether (F20). Present-but-invalid and absent are the two ways a frame fails the schema,

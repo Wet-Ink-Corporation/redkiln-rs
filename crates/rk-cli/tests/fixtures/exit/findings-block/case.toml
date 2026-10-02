@@ -17,6 +17,9 @@
 # makes the weight `Strict`, and `reproduced` + `Flipped` at `Strict` is a `Block`.
 #
 # Change any one of those and the expected code is not 4 — which is the fixture's real assertion.
+# (dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2) `schemas/Findings.json` above is
+# deleted (s8h section 8h.4): the payload validates against `rk_types::registry::EXPORTED`'s `Findings`,
+# read by name from `review-min`'s bound step (`value:Findings`). The commit and the selection are unchanged.
 args = ["run", "review-1"]
 pack = "review"
 mode = "exit:0"

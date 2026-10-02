@@ -21,6 +21,10 @@
 # which is exactly what `review_pass::findings_in` selects the `activity_committed` row by. The
 # stage name is NEVER matched: `resolved.stage` is compared to no string literal anywhere in
 # `crates/rk-cli/src/` and ADR-0162 decision 5 does not introduce the first one.
+# (dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2) `schemas/Findings.json` is deleted
+# (s8h section 8h.4), and `provides.first()` no longer names a schema file: the dispatch validates
+# against `rk_types::registry::EXPORTED`'s `Findings`, read by name from the bound step's
+# `outputs = "value:Findings"` below, and still commits `Typed.schema == "Findings"`.
 [activity]
 id           = "review-min"
 version      = 1

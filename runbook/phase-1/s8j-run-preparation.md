@@ -235,6 +235,8 @@ new tests and ten mutants, because the launch-record lint and its mutant are `s8
   8d-ii's and 8e (10d)'s card-mode stops (`s8h` finding 27). A0 was made at insertion. (8) finds INDEX's Step 8 row
   by its stage cell, not by number.
 - *Final consistency pass 2026-09-24:* A10 lists `s8h`'s three screen hits as exemption entries, re-measured.
+- *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2)* A10 gains a fourth exemption entry, under stem `s7d-cli-and-migrate`: Checkpoint 7d's fixture
+  launch record line, which `s8h`'s R1FIX-8h amendment added and (10)'s screen refuses. Re-measured: zero hits.
 - *Final consistency pass 2026-09-24:* A12 adds `-H` to `s7c`/`s7d` `rk_absent`; (10) and step 2 assert it.
 - *Final consistency pass 2026-09-24:* both lanes' proofs assert every AC carries a `verification` (`s8g` §8g.3).
 - *Final consistency pass 2026-09-24:* `s8b`'s goldens line, `s8g`'s names line and `s8h`'s guard line re-quoted.
@@ -1894,7 +1896,7 @@ was in progress:* `s8h`'s block was gaining two `tools/live-run.sh wrap` runs ag
 Each is admitted here, with its reason, only if `s8h` keeps it as landed.
 
 *Re-measured 2026-09-24 (final consistency pass), by running (10)'s own `screen` over the twenty current blocks with an
-empty exemption list:* every block except Checkpoint 8h's is clean, and 8h's has exactly those three hits. So the
+empty exemption list:* every block except Checkpoint 8h's is clean, and 8h's has exactly those three hits *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2: no longer; Checkpoint 7d's block now has one hit too, the fourth entry below)*. So the
 exemption file carries three more entries, each under stem `s8h-cards-and-run-environment`, each line taken byte for
 byte from `s8h`'s (10) as landed, each with its reason. Each is named here by a substring that only it carries,
 because `s8h`'s bytes were still moving during this pass:
@@ -1906,10 +1908,26 @@ because `s8h`'s bytes were still moving during this pass:
   step-9 control (mutant M22), in the same scratch repository; the child copies one fake `claude` over another.
 - the line that carries `for argv in "./target/debug/redkiln run rk-x"`. Reason: `s8h` (10)'s `WRAP_ARGV` refusals;
   the strings are argv handed to `--check wrap`, which spawns nothing.
+- *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2)* **a fourth entry, under stem `s7d-cli-and-migrate`**: the line
+  `export REDKILN_LAUNCH_RECORD="$lrec"`, byte for byte. Reason: Checkpoint 7d's run-on-init-only fixture launch
+  record (`s8h` R1FIX-8h; D21-47's time-bound rule, because `s8h`'s launch check now refuses that `run` before step
+  (7)). The record is an empty scratch file beside the `mktemp -d` repository `$TMP1`, exported for the one
+  `run some-item` invocation in that init-only sandbox, whose run refuses at step (7) (*"no process pack enabled"*,
+  exit 3) before any selection or dispatch. It is unset and removed after the two assertions, and an EXIT trap
+  removes it if either assertion exits. No honest spelling passes the screen: `export`, `declare -x`, an assignment
+  then `export`, an `env REDKILN_LAUNCH_RECORD="$lrec" <cmd>` prefix and an inline `REDKILN_LAUNCH_RECORD="$lrec"
+  <cmd>` are all refused by RUN_RE, measured 2026-10-02 with the regex read from this file's bytes. A scoped prefix
+  would also change the `run some-item` line that `s8g` (12)'s refusal-only list admits byte for byte, so the
+  `export` line is kept and exempted. *Re-measured 2026-10-02 by (10)'s own `screen` over the fifteen CHAIN blocks
+  and the five marker-less older blocks:* with an empty list, 8h's three hits and 7d's one; with these four entries
+  in a scratch exemption file (8h's three taken by the substrings above), zero hits on all twenty; the 7d entry with
+  one byte changed is refused; and every entry matches a code line of its block. **Forward hazard:** the screen is
+  a FLOOR and does not refuse `printf -v REDKILN_LAUNCH_RECORD …` followed by `export -- REDKILN_LAUNCH_RECORD`
+  (measured: both admitted). Nothing in the tree spells that, and this entry does not rely on it.
 
 (10)'s stale-entry check refuses an entry that no longer matches a code line of 8h's block, so a reshaped `s8h` line
 re-opens its entry rather than passing silently. With those three entries in an exemption file, the screen found
-zero hits on all twenty blocks [measured 2026-09-24, final consistency pass]. The following lines are inserted after 7f's `dag_assembled` guard:
+zero hits on all twenty blocks [measured 2026-09-24, final consistency pass] *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2: with four entries since 7d's amendment, zero hits on all twenty, re-measured 2026-10-02)*. The following lines are inserted after 7f's `dag_assembled` guard:
 
 ```bash
 s8j_nm=$(find "$s8j_mk" -name '*.marker' | grep -c .)
@@ -2032,7 +2050,7 @@ re-run both run it. §8j.6 step 2's block asserts it over 7c's suite portion, an
   `runbook/tools/nodispatch.sh`: an unset launch record, a compiled fake `claude` first on `PATH` that prints the pin,
   every other `PATH` directory holding a `claude` removed, and an empty `CLAUDE_CONFIG_DIR` trap, with `nd_check`
   after each replay. The screen refuses every executing shape except a planted bare-word control and the lines the
-  exemption file lists, each with its reason: 7f's A10 line and `s8h`'s three. 7d's `rk_absent` reads with `-H`
+  exemption file lists, each with its reason: 7f's A10 line and `s8h`'s three *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2: and Checkpoint 7d's fixture launch record line, A10's fourth entry)*. 7d's `rk_absent` reads with `-H`
   (A12). When Checkpoint 8j is itself run with
   `RK_CP_NESTED=1`, it re-runs none of them.
 - **The whole suite, fmt and clippy are green, and the three runbook checkers pass.**
@@ -2601,6 +2619,7 @@ out=$(python runbook/tools/check-bash-syntax.py 2>&1); rc=$?
 #     `sh -c 'printf …'` or `sh -c 'echo …'`. Every other admitted line is listed, byte for byte and with its reason,
 #     in runbook/phase-1/s8j-screen-exempt.txt: 7f's fixture-route line (A10) always, and any line a chain block runs
 #     against a sandbox the stage that owns it describes (Checkpoint 8h's three, listed in A10). The screen is a FLOOR: a block that assembles another at run
+#     (dated 2026-10-02, s8h build, package R2FIX-8h) and Checkpoint 7d's fixture launch record line, A10's fourth entry.
 #     time is screened by its own parent, and the trap and (12) cover it.
 #   · DETECTION. The trap and the fake's log below, and (12)'s store, ref, launch-record and transcript readings.
 if [ "${RK_CP_NESTED:-0}" = 1 ]; then

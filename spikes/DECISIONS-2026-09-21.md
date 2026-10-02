@@ -5997,9 +5997,20 @@ minor) and its Supersessions row's note. **Checkpoint 8g is re-run after this fl
 ## D21-137 · `s8h`: §8h.6's settings go to the child as a file, `--settings <path>`, written per dispatch outside the worktree; ADR-0197 (proposed) decision 9 amended in place
 
 **TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-10-02, pending the operator's confirmation — Weigh-In
-wi-10f1da** (two-way door, judgment; defaulted to A). No accepted Decision moves: the one sentence that changes is ADR-0197
+wi-10f1da** (two-way door, judgment; defaulted to A). ~~No accepted Decision moves: the one sentence that changes is ADR-0197
 (Record A) decision 9, which is `proposed`, so it is amended in place by a dated edit and no superseding record is
-owed. The ruling is on the review packet's confirm list.
+owed.~~ The ruling is on the review packet's confirm list.
+
+*(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2, records finding 1.)* **Corrected: one
+accepted Decision moves, in part.** Item 4 puts `settings_file { path, sha256 }` on the dispatch's
+`DispatchRecord`, on its `dispatch_completed` row (`crates/rk-types/src/activity.rs`:
+`pub settings_file: Option<SettingsFile>,`). ADR-0126 (accepted) decision 1's payload table lists that record
+member by member, and Record A's decision 12 states the rule: *"A member added to a `## Decision` table is a
+supersession (ADR-0092 rule 1)"*. So this ruling moves ADR-0126 decision 1 in part, beside `observed_model`. It
+moves through Record A's existing supersession (ADR-0197's frontmatter already reads `supersedes: ["0126",
+"0074"]`, and the back-link on ADR-0126 is written in 0197's flip commit), so **no new record is owed**. ADR-0197's
+title, preamble and decision 12 now name both added members, and the README's 0197 row says the same, each by
+dated edit. The operator reads this correction with the ruling on the confirm list.
 
 **The blocker.** Package S8H-P3 raised it.
 - §8h.6 and ADR-0197 decision 9 put the child's settings, including the deny-rule complement for the worktree's
@@ -6066,4 +6077,5 @@ owed. The ruling is on the review packet's confirm list.
 7. **Not adopted, kept as possible probe arms:** option 3's negated-class patterns and 2.1.287's `--restricted`.
    Neither is a fence of record.
 
-**Unmoved:** D21-42 21b and 21d, RT-1, D21-45 and every accepted ADR.
+**Unmoved:** D21-42 21b and 21d, RT-1, D21-45 and ~~every accepted ADR~~ *(dated 2026-10-02, s8h build, package
+R2FIX-8h)* every accepted ADR but ADR-0126 decision 1, which moves in part through ADR-0197 as corrected above.

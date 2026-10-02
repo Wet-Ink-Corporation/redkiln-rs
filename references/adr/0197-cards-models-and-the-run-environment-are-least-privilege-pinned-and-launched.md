@@ -1,13 +1,13 @@
 ---
 id: "0197"
-title: "**Cards, models and the run environment: least-privilege cards, pinned model ids, typed schemas read by name, in-band principle-7 guards, isolated settings and one launcher** (`s8h`'s Record A; D21-41 (g); D21-42 15a, 15b, 16, 17a, 17b, 21b, 21d; D21-43 N17 Q1; D21-45's standing limit; D21-47; D21-48 X12): the eight shipped cards carry the least-privilege grant table and a mode from a closed seven-member set; the argv spells a card's `default` from one closed table keyed by the `Config`'s pin; `[models]` pins three full ids, and adoption requires exact equality of the reported and requested id (RT-27 settled); every lane-reached kind is an `EXPORTED` Rust type read by the bound step's `value:<Kind>`; the init's `permissionMode`, `model` and `apiKeySource` and both denial channels are read back from the child; the child runs under `--setting-sources \"\"` and one `--settings` confinement element; `tools/live-run.sh` and its launch record are the only entry to a real run; the CLI is frozen for the real-run window. Supersedes `0126` decision 1 in part (its payload table gains `observed_model`) and `0074` decision 1 in part (its finding shape gains `severity`)"
+title: "**Cards, models and the run environment: least-privilege cards, pinned model ids, typed schemas read by name, in-band principle-7 guards, isolated settings and one launcher** (`s8h`'s Record A; D21-41 (g); D21-42 15a, 15b, 16, 17a, 17b, 21b, 21d; D21-43 N17 Q1; D21-45's standing limit; D21-47; D21-48 X12): the eight shipped cards carry the least-privilege grant table and a mode from a closed seven-member set; the argv spells a card's `default` from one closed table keyed by the `Config`'s pin; `[models]` pins three full ids, and adoption requires exact equality of the reported and requested id (RT-27 settled); every lane-reached kind is an `EXPORTED` Rust type read by the bound step's `value:<Kind>`; the init's `permissionMode`, `model` and `apiKeySource` and both denial channels are read back from the child; the child runs under `--setting-sources \"\"` and one `--settings` confinement element; `tools/live-run.sh` and its launch record are the only entry to a real run; the CLI is frozen for the real-run window. Supersedes `0126` decision 1 in part (its payload table gains `observed_model` and, by D21-137, `settings_file`) and `0074` decision 1 in part (its finding shape gains `severity`)"
 status: proposed
 date: 2026-10-02
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-41 (g), D21-42 15a, 15b, 16, 17a, 17b, 21b, 21c, 21d, D21-43 N17 (Q1, Q4) and its integration call on AC-133, D21-44, D21-45 (the standing limit), D21-46's integration calls, D21-47 (the s8h review findings and cross #4, #5, #7), D21-48 X12, D21-129 (owed forward to `s8h`); spikes/DECISIONS-2026-09-17.md RT-27; runbook/phase-1/s8h-cards-and-run-environment.md §8h.1 … §8h.8 and the stage-open readings of 2026-10-02; references/2026-09-08-acceptance-criteria.md AC-133, AC-156, AC-202, AC-204, AC-214; references/adr/0168 decision 1
 supersedes: ["0126", "0074"]
 superseded_by: []
-related: ["0010", "0014", "0080", "0084", "0092", "0095", "0112", "0130", "0146", "0156", "0162", "0164", "0168", "0180", "0188", "0192"]
+related: ["0010", "0014", "0080", "0084", "0092", "0095", "0112", "0130", "0146", "0156", "0162", "0164", "0168", "0180", "0188", "0192", "0198"]
 evidence: []
 consumers: []
 ---
@@ -45,8 +45,9 @@ D21-41 (g) took the shape: *"**Least privilege.** Only the implementer writes �
 Schemas are Rust types in rk-types `EXPORTED` (ADR-0084), not hand-written JSON. … The record is accepted only after two
 live probes pass, and those probes run after the fixture proofs."* D21-42 15a, 15b, 16, 17a, 17b, 21b and 21d took the
 rest, and D21-43 N17, D21-45, D21-47 and D21-48 X12 took what the stage authors surfaced. This record is the one record
-those decisions name. Two of its decisions move accepted `## Decision` text: ADR-0126 decision 1's payload table gains a
-member, and ADR-0074 decision 1's finding shape gains a member. ADR-0092 rule 1 makes each a supersession in part.
+those decisions name. Two of its decisions move accepted `## Decision` text: ADR-0126 decision 1's payload table ~~gains a
+member~~ *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2)* gains two members, `observed_model` (decision 5) and `settings_file { path, sha256 }`
+(decision 9's dated D21-137 paragraph), and ADR-0074 decision 1's finding shape gains a member. ADR-0092 rule 1 makes each a supersession in part.
 
 ## Decision drivers
 
@@ -354,8 +355,11 @@ sha256, so a move is caught rather than trusted away. The pin moves once, at `s8
 `MismatchPolicy::Refuse` hard-coded in `real_harness_config`.
 
 **12. What this supersedes, in part, and what it does not.**
-- **ADR-0126 decision 1**, in part: its `dispatch_completed` payload table gains `observed_model` (decision 5). A member
-  added to a `## Decision` table is a supersession (ADR-0092 rule 1). Every other member, obligation and rule of
+- **ADR-0126 decision 1**, in part: its `dispatch_completed` payload table gains `observed_model` (decision 5)
+  *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2; D21-137)* and `settings_file { path, sha256 }` (decision 9's dated D21-137 paragraph: the
+  `DispatchRecord` member naming the per-dispatch settings file and its sha256). A member
+  added to a `## Decision` table is a supersession (ADR-0092 rule 1); both members ride this one supersession in
+  part, and no further record is owed. Every other member, obligation and rule of
   decision 1 stands, and decisions 2 onward stand whole.
 - **ADR-0074 decision 1**, in part: its finding shape *"`{ ac, claim, evidence (advisory label), rationale, files[],
   repro … }`"* gains `severity` (decision 6). Its other clauses stand, as does ADR-0096's prior supersession of clause

@@ -484,7 +484,8 @@ types this stage adds, entered in `s8g`'s registry and **signed by the operator 
 *"that classification is the human gate AC-156"*); the three guards, N17's Q1 mapping and D21-45's protected-segment
 limit named as a known limit (§8h.5); the setting-sources and confinement settings (§8h.6); the launcher and the
 launch record as the only entry to a real run (§8h.7); the freeze (§8h.8). **It supersedes in part** ADR-0126
-decision 1 — its payload table gains `observed_model` (a member added to a `## Decision` table is a supersession,
+decision 1 — its payload table gains `observed_model` *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2; D21-137)* and
+`settings_file { path, sha256 }`, both through this one supersession (a member added to a `## Decision` table is a supersession,
 ADR-0092 r1) — and ADR-0074 decision 1, whose finding shape *"`{ ac, claim, evidence (advisory label), rationale,
 files[], repro … }`"* gains `severity` under the same rule (§8h.4; D21-47 cross #4). Nothing else of the error set
 is superseded: N17 took Q1 as reuse, so ADR-0095 decision 2 and ADR-0112 stand. It supersedes **nothing** of ADR-0084 (the schemas are Rust types in `EXPORTED`, which is what its golden-snapshot clause binds: *"Every type that crosses the closed-output boundary has
@@ -1618,7 +1619,7 @@ requires the row's fixture.
   refuses a card tool outside `GRANT_UNION` and a card `permission_mode` outside `SHIPPED_MODES`; a card with no mode
   is the adapter's refusal, not this row's. Its rejecting fixture is `doctor/RK-D-CARD-GRANT/` (six cards: `Bash`,
   `PowerShell`, `WebFetch`, `WebSearch`, `mcp__x__y`, and a `plan` mode), so
-  `doctor::ac415_every_rule_id_has_a_rejecting_fixture` is green over 39 ids. Checkpoint 7d's doctor FLOOR is a floor,
+  `doctor::ac415_every_rule_id_has_a_rejecting_fixture` is green over ~~39~~ *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2: 43, measured by `grep -c 'id: "RK-D-' crates/rk-cli/src/doctor/rules.rs`: 42 at `5d590c3` + `RK-D-CARD-GRANT`)* ids. Checkpoint 7d's doctor FLOOR is a floor,
   not an equality, and does not move.
 
 ### 8h.11 The two live probes — authored here, run at `s8j` after the fixture proofs
@@ -2271,6 +2272,27 @@ EXPORTED type … ["Spec"]"*), that test's red.
 - **Records and side effects.** No launch record was written under this repository. The scratch repositories were
   removed.
 
+*(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2, recording R1FIX-8h's mutants)* **R1FIX-8h's four `probe_denials` mutants KILLED**, from the Python
+driver `D:/repos/redkiln-sev/afk-tools/sp/s8h/R1FIX-8h_mutants.py`. That run kept no log, so the same four mutants,
+with the same anchors, were re-run by `R2FIX-8h_mutants.py` beside it (identical but for the private worktree,
+`target/wt-r2fix8h` at `d2c2e9e`); its log is `R2FIX-8h_mutants.log`.
+- **How each mutant was run.** The driver copies the main checkout's `tests/it/probe_denials.rs` and
+  `tests/it/main.rs` into the worktree, asserts each anchor exactly once, writes the mutant through a tmp file and
+  `os.replace`, runs `cargo test -p rk-adapter-claude --test it -- probe_denials` through `nd.sh`, and restores in
+  `finally`, asserting the sha256. The unmutated baseline ran first: `3 passed; 0 failed`.
+- **The kills**, each `test result: FAILED`:
+  - **M1-no-dedup** (`merge` never finds the typed twin by `tool_use_id`):
+    `a_denial_on_both_typed_channels_counts_once_and_a_tool_result_only_target_halts` and
+    `four_typed_denials_name_every_target_and_print_in_the_stage_files_form` FAILED (1 passed; 2 failed).
+  - **M2-halts-ignore-cover** (`halts` treats every `tool_result`-only denial as uncovered):
+    `an_unattempted_target_is_absent_and_a_typed_twin_without_an_id_covers_its_tool_result` FAILED (2 passed; 1 failed).
+  - **M3-norm-keeps-separators** (`norm` stops unifying `\` to `/`): `four_typed_denials_…` FAILED (2 passed; 1 failed).
+  - **M4-tool-result-counts-as-typed** (`typed` admits a `tool_result` channel):
+    `a_denial_on_both_typed_channels_…` FAILED (2 passed; 1 failed).
+- **Restore verified.** The driver printed `RESTORED True`: the worktree file's sha256 equals the original and the
+  main checkout's, `5915c97b…`, which reads the same before and after the run. The main checkout's file was never
+  written. The worktree is removed after this package.
+
 ### 8h.14 What this stage may not do, what it makes provisional, and what it hands on
 
 - It may not dispatch, run a `live::` test, move the pin, or edit the operator's user settings.
@@ -2287,7 +2309,7 @@ whole, plus the older checkpoints this stage's own edits make provisional. It do
 | 8g | the entry gate | Checkpoint 8h (13), whole |
 | 5 | `rk-types`: `observed_model`, the new `EXPORTED` types | Checkpoint 8h (13), whole |
 | 7b, 7b-ii | `rk-kernel`: the per-item envelope | Checkpoint 8h (13), whole |
-| 7d | `rk-cli`: the launch check, `RK-D-CARD-GRANT`, the load lint, the envelope's exit | Checkpoint 8h (13), whole, under (0c)'s wrapper. *Dated 2026-09-24 (D21-47, s8h review #1):* 7d's Halt 2 line and `doctor`'s `RK-D-CLI-VERSION` meet the fake `claude`, which prints the pin, so here they assert the fake. Both meet the real binary only at `s8j`, after the pin move (§8h.8). *(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1, blocker; D21-47's time-bound rule)* **Amended here**: its run-on-init-only line expects step (7)'s *"no process pack enabled"*, and the launch check (§8h.7) now refuses first with exit 3 and another message. The amendment exports a FIXTURE `REDKILN_LAUNCH_RECORD` (an empty scratch file beside `$TMP1`) for that one invocation and unsets and removes it after the two assertions; the run line is byte-identical, so `s8g` (12)'s refusal-only list still admits it (its RUN_GUARD, run over the amended block: `RUN-LINES-CHECKED`, rc 0). Proved in a private worktree with that worktree's binary: the fragment without the three new lines fails *"a different refusal fired first"* on the launch-check text, and with them reaches its end, rc 0 |
+| 7d | `rk-cli`: the launch check, `RK-D-CARD-GRANT`, the load lint, the envelope's exit | Checkpoint 8h (13), whole, under (0c)'s wrapper. *Dated 2026-09-24 (D21-47, s8h review #1):* 7d's Halt 2 line and `doctor`'s `RK-D-CLI-VERSION` meet the fake `claude`, which prints the pin, so here they assert the fake. Both meet the real binary only at `s8j`, after the pin move (§8h.8). *(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1, blocker; D21-47's time-bound rule)* **Amended here**: its run-on-init-only line expects step (7)'s *"no process pack enabled"*, and the launch check (§8h.7) now refuses first with exit 3 and another message. The amendment exports a FIXTURE `REDKILN_LAUNCH_RECORD` (an empty scratch file beside `$TMP1`) for that one invocation and unsets and removes it after the two assertions; the run line is byte-identical, so `s8g` (12)'s refusal-only list still admits it (its RUN_GUARD, run over the amended block: `RUN-LINES-CHECKED`, rc 0). Proved in a private worktree with that worktree's binary: the fragment without the three new lines fails *"a different refusal fired first"* on the launch-check text, and with them reaches its end, rc 0 *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2, major)* **`s8j` Checkpoint 8j (10)'s dispatch screen refuses the export line** (`export REDKILN_LAUNCH_RECORD="$lrec"`, a launch record supplied), and 8j (10) re-runs 7d. Every honest spelling is refused by its RUN_RE, measured with the regex read from `s8j`'s bytes (`export`, `declare -x`, an assignment then `export`, an `env NAME=… <cmd>` prefix, an inline `NAME=… <cmd>`), and a scoped prefix would also change the run line `s8g` (12) admits byte for byte. So the line is kept and `s8j` §8j.8 A10 gains a fourth, reasoned exemption entry under stem `s7d-cli-and-migrate`, by dated edit there; the header bullet, the (10) comment and the checkpoint bullet name it. An EXIT trap now removes the fixture record when either assertion exits (`trap - EXIT` after the removal). Re-proved in the private worktree `target/wt-r2fix8h` with its binary: the fragment as amended rc 0 with no record left; without the amendment's five code lines rc 1, *"a different refusal fired first"*; with the message assertion forced to fail rc 1 and the record removed; the same without the two trap lines rc 1 and the record LEFT (the trap is what removes it). `s8g` (12)'s RUN_GUARD over the amended block: `RUN-LINES-CHECKED`, rc 0 (control: an empty refusal-only list, rc 4, both run lines UNGUARDED). `s8j` (10)'s own `screen` over its fifteen CHAIN blocks and five older blocks: 4 hits with an empty list (8h's three, 7d's one), 0 with the four entries, and the 7d entry with one byte changed is refused |
 | 8b | `rk-types`: `Finding` gains `severity`, which `s8b`'s severity-reading rows and fixtures meet (D21-47 cross #4) | Checkpoint 8h (13), whole |
 | 7c | `rk-adapter-claude`: argv, init equality, classification | **not here.** Its block carries the live probe. `s8j` re-runs it split (D21-47). The suite portion runs outside `wrap`, under the no-launch-record, trap and fake-`claude` wrapper. Only the live-probe portion runs under `wrap`, from a plain terminal (D21-43 N28). Its non-live regressions are selected by name in (3). *(dated 2026-10-02, s8h build, package R1FIX-8h; refuting round 1, major)* This stage's `classify::denial_of` had put an `unwrap_or_default()` on a code line of `crates/rk-adapter-claude/src`, which 7c's AC-362 `rk_absent` ban and `ci.yml`'s AC-362 rule both cover; it is gone (the absent `tool_name` is an explicit empty branch, not a respelling), and both, extracted from their own bytes and run read-only, print rc 0 with 7c's control passing |
 | 7e | `.redkiln/cards/` and both packs | **not re-runnable whole**: its block ends in `git add .redkiln spikes/p9 && git commit`. Its subject is asserted by (8)'s parser read of the cards and both packs, by the `cards::` tests in (6), and by the load lint's tests. `conformance::shipped_pack_loads` loads the catalog only, so it is not cited for this subject (s8h review #14) |
@@ -2384,6 +2406,11 @@ adding `Finding.severity` moves its premise.
     the CLI from S-BIN on. **This withdraws the draft's finding 3**, which said an `s8i` dispatch would refuse at
     the init line. That holds only for a dispatch through `rk-adapter-claude`, and S-BIN makes none.
 - **To `s8i` and `s8j`: their dispatch scans refuse this checkpoint as written** (finding 10).
+- *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2)* **To `s8j`: its (10) screen refuses Checkpoint 7d's fixture launch record line**
+  (`export REDKILN_LAUNCH_RECORD="$lrec"`, added by R1FIX-8h; refuting round 2, checkpoint major). `s8j` §8j.8 A10
+  now plans it as a fourth exemption entry under stem `s7d-cli-and-migrate`, by dated edit. `s8j-screen-exempt.txt`
+  must carry it byte for byte when it is written, or (10) fails on 7d. Also measured: the screen is a floor and admits
+  `printf -v REDKILN_LAUNCH_RECORD …` followed by `export -- REDKILN_LAUNCH_RECORD`; no line in the tree spells that.
 
 ### 8h.15 Checkpoint 8h
 
@@ -2412,7 +2439,9 @@ adding `Finding.severity` moves its premise.
   writes a launch record with every member, and fails on a CLI that moved under it. `wrap` refuses a `run`,
   `answer` or live `--ignored` argv.
 - No `REDKILN_LAUNCH_RECORD` is in the environment, so nothing re-run here can pass the launch check.
-- The whole suite is at or above Checkpoint 8g's recorded count plus 54 (*D21-48 (2026-09-24):* was 51), with 0 failed
+- The whole suite is at or above Checkpoint 8g's recorded count plus ~~54~~ *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2: plus 67, the block's
+  `FLOOR=$((BASE_8G + 54 + 9 + 1 + 3))`: the 54, D21-137's nine adapter tests, its rk-cli survival guard and R1FIX-8h's
+  three `probe_denials::` tests; 1337 + 67 = 1404)* (*D21-48 (2026-09-24):* was 51), with 0 failed
   over at least 44 results.
 - The block's own cargo runs and every replay run under D21-47's shared wrapper, `runbook/tools/nodispatch.sh`,
   sourced at (0c): the compiled fake `claude` first on PATH, printing the pin, and every other `claude` directory
@@ -2443,6 +2472,8 @@ compiled fake `claude`, which cargo's toolchain provides.
   - `A_SUPERSEDES` and `TOKENS_APPETITE`, as drafted;
   - in (12), `BASE_8G=1337` with `FLOOR` at 1337 + 54 + 9. *(dated 2026-10-02, s8h build, package F1-D21137-loc)*
     Now 1337 + 54 + 9 + 1: D21-137 item 2's survival guard (§8h.6).
+    *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2)* Now 1337 + 54 + 9 + 1 + 3 = 1404: R1FIX-8h's three
+    `probe_denials::` tests (§8h.11).
 - **(2) needs no FLIP_PENDING form.** It asserts `status: proposed` for Record A and `status: (proposed|accepted)` for
   Record B. No line of the block asserts `status: accepted` for this stage's own records, so the FLIP_PENDING form
   (Checkpoint 8f (2), dated 2026-09-29) is not needed and is not added.
@@ -2588,6 +2619,8 @@ sel rk-cli 22 run::every_binary_spawn_withholds_or_supplies_the_launch_record ca
 sel rk-adapter-claude 9 command::a_five_thousand_sibling_chain_assembles_under_the_cap dispatch::the_settings_file_is_the_json_and_its_sha256_is_recorded command::a_settings_dir_under_the_worktree_is_refused dispatch::two_dispatches_write_two_distinct_settings_files command::settings_over_two_mib_are_refused_before_spawn command::a_missing_settings_dir_is_refused binder::binds_over_temp_and_target_tmp_worktrees_succeed_and_write_nothing command::a_relative_or_verbatim_settings_dir_is_refused command::a_settings_file_write_failure_is_refused_and_overwrites_nothing
 # *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* The tenth D21-137 test, rk-cli's: item 2's survival guard, an exact count.
 sel rk-cli 1 run::a_child_settings_file_survives_write_run_for_its_run_id
+# *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2)* The three probe_denials:: tests that carry probe 1's per-denial reading (R1FIX-8h, section 8h.11), an exact count.
+sel rk-adapter-claude 3 probe_denials::tests::a_denial_on_both_typed_channels_counts_once_and_a_tool_result_only_target_halts probe_denials::tests::four_typed_denials_name_every_target_and_print_in_the_stage_files_form probe_denials::tests::an_unattempted_target_is_absent_and_a_typed_twin_without_an_id_covers_its_tool_result
 nd_check "(3)-(6) named tests" || exit 1
 
 # ---- (7) THE TWO PROBES EXIST, COMPILE UNDER `live`, AND ARE IGNORED — LISTED, NEVER RUN (`--list` runs nothing).
