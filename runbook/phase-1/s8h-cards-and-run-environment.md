@@ -1078,17 +1078,47 @@ git to find it and has no default).
   (including a dispatch whose directory was removed after bind); (g)
   `binder::binds_over_temp_and_target_tmp_worktrees_succeed_and_write_nothing`; and two for the remaining refusals,
   `command::a_relative_or_verbatim_settings_dir_is_refused` and
-  `command::a_settings_file_write_failure_is_refused_and_overwrites_nothing`. Nine new tests; Checkpoint 8h (12)'s
-  floor gains nine by dated edit. `golden_argv_per_profile`'s snapshots and the at-the-cap fixture now count the path
+  `command::a_settings_file_write_failure_is_refused_and_overwrites_nothing`. ~~Nine new tests; Checkpoint 8h (12)'s
+  floor gains nine by dated edit.~~ *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* Ten new tests; Checkpoint 8h (12)'s floor gains ten
+  by dated edits. The tenth, in rk-cli's `it` binary: `run::a_child_settings_file_survives_write_run_for_its_run_id` builds a
+  `Resolved` over a `pack-min` temp repository, writes a read-only settings file with
+  `write_settings_file` into `child_settings_dir(&resolved, run_id)`, calls `write_run(<common_dir>/redkiln/runs, ..)`
+  for a recorded run with that same `run_id`, and asserts the file survives, its bytes still hash to the returned
+  sha256, `runs/<run_id>/run.json` exists, and the directory is not under `runs/`. `golden_argv_per_profile`'s snapshots and the at-the-cap fixture now count the path
   element (the fixture's prompt re-grown by 1,707 characters, the measure the shorter element gave back).
 
-*(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* **rk-cli's directory is NOT `<common_dir>/redkiln/runs/<run_id>/` (RAISED for a ruling).** D21-137
+*(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* **rk-cli's directory is NOT `<common_dir>/redkiln/runs/<run_id>/` ~~(RAISED for a ruling)~~ (RULED: option 1, D21-137 item 2 amended).** D21-137
 names that directory and also says *"Keep the file with the run's evidence. Never delete it during the run or after
 spawn."* The two cannot both hold: `rk_kernel::replay::write_run(&runs_dir, …)` begins
 `let _ = std::fs::remove_dir_all(&dir);` on `<runs_dir>/<run_id>` and runs after the stage's dispatches, so every
 settings file written there would be deleted at the stage's end. Built provisionally, as the most reversible option:
 `run.rs`'s `child_settings_dir` passes `<common_dir>/redkiln/child-settings/<run_id>/` (same `run_id`, a sibling root,
 created before the first bind, never emptied). The alternatives are listed in the package report.
+
+*(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* **Ruled.** The panel took option 1 (3/3 judges); the scores were (1) 9/9/8, (2) 3/3/3, (3) 1/2/2,
+(4) 4/3/3. Option 2 (change `write_run`) was vetoed because it moves the premise of accepted ADR-0130 decision 5,
+*"`write_run`'s own `remove_dir_all`-then-write shape makes re-recording the cheap operation"*. A run's evidence
+is the pair `runs/<run_id>/` (the record, replaced whole by `write_run`) and `child-settings/<run_id>/` (launch
+evidence, never deleted), joined by `run_id` and by the `dispatch_completed` row's `settings_file { path, sha256 }`;
+`read_run`, replay and `explain` read neither file. D21-137 item 2 is amended in place on the ledger. The guard is
+the tenth test below, `run::a_child_settings_file_survives_write_run_for_its_run_id` (rk-cli), and its killing mutant is
+M-D21-137-loc (§8h.13). It sits in the `it` binary, not in a `#[cfg(test)]` module in `run.rs` as the ruling's
+fallback named: no `#[cfg(test)]` module can build a `Resolved` (its `Item` has no constructor outside `rk-kernel`)
+without the `it` binary's `pack-min` fixture, so `child_settings_dir` is made `pub` and the test calls it.
+
+*(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* **Residuals, recorded and not fixed here.**
+- **Name collision on identical re-runs, fail-closed.** `run_id` is content-derived
+  (`format!("{}-{}", self.stage, &digest.as_str()[..16])`) and the directory is never emptied, so identical re-runs
+  share it. The name `child-settings-<pid:010>-<seq:020>-<sha16>.json` can recur across processes: a recycled
+  Windows PID, `SETTINGS_SEQ` restarting at 0, and identical settings bytes. `create_new` then refuses as
+  `SettingsWrite`, a pre-spawn `Transport { Spawn }` row, with nothing spawned and nothing overwritten. The three
+  deferred fixes, each the operator's because each moves something this section pins: an invocation subdirectory
+  (`child-settings/<run_id>/<pid>-<start-nanos>/`, an rk-cli-only change to the same one function); a nonce in the
+  name; or accepting `AlreadyExists` when the existing bytes are identical.
+- **The directory is never pruned**, and is unbounded.
+- **Whether `remove_dir_all` removes a read-only file on Windows** was unmeasured at the ruling; M-D21-137-loc's
+  run (§8h.13) measured it: it does. The read-only file `write_settings_file` wrote under `runs/<run_id>/` was gone
+  after `write_run`, so the read-only flag is no protection, and a move back to `runs/` would delete every file.
 
 ### 8h.7 The launcher — the only entry to a real run (D21-42 17a, 17b)
 
@@ -2154,7 +2184,8 @@ after an unmutated control of every named test, and each file's sha256 was resto
   `left: Some(0)`, `right: Some(3)`.
 - M26 (the helper's `env_remove` deleted) killed `run::every_binary_spawn_withholds_or_supplies_the_launch_record`:
   *"the real tree: the helper's body does not `.env_remove` the launch record"*.
-- D21-137 (§8h.6), seventeen mutants, all killed: the JSON inlined again (D1: (a) and (g)); the recorded sha256 not
+- D21-137 (§8h.6), ~~seventeen~~ eighteen *(dated 2026-10-02, s8h build, package F1-D21137-loc: M-D21-137-loc,
+  below)* mutants, all killed: the JSON inlined again (D1: (a) and (g)); the recorded sha256 not
   the bytes' (D2: (b) and the write test); the under-worktree comparison always false (D3), without case-folding
   (D4) or without the `\\?\` strip (D5), each by (c); `create_new` made `create` + `truncate` (D6: it SURVIVED the
   first run, because the read-only flag refused the overwrite on its own; the write test then gained a writable file
@@ -2163,6 +2194,14 @@ after an unmutated control of every named test, and each file's sha256 was resto
   no re-check at dispatch (D11), each by (f); the verbatim (D12), relative (D13) and `..` (D17) refusals dropped, each
   by the relative-or-verbatim test; no read-only flag (D14: (b) and the write test); bind writing the file (D15: (g),
   *"bind writes nothing … left: 1 right: 0"*); the record's `settings_file` dropped (D16: (b)).
+- *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* **M-D21-137-loc KILLED**, from `D:/repos/redkiln-sev/afk-tools/sp/s8h/F1-D21137-loc-mutants.py`
+  in a private worktree (`target/wt-F1loc`: HEAD plus the main checkout's tracked working diff), removed
+  afterwards; the main checkout's `run.rs` sha256 was equal before and after, the file's sha256 restored and
+  verified, every cargo run through D21-47's wrapper. `child_settings_dir`'s `.join("child-settings")` retargeted
+  to `.join("runs")` turned `run::a_child_settings_file_survives_write_run_for_its_run_id` red: *"the settings file C:/Users/ryanm/AppData/Local/Temp/.tmp6bIsHW/.git\redkiln\runs\implement-4807c4db9441017d\child-settings-0000035544-00000000000000000000-4bc6981cac98ba34.json was deleted by write_run over its run_id (D21-137 item 3: never delete it during the run or after spawn)"*. The same
+  run is the guard's red-first reading. An unmutated control before it and the restored tree after it each read
+  1 passed, after `cargo build --workspace` in the worktree. A first run without that build failed both arms,
+  the unmutated one included, so its kill reading was discarded and the run repeated with the control.
 
 *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments)* **M11, M12 and M13 KILLED**, from the Python driver
 `D:/repos/redkiln-sev/afk-tools/sp/s8h/P7-cli-binding-data-and-amendments-mutants.py`, in a private worktree
@@ -2377,7 +2416,8 @@ compiled fake `claude`, which cargo's toolchain provides.
   - `REC_A=0197` and `REC_B=0198`;
   - `MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"`;
   - `A_SUPERSEDES` and `TOKENS_APPETITE`, as drafted;
-  - in (12), `BASE_8G=1337` with `FLOOR` at 1337 + 54 + 9.
+  - in (12), `BASE_8G=1337` with `FLOOR` at 1337 + 54 + 9. *(dated 2026-10-02, s8h build, package F1-D21137-loc)*
+    Now 1337 + 54 + 9 + 1: D21-137 item 2's survival guard (§8h.6).
 - **(2) needs no FLIP_PENDING form.** It asserts `status: proposed` for Record A and `status: (proposed|accepted)` for
   Record B. No line of the block asserts `status: accepted` for this stage's own records, so the FLIP_PENDING form
   (Checkpoint 8f (2), dated 2026-09-29) is not needed and is not added.
@@ -2521,6 +2561,8 @@ sel rk-kernel 9 quality_block::a_severity_row_reads_the_typed_member_over_a_non_
 sel rk-cli 22 run::every_binary_spawn_withholds_or_supplies_the_launch_record cards::shipped_cards_are_the_least_privilege_table cards::shipped_role_rows_resolve_through_the_models_table cards::the_models_table_pins_the_three_full_ids cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class cards::shipped_rt57_scalars_carry_no_no_record_marker schemas::every_agent_output_kind_the_two_lanes_reach_is_exported schemas::bind_reads_the_schema_from_exported_by_name schemas::a_kind_absent_from_exported_refuses_at_bind doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load run::a_gate_expiry_row_naming_no_reachable_class_is_refused run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn run::a_real_harness_run_with_a_launch_record_passes_the_launch_check answer::a_binary_answer_without_a_launch_record_refuses_before_any_row answer::a_binary_answer_with_a_launch_record_passes_the_launch_check exit::an_envelope_refusal_leaves_through_overage doctor::ac415_every_rule_id_has_a_rejecting_fixture exit::ac438_exit_table_snapshot exit::ac438_step_error_mapping_is_exhaustive surface::ac400_help_snapshot_every_verb
 # *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* The nine D21-137 tests, an exact count (> 0: a filter that matches nothing is a green).
 sel rk-adapter-claude 9 command::a_five_thousand_sibling_chain_assembles_under_the_cap dispatch::the_settings_file_is_the_json_and_its_sha256_is_recorded command::a_settings_dir_under_the_worktree_is_refused dispatch::two_dispatches_write_two_distinct_settings_files command::settings_over_two_mib_are_refused_before_spawn command::a_missing_settings_dir_is_refused binder::binds_over_temp_and_target_tmp_worktrees_succeed_and_write_nothing command::a_relative_or_verbatim_settings_dir_is_refused command::a_settings_file_write_failure_is_refused_and_overwrites_nothing
+# *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* The tenth D21-137 test, rk-cli's: item 2's survival guard, an exact count.
+sel rk-cli 1 run::a_child_settings_file_survives_write_run_for_its_run_id
 nd_check "(3)-(6) named tests" || exit 1
 
 # ---- (7) THE TWO PROBES EXIST, COMPILE UNDER `live`, AND ARE IGNORED — LISTED, NEVER RUN (`--list` runs nothing).
@@ -2916,8 +2958,10 @@ nd_check "(12) fmt, clippy and the whole suite" || exit 1
 # 1337 passed / 0 failed / 9 ignored over 44 at 4777941), so FLOOR = 1337 + 54 = 1391.
 # *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137, TAKEN PROVISIONALLY under D21-105)* FLOOR 1391 -> 1400: D21-137 adds nine tests beyond §8h.12's 54 (§8h.6's dated
 # note), so FLOOR = 1337 + 54 + 9. The floor is raised, never lowered.
+# *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling TAKEN PROVISIONALLY under D21-105)* FLOOR 1400 -> 1401 (D21-137 item 2's survival guard,
+# run::a_child_settings_file_survives_write_run_for_its_run_id), so FLOOR = 1337 + 54 + 9 + 1.
 BASE_8G=1337
-FLOOR=$((BASE_8G + 54 + 9))
+FLOOR=$((BASE_8G + 54 + 9 + 1))
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

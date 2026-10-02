@@ -5870,11 +5870,22 @@ pub fn toolchain_values(
 /// stage's end — against D21-137 item 3's *"Keep the file with the run's evidence. Never delete it
 /// during the run or after spawn."* A sibling root keyed by the same `run_id` keeps both clauses
 /// that can hold at once (outside the worktree, a protected `.git` segment, kept with the run) and
-/// is a one-line move back. Raised for a ruling (the package report's blocker).
+/// is a one-line move back. ~~Raised for a ruling (the package report's blocker).~~
+///
+/// *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, panel ruling
+/// TAKEN PROVISIONALLY under D21-105.)* **Ruled (option 1).** A run's evidence is the pair
+/// `runs/<run_id>/` (the record, replaced whole by `write_run`) and `child-settings/<run_id>/`
+/// (launch evidence, never deleted), joined by `run_id` and each `dispatch_completed` row's
+/// `settings_file`. `pub` so the `it` binary's guard
+/// `run::a_child_settings_file_survives_write_run_for_its_run_id` calls this very function: a
+/// `#[cfg(test)]` module here cannot build a `Resolved`, whose `Item` has no constructor outside
+/// `rk-kernel`, without the `it` binary's `pack-min` fixture. Residual (fails closed): identical
+/// re-runs share this content-keyed directory, so a recurring file name is refused by `create_new`
+/// as `SettingsWrite` before any spawn.
 ///
 /// # Errors
 /// [`Exit::ConfigError`], printed, when the directory cannot be created.
-fn child_settings_dir(resolved: &Resolved, run_id: &str) -> Result<PathBuf, Exit> {
+pub fn child_settings_dir(resolved: &Resolved, run_id: &str) -> Result<PathBuf, Exit> {
     let dir = resolved
         .common_dir
         .join("redkiln")

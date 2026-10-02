@@ -1887,3 +1887,104 @@ fn a_gate_expiry_row_naming_no_reachable_class_is_refused() {
         );
     }
 }
+
+/// **D21-137 item 2, as amended 2026-10-02 (`s8h` §8h.6): a child-settings file survives
+/// `write_run` over its own `run_id`.** `run` writes each dispatch's settings file into
+/// `child_settings_dir(&resolved, run_id)` before the stage's dispatches, and calls
+/// `rk_kernel::replay::write_run(<common_dir>/redkiln/runs, ..)` after them, which begins with
+/// `let _ = std::fs::remove_dir_all(&dir);` over `runs/<run_id>/`. Item 3 says *"Never delete it
+/// during the run or after spawn."* So: the file `rk_adapter_claude::command::write_settings_file`
+/// wrote under the directory `run` would pass is still there after `write_run` ran over the same
+/// `run_id`, its bytes still hash to the returned sha256, `runs/<run_id>/run.json` exists (so
+/// `write_run` really ran over that id), and the directory is not under `runs/`. Killing mutant
+/// M-D21-137-loc: `child_settings_dir`'s `.join("child-settings")` retargeted to `.join("runs")`.
+/// *(dated 2026-10-02, s8h build, package F1-D21137-loc; D21-137 item 2 amended, TAKEN
+/// PROVISIONALLY under D21-105.)*
+#[test]
+fn a_child_settings_file_survives_write_run_for_its_run_id() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
+    let (inputs, _tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let inputs = inputs.with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::supplied(
+            "emit-report@1",
+            crate::support::any_activity_spec(),
+        ),
+    );
+    let trace = crate::support::Trace::new();
+    let store = crate::support::counting_store(&trace);
+    let harness = std::sync::Arc::new(crate::support::ScriptedHarness::scripted(vec![Ok(
+        crate::support::impl_report(),
+    )]));
+    let ports = crate::support::ports(
+        std::sync::Arc::clone(&harness) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let mut supply = crate::support::no_spec();
+    let recorded = rk_kernel::replay::resume(&inputs, ports, &[], &mut supply)
+        .expect("the recorded run is produced in process");
+    let run_id = recorded.run_id().to_owned();
+    assert!(
+        !run_id.is_empty(),
+        "PREMISE: the recorded run carries a run_id"
+    );
+
+    // The directory `run` hands the adapter, over this fixture's common dir.
+    let settings_dir = rk_cli::verbs::run::child_settings_dir(&resolved, &run_id)
+        .expect("the child-settings directory is created");
+    let common = resolved.common_dir.clone();
+    assert!(
+        settings_dir.starts_with(&common),
+        "PREMISE: the settings directory {} is under the fixture's common dir {}",
+        settings_dir.display(),
+        common.display()
+    );
+
+    // One settings file, written read-only exactly as a dispatch writes it.
+    let settings = rk_adapter_claude::command::ChildSettings::for_worktree(Path::new(
+        resolved.worktree.as_str(),
+    ))
+    .expect("the fixture worktree's confinement chain reads");
+    let path = settings_dir.join(rk_adapter_claude::command::settings_file_name(
+        std::process::id(),
+        0,
+        &settings,
+    ));
+    let written = rk_adapter_claude::command::write_settings_file(&path, &settings)
+        .expect("the settings file is written");
+
+    // The record, over the SAME run_id, where `run` writes it.
+    let runs = common.join("redkiln").join("runs");
+    let record_dir =
+        rk_kernel::replay::write_run(&runs, &recorded).expect("the run record is written");
+    assert_eq!(
+        record_dir,
+        runs.join(&run_id),
+        "PREMISE: write_run wrote runs/<run_id>/ for the settings directory's run_id"
+    );
+    assert!(
+        runs.join(&run_id).join("run.json").is_file(),
+        "runs/{run_id}/run.json does not exist, so write_run did not run over this run_id"
+    );
+
+    assert!(
+        path.is_file(),
+        "the settings file {} was deleted by write_run over its run_id (D21-137 item 3: never \
+         delete it during the run or after spawn)",
+        path.display()
+    );
+    let bytes = std::fs::read(&path).expect("the settings file reads");
+    assert_eq!(
+        rk_types::digest::sha256(&bytes),
+        written.sha256,
+        "the settings file's bytes no longer hash to the sha256 its dispatch would record"
+    );
+    assert!(
+        !settings_dir.starts_with(&runs),
+        "the child-settings directory {} is under the run record's root {}, which write_run \
+         replaces whole",
+        settings_dir.display(),
+        runs.display()
+    );
+}
