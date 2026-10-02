@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-136), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-137), and what they license
+
+*(Title moved 2026-10-02 during `s8h`: it read **"(D21-1 … D21-136)"**; `D21-137` is appended with this move.)*
 
 *(Title moved 2026-10-02 at `s8g`'s close: it read **"(D21-1 … D21-128)"**; `D21-129` … `D21-136` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 136, the last `D21-136`.)*
 
@@ -5989,3 +5991,60 @@ none of D21-105 … D21-128 records an objection (measured over the ledger's tex
 wording set aside). Its back-link on `0186` was written with the record, with a dated reading note; the flip commit
 writes ADR-0186's README status cell in the leading *"(partially superseded by …)"* form (refuting round 3's records
 minor) and its Supersessions row's note. **Checkpoint 8g is re-run after this flip commit.**
+
+---
+
+## D21-137 · `s8h`: §8h.6's settings go to the child as a file, `--settings <path>`, written per dispatch outside the worktree; ADR-0197 (proposed) decision 9 amended in place
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-10-02, pending the operator's confirmation — Weigh-In
+wi-10f1da** (two-way door, judgment; defaulted to A). No accepted Decision moves: the one sentence that changes is ADR-0197
+(Record A) decision 9, which is `proposed`, so it is amended in place by a dated edit and no superseding record is
+owed. The ruling is on the review packet's confirm list.
+
+**The blocker.** Package S8H-P3 raised it.
+- §8h.6 and ADR-0197 decision 9 put the child's settings, including the deny-rule complement for the worktree's
+  ancestor chain, in *"one `--settings <json>` element"* on the argv.
+- RT-1 caps the argv at 32,767 UTF-16 units. P3 measured the inline JSON on 2026-10-02:
+  - about 11,989 units for `.redkiln/worktrees/bug-1` (37% of the cap, before the schema and the card);
+  - about 1,068,619 units for a worktree under `%TEMP%`, where every adapter and rk-cli test repository lives;
+  - about 243,048 units under `target/tmp`.
+- Wiring it would refuse every test bind with `ArgvAtOrOverCap`, and production binds as the operator's directories
+  grow. P3 built and tested `command::ChildSettings` but held the wiring: `Binder::bind` and `dispatch` pass
+  `settings: None` under dated interim comments (interim 2, `5e5d410`).
+
+**Ruled** (blocker panel, option 1 with the judges' hardenings, unanimous 9/9/9; the record is
+`target/afk-wf/s8h-ruling-d21-137.json`):
+1. **Deliver a file.** The argv elements are `--setting-sources`, `""`, `--settings`, `<path>`, in the same position.
+   `<path>` names a file whose bytes are exactly `ChildSettings::json()`. The rule set, `ConfinementChain`, the block
+   setting, `autoMemoryEnabled: false` and the stated residual are unchanged. The CLI documents the form: *"--settings
+   <file-or-json>  Path to a settings JSON file or a JSON string"* (2.1.287 `--help`).
+2. **The directory is a caller input** (`settings_dir`), never discovered by the adapter. rk-cli `run` passes
+   `<common_dir>/redkiln/runs/<run_id>/` and creates it before the first dispatch; tests pass a tempdir outside the
+   worktree.
+3. **Fail closed, by type.** Each of these refuses before spawning, and none falls back to `settings: None`:
+   - a missing directory;
+   - a directory under the worktree, compared case-folded on Windows with `\\?\` stripped;
+   - a path that is not absolute or carries a verbatim prefix;
+   - JSON over 2,097,152 bytes, the CLI's settings-file limit (read from the binary by string search, not executed);
+   - any write failure.
+4. **Write per dispatch.** The file is written with `create_new` under a unique per-dispatch name and marked
+   read-only. Its sha256 and path go in the dispatch's launch evidence, and it is kept with the run. `Binder::bind`
+   writes nothing: it builds the settings, checks the 2 MiB limit, and measures the argv against RT-1 with a stand-in
+   path of the dispatch form.
+5. **Red-first tests**, each guard with a killing mutant:
+   - a 5,000-sibling synthetic chain assembles under the cap;
+   - the file's bytes equal `json()` and the recorded sha256 matches;
+   - the under-worktree, missing-directory and over-2 MiB refusals;
+   - two dispatches make two files;
+   - `%TEMP%` and `target/tmp` binds succeed.
+6. **Unmeasured until `s8j`** (D21-105 item 2), each owed to a named probe arm:
+   - probe 2: the file argument is honoured;
+   - probe 1: the outside-read refusal under file delivery, plus a Read of the settings file itself, which must be
+     denied;
+   - a missing or unparsable path must fail closed;
+   - a size arm near 2 MiB.
+   If the CLI ignores the file, D21-42 21d applies: the work HALTS.
+7. **Not adopted, kept as possible probe arms:** option 3's negated-class patterns and 2.1.287's `--restricted`.
+   Neither is a fence of record.
+
+**Unmoved:** D21-42 21b and 21d, RT-1, D21-45 and every accepted ADR.
