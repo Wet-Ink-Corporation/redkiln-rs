@@ -1,0 +1,39 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ImplReport",
+  "description": "The implementer's report. `status` is the implementer's own word; the verify pass measures.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "tests_added": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "files",
+    "summary",
+    "tests_added"
+  ]
+}

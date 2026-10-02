@@ -114,6 +114,8 @@ fn finding(ac: &str, label: EvidenceLabel, repro: Repro) -> Finding {
         ac: ac.to_owned(),
         claim: Text::new(format!("{ac}: the claim")),
         evidence: label,
+        // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+        severity: rk_types::artifact::findings::FindingSeverity::Blocking,
         rationale: Text::new("the rationale"),
         repro,
         files: vec!["src/lib.rs".to_owned()],

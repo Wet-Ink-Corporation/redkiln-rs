@@ -1,0 +1,91 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Postmortem",
+  "description": "A blameless postmortem.",
+  "type": "object",
+  "properties": {
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "impact": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "timeline": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "root_causes": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "contributing_factors": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "went_well": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "went_badly": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "lucky": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "action_items": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "unassigned_items": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "status": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "impact",
+    "timeline",
+    "root_causes",
+    "contributing_factors",
+    "went_well",
+    "went_badly",
+    "lucky",
+    "action_items",
+    "unassigned_items",
+    "status"
+  ]
+}

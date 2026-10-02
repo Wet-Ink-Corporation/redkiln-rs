@@ -176,6 +176,29 @@ pub struct Timings {
     pub api_ms: Option<u64>,
 }
 
+/// The model id the child's own `system/init` reported (`s8h` §8h.3; Record A = ADR-0197, proposed).
+/// *(Added 2026-10-02, `s8h` build, package P2-rk-types.)*
+///
+/// A distinct type, so a requested id cannot be written into the record's member by a plain string
+/// assignment: the member is the child's REPORT, never the `--model` argument copied in (Halt 11's
+/// shape; the reasoning that gives [`CliVersion`] its two arms). It travels as the bare string.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct ObservedModel(String);
+
+impl ObservedModel {
+    /// Wrap the id exactly as the child's init printed it.
+    #[must_use]
+    pub fn new(reported: impl Into<String>) -> Self {
+        Self(reported.into())
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 /// The CLI version on the row, **non-optional** (AC-227) and **two-armed so the provenance is
 /// distinguishable** (ADR-0126 decision 1; D17-8's dated confirmation).
 ///

@@ -1,0 +1,58 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ADR",
+  "description": "An architecture decision record (`adr-record`).",
+  "type": "object",
+  "properties": {
+    "title": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "context": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "decision": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "consequences": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "status": {
+      "description": "An architecture decision record's lifecycle state (`references/adr/README.md`: proposed,\naccepted, then rejected, deprecated or superseded).",
+      "type": "string",
+      "enum": [
+        "proposed",
+        "accepted",
+        "rejected",
+        "deprecated",
+        "superseded"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "context",
+    "decision",
+    "options",
+    "consequences",
+    "status"
+  ]
+}

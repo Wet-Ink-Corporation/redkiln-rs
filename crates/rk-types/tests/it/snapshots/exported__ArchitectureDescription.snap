@@ -1,0 +1,59 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArchitectureDescription",
+  "description": "A C4 architecture description.",
+  "type": "object",
+  "properties": {
+    "level": {
+      "description": "The C4 level an architecture description is drawn at (`c4-context`, `c4-container`,\n`c4-component`).",
+      "type": "string",
+      "enum": [
+        "context",
+        "container",
+        "component"
+      ]
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "diagram": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "level",
+    "elements",
+    "relationships",
+    "diagram",
+    "assumptions",
+    "summary"
+  ]
+}

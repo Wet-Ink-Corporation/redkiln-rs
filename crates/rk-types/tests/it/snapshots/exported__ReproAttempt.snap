@@ -1,0 +1,43 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReproAttempt",
+  "description": "One attempt to reproduce a defect. `command` is the selection a later step re-runs.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "description": "Whether an attempt reproduced the defect. `reproduced` is the spelling `minimal-repro` compares.",
+      "type": "string",
+      "enum": [
+        "reproduced",
+        "not-reproduced"
+      ]
+    },
+    "command": {
+      "type": "string"
+    },
+    "observed": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "notes": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "rationale": {
+      "description": "Why the observation is read as reproduced or not.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "command",
+    "observed",
+    "notes",
+    "rationale"
+  ]
+}

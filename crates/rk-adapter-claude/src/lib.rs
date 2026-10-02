@@ -388,6 +388,8 @@ impl ClaudeHarness {
                 detected_by: None,
                 // ADR-0190 decision 1 (proposed): on EVERY path, the pre-spawn ones included.
                 activity_id_at_version: spec.activity_id_at_version.clone(),
+                // *(dated 2026-10-02, s8h build, package P2-rk-types.)* The type half only (s8h §8h.3): the adapter's reading of the init `model` is §8h.12's rk-adapter-claude test `dispatch::observed_model_is_recorded_on_every_path_that_read_init`, red first in its own package.
+                observed_model: None,
             },
         )
     }
@@ -674,6 +676,8 @@ impl Harness for ClaudeHarness {
                 // ADR-0190 decision 1 (proposed; D21-107): the spec's member, verbatim — the
                 // adapter alone writes it, on its own row (ADR-0126).
                 activity_id_at_version: spec.activity_id_at_version.clone(),
+                // *(dated 2026-10-02, s8h build, package P2-rk-types.)* The type half only (s8h §8h.3): the adapter's reading of the init `model` is §8h.12's rk-adapter-claude test `dispatch::observed_model_is_recorded_on_every_path_that_read_init`, red first in its own package.
+                observed_model: None,
             },
         );
         // ADR-0163 clause 2: ONE rate_limit_reading per dispatch through the child, from the

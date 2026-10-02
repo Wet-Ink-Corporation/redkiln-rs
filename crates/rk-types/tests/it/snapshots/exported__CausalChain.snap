@@ -1,0 +1,66 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CausalChain",
+  "description": "A causal chain from the technical cause to the systemic one.",
+  "type": "object",
+  "properties": {
+    "method": {
+      "description": "The causal-analysis method a chain was built by (`five-whys`, `fishbone-analysis`,\n`fault-tree-analysis`).",
+      "type": "string",
+      "enum": [
+        "five-whys",
+        "fishbone",
+        "fault-tree"
+      ]
+    },
+    "whys": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "systemic_cause": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "The author's confidence in a conclusion. `high` is the spelling the shipped loops compare\n(`differential-debugging`, `instrumented-trace-analysis`).",
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "rationale": {
+      "description": "Why the confidence is what it is.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "method",
+    "whys",
+    "categories",
+    "systemic_cause",
+    "confidence",
+    "summary",
+    "rationale"
+  ]
+}

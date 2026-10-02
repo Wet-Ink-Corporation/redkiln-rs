@@ -1,0 +1,62 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Estimate",
+  "description": "An estimate. `fits_appetite` is the boolean `appetite-check` reads.",
+  "type": "object",
+  "properties": {
+    "method": {
+      "description": "The estimation method (`appetite-check`, `t-shirt-sizing`, `relative-estimation`).",
+      "type": "string",
+      "enum": [
+        "appetite",
+        "t-shirt",
+        "relative"
+      ]
+    },
+    "sizes": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "total": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "fits_appetite": {
+      "type": "boolean"
+    },
+    "confidence": {
+      "description": "The author's confidence in a conclusion. `high` is the spelling the shipped loops compare\n(`differential-debugging`, `instrumented-trace-analysis`).",
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "rationale": {
+      "description": "Why the confidence is what it is.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "method",
+    "sizes",
+    "total",
+    "fits_appetite",
+    "confidence",
+    "summary",
+    "rationale"
+  ]
+}

@@ -1210,6 +1210,12 @@ and committed **before** the sheet is generated. The spike id is **S-SEV**.
     - Over a non-empty list whose findings carry no `severity`, the element lookup falls through to the context and
       returns `EvalError::UnknownField("severity")`.
     - So an empty list passes the row and a non-empty one errors. No non-empty list is read as absent-means-true.
+    - *(dated 2026-10-02, `s8h` build, package P2-rk-types.)* The owner's type half has landed: `rk_types` `Finding`
+      carries a REQUIRED `severity: FindingSeverity` (`blocking | advisory`, ADR-0168 decision 1), so a typed
+      finding always carries the member. The 39 rows themselves were disposed of in `s8d` (D21-67 ruling 1), and
+      whether the evaluator reads the typed member over a non-empty list is `s8h` §8h.12's
+      `quality_block::a_severity_row_reads_the_typed_member_over_a_non_empty_list`, over a fixture activity. The
+      untyped quality-block witness (`rk_kernel::quality_block`) is unchanged and still carries `evidence` only.
 
     The record says this, and the row is evaluated in `s8d`'s resolver (R2).
   - **In every branch**, if the labels contradict ADR-0074's `narrowed-pin` row, the record **reports** the

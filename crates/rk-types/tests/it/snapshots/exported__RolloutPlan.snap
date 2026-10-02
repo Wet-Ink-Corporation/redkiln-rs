@@ -1,0 +1,39 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RolloutPlan",
+  "description": "A rollout plan.",
+  "type": "object",
+  "properties": {
+    "strategy": {
+      "description": "The deployment pattern a rollout plan chooses (the release stage's `blue-green-deploy`,\n`canary-release`, `flag-progressive-rollout` and `rolling-deploy`).",
+      "type": "string",
+      "enum": [
+        "blue-green",
+        "canary",
+        "flag-progressive",
+        "rolling"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "thresholds": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "strategy",
+    "steps",
+    "thresholds"
+  ]
+}

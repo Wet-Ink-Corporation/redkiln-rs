@@ -167,6 +167,8 @@ fn mutate_finding(ac: &str, patch: &str) -> Finding {
         ac: ac.to_owned(),
         claim: Text::new(format!("{ac}: the mutant survived")),
         evidence: EvidenceLabel::MutationSurvived,
+        // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+        severity: rk_types::artifact::findings::FindingSeverity::Blocking,
         rationale: Text::new("the suite stayed green under a reverted fix"),
         repro: Repro {
             kind: ReproKind::Mutate,
@@ -193,6 +195,8 @@ fn run_finding(ac: &str, command: &str) -> Finding {
         ac: ac.to_owned(),
         claim: Text::new(format!("{ac}: reproduced")),
         evidence: EvidenceLabel::Reproduced,
+        // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+        severity: rk_types::artifact::findings::FindingSeverity::Blocking,
         rationale: Text::new("the command fails on the candidate"),
         repro: Repro {
             kind: ReproKind::Run,
@@ -936,7 +940,8 @@ fn ac343_model_authored_pass_is_a_schema_violation() {
         "a findings card carrying `pass` fails ingest"
     );
     let mut item = json!({ "items": [{
-        "ac": "AC-1", "claim": "c", "evidence": "advisory", "rationale": "r", "files": [],
+        // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+        "ac": "AC-1", "claim": "c", "evidence": "advisory", "severity": "advisory", "rationale": "r", "files": [],
         "repro": { "kind": "run", "command": "cargo test", "mutation": null, "expected": { "kind": "exit", "exit": 0 }, "observed": "exit 1", "expected_when_met": "exit 0" },
         "verdict": "approved"
     }]});

@@ -12,7 +12,7 @@ use rk_types::activity::{DispatchRecord, RecordTail};
 use rk_types::error::CancelledBy;
 use rk_types::retention::{HEAD_TAIL, Retained, STDIO_CAP};
 use rk_types::usage::{
-    CacheCreation, CliVersion, CostUsd, DetectedBy, Timings, Usage, WindowReading,
+    CacheCreation, CliVersion, CostUsd, DetectedBy, ObservedModel, Timings, Usage, WindowReading,
 };
 
 fn argv() -> Vec<String> {
@@ -62,6 +62,8 @@ fn full_tail() -> RecordTail {
         detected_by: Some(DetectedBy::TextMarker),
         // *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1, proposed.)*
         activity_id_at_version: Some("emit-report@1".to_owned()),
+        // *(dated 2026-10-02, s8h build, package P2-rk-types; Record A = ADR-0197, proposed.)*
+        observed_model: Some(ObservedModel::new("claude-haiku-4-5-20251001")),
     }
 }
 
@@ -83,6 +85,8 @@ fn pre_spawn_tail() -> RecordTail {
         cancelled_by: None,
         detected_by: None,
         activity_id_at_version: None,
+        // *(dated 2026-10-02, s8h build, package P2-rk-types.)* No init was read before a spawn.
+        observed_model: None,
     }
 }
 
@@ -124,6 +128,8 @@ fn ac360_dispatch_record_carries_the_usage_fields() {
         cancelled_by,
         detected_by,
         activity_id_at_version,
+        // *(dated 2026-10-02, s8h build, package P2-rk-types; Record A = ADR-0197, proposed.)*
+        observed_model,
     } = rec.clone();
 
     // The digests are digests: 64 hex characters, and the secret is in neither.
@@ -171,6 +177,10 @@ fn ac360_dispatch_record_carries_the_usage_fields() {
     // *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1, proposed.)* The interim
     // correlation key the tail hands in, unchanged.
     assert_eq!(activity_id_at_version.as_deref(), Some("emit-report@1"));
+    assert_eq!(
+        observed_model.as_ref().map(ObservedModel::as_str),
+        Some("claude-haiku-4-5-20251001")
+    );
     assert_eq!(
         usage.as_ref().and_then(Usage::ttl_split),
         Some((148, 100)),
@@ -240,6 +250,8 @@ fn a_pre_spawn_record_carries_the_pin_and_absence_as_null() {
         "detected_by",
         // *(dated 2026-09-29, s8f build, package S8F-P7; ADR-0190 decision 1.)* Present as `null`.
         "activity_id_at_version",
+        // *(dated 2026-10-02, s8h build, package P2-rk-types.)* No init before a spawn: `null`.
+        "observed_model",
     ] {
         // `.get()`, not `[]`: `Value`'s `Index<&str>` answers `Null` for a MISSING key too, so the
         // indexed form could not tell "present as null" from "omitted" and a
@@ -269,6 +281,55 @@ fn a_pre_spawn_record_carries_the_pin_and_absence_as_null() {
         .remove("activity_id_at_version");
     let back: DispatchRecord = serde_json::from_value(older).expect("an older row deserialises");
     assert_eq!(back.activity_id_at_version, None);
+}
+
+/// **`observed_model` is a typed member, absent before init** (`s8h` §8h.3, the type half;
+/// Record A = ADR-0197, proposed). *(Added 2026-10-02, `s8h` build, package P2-rk-types.)* It is
+/// `Some` only on a path that read a `system/init` carrying `model`, and `None` on every path that
+/// terminated before one was read; it is never the requested id copied in (Halt 11's shape, the
+/// reasoning that gives `cli_version` its two arms). On the wire it is a PRESENT member on every
+/// row (`null` for `None`), and a row written before the member existed reads back as `None`.
+#[test]
+fn observed_model_is_a_typed_member_absent_before_init() {
+    // Before init: the pre-spawn tail carries no reading.
+    let pre = DispatchRecord::new(&argv(), &env(), "2.1.275", b"", b"", pre_spawn_tail());
+    assert_eq!(
+        pre.observed_model, None,
+        "no init was read: no observed model"
+    );
+    let payload = serde_json::to_value(&pre).expect("serialises");
+    assert_eq!(
+        payload.get("observed_model"),
+        Some(&serde_json::Value::Null),
+        "absence travels as a PRESENT null member, never an omitted key"
+    );
+
+    // After init: the reported id, typed, verbatim, and round-tripped.
+    let reported = ObservedModel::new("claude-sonnet-5");
+    let tail = RecordTail {
+        observed_model: Some(reported.clone()),
+        ..full_tail()
+    };
+    let rec = DispatchRecord::new(&argv(), &env(), "2.1.275", b"out", b"err", tail);
+    assert_eq!(rec.observed_model.as_ref(), Some(&reported));
+    assert_eq!(reported.as_str(), "claude-sonnet-5");
+    let payload = serde_json::to_value(&rec).expect("serialises");
+    assert_eq!(
+        payload["observed_model"],
+        serde_json::json!("claude-sonnet-5"),
+        "the reported id travels as the string the child printed"
+    );
+    let back: DispatchRecord = serde_json::from_value(payload.clone()).expect("deserialises");
+    assert_eq!(back, rec, "the round trip is identity");
+
+    // An older row, written before the member existed, reads back as `None`.
+    let mut older = payload;
+    older
+        .as_object_mut()
+        .expect("the payload is an object")
+        .remove("observed_model");
+    let back: DispatchRecord = serde_json::from_value(older).expect("an older row deserialises");
+    assert_eq!(back.observed_model, None);
 }
 
 /// **`Retained`'s bytes travel as the derived `Vec<u8>` form — a JSON array of integers** (§7c.11):

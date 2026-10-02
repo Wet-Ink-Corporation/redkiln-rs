@@ -1,0 +1,94 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HypothesisLog",
+  "description": "A hypothesis log (`root-cause`). Its `root_cause` is the `RootCause` the activity emits, and\n`discriminating_test` the selection its `confirm` step re-runs.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "description": "Where a hypothesis stands. `confirmed` is the spelling `root-cause` compares.",
+      "type": "string",
+      "enum": [
+        "open",
+        "confirmed",
+        "refuted"
+      ]
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "discriminating_test": {
+      "type": "string"
+    },
+    "root_cause": {
+      "description": "A root cause. `discriminating_test` is the test selection `confirm` re-runs (D21-47 cross #5),\na required string.",
+      "type": "object",
+      "properties": {
+        "cause": {
+          "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+          "type": "string"
+        },
+        "contributing_factors": {
+          "type": "array",
+          "items": {
+            "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "description": "The author's confidence in a conclusion. `high` is the spelling the shipped loops compare\n(`differential-debugging`, `instrumented-trace-analysis`).",
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "summary": {
+          "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+          "type": "string"
+        },
+        "discriminating_test": {
+          "type": "string"
+        },
+        "rationale": {
+          "description": "Why the confidence is what it is.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "cause",
+        "contributing_factors",
+        "confidence",
+        "summary",
+        "discriminating_test",
+        "rationale"
+      ]
+    },
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "rationale": {
+      "description": "Why the hypothesis stands where it does.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "entries",
+    "discriminating_test",
+    "root_cause",
+    "summary",
+    "rationale"
+  ]
+}

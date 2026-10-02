@@ -140,6 +140,8 @@ fn finding(ac: &str, repro: Repro) -> Finding {
         ac: ac.to_owned(),
         claim: Text::new(format!("{ac}: the claim")),
         evidence: EvidenceLabel::Reproduced,
+        // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+        severity: rk_types::artifact::findings::FindingSeverity::Blocking,
         rationale: Text::new("the rationale"),
         repro,
         files: vec![],
@@ -258,6 +260,8 @@ fn one_finding_payload(ac: &str, command: &str) -> serde_json::Value {
             "ac": ac,
             "claim": "the claim",
             "evidence": "reproduced",
+            // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+            "severity": "blocking",
             "rationale": "the rationale",
             "repro": {
                 "kind": "run",

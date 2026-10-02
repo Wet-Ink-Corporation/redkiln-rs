@@ -10,7 +10,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ac", "claim", "evidence", "rationale", "repro"],
+        "required": ["ac", "claim", "evidence", "severity", "rationale", "repro"],
         "properties": {
           "ac": { "type": "string" },
           "claim": { "type": "string" },
@@ -18,6 +18,7 @@
             "type": "string",
             "enum": ["reproduced", "mutation-survived", "narrowed-pin", "advisory"]
           },
+          "severity": { "type": "string", "enum": ["blocking", "advisory"] },
           "rationale": { "type": "string" },
           "repro": {
             "type": "object",

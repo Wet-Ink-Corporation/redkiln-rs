@@ -1,0 +1,50 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ChangeRecord",
+  "description": "A recorded change (`change-authorization`). `status` is the authorisation outcome, composed\nfrom the gate's answer at emit, so it is free text here.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "description": "The ITIL 4 change type (`change-authorization`: standard, normal, emergency).",
+      "type": "string",
+      "enum": [
+        "standard",
+        "normal",
+        "emergency"
+      ]
+    },
+    "authorized_by": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "window": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "rollback": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "status": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "authorized_by",
+    "window",
+    "rollback",
+    "status",
+    "summary"
+  ]
+}

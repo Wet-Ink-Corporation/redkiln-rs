@@ -305,7 +305,7 @@ write each reading into the stage-open commit:
      lint refuses a row whose class nothing mints. §8h.10 names `s8j`'s three.
 8. **The whole-suite floor.** Read Checkpoint 8g's recorded passed count from `PROGRESS.md` §1 and write it over
    `BASE_8G` in Checkpoint 8h (12) by a dated edit. The expected value, **re-derived at stage open from Checkpoint
-   8g's recorded count**, is BASE_8G = **1189**, so the floor is 1189 + 54 = **1243**. The arithmetic, once:
+   8g's recorded count**, is ~~BASE_8G = **1189**, so the floor is 1189 + 54 = **1243**~~ *(dated 2026-10-02, s8h build)* BASE_8G = **1337**, Checkpoint 8g's RECORDED count (D21-129), so the floor is 1337 + 54 = **1391**; the drafted chain below is superseded by the recorded count, as the paragraph's last sentence requires. The arithmetic, once:
    - ADR-0164's baseline at `992d257`: 740 passed / 0 failed / 9 ignored over at least 44 results;
    - plus each sub-stage's new tests as its file states them: 9 (8a) + 25 (8b) + 78 (8c) + 62 (8d) + 50 (8d-ii) +
      74 (8e) + 85 (8f) + 66 (8g) = 449, which gives 1189;
@@ -337,6 +337,93 @@ write each reading into the stage-open commit:
     [measured at `fc80687`: `fields = ["cause", "contributing_factors", "confidence", "summary"]`].
 13. **The permission-mode choices.** Re-read `claude --help`'s `--permission-mode` choices, which is a spawn and
     not a dispatch. §8h.2's closed set is cited to that list, and a change to it is corrected there by a dated line.
+
+*(dated 2026-10-02, s8h build)* **Stage-open readings, package P1-records, at `2770bda` (HEAD and a clean tree confirmed; `PROGRESS.md` §1
+records Checkpoint 8g passed whole at `4777941` and re-run green at `d5bfc4f`, 1337 passed / 0 failed / 9 ignored over
+44, D21-129).** Each item above, as read. The store was backed up first to `target/store-backups/s8h-open` (sha256
+`09020ee9b3deb4405173cd4b71bf858a4f7a36ac23b3e762c9ced1c36038fad8`, equal to the live store's).
+
+- **Item 1.** `cargo test -p <crate> --test it -- --list`, each through D21-47's wrapper (the AFK `nd.sh`): `rk-adapter-claude`
+  112, `rk-types` 77, `rk-kernel` 415, `rk-cli` 310 tests listed. Every regression name §8h.12 and Checkpoint 8h (3)–(6)
+  reuse is listed, so no line in (3)–(6) is corrected: `command::golden_argv_per_profile`,
+  `command::ac214_permission_mode_explicit`, `command::permission_prompts_none_on_every_argv`,
+  `isolation::ac204_adoption_equal_subset_superset_wrong_agent` (beside `isolation::ac204_adoption_at_2_1_277_is_read_from_agents_and_model`),
+  `isolation::ac202_isolation_from_system_init_not_argv` (beside `isolation::ac202_absent_mcp_key_is_the_empty_set`),
+  `config::tested_cli_version_is_the_pin_as_a_config_value`, `schema_snapshot::schema_snapshot`,
+  `schema_no_oneof::no_oneof_at_any_node`, `schema_caps::union_and_optional_caps`,
+  `dispatch_record::ac360_dispatch_record_carries_the_usage_fields`, the three `judgement_registry::` names (item 10),
+  `envelope::ac029_n_is_declared_never_defaulted`, `conformance::shipped_pack_loads`,
+  `doctor::ac415_every_rule_id_has_a_rejecting_fixture`, `exit::ac438_exit_table_snapshot` and
+  `exit::ac438_step_error_mapping_is_exhaustive` (of five `exit::ac438_` names), and `surface::ac400_help_snapshot_every_verb`.
+- **Item 2.** `s8d` left the binding **per agent step**, not per node: `bind_nodes` (`crates/rk-cli/src/verbs/run.rs`) walks each
+  activity's `kind = "agent"` steps and passes each step's own `step.output_type` (its `value:<Kind>`) to `bind_one`; its
+  comment reads *"never `activity.provides.first()`"*. No per-node gap. The remaining gap is the read itself: `bind_one`
+  still reads `.join("schemas")` then `.join(format!("{kind}.json"))`, which §8h.4 replaces by the `EXPORTED` lookup.
+- **Item 3.** Of §8h.4's 24 kinds, **one** exists as an `rk-types` type: `Findings` (`rk_types::artifact::findings`).
+  `DebtRegisterEntry`, `Spec`, `RootCause` and the other 21 do not (`grep -rnE "pub (struct|enum) <Kind>\b"
+  crates/rk-types/src` → 0 each). `AcceptanceCriterion` is exported (`registry::EXPORTED`'s second entry, ADR-0192) and is
+  embedded by `Spec`, never redeclared. So 23 types are new.
+- **Item 4.** The kernel's pre-dispatch `dispatch` row **names the item twice**: its payload carries `item`
+  (`rk_kernel::runtime::activity::dispatch_event`: `{activity_id_at_version, attempt, item, step_id}`), and
+  `EventKind::Dispatch` is `ItemKey::Carried`, so `Runtime::append` keys it with the interim `item` (ADR-0182).
+  `dispatch_completed` is `Carried` too. The count source is therefore the store's `dispatch` rows through
+  `query(ByItem)`, counting only rows keyed to the item (`ByItem` also returns unkeyed rows in the interim, ADR-0182
+  decision 4), and the token sum reads `dispatch_completed` the same way. Record B (ADR-0198) decision 4 states it.
+- **Item 5.** No producer. `wall_clock_expiry_mark(` has no call site under `crates/*/src` (the definition at
+  `crates/rk-kernel/src/workflow/budget.rs` only; its callers are `rk-kernel`'s tests `budget.rs` and
+  `cross_process.rs`), and `budget_extension` appears only as `BudgetExtensionMark::KIND` and its reader. It does not
+  join §8h.10's table.
+- **Items 6 and 13 (D21-48).** The real `claude --version` → `2.1.287 (Claude Code)` (rc 0; `~/.local/bin/claude.exe`,
+  247,736,480 bytes, dated 2026-10-01 11:02). `spikes/results/instrument-checks/RUNBOOK-instrument.txt` is 22 bytes,
+  `od -c` → `2 . 1 . 2 7 8 ␠ ( C l a u d e ␠ C o d e ) \n`. **Halt 2 is LIVE and recorded, not worked around**: the pin is
+  `2.1.278`, and the installed CLI has moved again since authoring (2.1.281 → 2.1.287); D21-42 16 moves the pin once, at
+  `s8j`. `claude --help`'s `--permission-mode` lines through `(choices: …)` were written by `printf` (never `tee`) to
+  `crates/rk-adapter-claude/tests/fixtures/cli-help/2.1.287.permission-mode.txt` (282 bytes, 4 lines, LF, 0 CR,
+  byte-identical to the help's lines 150–153). **The choices are `"acceptEdits", "auto", "bypassPermissions", "manual",
+  "dontAsk", "plan"`**, the same six as 2.1.281. They list `manual`, so X12's premise holds, no STOP, and by §8h.2's rule
+  the help-warranted row is keyed by the installed version: `("2.1.287", "manual")`, not the drafted `2.1.281` (§8h.2's
+  dated note). Both reads were spawns, not dispatches.
+- **Item 7.** Each minted spelling is a `&str` constant on a code line under `crates/*/src`, and no `format!` gap exists:
+  `pub const LANDING_REFUSED_KIND: &str = "landing.refused-path";` (`crates/rk-kernel/src/runtime/tier_one.rs`),
+  `pub const DRIFT_GATE_KIND: &str = "render.structured-drift";` (`crates/rk-kernel/src/workflow/fsm.rs`), and
+  `pub const AC_GATE_KIND: &str = "verify.ac-discriminates";` (`crates/rk-kernel/src/verify/ac_gate.rs`). R6's gate
+  carries `unknown_facet:change`: `workflow/gate.rs` builds `format!("unknown_facet:{axis}")`, an axis row and not a
+  minted class, and `.redkiln/processes/questions.toml`'s `[question."facet.change"]` reads `binds =
+  ["unknown_facet:change"]`. `MINTED_CLASSES` is written into Checkpoint 8h's INPUTS by dated edit.
+- **Item 8.** BASE_8G is Checkpoint 8g's RECORDED count, **1337** (D21-129), so the floor is 1337 + 54 = **1391**,
+  written over (12)'s `BASE_8G` by dated edit. The drafted 1189 / 1243 are struck in item 8.
+- **Item 9.** Confirmed: `rk_git::worktree`'s one derivation roots every run tree at `run_tree_root(main)` →
+  `main.join(".redkiln").join("worktrees")` (`<item>`, `<item>.review-ref`, `<item>.mut`). `recreate_run_worktree` is
+  retired (`s8d-ii` P6; ADR-0180 decision 9), and its successor is **`rk_git::worktree::enter`**: created at
+  `.redkiln/worktrees/<item>`, re-entered and reused, or refused and kept.
+- **Item 10.** Three `judgement_registry::` names exist: `ac133_every_exported_enum_is_registered`,
+  `ac133_a_judgement_enum_without_a_rationale_sibling_fails` (both selected by (4)) and
+  `the_registry_names_no_enum_that_is_not_exported`. No rename.
+- **Item 11.** Binary-level `answer` spawns: the shared helper `pub(crate) fn spawn_answer(` (`crates/rk-cli/tests/it/answer.rs`),
+  called from `answer.rs`, `change_deriver.rs`, `landing.rs`, `lane_e2e.rs`, `processes.rs`, `run.rs`, `verify_pass.rs`
+  and `worktree_assigned.rs`. `s8e`'s `lane_e2e` binary arm is `spawn_run_replaying` (a `run` spawn). **Binary spawn
+  sites over the `redkiln` binary in `rk-cli`'s `tests/it`: 21 code lines** (13 at `fc80687`): 20 of the form
+  `Command::new(crate::redkiln())` (`redkiln()` in `main.rs`) in `adapter_selection.rs`, `answer.rs`, `config.rs`,
+  `cost.rs` (3), `doctor.rs` (3), `doctor_journal.rs`, `explain.rs`, `lane_e2e.rs`, `main.rs`, `review_pass.rs`, `root.rs`,
+  `run.rs` (2), `run_worktree.rs`, `slice_verdict.rs` and `verify_pass.rs`, and one `Command::new(env!("CARGO_BIN_EXE_redkiln"))`
+  in `surface.rs`. The other `Command::new` sites (`support.rs`'s `taskkill`/`kill`/`tasklist` and its fixture child) do
+  not spawn `redkiln`.
+- **Item 12.** The 11c record is **ADR-0168** (recorded id; accepted on D21-65). Its decision 1: *"The severity vocabulary
+  is `blocking | advisory`."* Its paragraph `**The severity field's source and owner.**` reads *"The owner is **`s8h`**"*.
+  `spikes/p9/schemas.toml`'s `[value.RootCause]` still reads `fields = ["cause", "contributing_factors", "confidence",
+  "summary"]`, without `discriminating_test`. `grep -rn "severity in" .redkiln/catalog` → **0** (D21-67 ruling 1 holds).
+- **D21-119 … D21-136.** What binds this stage is D21-129's owed-forward list: the `verify.ac-discriminates` row in both
+  packs and the class in `MINTED_CLASSES`; `Spec`'s `acceptance_criteria` embedding `AcceptanceCriterion` unchanged, with
+  a required authored `verification` on every criterion a specifying activity emits; this stage's enums entered in
+  AC-133's registry. D21-126 leaves `LintReport` without a type, outside `EXPORTED`; D21-132 accepts ADR-0192. **D21-128
+  stays OPEN for the operator and is not re-decided here.** Checkpoint 7d's manifest loop now expects THREE `rk-cli`
+  `[[bin]]` targets (amended 2026-10-02, `wi-b846d9`); a `[[bin]]` this stage adds needs the same dated amendment.
+- **Line endings, by bytes** (`open(f,'rb').read().count(b'\r')`): this file 0 CR / 2321 LF; `s8a` 0 / 1927; `s8c` 0 / 3348;
+  `s8d` 0 / 3476; `s8d-ii` 0 / 2835; `bug-standard.toml` 0 / 547; `story.toml` 0 / 568; each of the eight cards 0 / 8;
+  `spikes/p9/schemas.toml` 0 / 416; `references/adr/README.md` 0 / 417; `runbook/00-preamble.md` 0 / 320. All LF.
+- **`FLIP_PENDING`.** No line of Checkpoint 8h asserts `status: accepted` for this stage's records: (2) asserts Record A
+  `status: proposed` and admits `proposed|accepted` for Record B. So the formal run passes with both `proposed`, and no
+  `FLIP_PENDING` form is added.
 
 **Four questions were owed before Red. D21-43 N17 took all four on 2026-09-24**, and each is stated here as taken.
 Each one changes a test's expected value.
@@ -382,7 +469,7 @@ Both records are new. Each takes **the next free id at writing** (no number is p
 form — frontmatter, `## Context and problem`, `## Decision drivers`, `## Considered options` with `### Option — <name>`
 headings (D21-42 24a), `## Decision`, `## Consequences` with a **What this forbids** block, `## Evidence and
 confidence`. Checkpoint 8h reads the two ids from its `REC_A` and `REC_B` lines, written into the block by a dated edit
-on the day each record is written (D21-47: *"Records are located by the id recorded at write time"*).
+on the day each record is written (D21-47: *"Records are located by the id recorded at write time"*). *(dated 2026-10-02, s8h build)* Record A is **ADR-0197** (`references/adr/0197-cards-models-and-the-run-environment-are-least-privilege-pinned-and-launched.md`) and Record B is **ADR-0198** (`references/adr/0198-rt-57-pack-scalars-the-per-item-envelope-and-gate-expiry-are-recorded-fail-closed.md`), the ids free at writing in that order, both written `status: proposed` by package P1-records; `REC_A=0197` and `REC_B=0198` are in Checkpoint 8h's INPUTS. Record A's AC-133 table carries placeholder rows that the build completes by dated line before the operator signs (its decision 7).
 
 **Record A — cards, models and the run environment** (`proposed`; **accepted only after both §8h.11 probes pass at
 `s8j`**, on the operator's dated ledger line, D21-41 (g)). It decides, as `## Decision` sentences:
@@ -471,7 +558,9 @@ lists.
     Code instrument row). No 2.1.278 `--help` was captured, and that binary is no longer the installed one. So this
     row is the single entry of `LIVE_WARRANTED`, and the help test below exempts it by that literal.
   - `("2.1.281", "manual")`, warranted by the help capture below. It is dormant here: nothing at this stage emits
-    `manual`. This stage's own golden argv changes (`--setting-sources`, `--settings`) leave the `--permission-mode`
+    `manual`. *(dated 2026-10-02, s8h build)* At stage open the installed CLI read `2.1.287`, so by the rule below this row is
+    `("2.1.287", "manual")` and its capture is `cli-help/2.1.287.permission-mode.txt` (§8h.0's readings, items 6
+    and 13); no `2.1.281` capture exists. Record A (ADR-0197) decision 3 states the two rows. This stage's own golden argv changes (`--setting-sources`, `--settings`) leave the `--permission-mode`
     element at `default`.
 - **The help capture is a fixture**, `crates/rk-adapter-claude/tests/fixtures/cli-help/<version>.permission-mode.txt`.
   It holds the lines of `claude --help` that document `--permission-mode`, through the `(choices: …)` list, written
@@ -685,6 +774,39 @@ and its stand-in lacks the field.
 `rk_types::registry::EXPORTED` entry named by the bound step's output kind. A kind that is absent is a bind-time
 refusal naming the kind and the step (`Exit::ConfigError`), before any spawn. `.redkiln/schemas/` is not created,
 and the file read is deleted.
+
+*(dated 2026-10-02, s8h build, package P2-rk-types; Record A = ADR-0197 decisions 6 and 7, `proposed`.)* **The type half
+is built.** `rk_types::registry::EXPORTED` now registers 25 entries: `Findings` and `AcceptanceCriterion` (`s8g`'s,
+registered once, never redeclared) and the 23 new kinds of `crates/rk-types/src/artifact/lane.rs`, each under its kind
+name (`ADR` and `APIContract` carry those schema titles over the Rust names `Adr` and `ApiContract`). `EXPORTED` and
+`EXPORTED_NAMED` are now generated from ONE table by a `macro_rules!` in `registry.rs`, so a type cannot enter one list
+alone; `judgement_registry::ac133_every_exported_enum_is_registered` still asserts the pair. Every stand-in field is
+required (no type declares an optional member). The typing rule is stated in `lane.rs`'s module comment: a list is a
+`Vec`; a scalar is a closed enum only when a shipped `expr`/`when`/`until` compares it to a literal or a catalog row,
+checklist or record names its complete vocabulary, a `bool`/count when a shipped expression reads it as one, a
+`String` when it is a machine token (a command, a test selection, a path, an AC id), and free `Text` otherwise. Eleven
+enums enter `s8g`'s registry (five drafted `yes`, each with a required `rationale` sibling on its object, which the
+stand-in did not list: `RootCause`, `CausalChain`, `ReproCase`, `Estimate`, `ReproAttempt`, `HypothesisLog`, `Docs`);
+Record A decision 7's table is completed by dated cells (four candidates struck to `Text`). `Spec.acceptance_criteria` is
+`Vec<rk_types::AcceptanceCriterion>`, unchanged; `GherkinScenarios.acceptance_criteria` embeds the same type, since the
+stand-in lists the member there too. `HypothesisLog.root_cause` is a `RootCause`, because `root-cause`'s emit writes
+`RootCause = "${hypothesise.outputs.root_cause}"`. `Finding.severity` is required and typed `FindingSeverity`
+(`blocking | advisory`, ADR-0168 decision 1) — named so because `rk_types::verb_output::Severity` is the CVSS band and
+the registry keys enums by schema name. `RootCause.discriminating_test` is a required `String`, and
+`spikes/p9/schemas.toml`'s `[value.RootCause]` gains it with a dated comment. `schema_snapshot` moved: `exported__Findings`
+gained `severity`, and 23 new `exported__<Kind>.snap` were reviewed (no `oneOf`; `Spec` and `GherkinScenarios` carry the
+one `anyOf` of `AcceptanceCriterion.mutation`) and accepted. **Fixtures amended for the required member**, each by a dated
+`//` line where the format admits one: the `Finding` constructors and JSON payloads in `rk-types`' `repro_ingest`,
+`review_gate`; `rk-kernel`'s `retry`, `review`, `review_confirm`, `verify` (the `verdict`-key refusal fixture gains
+`severity` so its refusal stays the key's); `rk-store`'s `artifacts`; `rk-cli`'s `review_pass`, `verb_rows`; and two
+JSON fixtures with no comment syntax, recorded here: `crates/rk-cli/tests/fixtures/exit/findings-block/frames.jsonl`
+(the review frame's finding gains `"severity":"blocking"`) and `crates/rk-cli/tests/fixtures/pack-min/schemas/Findings.json`
+(the file `bind_one` still reads until this section's binder change deletes the read: `severity` added to `required` and
+`properties`). `crates/rk-kernel/tests/fixtures/findings/ac310_f31_narrowed_pin_seed.json` is historical F31 data, not
+a `Finding` payload, and is untouched. `DispatchRecord`/`RecordTail` gain `observed_model: Option<rk_types::usage::ObservedModel>`
+(§8h.3's type half): every literal across `rk-kernel`, `rk-store`, `rk-ports` and both `rk-adapter-claude` sites sets
+`None`, and the adapter's init reading is left for its own red-first test (§8h.12's
+`dispatch::observed_model_is_recorded_on_every_path_that_read_init`).
 
 ### 8h.5 The three principle-7 guards, and the auth check (D21-41 (g); D21-42 15a, 17a)
 
@@ -1337,6 +1459,15 @@ record and no fixture `harness_binary` would otherwise dispatch on the terminal'
   deserialize]
 - `root_cause::discriminating_test_is_a_required_member` [cross #5: `RootCause`'s schema requires the member as a
   string]
+  *(dated 2026-10-02, s8h build, package P2-rk-types)* Red, each through D21-47's wrapper (`nd.sh`): the two
+  `findings::` and the `root_cause::` test ran red at runtime before any type existed — *"the record's spelling
+  `blocking` must be accepted on a finding, got Err(Malformed { detail: "unknown field `severity`, …" })"*, the
+  out-of-vocabulary test's control *"control: the record's spelling `blocking` is accepted"*, and *"`RootCause` is not
+  registered in registry::EXPORTED"*; then `dispatch_record::` ran red by compile, `error[E0609]: no field
+  `observed_model` on type `DispatchRecord`` and `error[E0560]: struct `RecordTail` has no field named
+  `observed_model``. Green: all four `... ok`, and Checkpoint 8h (4)'s ten-name selection `test result: ok. 10 passed;
+  0 failed`. The `findings::` tests read the vocabulary from ADR-0168 by its id (`0168-*.md`, decision 1's sentence),
+  never from this file.
 
 AC-133's registry and its completeness tests are `s8g`'s, and this stage adds none. Its new types' enums are entered
 in that registry, and `s8g`'s two `judgement_registry::` tests (§8h.0 item 10) are selected in Checkpoint 8h (4) as
@@ -1436,6 +1567,18 @@ driver is started once per mutant as `nodispatch python <script> <id>`, so every
 | M31 | a pin with no row falls back to the card's spelling (D21-48 X12) | `command::a_pin_without_a_spelling_row_is_refused` |
 | M32 | the lookup keyed by the constant `TESTED_CLI_VERSION` instead of the `Config`'s pin (D21-48 X12) | `command::argv_permission_mode_reads_the_row_of_the_configs_pin` (its `2.1.281` arm) |
 | M33 | the help-capture check accepts a row's spelling without finding it among the parsed choices (D21-48 X12) | `command::permission_mode_spelling_rows_are_listed_by_their_help_fixtures` (its synthetic control) |
+
+*(dated 2026-10-02, s8h build, package P2-rk-types)* **M28 KILLED**, from the Python driver
+`D:/repos/redkiln-sev/afk-tools/sp/s8h/P2-rk-types-mutants.py` in a private worktree (`target/wt-P2rkt`, HEAD plus this
+build's working diff, removed afterwards; the main checkout's `git diff HEAD` hash equal before and after), through
+D21-47's wrapper: the unmutated control `... ok` (1 passed), then *"a finding without `severity` must be refused at
+ingest, got Ok(… severity: None …)"*, rc 101, the file's sha256 restored and verified. The same driver ran four
+instrument checks for this package's other guards, each with its green control first, all KILLED: `RootCause.discriminating_test`
+made an `Option` (`root_cause::discriminating_test_is_a_required_member`); `observed_model` given
+`skip_serializing_if` (`dispatch_record::observed_model_is_a_typed_member_absent_before_init`); `FindingSeverity`'s
+registry row renamed away (`judgement_registry::ac133_every_exported_enum_is_registered`, AC-133's completeness red,
+the instrument §8h.4 names); and `RootCause`'s `rationale` deleted beside the judgement-bearing `Confidence`
+(`judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails`).
 
 ### 8h.14 What this stage may not do, what it makes provisional, and what it hands on
 
@@ -1609,11 +1752,14 @@ env | grep -qE '^(CLAUDE_PID|CLAUDE_EFFORT|AI_AGENT)=' && { echo "FAIL: CLAUDE_P
 # ---- stage in the change that mints a class. A_SUPERSEDES and TOKENS_APPETITE carry their drafted values; the
 # ---- operator's signed appetite replaces the second by dated edit. Re-runners supply nothing. Empty means not yet
 # ---- written, and the block stops here.
-REC_A=
-REC_B=
+# *(dated 2026-10-02, s8h build, package P1-records)* REC_A and REC_B: ADR-0197 and ADR-0198, the ids recorded when
+# the records were written. MINTED_CLASSES: the three kernel-minted classes read from their &str constants at stage
+# open (s8h §8h.0 item 7): tier_one::LANDING_REFUSED_KIND, fsm::DRIFT_GATE_KIND, verify::ac_gate::AC_GATE_KIND.
+REC_A=0197
+REC_B=0198
 A_SUPERSEDES="0126 0074"
 TOKENS_APPETITE=24000000
-MINTED_CLASSES=
+MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"
 printf '%s\n' "$REC_A" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_A (Record A's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 printf '%s\n' "$REC_B" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_B (Record B's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 [ "$REC_A" != "$REC_B" ] || { echo "FAIL: REC_A and REC_B record the same id ($REC_A)"; exit 1; }
@@ -2098,7 +2244,9 @@ nd_check "(12) fmt, clippy and the whole suite" || exit 1
 # next line by a dated edit before the first run. (Final consistency pass 2026-09-24: was 1127 + 50. D21-48
 # (2026-09-24): was 1171 + 51; X12 adds three command:: tests. D21-48 floor propagation (2026-09-24): was
 # 1171 + 54, before s8c 78, s8d 62, s8d-ii 50 and s8f 85.)
-BASE_8G=1189
+# *(dated 2026-10-02, s8h build, package P1-records)* BASE_8G 1189 -> 1337, Checkpoint 8g's RECORDED count (D21-129:
+# 1337 passed / 0 failed / 9 ignored over 44 at 4777941), so FLOOR = 1337 + 54 = 1391.
+BASE_8G=1337
 FLOOR=$((BASE_8G + 54))
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }

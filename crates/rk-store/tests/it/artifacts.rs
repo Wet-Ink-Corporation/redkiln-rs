@@ -26,6 +26,8 @@ fn run_finding(ac: &str, command: &str) -> Finding {
         ac: ac.to_owned(),
         claim: Text::new("the claim"),
         evidence: EvidenceLabel::Reproduced,
+        // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+        severity: rk_types::artifact::findings::FindingSeverity::Blocking,
         rationale: Text::new("the rationale, first wording"),
         repro: Repro {
             kind: ReproKind::Run,

@@ -1,0 +1,4 @@
+  --permission-mode <mode>              Permission mode to use for the session
+                                        (choices: "acceptEdits", "auto",
+                                        "bypassPermissions", "manual",
+                                        "dontAsk", "plan")

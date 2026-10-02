@@ -1,6 +1,5 @@
 ---
 source: crates/rk-types/tests/it/schema_snapshot.rs
-assertion_line: 43
 expression: schema
 ---
 {
@@ -28,6 +27,14 @@ expression: schema
               "reproduced",
               "mutation-survived",
               "narrowed-pin",
+              "advisory"
+            ]
+          },
+          "severity": {
+            "description": "Whether the finding blocks the change (`blocking`) or is recorded for follow-up\n(`advisory`).",
+            "type": "string",
+            "enum": [
+              "blocking",
               "advisory"
             ]
           },
@@ -155,6 +162,7 @@ expression: schema
           "ac",
           "claim",
           "evidence",
+          "severity",
           "rationale",
           "repro"
         ]

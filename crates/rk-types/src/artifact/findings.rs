@@ -41,6 +41,31 @@ impl EvidenceLabel {
     }
 }
 
+/// A finding's severity: the reviewer's call on whether it blocks.
+///
+/// A closed enum whose spellings
+/// are the 11c record's, read from it by its recorded id (ADR-0168 decision 1: *"The severity
+/// vocabulary is `blocking | advisory`"*; `s8h` §8h.0 item 12). *(Added 2026-10-02, `s8h` build,
+/// package P2-rk-types; Record A = ADR-0197 decision 6, proposed.)* Named `FindingSeverity`, not
+/// `Severity`: `verb_output::Severity` is the CVSS band, and AC-133's registry keys an enum by its
+/// schema name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum FindingSeverity {
+    Blocking,
+    Advisory,
+}
+
+impl FindingSeverity {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Blocking => "blocking",
+            Self::Advisory => "advisory",
+        }
+    }
+}
+
 /// One finding — ADR-0074 clause 1's `{ ac, claim, evidence (advisory label), rationale, files[],
 /// repro }` with ADR-0096 decision 1's typed `repro`. `claim` and `rationale` are the **only**
 /// free-text members (AC-283); `evidence` is a closed label and `files` are paths.
@@ -52,6 +77,12 @@ pub struct Finding {
     /// The model's label. Read by the drift instrument and the persisted record; **never by the
     /// policy module** (AC-285's architecture lint).
     pub evidence: EvidenceLabel,
+    // *(dated 2026-10-02, `s8h` build, package P2-rk-types; D21-47 cross #4; Record A = ADR-0197
+    // decisions 6 and 12, proposed: ADR-0074 decision 1's shape gains this member, in part.)*
+    // REQUIRED, never an `Option`; `rationale` below is its AC-133 sibling.
+    /// Whether the finding blocks the change (`blocking`) or is recorded for follow-up
+    /// (`advisory`).
+    pub severity: FindingSeverity,
     pub rationale: Text,
     pub repro: Repro,
     /// Paths the finding names. Optional, so declared LAST: AC-158's schema lint refuses an

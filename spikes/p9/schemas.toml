@@ -96,7 +96,11 @@ fields = ["events", "detected_at", "mitigated_at", "resolved_at"]
 lists  = ["events"]
 
 [value.RootCause]
-fields = ["cause", "contributing_factors", "confidence", "summary"]
+# discriminating_test added 2026-10-02 (s8h build, package P2-rk-types; D21-47 cross #5; s8h §8h.4; Record A =
+# ADR-0197, proposed): the test selection `confirm` re-runs, bound by s8b §8b.5's (C) rows as
+# ${compare.outputs.discriminating_test} / ${analyse.outputs.discriminating_test}. Safe under D21-47 V2: every
+# test pinning a historical p9 measurement reads the p9 tree at its pinned commit.
+fields = ["cause", "contributing_factors", "confidence", "summary", "discriminating_test"]
 lists  = ["contributing_factors"]
 
 [value.ImpactAssessment]

@@ -1,0 +1,36 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SelfCheck",
+  "description": "A self-check against a checklist. `passed` and `failed` are the counts the shipped\n`check.failed == 0` rows read.",
+  "type": "object",
+  "properties": {
+    "checklist": {
+      "type": "string"
+    },
+    "passed": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "failed": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "notes": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "checklist",
+    "passed",
+    "failed",
+    "notes"
+  ]
+}

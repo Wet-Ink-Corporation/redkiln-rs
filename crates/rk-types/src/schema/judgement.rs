@@ -61,6 +61,63 @@ pub const REGISTRY: &[JudgementEntry] = &[
         judgement_bearing: false,
         reason: "the author's declaration: a patch the harness runs, or not_feasible with its own \
                  in-variant reason (AC-337); the ledger's outcome is the judgement, not this",
+    }, // --- s8h §8h.4's lane kinds (Record A = ADR-0197 decision 7, proposed). The yes/no VALUES are
+    // drafted; each is the operator's to sign (AC-156). *(dated 2026-10-02, `s8h` build, package
+    // P2-rk-types.)*
+    JudgementEntry {
+        name: "FindingSeverity",
+        judgement_bearing: true,
+        reason: "the reviewer's call on whether a finding blocks (ADR-0168 decision 1); `Finding.rationale` is its sibling",
+    },
+    JudgementEntry {
+        name: "Confidence",
+        judgement_bearing: true,
+        reason: "the author's confidence in a conclusion is a judgement about evidence; each object carrying it carries a `rationale`",
+    },
+    JudgementEntry {
+        name: "ReproStatus",
+        judgement_bearing: true,
+        reason: "whether the defect reproduced is the investigator's reading of an observation; `rationale` is its sibling",
+    },
+    JudgementEntry {
+        name: "HypothesisStatus",
+        judgement_bearing: true,
+        reason: "whether a hypothesis is confirmed or refuted is a judgement; `HypothesisLog.rationale` is its sibling",
+    },
+    JudgementEntry {
+        name: "DocsQuadrant",
+        judgement_bearing: true,
+        reason: "the Diataxis quadrant is the author's classification, and the checklist catches a wrong one; `Docs.rationale` is its sibling",
+    },
+    JudgementEntry {
+        name: "ArchitectureLevel",
+        judgement_bearing: false,
+        reason: "the C4 level the description is drawn at: the notation chosen, not a judgement on evidence",
+    },
+    JudgementEntry {
+        name: "CausalMethod",
+        judgement_bearing: false,
+        reason: "which causal-analysis method built the chain: the method chosen, not a judgement on evidence",
+    },
+    JudgementEntry {
+        name: "EstimateMethod",
+        judgement_bearing: false,
+        reason: "which estimation method was used: the method chosen, not a judgement on evidence",
+    },
+    JudgementEntry {
+        name: "RolloutStrategy",
+        judgement_bearing: false,
+        reason: "the deployment pattern the plan chooses: a plan decided and recorded, not a judgement on evidence",
+    },
+    JudgementEntry {
+        name: "ChangeType",
+        judgement_bearing: false,
+        reason: "the ITIL change type: a change-management classification recorded, not judged",
+    },
+    JudgementEntry {
+        name: "AdrStatus",
+        judgement_bearing: false,
+        reason: "a decision record's lifecycle state, recorded by the author, not a judgement on evidence",
     },
 ];
 

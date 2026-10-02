@@ -164,6 +164,8 @@ fn blocking_findings() -> Findings {
             ac: "AC-032".to_owned(),
             claim: Text::new("the change reverses the invariant"),
             evidence: rk_types::artifact::findings::EvidenceLabel::Reproduced,
+            // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+            severity: rk_types::artifact::findings::FindingSeverity::Blocking,
             rationale: Text::new("the guard is evaluated after the write"),
             repro: Repro {
                 kind: ReproKind::Run,

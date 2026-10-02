@@ -130,6 +130,8 @@ impl Harness for FakeAdapter {
                 cancelled_by: None,
                 detected_by: None,
                 activity_id_at_version: None,
+                // *(dated 2026-10-02, s8h build, package P2-rk-types; ADR-0197, proposed.)* No init read here.
+                observed_model: None,
             },
             result: Ok(Typed::new(
                 spec.schema.clone(),

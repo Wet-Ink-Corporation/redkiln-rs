@@ -38,7 +38,7 @@ use crate::digest::{Digest, sha256};
 use crate::error::CancelledBy;
 use crate::retention::Retained;
 use crate::typed::SchemaId;
-use crate::usage::{CliVersion, CostUsd, DetectedBy, Timings, Usage, WindowReading};
+use crate::usage::{CliVersion, CostUsd, DetectedBy, ObservedModel, Timings, Usage, WindowReading};
 
 /// From `StepSpec`: what the adapter needs to assemble one dispatch.
 ///
@@ -145,6 +145,13 @@ pub struct DispatchRecord {
     /// `@version`.
     #[serde(default)]
     pub activity_id_at_version: Option<String>,
+    /// *(dated 2026-10-02, `s8h` build, package P2-rk-types; `s8h` §8h.3, the type half; Record A
+    /// = ADR-0197, proposed.)* The model id the child's `system/init` reported: `Some` on every
+    /// path that read an init carrying `model`, `None` on every path that terminated before one
+    /// was read. Never the requested id copied in. Serialised on EVERY row (`null` for `None`); a
+    /// row written before this member existed reads back as `None`.
+    #[serde(default)]
+    pub observed_model: Option<ObservedModel>,
 }
 
 /// Everything [`DispatchRecord::new`] cannot derive from the raw material: the members the adapter
@@ -171,6 +178,9 @@ pub struct RecordTail {
     /// *(dated 2026-09-29, s8f build, package S8F-P7-TELEMETRY-COST-DOCTOR-JOURNAL; ADR-0190
     /// decision 1.)* The spec's `activity_id_at_version`, handed over as the rest of the tail is.
     pub activity_id_at_version: Option<String>,
+    /// *(dated 2026-10-02, `s8h` build, package P2-rk-types; Record A = ADR-0197, proposed.)* The
+    /// init's reported model, or `None` before init ([`DispatchRecord::observed_model`]).
+    pub observed_model: Option<ObservedModel>,
 }
 
 impl DispatchRecord {
@@ -233,6 +243,7 @@ impl DispatchRecord {
             cancelled_by,
             detected_by,
             activity_id_at_version,
+            observed_model,
         } = tail;
         Self {
             argv_digest: sha256(argv_joined.as_bytes()),
@@ -252,6 +263,7 @@ impl DispatchRecord {
             cancelled_by,
             detected_by,
             activity_id_at_version,
+            observed_model,
         }
     }
 }

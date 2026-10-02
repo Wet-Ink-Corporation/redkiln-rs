@@ -43,6 +43,8 @@ fn valid_run() -> serde_json::Value {
             "ac": "AC-281",
             "claim": "the ingest guard rejects a prose command",
             "evidence": "reproduced",
+            // *(dated 2026-10-02, s8h build, package P2-rk-types: `Finding.severity` is required, ADR-0197 d6.)*
+            "severity": "blocking",
             "rationale": "ADR-0096 decision 1",
             "files": ["crates/rk-types/src/artifact/findings.rs"],
             "repro": {

@@ -1,0 +1,61 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReproCase",
+  "description": "A minimal reproduction.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "description": "Whether an attempt reproduced the defect. `reproduced` is the spelling `minimal-repro` compares.",
+      "type": "string",
+      "enum": [
+        "reproduced",
+        "not-reproduced"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+        "type": "string"
+      }
+    },
+    "command": {
+      "type": "string"
+    },
+    "expected": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "observed": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "The author's confidence in a conclusion. `high` is the spelling the shipped loops compare\n(`differential-debugging`, `instrumented-trace-analysis`).",
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "rationale": {
+      "description": "Why the status and confidence are what they are.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "steps",
+    "command",
+    "expected",
+    "observed",
+    "confidence",
+    "rationale"
+  ]
+}
