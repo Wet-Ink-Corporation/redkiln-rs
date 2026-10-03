@@ -1094,6 +1094,12 @@ for ctl in 'F|x.rs:1:pub struct ChangeSummary;' 'F|x.rs:2:pub enum TextChangeSum
 done
 kraw=$(grep -rn 'ChangeSummary' crates/rk-kernel/src --include='*.rs'); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the rk-kernel search could not run (rc=$rc)"; exit 1; }
+# *(dated 2026-10-03, s8i build, R2FIX-8i)* OWED, NOT CHANGED HERE (s8i refuting rounds 1 and 2): k_filter blanks string
+# literals but not char literals. A '"' char literal pairs its quote with the next string's and hides a type use between
+# them. s8i's Checkpoint 8i (8) now blanks char literals first (s8i R1FIX-8i). None of the kernel's lines naming
+# ChangeSummary carries a '"' char literal [measured 2026-10-03: grep -rn 'ChangeSummary' crates/rk-kernel/src | grep -cF
+# with that literal -> 0 of 4], so this ban passes as it stands. Changing this guard is a change to Checkpoint 8a and
+# needs its re-run.
 k_filter() { grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/"([^"\\]|\\.)*"/""/g' | grep -E '\bChangeSummary\b'; }
 khits=$(printf '%s\n' "$kraw" | k_filter)
 [ -z "$khits" ] || { echo "FAIL: rk-kernel production code names the ChangeSummary type (ADR-0135's surviving forbids):"; printf '%s\n' "$khits"; exit 1; }

@@ -6461,6 +6461,15 @@ specs and reports, the review repositories and the completed `fixture.json` (`s8
 goes back on the pin before the formal Checkpoint 8i (§8i.5 step 11). This entry stays OPEN, and nothing here signs
 a line.
 
+*(dated 2026-10-03, s8i build, R2FIX-8i)* **Refuting round 2 fixed in the driver (package R2FIX-8i).** The superseding driver
+patch is `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R2FIX-8i-sbin-driver.patch` (sha256
+`815111521f351e61b8ea884124eb26ef34321c9767dd48792311f9cf4a8868c1`), so the B0 line's *"from the private-copy patches"* now means that patch and P6's. The
+driver reads the CLI version before each dispatch. It refuses a real dispatch with no launch record, or whose launch
+record read another version (METHOD-S's R2FIX-8i extension). The dry-run script's runner-clean check excludes
+`runner/target/` (sha256 `1599099691282b5334a3b1e9612b38dedcf331205e04e08b3ea1e7ba04a9b7f3`). Owed item (f), the per-copy
+free-space check, is the operator's choice before B2 (`s8i` §8i.5). This entry stays OPEN, and nothing here signs a
+line.
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00

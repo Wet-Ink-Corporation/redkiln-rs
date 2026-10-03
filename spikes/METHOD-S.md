@@ -1608,3 +1608,37 @@ Any later change is disclosed here with the date and the records it post-dates.
   `| **Feature** |` 1 and 1 at items 1–4, 0 and 0 at item 5]. D21-43 N20's *"stripped from all five trees
   identically, and recorded"* holds for the set's name, not for the bytes removed, and this is its record. Whether to
   widen item 3's rule is the operator's.
+
+- **s8i pre-dispatch amendment, extension: how items 4, 5 and 11 and §3.4's *"Recorded"* read in the driver after
+  `s8i` refuting round 2 — 2026-10-03, before B1; no S-BIN record exists** (cites the *s8i pre-dispatch amendment*
+  above, its items 4, 5 and 11, and §3.4; edits nothing in it or in the two extensions above). Written in the AFK
+  build, package R2FIX-8i.
+
+  **1. Item 11, *"its launch record's `CLI_VERSION`"*.** The launcher's record (s8h §8h.7 step 8) holds the version as
+  `CLI_VERSION_BEFORE` and `CLI_VERSION_AFTER`. `CLI_VERSION=` is printed on the launcher's stdout only, from the same
+  reading [measured: `tools/live-run.sh` writes `printf 'CLI_VERSION_BEFORE=%s\n' "$cver"` into the record and prints
+  `printf 'CLI_VERSION=%s\n' "$cver"`]. So the item reads as that record's `CLI_VERSION_BEFORE`. The driver reads it
+  from the record that `REDKILN_LAUNCH_RECORD` names, before each dispatch. It refuses before the spawn in two cases:
+  a real dispatch with no launch record, since item 5's argv runs *"through the launcher's `wrap` mode"*; and a record
+  whose version differs from the `<claude-bin> --version` read before that dispatch. Every record carries the two
+  values as `launch_record` and `launch_cli_version`. The dry run is not a `wrap` child, and its record carries both
+  as null.
+
+  **2. Item 11's set-level check runs before each dispatch.** The version is read by `<claude-bin> --version` before
+  each item's dispatch within one invocation, not once per invocation, and every halt stops the invocation before the
+  next item.
+
+  **3. Item 5's `fix_unreachable` is true by construction.** The driver checks each dispatch copy for every fix blob and
+  LFS object, and for a single commit. Either miss halts before the spawn, and no record is written. So every record
+  written carries `true`, which is the item's *"true only when the dispatch copy passes item 4's checks"*.
+
+  **4. §3.4's *"whether the reviewer ran the automation itself"*.** `ran_automation` counts a `Bash` command that
+  invokes the suite, not one that names it. A segment counts when its program is `pwsh` or `powershell` and it names
+  `verify_headless`, when its program is the `verify_headless.ps1` script itself, or when its program is
+  `UnrealEditor-Cmd` and it carries `Automation RunTests`. Reading the script with `cat`, `grep` or `ls` is not a run.
+
+  **5. Not changed, and recorded: item 4's per-copy free-space check is not in the driver.** Item 4's *"Before each
+  copy, the free space on the root's volume must be at least `SBIN_NEED_BYTES`"* stands as registered. The driver does
+  not run it, and `s8i` §8i.5's batch pre-check reads the free space once per batch. Building the per-copy check, or
+  registering that the batch check carries it, is owed before B2 (`s8i` §8i.5's owed item (f)). Choosing between them
+  narrows or keeps a registered check, so it is not taken here.

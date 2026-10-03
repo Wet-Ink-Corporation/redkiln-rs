@@ -648,29 +648,29 @@ is authored and run **from Python, never the shell**, and must flip its test.
 
 | test (`sbin::tests::`) | pins | mutant that must flip it |
 | --- | --- | --- |
-| `seed_is_confirmed_by_blob_oid_not_by_file_count` | the entry's *"each seed is confirmed by blob oid … and not by a file count"* | compare `git diff --stat` counts |
+| `seed_is_confirmed_by_blob_oid_not_by_file_count` | the entry's *"each seed is confirmed by blob oid … and not by a file count"* | compare `git diff --stat` counts; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `dispatch_one` recording `seed_blob_verified` true without checking, and not refusing a seeded item with no `seed_blobs` |
 | `review_repo_holds_one_commit_and_no_fix_object` | §8i.2 item 4 | check the working tree only, not the object store and `.git/lfs`; *(dated 2026-10-03, s8i build)* also `commit_single` as plain `git add -A`, as `add -A -f` without the tracked-set check, without the index check, and force-adding every ignored file; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` checking no fix blob in its own copy |
 | `text_diff_carries_source_and_test_paths_only` | §8i.2 item 6 | admit `_workspace/backlog/` |
 | `asset_size_is_read_from_the_lfs_pointer` | §8i.2 item 6 | infer size from whether the pointer's size line moved; *(dated 2026-10-03, s8i build)* also read the pointer from the work-tree file, in `review_pointer`, `asset_entries` or `render_summary` |
 | `warned_and_not_run_fold_into_passed_with_the_raw_report_referenced` | §8i.2 item 6 | drop `succeededWithWarnings` |
 | `a_digest_failing_the_typed_schema_is_void_schema_not_a_miss` | METHOD-S §0 rule 2 | score the invalid digest |
 | `exit_zero_without_structured_output_is_void_not_success` | Halt 3 | read exit 0 as a completed dispatch |
-| `strong_detection_needs_a_blocking_finding_naming_the_seeded_path` | METHOD-S §3.4 primary | credit any blocking finding |
+| `strong_detection_needs_a_blocking_finding_naming_the_seeded_path` | METHOD-S §3.4 primary | credit any blocking finding; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `dispatch_one` scoring a seeded item as clean (`seeded_paths` empty) |
 | `cited_fields_are_extracted_mechanically_from_the_digest` | METHOD-S §3.4 *"Recorded"* | read cited fields from the prose |
-| `an_out_of_tree_read_voids_the_record` | §8i.2 item 4 | audit `Read` paths only, not `Bash` commands |
+| `an_out_of_tree_read_voids_the_record` | §8i.2 item 4 | audit `Read` paths only, not `Bash` commands; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `ran_automation` counting a command that only names the suite |
 | `api_key_source_other_than_none_voids_before_scoring` | D21-42 17a | skip the init check |
-| `a_version_move_between_dispatches_halts_the_set` | Halt 2 | compare against the floor, not the set's first version; *(dated 2026-10-03, s8i build, R1FIX-8i)* also, on `dispatch_one`'s path: the set check reading no records, no Halt 2 when init's CLI differs from the pre-read, no halt on a second observed model, the first model read from valid records only, and the model compared only when this dispatch is valid |
-| `the_dispatch_cap_refuses_before_spawning` | §8i.5 caps | check the cap after the child is spawned; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `cap_state` skipping voided records, and `fixture.json`'s `ceiling_secs` ignored, defaulted to `--timeout-secs`, or accepted when it differs |
-| `resume_is_keyed_per_arm_item_pass` | METHOD-S §0 | key on `item` alone; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` resuming over no records, and no halt in the run that writes an item's second void |
+| `a_version_move_between_dispatches_halts_the_set` | Halt 2 | compare against the floor, not the set's first version; *(dated 2026-10-03, s8i build, R1FIX-8i)* also, on `dispatch_one`'s path: the set check reading no records, no Halt 2 when init's CLI differs from the pre-read, no halt on a second observed model, the first model read from valid records only, and the model compared only when this dispatch is valid; *(dated 2026-10-03, s8i build, R2FIX-8i)* also probe's loop reading the version once per run, ignoring a pre-spawn or a post-record halt; `dispatch_one` skipping the launch-record check, admitting no launch record or a different version, or recording no launch version; and the launch record read from the first of two `CLI_VERSION_BEFORE` lines |
+| `the_dispatch_cap_refuses_before_spawning` | §8i.5 caps | check the cap after the child is spawned; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `cap_state` skipping voided records, and `fixture.json`'s `ceiling_secs` ignored, defaulted to `--timeout-secs`, or accepted when it differs; *(dated 2026-10-03, s8i build, R2FIX-8i)* also a cost-less dispatch charged 0.00, not the bound |
+| `resume_is_keyed_per_arm_item_pass` | METHOD-S §0 | key on `item` alone; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` resuming over no records, and no halt in the run that writes an item's second void; *(dated 2026-10-03, s8i build, R2FIX-8i)* also probe's loop (`run_items`) ignoring a post-record halt |
 | `a_surviving_unreal_process_halts_before_the_next_dispatch` | Halt 6 | skip the process check |
 | `stripped_path_set_is_identical_across_all_five_trees` | §8i.2 item 3 (D21-43 N20) | strip each tree by its own item's diff |
-| `review_tree_carries_no_registered_leak_token` | §8i.2 item 3 | scan `_workspace/backlog/` only |
+| `review_tree_carries_no_registered_leak_token` | §8i.2 item 3 | scan `_workspace/backlog/` only; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `dispatch_one` not refusing an empty token list, and scanning its copy for the compiled item-4 token only |
 | `every_item_carries_a_capture_reference_or_rendering_refuses` | §8i.2 item 2 (D21-43 N19) | render captures for the seeded items only; *(dated 2026-10-03, s8i build, R1FIX-8i)* also F1's hand-written brief (E3's wording changed, no truncation), B4's rendering written over the pass's, B4's field not added, and a B4 field replacing one the summary renders |
 | `card_not_adopted_voids_before_scoring` | METHOD-S §0's `card_adopted` | score a record whose init tool set differs from the card's |
 | `a_platform_error_is_recorded_as_api_error_status_and_voids` | METHOD-S §0's *"platform errors named as such (`api_error_status`)"* | record a platform error as a scored miss |
 | `each_dispatch_runs_in_a_fresh_copy_at_a_never_used_path` | §8i.2 item 4, §8i.4 | reuse the previous dispatch's path; *(dated 2026-10-03, s8i build, R1FIX-8i)* also a B4 re-run's copy path or raw stem without its arm, a re-run with no valid missed original or after a detected one, the arm and `--rerun` disagreeing, and any field name accepted |
 | `a_dirty_or_mismatched_copy_refuses_before_spawning` | §8i.4's pre-spawn checks | read tracked files only, not untracked and ignored ones; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` ignoring the pre-spawn miss |
-| `an_account_project_dir_for_the_copy_path_refuses_before_spawning` | §8i.4 (transcripts and auto-memory are keyed by path) | check `~/.claude` only, not `~/.claude-personal`; *(dated 2026-10-03, s8i build, R1FIX-8i)* also exercised through `dispatch_one`, whose miss the row above's mutant removes |
+| `an_account_project_dir_for_the_copy_path_refuses_before_spawning` | §8i.4 (transcripts and auto-memory are keyed by path) | check `~/.claude` only, not `~/.claude-personal`; *(dated 2026-10-03, s8i build, R1FIX-8i)* also exercised through `dispatch_one`, whose miss the row above's mutant removes; *(dated 2026-10-03, s8i build, R2FIX-8i)* also the production account roots without `~/.claude-personal` |
 | `a_dirty_runner_tree_refuses_before_spawning` | §8i.7's `runner_commit` | record `runner_commit` without reading `runner/`'s status; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` recording `HEAD` without reading `runner/`'s status |
 | `every_test_spawns_only_an_injected_stub_never_claude` | the stub rule below | the helper returns the default `claude` |
 
@@ -823,7 +823,7 @@ What is prepared. All of it is zero spend, and none of it is in a repository:
   The registered argv names `results/s-bin/fixture.json`, so the script puts this file at that path for the dry run
   only and removes it afterwards. A copy stays at `results/s-bin/dry-run/fixture.json`.
 - **The operator's script**, `D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh` (sha256
-  `622f93f98df15865eadf8faa7fe2bc3a13b296dece2a12f544da2a3d882ba27f`; `bash -n` clean).
+  ~~`622f93f98df15865eadf8faa7fe2bc3a13b296dece2a12f544da2a3d882ba27f`~~ *(dated 2026-10-03, s8i build, R2FIX-8i: `1599099691282b5334a3b1e9612b38dedcf331205e04e08b3ea1e7ba04a9b7f3`, after its runner-clean check excluded `runner/target/`)*; `bash -n` clean).
   - Before it runs, it refuses inside Claude Code, and it requires the B0 commit and `driver-tests.txt`.
   - It runs the registered dry-run argv under `nodispatch`.
   - It asserts one record, with `dry_run` true, `synthetic_capture` true, `void` null, the 33 §8i.7 fields and
@@ -927,6 +927,88 @@ status empty, before and after.
   P4's same 6 lines in `runner/src/main.rs`. Applied with `core.autocrlf=false` to a fresh `git archive` of `runner/`,
   it gives a `runner/src` byte-identical to the copy. Apply only this one, not P4's, P5's or F1's. P6's audit patch is
   applied beside it. §8i.5's packet names it as `DRV`.
+
+*(dated 2026-10-03, s8i build, R2FIX-8i)* **Refuting round 2's findings, fixed in the driver (package R2FIX-8i).** A sixth private copy,
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R2-corpus`, made from R1's copy (R1's copy keeps its own bytes,
+`5be7cb75…52b0`). Nothing wrote to `D:/repos/redkiln-corpus` or its `.git`. What changed:
+- **The version is read before each dispatch.** `probe`'s item loop is now `run_items`. It runs `<claude-bin>
+  --version` before every item and passes that reading to the dispatch as its `cli_version`, as the bullet above
+  prescribes (*"read by `<claude-bin> --version` before each dispatch"*). Before, one reading at start-up served all
+  five items. A CLI that moved mid-pass then passed item k's pre-spawn check, and only the post-record Halt 2 caught
+  it, after the spend.
+- **Every halt stops the loop, and a test now drives the loop.** `run_items` bails on a pre-spawn halt and on every
+  post-record halt: the second void, the second model, Halt 2 from init, and Halt 6. The tests call it with the
+  injected stub over a two-item rig, and item 2 is never spawned. Round 2 measured that probe's bail could be dropped
+  with 25/25 green, because no test reached `probe`.
+- **The launch record (METHOD-S item 11).** The driver reads the launch record that `REDKILN_LAUNCH_RECORD` names. Its
+  version key is `CLI_VERSION_BEFORE`. The launcher writes `printf 'CLI_VERSION_BEFORE=%s\n' "$cver"` into the record
+  and prints `printf 'CLI_VERSION=%s\n' "$cver"` only to stdout, both from the same reading, so the record has no
+  `CLI_VERSION` key. A real dispatch refuses before the spawn in two cases: when no launch record is set (§8i.5: every
+  dispatch launches through `wrap`), and when the record's version differs from the reading taken before that
+  dispatch (Halt 2). The dry run is not wrapped (§8i.3) and needs none. Records also carry `launch_record` and
+  `launch_cli_version`, and so do B1's probe records. Checkpoint 8i (4)'s new `launch` line re-checks the equality on
+  every record.
+- **Seeded items through `dispatch_one`.** A seeded rig item (`seeded` set, `seed_blobs` read from the review
+  repository's HEAD) is dispatched:
+  - a blocking finding naming the seed records `detected` true and `seed_blob_verified` true;
+  - an advisory naming it records `detected` false, never null;
+  - a wrong seed oid halts with zero spawns;
+  - a seeded item with no `seed_blobs` halts with zero spawns.
+- **The fixture's tokens, an empty token list, and the cost bound.** A copy holding D21-142's `white-on-white` refuses
+  when the fixture registers that token, and dispatches when it does not. An empty token list refuses. A dispatch that
+  reports no cost records 5.00, with `total_cost_source` `bound`.
+- **`ran_automation` counts a run, not a mention.** A `Bash` command counts when one of its segments invokes the
+  suite: `pwsh` or `powershell` naming `verify_headless`, the `verify_headless.ps1` script itself, or `UnrealEditor-Cmd`
+  with `Automation RunTests`. A `cat`, `grep`, `ls` or `echo` naming them does not count.
+- **The account roots.** `default_account_roots` reads the environment and calls `account_roots_for(home,
+  CLAUDE_CONFIG_DIR)`. A test now asserts the list: both roots, `~/.claude-personal` first, and a third
+  `CLAUDE_CONFIG_DIR` added.
+- **`fix_unreachable` stays a constant, by construction** (§8i.7's dated note gives the reason).
+- **Red first.** The behaviour-neutral scaffolding went in first, with the guards unwritten. Two tests went red for
+  their stated reasons:
+  - `a_version_move_between_dispatches_halts_the_set`, twice. First: *"a CLI that moves between two items halts the
+    run: ()"* (the version was read once, so item 2 dispatched). Then, after the per-item read: *"a launch record whose
+    CLI differs from the pre-read refuses before the spawn: Recorded {…}"*.
+  - `an_out_of_tree_read_voids_the_record`: *"`cat _workspace/tooling/verify_headless.ps1` mentions the automation and
+    does not run it"*.
+
+  The rig cases over guards that already existed passed at once: the seeded item, the tokens, the cost bound, the
+  roots and the loop's halts. Their red is their mutants, below. **The selection stays at 25**: every case was added to
+  an existing test.
+- **One earlier mutant was masked, and the test was narrowed.** R1FIX-8i's M13, *"dispatch_one's set-version check
+  reads no records"*, first SURVIVED over the new bytes. In its `ver-set` case the launch record said 2.1.288 and the
+  read said 2.1.290, so the new launch check halted with "Halt 2" first. The case now gives the launch record the
+  read's version. That is a move between launches, which only the set check catches, and M13 then flipped.
+- **Mutants, from `s8i_R2FIX-8i_mutants.py`, in the copy only, restore verified by sha256.** Seventeen are new:
+  - round 2's Q1–Q7, with Q7 run on both the second void and the second model;
+  - the loop reading the version once, and the loop ignoring a pre-spawn halt;
+  - `dispatch_one` skipping the launch check, admitting no launch record, admitting a different version, and
+    recording no launch version;
+  - the launch record read from the first of two `CLI_VERSION_BEFORE` lines;
+  - `ran_automation` back to substrings;
+  - the account roots without `~/.claude-personal`.
+
+  All 17 flipped. R1FIX-8i's 24, F1's 7, P4's 13 and P5's 12 were re-run over the final bytes: **73/73 flipped**.
+- **Not built, and why.**
+  - The per-copy `SBIN_NEED_BYTES` check (METHOD-S item 4) is still not built. Its figure is extension 3's, which is
+    not registered yet, and the driver has no free-space call without a new dependency. It is owed item (f) in §8i.5.
+  - `flag_probe`'s cap, Halt 6 and project-dir checks are still reached by no test. Its new launch check is
+    `check_launch`, which is tested.
+  - No test reaches `probe`'s read of `REDKILN_LAUNCH_RECORD`. If `probe` read no record, every real pass would refuse
+    before any spawn.
+- **Readings, last in the copy, all under `nd.sh`.** The sbin selection: `test result: ok. 25 passed; 0 failed`. The whole runner suite:
+  159 passed, 1 failed, the same pre-existing `p7::tests::the_driver_matches_the_committed_catalog`. clippy exits 0 with nothing for `sbin.rs`, and `sbin.rs` is rustfmt-clean.
+- **The patch supersedes R1FIX-8i's.** `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R2FIX-8i-sbin-driver.patch` (sha256
+  `815111521f351e61b8ea884124eb26ef34321c9767dd48792311f9cf4a8868c1`) is cumulative against a fresh `main` extract at `285e011`. It adds
+  `runner/src/sbin.rs` (sha256 `4f64c7d0c50500c9eb28562cd9bcdea05bc5bcba71c59a6788d8baf7053c8636`, 5,648 lines) and
+  P4's same 6 lines in `runner/src/main.rs`. Applied with `core.autocrlf=false` to a fresh `git archive` of `runner/`,
+  it gives a `runner/src` byte-identical to the copy. Apply only this one, not P4's, P5's, F1's or R1FIX-8i's. P6's
+  audit patch is applied beside it. §8i.5's packet names it as `DRV`.
+- **The dry-run script's runner-clean check** now excludes `runner/target/`, as `runner_commit` does. Its sha256 is now
+  `1599099691282b5334a3b1e9612b38dedcf331205e04e08b3ea1e7ba04a9b7f3`. The pre-check block in §8i.5 is changed the
+  same way. A scratch-repo control, `s8i_R2FIX-8i_cleanctl.sh`, shows the old form refusing a tree whose only change
+  is `runner/target/`, and the new form passing it. Both forms refuse a modified or untracked runner file and a
+  modified audit.
 
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
@@ -1293,7 +1375,7 @@ none of them:
   account's `settings.json`. The pre-check below reads that row. `wrap`'s step 9 sees a move inside one launch only.
   A move between two launches is caught by the driver's set-level
   `a_version_move_between_dispatches_halts_the_set`, which compares every record to the set's first version. Every
-  record's `cli_version` must also equal the `CLI_VERSION` of its launch record.
+  record's `cli_version` must also equal the `CLI_VERSION` of its launch record. *(dated 2026-10-03, s8i build, R2FIX-8i)* Enforced in two places since s8i refuting round 2. The driver reads `$REDKILN_LAUNCH_RECORD`'s `CLI_VERSION_BEFORE` (the record has no `CLI_VERSION` key; the launcher's stdout `CLI_VERSION=` is the same reading) before each dispatch. It refuses a real dispatch with no launch record or with another version, and it records `launch_record` and `launch_cli_version` (§8i.3's dated note). Checkpoint 8i (4)'s `launch` line re-checks every record.
 - **The `apiKeySource` check**, the driver's own (`api_key_source_other_than_none_voids_before_scoring`). The
   launcher reads no init line.
 - **The transcript tripwire**, Checkpoint 8i (0) and (12), over both account roots.
@@ -1316,7 +1398,10 @@ test -d "$acct" || { echo "FAIL: no $acct — D21-42 17b's account is not on thi
 # settings. The launcher does the first; this reads the second.
 grep -q '"DISABLE_AUTOUPDATER"' "$acct/settings.json" || { echo "FAIL: $acct/settings.json has no DISABLE_AUTOUPDATER env row — the freeze (s8h §8h.8) is not in place before B1"; exit 1; }
 # The runner that dispatches is committed code: every record's runner_commit names what ran (§8i.7).
-st=$(git -C D:/repos/redkiln-corpus status --porcelain -- runner results/audit-s.py); rc=$?
+# (dated 2026-10-03, s8i build, R2FIX-8i; s8i refuting round 2) runner/target/ is excluded, as runner_commit excludes
+# it (§8i.3): step 3's B0 block and every launch's cargo build create it, and the corpus has no .gitignore, so the
+# plain check refused at every batch. Was: git -C D:/repos/redkiln-corpus status --porcelain -- runner results/audit-s.py
+st=$(git -C D:/repos/redkiln-corpus status --porcelain --untracked-files=all -- runner results/audit-s.py ':(exclude)runner/target/'); rc=$?
 [ "$rc" -eq 0 ] && [ -z "$st" ] || { echo "FAIL: the corpus runner or audit is not committed and clean (rc=$rc) — a record's runner_commit would not name the code that ran"; printf '%s\n' "$st"; exit 1; }
 # Disk: one dispatch copy and one UE build must fit (§8i.4). Both values are the amendment's.
 test -d "${SBIN_ROOT:-}" || { echo "FAIL: SBIN_ROOT does not name the registered review root"; exit 1; }
@@ -1473,6 +1558,14 @@ rule, the five bases, and the measured half of extensions 3 and 4), and base ite
 - **Step 11** returns the corpus to the pin before the formal Checkpoint 8i, because that block's replay of
   Checkpoint 5 needs it there (§8i.9).
 
+*(dated 2026-10-03, s8i build, R2FIX-8i)* **`DRV` is superseded again, and one owed item is added (s8i refuting round 2).** `DRV` is now
+`S8I-R2FIX-8i-sbin-driver.patch` (sha256 `815111521f351e61b8ea884124eb26ef34321c9767dd48792311f9cf4a8868c1`, §8i.3's dated
+note), and step 2's check names it. The dry-run script's sha256 is now `15990996…a9b7f3` (step 4).
+- **(f)**, owed before B2: METHOD-S item 4's per-copy free-space check, *"Before each copy, the free space on the
+  root's volume must be at least `SBIN_NEED_BYTES`"*, is not in the driver (§8i.3, *"Not built here"*). Either
+  it is built, or an appended METHOD-S extension registers that the batch pre-check above carries it. That choice
+  narrows or keeps a registered check, so it is the operator's (METHOD-S's R2FIX-8i extension, item 5).
+
 | step | what | USD bound | check before it |
 | --- | --- | --- | --- |
 | 1 | the corpus on `main`, clean | 0.00 | none |
@@ -1497,9 +1590,10 @@ rule, the five bases, and the measured half of extensions 3 and 4), and base ite
 #    DRV is P5's patch until the LFS fix (owed item (a)) lands; after that it is the fixed patch.
 #    (dated 2026-10-03, s8i build) The fix landed: DRV is S8I-F1's patch, superseding P5's S8I-P5-sbin-driver.patch.
 #    (dated 2026-10-03, s8i build, R1FIX-8i) DRV is S8I-R1FIX-8i's patch, superseding S8I-F1's (sha256 dd3ee74e…4f3a).
+#    (dated 2026-10-03, s8i build, R2FIX-8i) DRV is S8I-R2FIX-8i's patch, superseding S8I-R1FIX-8i's (sha256 1922bb47…2b08).
 ( C=D:/repos/redkiln-corpus; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
-  DRV=${DRV:-$S/S8I-R1FIX-8i-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
-  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 1922bb473b14a2bd57914e0ce7092e95accd3766eaca39ae80ab214192c12b08 ] || { echo "FAIL: $DRV is not S8I-R1FIX-8i's patch"; exit 1; }
+  DRV=${DRV:-$S/S8I-R2FIX-8i-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
+  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 815111521f351e61b8ea884124eb26ef34321c9767dd48792311f9cf4a8868c1 ] || { echo "FAIL: $DRV is not S8I-R2FIX-8i's patch"; exit 1; }
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply --check "$p" || { echo "FAIL: $p does not apply"; exit 1; }; done
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply "$p" || exit 1; done
   git -C "$C" add runner/src/main.rs runner/src/sbin.rs results/audit-s.py results/s-bin/audit-fixtures || exit 1
@@ -1507,6 +1601,8 @@ rule, the five bases, and the measured half of extensions 3 and 4), and base ite
   [ -z "$(git -C "$C" status --porcelain -- runner results/audit-s.py)" ] || { echo "FAIL: runner/ or audit-s.py not clean after the commit"; exit 1; } )
 # 3. §8i.3's B0 block, as written. It writes results/s-bin/driver-tests.txt.
 # 4. The dry run. It spawns the stub only and prints the dry run's and driver-tests.txt's sha256.
+#    (dated 2026-10-03, s8i build, R2FIX-8i) Its runner-clean check now excludes runner/target/, which step 3 builds;
+#    without that, step 4 and step 7 refused after step 3. The script's sha256 is 1599099691282b5334a3b1e9612b38dedcf331205e04e08b3ea1e7ba04a9b7f3.
 bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
 #    Then commit its results in the corpus, and remove the dry run's 21.5 GB review repository:
 ( C=D:/repos/redkiln-corpus
@@ -1622,7 +1718,7 @@ named fields, possibly empty); `results/s-bin/brittongames-snapshots.txt` (§8i.
 - `dry_run`, which is `false`;
 - `cli_version`, `observed_model`, `api_key_source`;
 - METHOD-S §0's pre-flight fields: `card_adopted`, and `api_error_status`, which is `null` unless a platform error;
-- `fix_unreachable`, and `seed_blob_verified`, which is `null` on a clean item;
+- `fix_unreachable`, and `seed_blob_verified`, which is `null` on a clean item; *(dated 2026-10-03, s8i build, R2FIX-8i; refuting round 2, a minor)* `fix_unreachable` is `true` on every record the driver writes, by construction. `dispatch_one` runs `check_fix_unreachable` on its copy, and precheck's `precheck_blob_oids` requires a single commit (`rev-list --all --count` reads 1). Either miss halts before the spawn, so no record is written for a copy whose fix is reachable. That is METHOD-S item 5's *"true only when the dispatch copy passes item 4's checks"*. Checkpoint 8i (4)'s `fix_unreachable` read guards the pinned records file, and the driver's own refusals are what its tests pin;
 - the dispatch copy's `tree_path` and `tree_commit`, and its four `precheck_*` results (§8i.4);
 - `runner_commit`, the corpus commit the runner was built from, read with a clean `runner/` status;
 - `runner_sha256`, the running binary's own bytes;
@@ -1931,7 +2027,9 @@ asserts the note.
   - The finding draft and its pins exist.
   - Every pinned corpus file matches byte-for-byte at the pinned commit on the corpus's `main`.
   - There are ten valid records, one per `(pass, item)`. They carry one CLI version, one model and `apiKeySource`
-    `none`.
+    `none`. *(dated 2026-10-03, s8i build, R2FIX-8i)* The `apiKeySource` line reads the valid records only, as this bullet says. A void
+    with no init carries no source and is retried by design. Every record, voids included, also names its launch
+    record and carries that record's CLI version, which equals its own `cli_version` (METHOD-S item 11).
   - On every valid record, `card_adopted` is true, `api_error_status` is null, the fix is unreachable and the seeds
     are verified.
   - Every dispatch copy passed its pre-spawn checks at a path used once. Its commit is its item's review commit.
@@ -2210,6 +2308,31 @@ bad=[str(n)+":"+w for n,(w,pl) in enumerate(cases) if ("ok" if caplog_ok(pl,it) 
 print("ok" if not bad else "BAD:"+",".join(bad))'
 clv=$(python -c "$cctl"); rc=$?
 [ "$rc" -eq 0 ] && [ "$clv" = "ok" ] || { echo "FAIL: the procedure-log check fails its synthetic logs (rc=$rc): $clv — a two-capture item passes, and a missing, extra, repeated or foreign hash does not (METHOD-S amendment item 2)"; exit 1; }
+# *(dated 2026-10-03, s8i build, R2FIX-8i)* s8i refuting round 2 (a major). The apiKeySource line read EVERY record, voids
+# included. A `no-init` or early-timeout void carries a null source, and the driver records and retries it by design
+# (§8i.3's void order; METHOD-S item 10), so one such void failed a paid, valid set for good. The line was
+# print("aks", ",".join(sorted({str(r.get("api_key_source")) for r in sb}))). It now reads the VALID records, as §8i.9's
+# prose scopes it ("ten valid records ... apiKeySource none"). New beside it, METHOD-S item 11: every record's
+# cli_version equals its launch record's CLI_VERSION. The driver records that version as launch_cli_version (the launch
+# record's CLI_VERSION_BEFORE, §8i.3's dated note). Each check is ONE snippet, shared by the record probe below and by its
+# synthetic record sets, as `outc` is.
+aksl='
+def aks_of(sb):
+    return ",".join(sorted({str(r.get("api_key_source")) for r in sb if r.get("void") is None}))
+def launch_ok(sb):
+    return bool(sb) and all(r.get("launch_record") and r.get("launch_cli_version") is not None and r.get("launch_cli_version")==r.get("cli_version") for r in sb)
+'
+akctl='
+def R(void=None, aks="none", cli="2.1.288", lv="2.1.288", lr="L"):
+    return {"void":void,"api_key_source":aks,"cli_version":cli,"launch_cli_version":lv,"launch_record":lr}
+'"$aksl"'
+cases=[("aks","ok",[R(void="no-init",aks=None),R()]),("aks","ok",[R(void="timeout",aks=None),R()]),("aks","BAD",[R(aks="ANTHROPIC_API_KEY")]),("aks","BAD",[R(),R(aks=None)]),
+       ("launch","ok",[R(),R(void="no-init",aks=None)]),("launch","BAD",[R(cli="2.1.290")]),("launch","BAD",[R(lv=None,lr=None)]),("launch","BAD",[])]
+def got(k,sb): return ("ok" if aks_of(sb)=="none" else "BAD") if k=="aks" else ("ok" if launch_ok(sb) else "BAD")
+bad=[str(n) for n,(k,w,sb) in enumerate(cases) if got(k,sb)!=w]
+print("ok" if not bad else "BAD:"+",".join(bad))'
+akv=$(python -c "$akctl"); rc=$?
+[ "$rc" -eq 0 ] && [ "$akv" = "ok" ] || { echo "FAIL: the apiKeySource or launch-record check fails its synthetic record sets (rc=$rc): $akv — a retried void with no source must pass; a valid record with another source, or a record whose CLI differs from its launch record's, must not (D21-42 17a; METHOD-S item 11)"; exit 1; }
 probe='import json,sys,os,re
 def jl(p): return [json.loads(l) for l in open(p,encoding="utf-8") if l.strip()]
 recs=jl(sys.argv[1]); fx=json.load(open(sys.argv[2],encoding="utf-8")); probes=jl(sys.argv[3]); mf=jl(sys.argv[4])
@@ -2230,7 +2353,9 @@ keys=sorted((int(r["pass"]),int(r["item"])) for r in ok)
 print("pairs", "ok" if keys==[(p,i) for p in (1,2) for i in (1,2,3,4,5)] else "BAD"+repr(keys))
 print("cli", ",".join(sorted({str(r.get("cli_version")) for r in sb})))
 print("model", ",".join(sorted({str(r.get("observed_model")) for r in sb if r.get("observed_model") is not None})))
-print("aks", ",".join(sorted({str(r.get("api_key_source")) for r in sb})))
+'"$aksl"'
+print("aks", aks_of(sb))
+print("launch", "ok" if launch_ok(sb) else "BAD")
 def every(k, want): return all(r.get(k) == want and type(r.get(k)) is type(want) for r in V)
 pre = every("card_adopted", True) and all(r.get("api_error_status") is None for r in V) and every("fix_unreachable", True)
 pre = pre and every("precheck_clean", True) and every("precheck_blob_oids", True) and every("precheck_leak_hits", 0) and every("precheck_no_project_dir", True)
@@ -2269,7 +2394,8 @@ rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 [ "$(rv pairs)" = "ok" ] || { echo "FAIL: not exactly one valid record per (pass, item): $(rv pairs)"; exit 1; }
 [ "$(rv cli)" = "$SBIN_CLI" ] || { echo "FAIL: the records span CLI versions '$(rv cli)', pinned $SBIN_CLI (Halt 2)"; exit 1; }
 [ "$(rv model)" = "$SBIN_MODEL" ] || { echo "FAIL: the records report models '$(rv model)', pinned $SBIN_MODEL — one observed id (§8i.2 item 5)"; exit 1; }
-[ "$(rv aks)" = "none" ] || { echo "FAIL: apiKeySource '$(rv aks)' on an S-BIN record (D21-42 17a)"; exit 1; }
+[ "$(rv aks)" = "none" ] || { echo "FAIL: apiKeySource '$(rv aks)' on a valid S-BIN record (D21-42 17a)"; exit 1; }
+[ "$(rv launch)" = "ok" ] || { echo "FAIL: a record names no launch record, or its cli_version is not its launch record's CLI_VERSION (METHOD-S item 11; §8i.5)"; exit 1; }
 [ "$(rv preflight)" = "ok" ] || { echo "FAIL: a valid record lacks card_adopted true, carries an api_error_status, has the fix reachable, or fails a pre-spawn copy check (METHOD-S §0; §8i.4)"; exit 1; }
 [ "$(rv seed)" = "True" ] || { echo "FAIL: a valid seeded record with its seed unverified by blob oid"; exit 1; }
 [ "$(rv fresh)" = "ok" ] || { echo "FAIL: a dispatch copy's path was used twice, or is a capture copy's — no tree is reused (§8i.4)"; exit 1; }
@@ -2461,6 +2587,7 @@ ctl=$(printf 'crates/rk-kernel/src/workflow/gate.rs:1:    /// spelled "automated
 # string's and hid a type use between them. Char literals are blanked first; a lifetime ('a) is never one quote, one
 # character and a quote, so it is left alone. One more control must fire (the last below). Checkpoint 8a's k_filter has
 # the same blind spot, owed to s8a by dated note.
+# *(dated 2026-10-03, s8i build, R2FIX-8i)* That note is now written beside s8a's k_filter (s8i refuting round 2).
 KT_RE='\b(Binary)?ChangeSummary\b'
 kt_scan() { comment_line | sed -E "s/'([^'\\\\]|\\\\.)'/''/g" | sed -E 's/"([^"\\]|\\.)*"/""/g' | grep -E "$KT_RE"; }
 raw=$(grep -rnE "$KT_RE" crates/rk-kernel/src --include=*.rs); rc=$?
