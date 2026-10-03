@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-142), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-143), and what they license
+
+*(Title moved 2026-10-03 during `s8i`: it read **"(D21-1 … D21-142)"**; `D21-143` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 142 before the append, the last `D21-142`.)*
 
 *(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-141)"**; `D21-142` is appended with this move.)*
 
@@ -6391,3 +6393,53 @@ white-on-white"**.
 - Its leak tokens (`white-on-white`, `VERIFIED COLD`, `entirely white`), its violated spec clause and its `$ARGUMENTS`
   are as P3 recorded them, and they go into the appended extension.
 - Greenness at R^ remains the operator's UE run (§8i.4).
+
+---
+
+## D21-143 · `s8i`: S-BIN's go-ahead lines, the entry Checkpoint 8i reads them from (OPEN)
+
+**OPEN. Drafted 2026-10-03 in the AFK build, package S8I-P8. Nothing in this entry is a go-ahead until the operator
+signs a line in it.** It takes no ruling. It is the entry `s8i` §8i.5 opens: *"in the ledger entry this stage opens
+(next free D21 id at writing)"*. Checkpoint 8i (0) records its id as `SBIN_LEDGER=D21-143`, written by dated edit on
+the day this entry is written (D21-47: *"a record is located by the id recorded when it was written"*).
+
+**The id.** The stage-open note reserved D21-141 for this entry. The METHOD-S `s8i pre-dispatch amendment` (introduced
+at `285b659`) says *"The go-ahead lines for B1–B4 are written by the operator into ledger entry D21-141, reserved for
+S-BIN"*. D21-141 and D21-142 were taken first, and D21-141's id note reads *"That entry takes the next free id when it
+is written, and the reservation note is corrected by dated line."* So this entry is D21-143. The amendment is
+append-only and is not edited. The correction is recorded here, and by dated note in the stage file.
+
+**What binds every line.**
+- **The spend.** D21-105 item 2 as amended by D21-140 item 1: *"D21-105 item 2's "capped at **US$30 total**" now reads
+  **US$90 total**, for S-BIN's dispatches only."* Before each batch the orchestrator sums the spend so far from the cost
+  records: every record's `total_cost_usd`, `results/s-bin/probes.jsonl`, and the procedure log's `cost_usd`. A missing
+  cost is refused, never read as zero. A batch launches only if (90.00 − spent) > its bound in `s8i` §8i.5's spend
+  table: B1 10.50 (probes ≤ 0.50 in all, each capture session ≤ 2.00), B2 25.00, B3 25.00, each retry 5.00, and B4
+  20.00. At the bounds, B4 does not fit.
+- **The launch.** D21-140 item 1: *"Every S-BIN launch is the operator's, made from a plain terminal and behind its own
+  go-ahead line"* and *"No subagent dispatches."*
+- **The fixture proofs, on the B1 line only.** D21-43 N22: *"S-BIN is gated on Checkpoint 8h plus its zero-spend dry
+  run, confirmed on the B1 line."* Checkpoint 8h passed WHOLE at `d24d15a` (D21-138; `PROGRESS.md` row 8h). It was
+  re-run green after the Record B flip, at `b2ab1dc`. The B1 line names `d24d15a`, which row 8h records and which
+  Checkpoint 8i (5) resolves.
+- **A refusal stops the batch.** D21-40 decision 2: *"If a real run is refused unexpectedly, the next step is to stop
+  and report, not to spend again."*
+
+**How to sign.** Each line below is in `s8i` §8i.5's fixed form. To sign a line, the operator replaces its `<…>`
+placeholders **in place**, with the UTC time at which it is written, immediately before the batch. A line is never
+duplicated. Checkpoint 8i (5) reads every `S-BIN go-ahead B<n>` line in this entry. It needs exactly one line each
+for B0 to B3, and one for B4 if and only if a re-run exists, and it fails an unsigned line as `BADFORM`. B2's and B3's
+lines are added in the same form before those batches, and B4's only after B4's amendment. `caps used so far` is the
+summed spend, as `$<x.xx>`.
+
+**The dry run's sha256 on the B1 line is owed.** The dry run was prepared and not run in this build (`s8i` §8i.3's
+dated note of 2026-10-03). A permission denial refused the private copy's commit, and a driver defect, the review
+tree's work file read as an LFS pointer, is owed first. The operator's dry run prints the value. The amendment hash
+`285b659fbcd3cd4d424541c4211e3b6398ea26ed` is the commit that introduced the amendment
+(`git log -S's8i pre-dispatch amendment — 2026-10-02' -- spikes/METHOD-S.md`).
+
+**The go-ahead lines (unsigned):**
+
+S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
+
+S-BIN go-ahead B1 <YYYY-MM-DDTHH:MM:SSZ> — at most 3 haiku flag probes on throwaway trees, then the five /ue-verify capture sessions on D:/sb/cap/item-1..5, caps used so far $0.00; fixture proofs: Checkpoint 8h d24d15a, dry run <sha256 of results/s-bin/dry-run.jsonl>; amendment 285b659fbcd3cd4d424541c4211e3b6398ea26ed

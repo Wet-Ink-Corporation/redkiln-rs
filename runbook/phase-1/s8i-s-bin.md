@@ -203,7 +203,7 @@ measurements sit in the sections named, and nothing here is a go-ahead or a disp
   The spend table is in §8i.5, and B4 does not fit at its bound.
 - *(dated 2026-10-02, s8i build)* **`spikes/FINDINGS.md`** gains F41's and F42's rows (§8i.0 item 10; §8i.7).
 - *(dated 2026-10-02, s8i build)* **Ids reserved** (each is the next free at writing; if one is taken first, the next free id is used and
-  this line takes a dated note): ledger **D21-141** for this stage's S-BIN entry, which holds the go-ahead lines;
+  this line takes a dated note): ledger ~~**D21-141**~~ **D21-143** *(dated 2026-10-03, s8i build)* D21-141 and D21-142 were taken first; D21-143 is written OPEN on 2026-10-03 for this stage's S-BIN entry, which holds the go-ahead lines;
   ADR **0199** for the post-dispatch `Binary` record, NOT written in this build; finding **F43** for the S-BIN draft,
   also post-dispatch. `SBIN_LEDGER`, `BIN_ADR` and `SBIN_F` are written into Checkpoint 8i (0) by dated edit, each
   on the day its record is written (D21-47), never before.
@@ -381,8 +381,12 @@ measured 2026-09-24, read-only].
   and (ii) S-BIN's own zero-spend dry run (§8i.3). The B1 go-ahead line names both, by hash (§8i.5), and Checkpoint 8i
   reads it.
   *(dated 2026-10-02, s8i build)* Not yet confirmable. The dry run is built in B0 (§8i.3), so its sha256 does not exist yet. The B1
-  go-ahead line is prepared for the operator in the reserved ledger entry D21-141, naming Checkpoint 8h's recorded
+  go-ahead line is prepared for the operator in the reserved ledger entry ~~D21-141~~ D21-143, naming Checkpoint 8h's recorded
   hash and the dry run's sha256 once the dry run has run. Nothing this build writes is a go-ahead.
+  *(dated 2026-10-03, s8i build)* The entry is **D21-143**: D21-141 and D21-142 were taken first, and D21-141's id note reads
+  *"That entry takes the next free id when it is written"*. Its B1 line is drafted unsigned, in §8i.5's fixed form,
+  naming Checkpoint 8h `d24d15a` and amendment `285b659fbcd3cd4d424541c4211e3b6398ea26ed`. The dry run's sha256 is a
+  placeholder, owed by the operator's dry run, because this build could not run it (§8i.3's dated note).
 - **Operator present, foreground.** D17-5 is headed *"The real dispatch runs in this session, in the foreground"*
   (`DECISIONS-2026-09-17`). Only its foreground, operator-present half carries here. Its *"in this session"* does
   not: every S-BIN launch is made from a plain terminal, never a Claude Code session, because the launcher refuses a
@@ -559,6 +563,85 @@ operator's"*, holds unchanged. Applying and committing the patch is the operator
 has put the corpus on `main` and clean (§8i.0 item 2's dated note). B0's gate, *"operator go-ahead for the corpus
 writes"*, is therefore that apply and commit, and it is a deferred operator gate.
 
+*(dated 2026-10-02, s8i build)* **The fixture and pre-spawn half, built (package S8I-P4).** The private copy is
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P4-corpus`, a `git archive` of corpus `main` at `285e011`. It is not under
+`target/`, because a package manifest anywhere under `D:/repos/redkiln-rs` finds this workspace's root, which does
+not list it, and cargo refuses (*"current package believes it's in a workspace when it's not"*, the root
+`Cargo.toml`'s own comment). The orchestrator's note allows `afk-tools/sp/s8i/` for this case. Nothing wrote to
+`D:/repos/redkiln-corpus` or its `.git`. `runner/src/sbin.rs` holds 13 of the table's 25 tests: 1–5, 16–18 and
+21–25. Each was watched red for its stated reason, then green, and each table mutant flipped its test (13/13, from
+a Python driver, with the sha256 restore verified). The other 12 tests (6–15, 19, 20) are the dispatch half's and
+are not built yet, so B0's `25 passed` line cannot pass until they are. The subcommand is `sbin-probe`. It reads
+`runner_commit` and then refuses before any spawn, because the dispatch half does not exist yet. `runner_commit`
+reads `git status --porcelain --untracked-files=all -- runner/ ':(exclude)runner/target/'`. The exclusion is there
+because the corpus has no `.gitignore`, and Halt 1's `cargo build` creates `runner/target/` as an untracked
+directory. On the copy, the whole runner suite is 147 passed and 1 failed. The failure,
+`p7::tests::the_driver_matches_the_committed_catalog`, predates this work: it reads `../p9/catalog/root-cause.toml`,
+a path relative to `spikes/runner` in this repository, and it fails the same way on the unmodified copy (134 passed
+and 1 failed before `sbin.rs`). The operator's patch is `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P4-sbin-driver.patch`
+(sha256 `706da895…51cb0`). It adds `runner/src/sbin.rs` (sha256 `213040ff…4e04`) and 6 lines to `runner/src/main.rs`.
+It applies cleanly to a fresh `main` extract, and the result is byte-identical to the copy. Applying it is the
+deferred B0 gate above, made after the corpus is on `main` and clean: `git -C D:/repos/redkiln-corpus -c
+core.autocrlf=false apply --check <patch>`, then the same command without `--check`, then `git add
+runner/src/main.rs runner/src/sbin.rs` and a commit. Later packages that add the dispatch half build on this copy,
+or on the patch, so the operator receives one `sbin.rs`.
+
+*(dated 2026-10-02, s8i build)* **The dispatch half, built (package S8I-P5).** It is built in a second private copy,
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P5-corpus`, made from P4's copy, so the operator receives one `sbin.rs`.
+The operator's patch is now `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P5-sbin-driver.patch` (sha256
+`6423a025…6e4bef`). It is cumulative against a fresh `main` extract at `285e011`: it adds `runner/src/sbin.rs` (sha256
+`89473ef4…760d8017`, 4,325 lines) and P4's same 6 lines in `runner/src/main.rs`. It **supersedes** P4's patch, so apply
+only this one. It applied cleanly to a fresh extract with `core.autocrlf=false`, and the result was byte-identical to
+the copy. The apply and commit commands are P4's, with this patch's path. The table's other 12 tests (6–15, 19, 20)
+now exist. Each was watched red for its stated reason with its guard unwritten, then green. Each table mutant
+flipped its test: 12/12 from `s8i_S8I-P5_mutants.py`. P4's 13 mutants were re-run over the final bytes, so 25/25
+flipped, and the sha256 restore was verified. B0's selection under `nd.sh`, run in the copy as the last reading,
+printed `test result: ok. 25 passed; 0 failed`, and `nd_check` was clean. The whole runner suite reads 159 passed
+and 1 failed. The failure is the same pre-existing `p7::tests::the_driver_matches_the_committed_catalog`. clippy
+exits 0 with nothing for `sbin.rs`, and `sbin.rs` is rustfmt-clean. These choices were made in the driver and are
+disclosed here:
+- **Void order, every void before scoring.** The checks run in this order: timeout, `api-error`
+  (`api_error_status` non-null), `no-init`, `api-key-source` (not `none`, or absent), `card-not-adopted` (init
+  tools ≠ `e3::CARD_TOOLS`), `out-of-tree`, `no-result`, `non-zero-exit`, `no-structured-output` (exit 0 with no
+  `structured_output`, which is Halt 3), then `schema: …` (§2's typed schema as amended, via `jsonschema`). A void
+  record carries `detected` and `policy_verdict` as null.
+- **`total_cost_usd` is never null.** A dispatch that reports no cost, such as a timeout or a crash, is charged the
+  spend table's per-dispatch bound (5.00 Opus, 0.50 haiku), and `total_cost_source` reads `bound` rather than
+  `reported`. A missing cost in an earlier record or probe is refused before spawning, never read as zero.
+- **Out-of-tree.** Every string in every tool input is audited, `Read` and `Bash` alike. Each is folded (`\` to
+  `/`, lower case) and checked by name against amendment item 4's roots: `/repos/redkiln-rs`,
+  `/repos/redkiln-corpus`, `/repos/brittongames`, `/.claude-personal/projects` and `/.claude/projects`. It is also
+  checked against any path under the review root, in its `D:/sb`, `/d/sb` and `/mnt/d/sb` spellings, other than
+  the dispatch copy's own. Paths outside all of these, such as the engine install, are not out-of-tree.
+- **Cited fields** are read from the digest's findings only, never from the prose. A field counts when its name
+  appears as the rendering writes it (dotted, indexed or in backticks), or when a finding names a path the summary
+  attributes to it. The token table is `FIELD_TOKENS`. A finding naming an item's asset path cites `assets`.
+- **The caps** are counted from `--out` (records) and `results/s-bin/probes.jsonl`, voids included: 18 Opus, 3
+  haiku, and USD 90.00 per D21-140. The check runs before the copy is made. **The set-level version check** compares
+  the CLI version read by `<claude-bin> --version` before each dispatch with the set's first record's `cli_version`.
+  A record's `cli_version` is init's `claude_code_version` when present. If it differs from the reading before the
+  spawn, the set halts after the record is written. **Halt 6** reads `tasklist` before the dispatch (a survivor
+  refuses the spawn) and after it (a survivor halts the set, the copy is deleted, and its `tree_path` in the record
+  keeps the path from being reused). A second `observed_model` among valid records halts the set. So does the same
+  `(pass, item)` voiding twice.
+- **The record** carries all 33 §8i.7 names, which `the_dispatch_cap_refuses_before_spawning` asserts against a
+  list transcribed from §8i.7. It also carries `attempt`, `cli_version_before`, `init_tools`,
+  `node_modules_linked` (null), `exit_code`, `timed_out`, `total_cost_source`, `out_of_tree`, `synthetic_capture`,
+  `rendered_sha256`, `model` and `effort`.
+- **The fixture keys the dispatch reads**, owed by the package that writes `fixture.json`: per item, `slug`,
+  `spec_path`, `report_path`, `ac_ids`, `asset_actions`, `build_exit`, `text_diff`, `seed_blobs` (seeded items, each
+  path's `<seed>^` blob), `fix_blobs` and `fix_lfs_oids`; at the top level, `leak_tokens` (every registered token)
+  and `ceiling_secs`. The driver refuses at dispatch any key it needs and does not find. Each review repository is
+  read at `<review_root>/rev/item-<n>`.
+- **The argv.** The registered argv is unchanged. Three flags are added, and their defaults keep it valid:
+  `--redkiln` (default `D:/repos/redkiln`, E3's card source), `--arm` (default `b-typed-sbin`) and `--rerun` (B4
+  only, and it must carry `b-typed-sbin-plus-<field>`). The registered dry-run argv has no `--timeout-secs`, so the
+  dry run uses 3600. **For the dry run's stub (P8):** the driver first runs `<stub> --version` and needs a version
+  token back, then replays the stream from stdout. A `.cmd` stub's argv goes through `cmd.exe`, whose command line is
+  limited to 8,191 characters.
+- **Not built here:** the per-copy `SBIN_NEED_BYTES` free-space check (the batch pre-check's `df` covers each
+  batch), `audit-s.py bin`, and the dry run itself.
+
 **Named tests**, run as `cargo test --bin redkiln-spike-runner -- sbin::tests::<name> --exact`, each authored and
 **watched red for the stated reason** before the code that turns it green (golden constraint 12's order). Each mutant
 is authored and run **from Python, never the shell**, and must flip its test.
@@ -632,6 +715,38 @@ against one hand-built fixture per rule outcome, before it reads a real one. The
 `branch2-detected`, `branch3`, `undecided-fp`, `undecided-silent` and `undecided-partial`, the six §8i.9's guard (4)
 computes. *D21-48 (2026-09-24): X3 registered `undecided-partial`, and it replaces the `unregistered` fixture.*
 
+*(dated 2026-10-02, s8i build)* **The audit, built (package S8I-P6).** It is built in a third private copy, a
+`git archive` of corpus `main` (`285e011`) taken over `results/` only, at
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P6-corpus`. Nothing wrote to `D:/repos/redkiln-corpus` or its `.git`. The
+patch touches only `results/`, so it is independent of P5's `runner/` patch, and the operator applies both:
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P6-audit-bin.patch` (sha256
+`0d2964ba50ec32987e80381094d58cb62d7f56e967bc4b7e5518ea33bfd17463`). It applies cleanly to a fresh extract with
+`core.autocrlf=false`, and the result is byte-identical to the copy. The patch carries these files:
+- `results/audit-s.py`, which gains `bin` (sha256 after: `6cf91638f74432bb540ff4cd4ae7d7f37a054ed121ab564110d46a685360e42c`, CRLF
+  kept);
+- `results/s-bin/audit-fixtures/`, holding seven fixtures and `check-audit-bin.py`.
+
+What it does and how it was checked:
+- **The outcome.** `bin_outcome` is a transcription of Checkpoint 8i guard (4)'s `outc` snippet. A scratch check
+  reads that snippet from this file, never from a copy, and runs it over every fixture. On all seven it gives the
+  same two values as the audit, and a perturbed control moves both together.
+- **The figures.** It reports per pass and per item. The pass figures are detection on each seed (strong, under
+  strict), approval on each clean item, the fields cited, whether the reviewer ran the automation, and wall clock.
+  A void row is shown but not scored. No figure pools the passes.
+- **The fixtures.** Each per-outcome fixture holds two passes, and pass 2 has a different outcome, or reaches
+  `branch3` by the other route, so pooling shows. All seven were red first, with "unknown subcommand: audit-s.py
+  printed its usage (rc=2)", and are green now ("fixtures: 7 checked, 0 failed").
+- **Mutants.** Six were run in the copy only, with the restore verified by sha256, and all six were killed:
+  `undecided-partial` collapsed to `branch3`; pooling in `bin_rec`, in detection, in the report's detection count and
+  in the fields tally; and the false-positive threshold loosened.
+- **`var` and `typed`.** Five invocations over their committed inputs give byte-identical stdout and exit codes
+  before and after. The usage text, printed for a bad argv, gains its `bin` line, so that output differs by design.
+- **A choice to check.** When a pass cannot be scored, for example when only pass 1 has run (§8i.2 item 8 reads
+  pass 1's audit before pass 2) or for the dry run's single record, the audit still exits 0. Its outcome line then
+  carries guard (4)'s own `BAD-<reason>` token, for example `rule_outcome_pass2=BAD-record`, and never
+  `unregistered`. The three-record fixture yields `BAD-record` for both passes by design. On the six per-outcome
+  fixtures both lines match the six-value pattern. Guard (4) already fails a `BAD` outcome over real records.
+
 **The zero-spend dry run — S-BIN's fixture proof.** The driver runs end to end over a dispatch copy of item 1's review repository with the
 runner's global `--claude-bin` pointed at a stub that replays a recorded stream; the record it writes carries
 `"dry_run": true`, goes to `results/s-bin/dry-run.jsonl` and **never** to `results/s-bin.jsonl` (every record in the set carries
@@ -640,6 +755,83 @@ it. Golden constraint 4 is the reason: *"A rig that compiles and passes its unit
 do not exist yet, because they are taken in B1. So the dry run renders item 1 with a synthetic capture reference,
 and its record marks that it did. The test run's full output is kept as `results/s-bin/driver-tests.txt`. Its
 sha256 is named on the B1 line (§8i.5).
+
+*(dated 2026-10-03, s8i build)* **The dry run: prepared, NOT run (package S8I-P8).** Two things stopped it. Both are recorded here and
+neither is worked around.
+- **A permission denial, final under the AFK rules.** The driver refuses unless `runner/` is committed and clean
+  (`runner_commit`, §8i.7), so the dry run needs a corpus checkout whose `runner/` holds `sbin.rs` in a commit. The
+  package cloned corpus `main` (`285e011`) to a private path, `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P8-corpus`
+  (`git clone --no-local`, remote removed). That clone is read-only on `D:/repos/redkiln-corpus`, whose HEAD stayed
+  `61f590e`, `main` stayed `285e011`, and status stayed empty. P5's and P6's patches applied there, giving `sbin.rs`
+  `89473ef43a26910ed8e9113cdade4aef559d53044e2720c77b8f1e67760d8017` and `audit-s.py`
+  `6cf91638f74432bb540ff4cd4ae7d7f37a054ed121ab564110d46a685360e42c`. The session's permission classifier then refused
+  the commit in that clone (*"[Modify Shared Resources]"*), and refused a later read in the same clone too. The
+  refused command was `git add runner/src/main.rs runner/src/sbin.rs results/audit-s.py results/s-bin/audit-fixtures
+  && git … commit -m "s8i B0: …"`, run in the clone. So the dry run is the operator's, from a plain terminal, after
+  the B0 corpus commit. The clone is left as it stands, with both patches applied and uncommitted. The packet in §8i.5
+  does not use it.
+- **A driver defect of the kind the dry run exists to catch (golden constraint 4).** It was found by reading the code
+  and measuring the tree, not by a run. `render_summary` reads each asset's pointer with
+  `std::fs::read(review_repo.join(p))`, `asset_entries` does the same, and both then call `parse_lfs_pointer`. But the
+  review trees hold the **materialised** asset in the work tree, and the pointer only as the committed blob. In
+  `D:/sb/base/item-1`, `OurGame/Content/UI/Inventory/WBP_StashRow.uasset` is 110,727 bytes of binary (its first
+  bytes are `\301\203*\236`). `git cat-file -p HEAD:<path>` prints `version https://git-lfs.github.com/spec/v1`,
+  `oid sha256:33800c41a55e0043b508abc896bd1e9f011f7a945cfedb65aeed6bc7f325030e` and `size 110727`. So rendering
+  refuses on every item, in the dry run and in B2 alike. The refusal comes before any spawn and costs nothing, but no
+  pass could run. Amendment item 6 says size and `lfs_oid` are read *"**from the LFS pointer in the review tree**"*.
+  The committed pointer blob is that pointer, so the fix needs no change to how the amendment reads. **Owed to the
+  driver before B0's commit:**
+  - read the pointer as `git cat-file blob HEAD:<path>` in the review repository, in both `render_summary` and
+    `asset_entries`;
+  - strengthen `asset_size_is_read_from_the_lfs_pointer`, red first, so its review tree's work file holds non-pointer
+    bytes while its committed blob is the pointer, which keeps the selection at 25;
+  - add the mutant "read the work-tree file" to that test's row;
+  - re-run the 25 tests and every mutant.
+
+  This package did not make the change, because its private copy was refused.
+
+What is prepared. All of it is zero spend, and none of it is in a repository:
+- **The stub**, `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P8-stub/sbin-stub.exe`, compiled from `sbin_stub.rs`
+  (sha256 `e21e63b5c2f46a356fbbc9aa3073e1b331ab3066e6933d7f83d8b37fc14ad808`). It is never named `claude`.
+  - `--version` prints `0.0.0 (S-BIN dry-run stub, not Claude Code)`.
+  - Any other call reads the prompt from stdin, logs the spawn to `sbin-stub.log` beside itself, and replays
+    `sbin-stub-stream.jsonl` (sha256 `9ce5dbde9ddbe413de982bac3d7591df15a9d5ede9d05ba1757ed378212adf76`), with
+    `@@CWD@@` replaced by its working directory.
+  - The stream holds an init line (`apiKeySource` `none`; tools `Read`, `Bash`, `StructuredOutput`; model
+    `sbin-stub-replay`; version `0.0.0`), one `Read` inside the copy, one `Bash` `git log`, and a result with
+    `total_cost_usd` 0 and a digest with no findings in the typed schema's shape.
+  - A control run outside the driver replayed the five lines with the path substituted, and logged one spawn.
+- **The dry run's review repository**, `D:/sb/dry/rev/item-1`, about 21.5 GB. It is a byte copy of base item 1 plus
+  two files:
+  - `_s-bin/report/index.json`, the pin's 2026-09-05 report (`c3dae802…6bc6`), as a stand-in, because no greenness
+    run exists yet;
+  - `_s-bin/report/headless.log`, a one-line synthetic note.
+
+  It is one parentless commit, `378a183fa265f00b6af2a3be02ba2d8adbf87b36`, with the message `review tree` and the
+  identity `s-bin <s-bin@invalid>`. Checked: `rev-list --all --count` is 1; `refs/heads/main` is the only ref; there
+  is no remote; status with `--ignored` is empty; the base commit is pruned; and the tree is base item 1's plus
+  exactly those two files. The review root is `D:/sb/dry`, so the dry run's dispatch copy is `D:/sb/dry/d/p1i1a1`,
+  never a set path.
+- **The dry run's inputs**, under `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P8-dryrun/`. The fixture is
+  `results/s-bin/fixture.json` (sha256 `4b16a580d81fdb468ea78a3a9ed00288c348161f537657ddb70c8cc9e28aee51`). It is P7's
+  staged fixture with these changes:
+  - `review_root` is `D:/sb/dry`;
+  - item 1's `review_commit` is the commit above;
+  - `leak_tokens` is `LoadoutFill` plus D21-142's three R tokens;
+  - marked stand-ins fill `build_exit` (0) and the spec and report (placeholders).
+
+  The registered argv names `results/s-bin/fixture.json`, so the script puts this file at that path for the dry run
+  only and removes it afterwards. A copy stays at `results/s-bin/dry-run/fixture.json`.
+- **The operator's script**, `D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh` (sha256
+  `622f93f98df15865eadf8faa7fe2bc3a13b296dece2a12f544da2a3d882ba27f`; `bash -n` clean).
+  - Before it runs, it refuses inside Claude Code, and it requires the B0 commit and `driver-tests.txt`.
+  - It runs the registered dry-run argv under `nodispatch`.
+  - It asserts one record, with `dry_run` true, `synthetic_capture` true, `void` null, the 33 §8i.7 fields and
+    `total_cost_usd` 0. It also asserts that `results/s-bin.jsonl` does not exist, that the stub logged one spawn, and
+    that `nd_check` is clean.
+  - It then runs `audit-s.py bin` over the record and keeps the output as `results/s-bin/dry-run/audit.txt`. Both
+    outcome lines read `BAD-record`, by P6's disclosed design.
+  - Last, it prints the two sha256 values the B1 line names.
 
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
@@ -753,6 +945,105 @@ A "no" on any tree is a stop (§8i.6), on a clean tree as much as a seeded one. 
 the five, and a clean item without its subject would be reviewed on less than the seeded ones. It never falls back
 to empty captures.
 
+*(dated 2026-10-02, s8i build)* **The base repositories, built (package S8I-P7); seed 5 awaits R.** Zero spend, and
+read-only on `D:/repos/BrittonGames`. Its HEAD (`ee6e450`), the sha256 of `git --no-optional-locks status --porcelain`
+(`a6751b0c…69ed`) and that of `git worktree list --porcelain` (`ba14505a…e0ab`) were the same before and after, and
+`find .git -newer <ref>` lists nothing in its `.git`. Each tree was checked out from a disposable `git clone
+--no-checkout --shared` under `D:/sb/tmp-p7` into `D:/sb/base/item-<n>`, as a separate work tree with the LFS smudge
+skipped and `core.autocrlf=false`. Seed 4 was applied with `git checkout a71265925^ -- <path>`. Every LFS pointer was
+then replaced by its object, read from BrittonGames' own `.git/lfs/objects`, and each materialised file's SHA-256 and
+size equal its pointer's `oid` and `size` (30,014, 30,015, 30,022 and 30,014 objects; 0 missing). The clone was then
+deleted, and `D:/sb/tmp-p7` is gone. The strip removed `CLAUDE.md`'s four rows, each prefix once, from every tree,
+and 19 files: `_workspace/backlog/`'s 18 and the gotchas reference. The set is one set, and the removed files are
+the same 19 on all four trees. In the work tree `CLAUDE.md` carries CRLF (153 CRs, from BrittonGames'
+`*.md text eol=crlf`) while its blob is LF, so the terminator-agnostic rule was exercised on CRLF bytes. `LoadoutFill`
+counts 0 over every non-asset file of every tree, both before and after the commit. Each tree is the one commit of a
+fresh repository: `main`, `review tree`, `s-bin <s-bin@invalid>`, `git rev-list --all --count` = 1, `refs/heads/main`
+alone, no remote and no tag. `git status --porcelain --untracked-files=all --ignored` prints nothing. Each committed
+tree equals BrittonGames' item tree **entry for entry** (seed applied, strip removed, `CLAUDE.md` = the byte rule
+over BrittonGames' blob).
+
+| item | commit | base commit | base tree | asset blob oid(s) | base bytes (`.git` included) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `cc0cf2d01` | `85d73729bc908b6dce10eb40df8fa0ac27816ca1` | `59b90c86` | `WBP_StashRow` `75dc20f8` | 21,540,846,625 |
+| 2 | `fa1ea72f4` | `78a5ed29a4ac93d3b7685e35c6d6b9cebe7112a8` | `ca9a46bb` | `FTEST_Inventory_Stash` `f2335143` | 21,541,178,231 |
+| 3 | `e83463288` | `536eb55f3c3529bf5943b6c8ecf06da873824c8e` | `81e0c570` | `BP_GamePlayerState` `f22e58e2`, `DA_Item_Sword` `2f9895f5` | 21,560,069,565 |
+| 4 | `a71265925` | `fd692b75ac96c6d94bf1de084e64bb03c422aaba` | `59b90c86` | `WBP_LoadoutScreen` `9415f098` (the seed) | 21,540,845,865 |
+| 5 | **awaiting R** | — | — | — | — |
+
+- **Seed 4 is confirmed by blob oid.** `a71265925^:OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset` =
+  `9415f0986275a66d01885cc74f58c33e1957e183` = base item 4's `HEAD:` blob. The fixed pointer blob `70e2a2e3…aa37c` is
+  absent from base item 4's object store, and its LFS object `02b53079…397db` is absent from its `.git/lfs/objects`.
+  The same probes return *present* on the seed's blob and LFS object (the control).
+- **Measured, not chosen: base item 1 and base item 4 hold the same tree** (`59b90c86`). `a71265925^` *is* item 1's
+  commit `cc0cf2d01`, and `a71265925` changes only `WBP_LoadoutScreen.uasset` plus two stripped backlog files. So the
+  seeded tree and the clean item 1 tree are byte-identical. They differ only in the commit (and so `review_commit`),
+  in the asset the summary names, and in the captures. Clean item 1's tree also carries seed 4's defect. This is the
+  registration's own consequence, and it is recorded rather than worked around.
+- **`git add -A -f`, not `add -A`.** BrittonGames tracks 11 files that its own `.gitignore` matches (`git ls-files -ci
+  --exclude-standard`: 10 under `OurGame/Plugins/Monolith/Tools/`, and one Synty report CSV). A plain `add -A` drops
+  them silently, so the commit would not be the tree, and `status --ignored` would show them. The directory holds only
+  the item's tracked set, so `-f` adds exactly that set. The entry-for-entry comparison proves it. **Owed to the
+  driver:** P4/P5's `commit_single` runs `add -A`. If it builds the review repositories, it drops the same 11 files.
+  It needs `-f`, or the review repositories are built the way the bases were. Recorded here, not edited in the patch.
+- **Item 5 awaits R.** P3 found that each of its three qualifiers is refused by amendment item 3's `CLAUDE.md` strip
+  (prefix counts 1/0/0/0). Base item 5 waits on that blocker's ruling and the operator's pick. When R is picked, the
+  same script builds it: `python D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P7_build.py 5`, after an `ITEMS[5]`
+  entry is added.
+- **`fixture.json`, drafted and staged (not in the corpus).** It is at
+  `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P7-results/results/s-bin/fixture.json`. It holds `items.1`..`4`, with
+  `stripped`, `leak_hits`, `asset_paths`, `asset_oids`, `asset_actions`, `seed_blobs`, `fix_blobs`, `fix_lfs_oids` and
+  `text_diff` (empty), plus provenance keys. `review_commit`, `capture_path` and `captures` are null/null/[] until
+  after B1. `build_exit` waits for the greenness runs. `slug`, `spec_path`, `report_path` and `ac_ids` belong to the
+  constructed-spec work, and `ceiling_secs` waits for extension 2.
+- **The pin report: the registered source was overwritten.** BrittonGames' `_workspace/tooling/TestResults/index.json`
+  now hashes `65960f78…1a8a` (mtime 2026-09-25 12:41 -07:00), not `c3dae802…6bc6`. A byte-identical copy of the
+  2026-09-05 report survives at `_workspace/_runs/8.3.3g-20260904-2334/final-suite.json` (mtime 2026-09-05 01:40
+  -07:00, `reportCreatedOn` `2026.09.05-08.40.33`, 849/180/0/0). A second copy is at
+  `_workspace/_runs/story-8.3.3f/baseline-suite.json`. The staged copy, at
+  `…/S8I-P7-results/results/s-bin/pin-report-2026-09-05/index.json`, was taken from the first. Its SHA-256 is
+  `c3dae80254299b8400149388d38df91b2885a4cf5c11ac0f8faf534b5d7e6bc6`, which is what guard (3) asserts. Copying from
+  that path is disclosed for the operator's acceptance at the corpus commit.
+- **Disk.** Four bases take 86.2 GB, and D: went from 316 GB to 235 GB free. Each base is about 10.8 GB of work tree
+  plus 10.7 GB in `.git/lfs`. At peak, five bases, five review repositories and one dispatch copy need about 237 GB
+  plus one run's growth.
+
+**The operator's greenness runs (not run here).** Run them from a plain Git Bash **outside Claude Code**, with the
+Unreal editor **closed**, one item at a time, each in a subshell. The helper refuses inside a Claude Code session,
+and the refusal has been shown to fire. It also refuses a reused copy, and it refuses (Halt 6) when an
+`UnrealEditor` process exists before a run or survives one.
+
+```bash
+( H=D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P7_green.py; N=1   # then N=2, 3, 4, and 5 once R's base exists
+  python "$H" prepare $N && python "$H" run $N && python "$H" collect $N && python "$H" cleanup $N )
+python D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P7_green.py table
+```
+
+`prepare` makes a byte copy of `D:/sb/base/item-<n>` to `D:/sb/green/item-<n>`, with `.git` included and never a
+clone, after a free-space check. It records the size before. `run` runs the registered `pwsh -File
+_workspace/tooling/verify_headless.ps1` in the copy, which builds and then runs every `OurGame.*` test, and records
+the exit and the wall clock. `collect` copies `index.json` and `headless.log` to
+`…/S8I-P7-results/results/s-bin/greenness/item-<n>/`, hashes each, folds `passed`, and records the size after.
+`cleanup` deletes the copy. Fill in:
+
+| item | seeded | exit | failed | wall s (build + suite) | suite s (`totalDuration`) | copy bytes before | copy bytes after | green (`failed`=0, exit 0) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | no | | | | | | | |
+| 2 | no | | | | | | | |
+| 3 | no | | | | | | | |
+| 4 | **yes** | | | | | | | must be yes |
+| 5 | **yes** | | | | | | | must be yes |
+
+The two formulas, pending the operator's numbers:
+- `ceiling_secs` = 3600 + `W_max`, rounded up to the next multiple of 300 s, where `W_max` is the slowest wall clock
+  (amendment item 7). That is never below 3600 s. The package brief's "max(slowest, 3600 s)" is not the registered
+  rule.
+- `SBIN_NEED_BYTES` = ceil((base size + growth) × 1.1), using the largest base and the largest growth over the five
+  (amendment item 4).
+
+`table` prints both once five runs exist. A red seed is replaced under item 12 before B2. The METHOD-S extension
+paragraph for deferred extensions 2, 3 and 4 is drafted at `…/S8I-P7-extension-draft.md` and is **not** appended.
+
 ### 8i.5 Spend — the batches, the caps, the environment, the version
 
 | batch | what | model spend | gate |
@@ -803,7 +1094,8 @@ alone would not have fitted (35.50), and D21-140 superseded that cap for S-BIN. 
 (`the_dispatch_cap_refuses_before_spawning`): 18 Opus, which is the table's 5 + 5 + 4 + 4, plus 3 haiku and 90.00
 summed. The amendment's item 10 registers the driver's USD cap at 90.00, citing D21-140. After each batch, the
 *spent so far* column is updated by dated edit from the records, never estimated. The build ends at the first B1
-go-ahead line, prepared in D21-141 (reserved) and not run.
+go-ahead line, prepared in ~~D21-141 (reserved)~~ D21-143 *(dated 2026-10-03, s8i build)* D21-141 and D21-142 were taken first;
+D21-143 is drafted OPEN and unsigned, and not run.
 
 **The go-ahead line.** Before each batch the operator writes, in the ledger entry this stage opens (next free D21 id at
 writing), one dated line of the fixed form `S-BIN go-ahead B<n> <YYYY-MM-DDTHH:MM:SSZ> — <scope>, <caps used so far>`. The B1
@@ -992,6 +1284,101 @@ was 2.1.281, and the CLI now reads 2.1.288. The account row is absent: `~/.claud
 `DISABLE_AUTOUPDATER`. Writing it is the operator's, as a **deferred gate before B1**, and the pre-check above
 refuses without it. The set's version is the one the CLI reads once the row is written. The B1 pre-check's
 `CLI_VERSION` records it. Halt 2 also goes on the stage's `PROGRESS.md` row, at the tracker edit (owed, not made here).
+
+*(dated 2026-10-03, s8i build)* **The operator packet, from B0's corpus write to the snapshot before B2 (package S8I-P8).** All of
+it is prepared and none of it has been run. Every step is the operator's, from a plain Git Bash outside Claude Code,
+each in a subshell. The cap is US$90.00 (D21-140 item 1). Before each batch and each retry, the orchestrator checks
+**(90.00 − spent) > the batch's bound**. The package brief's *"(30.00 − spent)"* is D21-105 item 2's figure from before
+D21-140 amended it for S-BIN, and is not used. The go-ahead lines go into **D21-143** and are signed in place (its
+*How to sign* paragraph).
+
+**Owed before the steps below.** None of these is this package's work.
+- **(a)** The driver's LFS-pointer read is fixed, and the 25 tests are re-read (§8i.3's dated note). Until then the
+  driver patch is P5's `S8I-P5-sbin-driver.patch`, and the dry run cannot render.
+- **(b)** METHOD-S extension 1 is appended: seed 5's R = `6a101bdcd` and D21-142's second strip rule. Then base item 5
+  is built.
+- **(c)** The five greenness runs are made (§8i.4). After them, extensions 2, 3 and 4 are appended: `ceiling_secs`,
+  `SBIN_NEED_BYTES` and the greenness results. B1's pre-check reads `SBIN_NEED_BYTES`, so extension 3 comes before
+  B1.
+- **(d)** The operator accepts or rejects P7's pin-report source (§8i.4's dated note).
+
+| step | what | USD bound | check before it |
+| --- | --- | --- | --- |
+| 1 | the corpus on `main`, clean | 0.00 | none |
+| 2 | sign B0, then the B0 corpus commit | 0.00 | none |
+| 3 | §8i.3's B0 block: `driver-tests.txt` | 0.00 | none |
+| 4 | the dry run, its results committed, the dry-run tree removed | 0.00 | none |
+| 5 | the settings row, then `claude --version` | 0.00 | none |
+| 6 | sign B1 with the dry run's sha256 | — | (90.00 − spent) > 10.50 |
+| 7 | §8i.5's pre-check, with `SBIN_ROOT` and `SBIN_NEED_BYTES` | 0.00 | none |
+| 8 | ≤ 3 haiku flag probes through `wrap` | ≤ 0.50 in all | (90.00 − spent) > 0.50 before each |
+| 9 | 5 capture sessions through `wrap`, each with its procedure-log line | ≤ 2.00 each, ≤ 10.00 in all, unmeasured | (90.00 − spent) > 2.00 before each |
+| 10 | the BrittonGames snapshot before B2 | 0.00 | none |
+
+```bash
+# 1. The corpus onto main. It is detached at the pin 61f590e today, and its main is at 285e011.
+( C=D:/repos/redkiln-corpus
+  [ -z "$(git -C "$C" status --porcelain)" ] || { echo "FAIL: the corpus is not clean"; exit 1; }
+  git -C "$C" switch main || exit 1
+  [ "$(git -C "$C" rev-parse HEAD)" = 285e011c70cfa0fc92d91089792834846d99bcf7 ] || { echo "FAIL: main is not 285e011; re-check the patches apply"; exit 1; } )
+# 2. Sign D21-143's B0 line in place first. Then the B0 corpus commit, from D21-140 item 2's private-copy patches.
+#    DRV is P5's patch until the LFS fix (owed item (a)) lands; after that it is the fixed patch.
+( C=D:/repos/redkiln-corpus; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
+  DRV=${DRV:-$S/S8I-P5-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
+  for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply --check "$p" || { echo "FAIL: $p does not apply"; exit 1; }; done
+  for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply "$p" || exit 1; done
+  git -C "$C" add runner/src/main.rs runner/src/sbin.rs results/audit-s.py results/s-bin/audit-fixtures || exit 1
+  git -C "$C" commit -m "s8i B0: the S-BIN driver (sbin-probe) and audit-s.py bin (D21-140 item 2)" || exit 1
+  [ -z "$(git -C "$C" status --porcelain -- runner results/audit-s.py)" ] || { echo "FAIL: runner/ or audit-s.py not clean after the commit"; exit 1; } )
+# 3. §8i.3's B0 block, as written. It writes results/s-bin/driver-tests.txt.
+# 4. The dry run. It spawns the stub only and prints the dry run's and driver-tests.txt's sha256.
+bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
+#    Then commit its results in the corpus, and remove the dry run's 21.5 GB review repository:
+( C=D:/repos/redkiln-corpus
+  git -C "$C" add results/s-bin/dry-run.jsonl results/s-bin/driver-tests.txt results/s-bin/dry-run results/s-bin/raw/dry-run results/s-bin/rendered/dry-run || exit 1
+  git -C "$C" commit -m "s8i B0: S-BIN's zero-spend dry run and the driver's test output" || exit 1
+  python D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_review.py remove )
+# 5. The CLI freeze before B1 (D21-43 N22; s8h §8h.8). ~/.claude-personal/settings.json has no "env" block today
+#    (measured: its top-level keys are autoMode, effortLevel, enableWorkflows, enabledPlugins, extraKnownMarketplaces,
+#    pluginConfigs, skipWorkflowUsageWarning, statusLine, theme). Add, by hand:   "env": { "DISABLE_AUTOUPDATER": "1" }
+#    Then read the set's version from a plain terminal:   claude --version
+# 6. Sign D21-143's B1 line in place, with the dry run's sha256 from step 4, only if (90.00 - spent) > 10.50.
+# 7. §8i.5's pre-check block, as written, with these two values set in the same shell first:
+export SBIN_ROOT=D:/sb
+export SBIN_NEED_BYTES=0   # REPLACE 0 with extension 3's figure (0 makes the pre-check refuse). It is
+                           # ceil((largest base + largest growth) x 1.1). The largest base alone is 21,560,069,565
+                           # bytes (item 3), so the figure is above 23,716,076,522.
+# 8. B1's flag probes, at most three. For each, check (90.00 - spent) > 0.50, then run §8i.5's runner launch block with:
+SBIN_ARGV=(sbin-probe --flag-probe --model haiku --out results/s-bin/probes.jsonl)
+#    Stop after the probe that shows all three properties: the card adopted with Read+Bash under --json-schema,
+#    apiKeySource none, and the init tool set equal to the card's. A probe that fails refuses non-zero: stop and report.
+# 9. The five capture sessions, items 1 to 5 in order. For each N, check (90.00 - spent) > 2.00, then:
+N=1   # then 2, 3, 4, 5
+( [ ! -e D:/sb/cap/item-$N ] || { echo "FAIL: D:/sb/cap/item-$N exists; a copy is never reused"; exit 1; }
+  mkdir -p D:/sb/cap && cp -a D:/sb/base/item-$N D:/sb/cap/item-$N )
+#    Open the editor on D:/sb/cap/item-$N/OurGame/OurGame.uproject. Then run §8i.5's capture block with:
+TREE=D:/sb/cap/item-$N
+#    In the session: /ue-verify <ARGS[N]>, confirming first that monolith_status() reports this copy's project.
+#    Copy each capture to D:/repos/redkiln-corpus/results/s-bin/captures/item-$N/ and hash it with sha256sum.
+#    Append ONE line to results/s-bin/captures/procedure-log.txt in the corpus:
+#    item=<n> tree=D:/sb/cap/item-<n> model=<id> cost_usd=<x.xx> sha256=<64 hex,comma-joined> shows_subject=<yes|no> utc=<YYYY-MM-DDTHH:MM:SSZ>
+#    Close the session and the editor. No UnrealEditor process may survive (Halt 6). Delete D:/sb/cap/item-$N.
+#    A shows_subject=no on any tree is a stop (§8i.6).
+# 10. Before B2: run §8i.5's BrittonGames snapshot block with
+WHEN=before-B2
+```
+
+`ARGS[N]` follows amendment item 2's rule: the item commit's changed `.uasset`/`.umap` paths in git's order, mapped to
+object paths, then the literal suffix ` — write the capture_scene_preview of the k-th asset above to
+_s-bin/captures/capture-<k>.png`. The paths come from P7's fixture, and item 5's comes from R's diff, read-only:
+- 1 (`cc0cf2d01`): `/Game/UI/Inventory/WBP_StashRow`
+- 2 (`fa1ea72f4`): `/Game/Tests/FTEST_Inventory_Stash`
+- 3 (`e83463288`): `/GameCore/Blueprints/BP_GamePlayerState /GameCore/Data/Items/DA_Item_Sword`
+- 4 (`a71265925`): `/Game/UI/Inventory/WBP_LoadoutScreen`
+- 5 (R = `6a101bdcd`, once extension 1 is appended): `/Game/UI/HUD/WBP_GameVitals`
+
+After each batch, the spend table's *spent so far* column is updated by dated edit, from the records, the probes and
+the procedure log.
 
 ### 8i.6 Kill and abort conditions
 
@@ -1194,6 +1581,13 @@ either taken in the record or named as owed with an owner.
    - (c) Rename the two literal sites, which is a kernel change no stage owes.
 
    This gates Checkpoint 8i, not B0 or B1, and it is left for a ruling.
+   *(dated 2026-10-03, s8i build)* **Ruled and built.** D21-141 took (a), provisionally under D21-105 (Weigh-In
+   wi-45f99f). Package S8I-P8 made the dated edit in (8): `kt_scan` blanks string literals with 8a's own `sed`,
+   after `comment_line`, and the scan and its controls share that function. Two controls were added: the
+   `lattice.rs` string-literal line is admitted, and a line that holds the type beside the same string is caught.
+   (8)'s lines were run read-only from this file's bytes over `crates/rk-kernel/src` at `d349359`. The scan passed
+   with all six controls, and the drafted pipeline still found the two lines above. Two in-memory mutants each
+   failed the block: dropping the blanking, and blanking the type everywhere.
 
 **The Rust — named, red first, each with its mutant.** `CS` below is the crate `s8a`'s record homes the type in
 (`rk-ports` at `ca8f387`; ADR-0099 clause 5). `s8a`'s own test that the slot is sealed —
@@ -1427,7 +1821,8 @@ T=$(mktemp -d "$PWD/target/cp8i/t.XXXXXX"); rc=$?
 # is written (§8i.10). Empty means not yet written, and the block stops here.
 SBIN_F=
 BIN_ADR=
-SBIN_LEDGER=
+# *(dated 2026-10-03, s8i build)* D21-143, S-BIN's go-ahead entry, was written (OPEN) on 2026-10-03; SBIN_LEDGER records it (D21-47).
+SBIN_LEDGER=D21-143
 printf '%s\n' "$SBIN_F" | grep -qxE 'F[0-9]+' || { echo "FAIL: SBIN_F (the S-BIN finding's id) is not recorded in this block — write it by dated edit the day the draft is written"; exit 1; }
 printf '%s\n' "$BIN_ADR" | grep -qxE '0[0-9]{3}' || { echo "FAIL: BIN_ADR (the Binary record's four-digit id) is not recorded in this block"; exit 1; }
 printf '%s\n' "$SBIN_LEDGER" | grep -qxE 'D[0-9]+-[0-9]+' || { echo "FAIL: SBIN_LEDGER (the ledger entry holding the go-ahead lines) is not recorded in this block"; exit 1; }
@@ -1837,13 +2232,18 @@ ctl=$(printf 'crates/rk-kernel/src/workflow/gate.rs:1:    /// spelled "automated
 [ -z "$ctl" ] || { echo "FAIL: the closed-reason scan counts a doc comment as code"; exit 1; }
 # ADR-0135's forbids bullet and Checkpoint 8a's ban STAND (D21-48 X16): on either route the kernel names no ChangeSummary
 # on a CODE line. Its own `change_summary` verb and port-method call are admitted: they name a method, not the type.
+# *(dated 2026-10-03, s8i build)* D21-141 (TAKEN PROVISIONALLY under D21-105, Weigh-In wi-45f99f): string literals are blanked
+# before the match, as Checkpoint 8a's k_filter does, so the artifact-kind string "ChangeSummary" on a kernel code line is
+# admitted and a type use is still caught. The scan and its controls share kt_scan. It replaces the drafted line
+# ~~kt=$(printf … | grep -E "$KT_RE" | comment_line)~~ and its control pipeline.
 KT_RE='\b(Binary)?ChangeSummary\b'
+kt_scan() { comment_line | sed -E 's/"([^"\\]|\\.)*"/""/g' | grep -E "$KT_RE"; }
 raw=$(grep -rnE "$KT_RE" crates/rk-kernel/src --include=*.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the kernel type scan could not run (grep rc=$rc)"; exit 1; }
-kt=$(printf '%s\n' "$raw" | grep -E "$KT_RE" | comment_line)
+kt=$(printf '%s\n' "$raw" | grep -E "$KT_RE" | kt_scan)
 [ -z "$kt" ] || { echo "FAIL: crates/rk-kernel/src names the type on a code line — the kernel carries the summary opaque (D21-48 X16):"; printf '%s\n' "$kt"; exit 1; }
-for ctl in 'F|crates/rk-kernel/src/workflow/gate.rs:1:use rk_ports::ChangeSummary;' 'F|crates/rk-kernel/src/workflow/gate.rs:1:    attachment: BinaryChangeSummary,' 'A|crates/rk-kernel/src/workflow/gate.rs:1:    /// rk-cli serialises a ChangeSummary into these bytes' 'A|crates/rk-kernel/src/runtime/step.rs:1:        "change_summary" => toolchain.change_summary("").map(|_| ()),'; do
-  want=${ctl%%|*}; line=${ctl#*|}; got=$(printf '%s\n' "$line" | grep -E "$KT_RE" | comment_line)
+for ctl in 'F|crates/rk-kernel/src/workflow/gate.rs:1:use rk_ports::ChangeSummary;' 'F|crates/rk-kernel/src/workflow/gate.rs:1:    attachment: BinaryChangeSummary,' 'A|crates/rk-kernel/src/workflow/gate.rs:1:    /// rk-cli serialises a ChangeSummary into these bytes' 'A|crates/rk-kernel/src/runtime/step.rs:1:        "change_summary" => toolchain.change_summary("").map(|_| ()),' 'A|crates/rk-kernel/src/lattice.rs:1:        && ["Changeset", "ImplReport", "ChangeSummary"]' 'F|crates/rk-kernel/src/workflow/memo.rs:1:    fn kind(s: ChangeSummary) -> String { "ChangeSummary".into() }'; do
+  want=${ctl%%|*}; line=${ctl#*|}; got=$(printf '%s\n' "$line" | grep -E "$KT_RE" | kt_scan)
   if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: the kernel type scan cannot see a synthetic use — it is vacuous for: $line"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: the kernel type scan fires on a line that names no type: $line"; exit 1; }; fi
 done
 rk_named rk-adapter-toolchain-node classify::ac497_classify_binary_paths
