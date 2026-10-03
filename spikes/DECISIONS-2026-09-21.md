@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-143), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-144), and what they license
+
+*(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-143)"**; `D21-144` is appended with this move.)*
 
 *(Title corrected 2026-10-03 at `s8i`'s build, package R1FIX-8i (refuting round 1's minor): it read **"2026-09-21 … 2026-09-28"** while the file carried entries dated 2026-10-02 (`D21-138` … `D21-142`) and `D21-143`, drafted 2026-10-03. The three title moves above corrected the id range only. No entry is added with this correction.)*
 
@@ -6491,3 +6493,52 @@ operator's to confirm before B1. This entry stays OPEN, and nothing here signs a
 S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
 
 S-BIN go-ahead B1 <YYYY-MM-DDTHH:MM:SSZ> — at most 3 haiku flag probes on throwaway trees, then the five /ue-verify capture sessions on D:/sb/cap/item-1..5, caps used so far $0.00; fixture proofs: Checkpoint 8h d24d15a, dry run <sha256 of results/s-bin/dry-run.jsonl>; amendment 285b659fbcd3cd4d424541c4211e3b6398ea26ed
+
+---
+
+## D21-144 · `s8i`: the S-BIN driver's out-of-tree audit is a hardened, measured denylist at runtime, with an allowlist shadow audit that holds flagged records unscored
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-10-03, pending the operator's confirmation — Weigh-In
+wi-35d9f8** (two-way door, judgment; defaulted to A). It is ruled by the blocker panel, 2-1, with the dissent recorded below.
+The record is `target/afk-wf/s8i-ruling-d21-144.json`. No accepted ADR moves. METHOD-S's amendment item 4 changes only
+by an appended extension, R5FIX-8i.
+
+**The blocker.** Five refuting rounds over the driver alternated between two failure modes:
+- **False voids**, each a paid Opus dispatch thrown away. R3FIX audited every string and voided 59/754 honest corpus
+  records (7.8%).
+- **Missed reads**, each a seeded answer scored as a detection. R4FIX audited reads only, against a denylist of
+  answer-bearing roots, and round 5 found reads that escape it:
+  - a path carried by an assignment and read through `$VAR`;
+  - a recursive read of an ancestor (`grep -r /d/repos`, or Glob/Grep on `D:/`);
+  - copies of seed-stating files outside the registered roots;
+  - the `/c/` and `~` spellings of the session's own tool-results.
+
+**Ruled.**
+1. **The runtime void, which voids and applies §8i.6's halt, is R4's reads-only lexer plus four additions:**
+   - assignment tracking and `$X` expansion, with assignment values audited;
+   - the ancestor rule: a recursive read rooted at or above a registered root reads that root;
+   - one spelling fold applied before every containment test;
+   - named roots taken from a **measured read-only sweep** of the reachable drives for the seed tokens, the seed and fix
+     blob oids and the fixture's seed statements. The expected set is D:/r6c, D:/repos/redkiln-sev and %TEMP%/claude,
+     plus the roots already registered.
+2. **A shadow audit that never voids, retries or counts toward caps.** It applies an allowlist over the kept raw
+   transcript: the copy slug's tool-results, OS and toolchain roots, and the UE engine install, which is measured from
+   B1 and provisional until then. Temp counts only where the session wrote the path first. An unresolved `$VAR` is
+   flagged.
+   - A flagged record is **held unscored** until the operator clears or voids it, at the item-4 gate before B1 and
+     before each later batch is scored.
+   - An operator void is `void: out-of-tree`, gets no AFK retry, and does not count toward the second-void halt.
+3. **Acceptance:**
+   - every round-5 must-catch case is a red-first named test;
+   - the 754-record corpus replay stays at 0 false voids;
+   - every 838-transcript void is checked as a genuine read;
+   - a killing mutant exists per rule.
+   - If the sweep finds copies it cannot bound, or the denylist still leaks, escalate to B as the runtime void by a
+     separate proposed extension. Never slide into it silently.
+
+**Dissent.** Judge 3 would make B the runtime void, since only an allowlist fails closed. The shadow hold answers that
+for scoring, and judge 3's position is the named escalation. Judge 1 objects in part to a human-held step. The flag
+itself is mechanical, and the operator's clear-or-void step is the item-4 confirmation already owed.
+
+**Operator housekeeping before B1** (deferred gate, deletions or moves): move D:/r6c and the redkiln-sev copies off
+reachable paths, and clear %TEMP%/claude task outputs. This lowers both the false-void surface and the leak surface.
