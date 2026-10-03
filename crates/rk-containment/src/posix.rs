@@ -3,6 +3,9 @@
 //! Also [`spawn_into_job`] (the name is the cross-platform primitive's; on POSIX the "job" is the
 //! pgid) and the two `#[doc(hidden)]` test-support probes. **No `unsafe` in this file** — every signal call is `ffi::posix`'s (`s7c` §7c.10).
 //!
+//! *(Dated 2026-10-03: this arm has now RUN, on `ubuntu-latest` CI; what that run measured is
+//! recorded at [`Group::kill`] and [`is_alive`]. The paragraph below is kept as it was written.)*
+//!
 //! **This arm is written and not run.** The box this crate was written on is Windows
 //! (`00-preamble.md`: every block runs on this box), the POSIX arm is **ARMED to a recorded
 //! `ubuntu-latest` CI run** that has never executed (`s7c` §7c.10 AC-224; ADR-0127 §Consequences),
@@ -47,15 +50,43 @@ impl Group {
         self.pgid
     }
 
-    /// `killpg(pgid, SIGKILL)`. An already-empty group is success. The [`KillDropOrder`] probe
-    /// records the kill only when the call succeeded — never for a `killpg` that failed.
+    /// `killpg(pgid, SIGKILL)`, then **wait until every member has terminated** — the Windows arm's
+    /// contract (`TerminateJobObject` and a bounded wait per member), so a caller's first read after
+    /// `kill` returns sees a dead tree on both arms. An already-empty group is success. The
+    /// [`KillDropOrder`] probe records the kill only when it completed.
+    ///
+    /// "Terminated" is no longer listed by [`Group::pids`] (gone, or a zombie): a zombie has exited, and its reaper
+    /// is the caller's own `child.wait()` (the direct child) or PID 1 (an orphan), so waiting for the
+    /// reap could deadlock a caller that waits after the kill. The wait is [`KILL_WAIT_TICKS`] polls
+    /// of [`KILL_WAIT_TICK`] (10 s, the Windows per-member bound), counted rather than clocked
+    /// (`clippy.toml` bans the clock and `thread::sleep`, AC-001/AC-003).
+    ///
+    /// *(Dated 2026-10-03: the first `ubuntu-latest` run measured the old return-at-once `kill` —
+    /// `run_bounded_kills_tree_at_timeout` read the orphaned holder alive on the first read after
+    /// `TimedOut` on one run and dead on the next.)*
     ///
     /// # Errors
-    /// [`ContainError::Kill`] if `killpg` fails for a reason other than `ESRCH`.
+    /// [`ContainError::Kill`] if `killpg` fails for a reason other than `ESRCH`, or a member is
+    /// still running when the wait is spent; [`ContainError::Enumerate`] if `/proc` cannot be read.
     pub fn kill(&self) -> Result<(), ContainError> {
         sys::killpg_all(self.pgid).map_err(ContainError::Kill)?;
-        self.order.record_kill();
-        Ok(())
+        for _ in 0..KILL_WAIT_TICKS {
+            if self.pids()?.is_empty() {
+                self.order.record_kill();
+                return Ok(());
+            }
+            std::thread::park_timeout(KILL_WAIT_TICK);
+        }
+        let left = self.pids()?;
+        if left.is_empty() {
+            self.order.record_kill();
+            return Ok(());
+        }
+        Err(ContainError::Kill(std::io::Error::other(format!(
+            "pid(s) {left:?} of group {} did not terminate within {} ms of killpg(SIGKILL)",
+            self.pgid,
+            KILL_WAIT_TICK.as_millis() * u128::from(KILL_WAIT_TICKS)
+        ))))
     }
 
     /// Whether any member of the group still exists (`kill(-pgid, 0)`) — the portable probe.
@@ -69,7 +100,10 @@ impl Group {
     }
 
     /// The pids in the group, read from `/proc` (Linux): every `/proc/<n>/stat` whose fifth
-    /// field equals the pgid. A zombie is listed until reaped.
+    /// field equals the pgid and whose state is not `Z`. A zombie has exited and is NOT listed —
+    /// the Windows job's process list likewise holds only active processes, and [`is_alive`] reads
+    /// a zombie dead. *(Dated 2026-10-03: a zombie used to be listed until reaped, so a group
+    /// emptied by the kill still listed its orphans until PID 1 reaped them.)*
     ///
     /// # Errors
     /// [`ContainError::Enumerate`] if `/proc` cannot be read.
@@ -85,7 +119,7 @@ impl Group {
             let Ok(stat) = fs::read_to_string(entry.path().join("stat")) else {
                 continue;
             };
-            if stat_pgrp(&stat) == Some(self.pgid) {
+            if stat_pgrp(&stat) == Some(self.pgid) && stat_state(&stat) != Some("Z") {
                 out.push(pid);
             }
         }
@@ -106,6 +140,23 @@ impl Drop for Group {
         // A process group has no handle to close and no KILL_ON_JOB_CLOSE: what a caller did not
         // kill survives the drop. That asymmetry is the POSIX arm's and is recorded here, not hidden.
     }
+}
+
+/// One poll of [`Group::kill`]'s wait for its members.
+const KILL_WAIT_TICK: std::time::Duration = std::time::Duration::from_millis(5);
+/// How many polls [`Group::kill`] waits: 2,000 × 5 ms = 10 s, the Windows arm's per-member bound
+/// (`windows.rs`'s `KILL_WAIT_EACH_MS`).
+const KILL_WAIT_TICKS: u32 = 2_000;
+
+/// Whether `pid` is a zombie (exited, not yet reaped): `/proc/<pid>/stat`'s state field is `Z`.
+/// A pid with no readable `/proc` entry is not one — gone, or a platform with no `/proc`.
+fn is_zombie(pid: u32) -> bool {
+    fs::read_to_string(format!("/proc/{pid}/stat")).is_ok_and(|stat| stat_state(&stat) == Some("Z"))
+}
+
+/// The state field of a `/proc/<pid>/stat` line: the first field after the LAST `)`.
+fn stat_state(stat: &str) -> Option<&str> {
+    stat[stat.rfind(')')? + 1..].split_whitespace().next()
 }
 
 /// The pgrp field of a `/proc/<pid>/stat` line: the fifth field, after `pid (comm) state ppid`,
@@ -151,7 +202,13 @@ pub fn terminate_pid(pid: u32, code: u32) -> Result<(), ContainError> {
     sys::terminate_pid(pid, code).map_err(ContainError::Kill)
 }
 
-/// Test support: `kill(pid, 0)` — alive (or a zombie not yet reaped).
+/// Test support: `kill(pid, 0)`, and **not a zombie** — an exited process reads dead whether or not
+/// it has been reaped, as `GetExitCodeProcess` reads it on Windows.
+///
+/// *(Dated 2026-10-03, the first `ubuntu-latest` run: a zombie used to read alive until reaped, so
+/// an orphan the kill had already ended read alive until PID 1 reaped it. `rk-cli`'s run-lock
+/// predicate below already ANDs this with [`process_start_time`], which reads nothing for a zombie,
+/// so its behaviour is unchanged.)*
 ///
 /// *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 6, proposed.)* **Now also a
 /// production call:** `rk-cli`'s run-tree lock builds its liveness predicate from this and
@@ -160,7 +217,7 @@ pub fn terminate_pid(pid: u32, code: u32) -> Result<(), ContainError> {
 #[doc(hidden)]
 #[must_use]
 pub fn is_alive(pid: u32) -> bool {
-    sys::is_alive(pid)
+    sys::is_alive(pid) && !is_zombie(pid)
 }
 
 /// The start time of the LIVE process `pid` names: `/proc/<pid>/stat`'s field 22 (`starttime`,
