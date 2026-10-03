@@ -615,6 +615,27 @@ disclosed here:
   the dispatch copy's own. Paths outside all of these, such as the engine install, are not out-of-tree.
   *(dated 2026-10-03, s8i build, R3FIX-8i)* Before that test, each string's separators are collapsed and its `.` and `..` resolved, and a
   relative path is resolved against the child's cwd: the copy, as moved by `cd` (METHOD-S's R3FIX-8i extension, item 1).
+*(dated 2026-10-03, s8i build, R5FIX-8i)* Assignment values are audited and `$VAR` is expanded in read positions. A
+  recursive read (`grep -r`/`-R`, `rg`, `find`, `ls -R`, `tree`, `du`, `git grep --no-index` or `git -C <dir> grep`, a
+  `Glob` or `Grep` tool path) of a registered root or an ancestor of one reads that root. Spellings fold (`/c/`,
+  `/mnt/c/`, `~`, `$HOME`, `$USERPROFILE`, `$TEMP`, `/tmp`) before every test, a POSIX path's `..` resolved first. The
+  roots list gains the sweep-measured directories: `D:/r6c`, `D:/repos/redkiln-sev`, `~/.claude-personal`,
+  `~/.claude-backup`, `~/AppData/Local/JetBrains`, `~/AppData/Local/Packages/Claude_pzs8sxrjxfjjc`, and under the temp
+  directory `claude`, `tmp.uDZZzvzEF4`, `h.md`, `l143` and `ms0` (METHOD-S's R5FIX-8i extension, items 2 and 3).
+  *"Paths outside all of these, such as the engine install, are not out-of-tree"* still holds for the runtime void.
+  PROVISIONALLY, the child's own background-task output, `<temp>/claude/<copy slug>/<session>/tasks/`, is in-tree
+  (that extension's item 4; returned to the orchestrator as a blocker).
+- **Shadow out-of-tree audit.** *(dated 2026-10-03, s8i build, R5FIX-8i)* D21-144's allowlist runs over the kept raw
+  transcript's tool uses, never the digest, as a shadow: it never voids, retries, counts toward a cap or halts. A
+  read-position path outside the dispatch copy is flagged unless it is under the copy slug's `tool-results` (every
+  spelling), `C:/Windows`, `C:/Program Files*`, Git Bash's `/usr`, `/bin`, `/etc`, `/dev/null` or `/mingw64`, or
+  `~/AppData/Local/UnrealEngine` (listed provisionally until B1 measures the engine's paths). A temp path is allowed
+  only where the same session wrote it first (the `Write` tool, a `>`/`>>` target, a `cp`/`mv` destination, a
+  `$(mktemp)` variable). A read-position word with an unresolved `$VAR`, `${…}` or `$(…)` is flagged. The record
+  carries `oot_shadow` `{verdict, flagged_reads, allowlist_version}` (version `r5fix-8i-1`). A flagged record is held
+  unscored: `audit-s.py bin` shows it as `HELD:oot-shadow` and gives its pass `BAD-held` until the operator clears or
+  voids it in `results/s-bin/oot-shadow-rulings.jsonl`, at the item-4 gate before B1 and before each later batch is
+  scored (METHOD-S's R5FIX-8i extension, item 5).
 - **Cited fields** are read from the digest's findings only, never from the prose. A field counts when its name
   appears as the rendering writes it (dotted, indexed or in backticks), or when a finding names a path the summary
   attributes to it. The token table is `FIELD_TOKENS`. A finding naming an item's asset path cites `assets`.
@@ -626,7 +647,7 @@ disclosed here:
   refuses the spawn) and after it (a survivor halts the set, the copy is deleted, and its `tree_path` in the record
   keeps the path from being reused). A second `observed_model` ~~among valid records~~ *(dated 2026-10-03, s8i build, R1FIX-8i: among every record that carries one, voids included, as METHOD-S item 5 and Checkpoint 8i (4)'s `model` line read it)* halts the set. So does the same
   `(pass, item)` voiding twice.
-- **The record** carries all 33 §8i.7 names, which `the_dispatch_cap_refuses_before_spawning` asserts against a
+- **The record** carries all 33 §8i.7 names *(dated 2026-10-03, s8i build, R5FIX-8i): 34, with `oot_shadow`)*, which `the_dispatch_cap_refuses_before_spawning` asserts against a
   list transcribed from §8i.7. It also carries `attempt`, `cli_version_before`, `init_tools`,
   `node_modules_linked` (null), `exit_code`, `timed_out`, `total_cost_source`, `out_of_tree`, `synthetic_capture`,
   `rendered_sha256`, `model` and `effort`.
@@ -662,7 +683,7 @@ is authored and run **from Python, never the shell**, and must flip its test.
 | `an_out_of_tree_read_voids_the_record` | §8i.2 item 4 | audit `Read` paths only, not `Bash` commands; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `ran_automation` counting a command that only names the suite; *(dated 2026-10-03, s8i build, R3FIX-8i)* also no `..` resolution, no separator collapse, relative paths ignored, no `cd` tracking, and `dispatch_one` handing the audit no copy path or another review root; *(dated 2026-10-03, s8i build, R4FIX-8i)* also the digest or a `Bash` description audited, a subshell's `cd` persisted, the tool-results exemption dropped, a `cd` option read as its target, a `cd` after a keyword missed, a grep's pattern or `echo`'s operands audited, no trailing-punctuation trim, `popd` untracked, a heredoc's body not read or read as commands, `grep -f`'s file, an input redirect, a `Grep` path or `git -C`'s directory not read, the whole session directory exempt, the exemption tested before resolution, a grep option's value taken as the pattern, a `Bash` command's separators not collapsed, and `dispatch_one` handing the audit no account roots |
 | `api_key_source_other_than_none_voids_before_scoring` | D21-42 17a | skip the init check |
 | `a_version_move_between_dispatches_halts_the_set` | Halt 2 | compare against the floor, not the set's first version; *(dated 2026-10-03, s8i build, R1FIX-8i)* also, on `dispatch_one`'s path: the set check reading no records, no Halt 2 when init's CLI differs from the pre-read, no halt on a second observed model, the first model read from valid records only, and the model compared only when this dispatch is valid; *(dated 2026-10-03, s8i build, R2FIX-8i)* also probe's loop reading the version once per run, ignoring a pre-spawn or a post-record halt; `dispatch_one` skipping the launch-record check, admitting no launch record or a different version, or recording no launch version; and the launch record read from the first of two `CLI_VERSION_BEFORE` lines |
-| `the_dispatch_cap_refuses_before_spawning` | §8i.5 caps | check the cap after the child is spawned; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `cap_state` skipping voided records, and `fixture.json`'s `ceiling_secs` ignored, defaulted to `--timeout-secs`, or accepted when it differs; *(dated 2026-10-03, s8i build, R2FIX-8i)* also a cost-less dispatch charged 0.00, not the bound |
+| `the_dispatch_cap_refuses_before_spawning` | §8i.5 caps | check the cap after the child is spawned; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `cap_state` skipping voided records, and `fixture.json`'s `ceiling_secs` ignored, defaulted to `--timeout-secs`, or accepted when it differs; *(dated 2026-10-03, s8i build, R2FIX-8i)* also a cost-less dispatch charged 0.00, not the bound; *(dated 2026-10-03, s8i build, R5FIX-8i)* also the record without `oot_shadow` |
 | `resume_is_keyed_per_arm_item_pass` | METHOD-S §0 | key on `item` alone; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` resuming over no records, and no halt in the run that writes an item's second void; *(dated 2026-10-03, s8i build, R2FIX-8i)* also probe's loop (`run_items`) ignoring a post-record halt |
 | `a_surviving_unreal_process_halts_before_the_next_dispatch` | Halt 6 | skip the process check |
 | `stripped_path_set_is_identical_across_all_five_trees` | §8i.2 item 3 (D21-43 N20) | strip each tree by its own item's diff |
@@ -673,8 +694,16 @@ is authored and run **from Python, never the shell**, and must flip its test.
 | `each_dispatch_runs_in_a_fresh_copy_at_a_never_used_path` | §8i.2 item 4, §8i.4 | reuse the previous dispatch's path; *(dated 2026-10-03, s8i build, R1FIX-8i)* also a B4 re-run's copy path or raw stem without its arm, a re-run with no valid missed original or after a detected one, the arm and `--rerun` disagreeing, and any field name accepted; *(dated 2026-10-03, s8i build, R3FIX-8i)* also a B4 re-run with no `--only-item` run over the default five items, and an `--only-item` outside 1–5 accepted |
 | `a_dirty_or_mismatched_copy_refuses_before_spawning` | §8i.4's pre-spawn checks | read tracked files only, not untracked and ignored ones; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` ignoring the pre-spawn miss |
 | `an_account_project_dir_for_the_copy_path_refuses_before_spawning` | §8i.4 (transcripts and auto-memory are keyed by path) | check `~/.claude` only, not `~/.claude-personal`; *(dated 2026-10-03, s8i build, R1FIX-8i)* also exercised through `dispatch_one`, whose miss the row above's mutant removes; *(dated 2026-10-03, s8i build, R2FIX-8i)* also the production account roots without `~/.claude-personal` |
-| `a_dirty_runner_tree_refuses_before_spawning` | §8i.7's `runner_commit` | record `runner_commit` without reading `runner/`'s status; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` recording `HEAD` without reading `runner/`'s status |
+| `a_dirty_runner_tree_refuses_before_spawning` | §8i.7's `runner_commit` | record `runner_commit` without reading `runner/`'s status; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` recording `HEAD` without reading `runner/`'s status; *(dated 2026-10-03, s8i build, R5FIX-8i)* also `runner_commit` reading `HEAD`, not the commit that last changed `runner/` |
 | `every_test_spawns_only_an_injected_stub_never_claude` | the stub rule below | the helper returns the default `claude` |
+| `an_assignment_carried_path_voids` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144 (a) | an assignment's value not audited; no `$VAR` expansion |
+| `a_recursive_read_of_an_ancestor_voids` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144 (b) | grep's `-r` ignored; `rg` not recursive; `find`, `ls -R`, `tree`, `du` not walked; `git grep --no-index` or `git -C <dir> grep` not walked; no walk of the cwd; a root read only when named exactly; the account roots' `projects/` not walked; a `cd` target not folded |
+| `a_tool_glob_or_grep_on_an_ancestor_voids` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144 (b) | a `Glob`/`Grep` tool path not walked; a `Glob` pattern's literal directory not walked; `Glob`'s path read as a plain path |
+| `a_sweep_measured_root_voids` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144 (d) | the sweep's roots not checked by name; each sweep root dropped (one row each); `$TEMP`/`$TMP` or `/tmp` not folded; a POSIX path folded before its `..`; the own task-output exemption dropped, or widened to the whole slug |
+| `tool_results_c_and_tilde_spellings_are_exempt` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144 (c) | `~`, `$HOME`, `$USERPROFILE`, `/mnt/x/` or `/x/` not folded; no fold before the containment tests |
+| `the_shadow_audit_flags_reads_outside_the_allowlist` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144, the shadow audit | the shadow never flags; each allowlist entry dropped (one row each); a trailing `*` read as a boundary; `tool-results` or an in-copy read flagged; the verdict always clear; the shadow computed over no tool uses |
+| `a_temp_read_written_earlier_in_the_session_is_not_flagged` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144, the temp rule | temp allowed wholesale; a write not recorded; a `>` target, a `cp`/`mv` destination or the `Write` tool's path read as a read; a `mktemp` variable untracked; a descriptor before `>` read as a word |
+| `an_unresolved_var_in_a_read_position_is_flagged_not_voided` *(dated 2026-10-03, s8i build, R5FIX-8i)* | D21-144, the shadow's unresolved rule | an unresolved variable not flagged; a heredoc body's variable flagged; a bare or exported assignment untracked; a subshell's variables outliving it; a single-quoted `$` read as a variable |
 
 **No driver test reaches a real `claude`.** The runner's global `--claude-bin` defaults to `claude`. So every test takes
 its binary from one helper, `stub_claude()`, which returns a stub path and asserts that its file name is neither
@@ -698,10 +727,11 @@ test -f runbook/tools/nodispatch.sh || { echo "FAIL: runbook/tools/nodispatch.sh
 nd_setup "$PWD/target/s8i-b0/nd" || exit 1
 out=$(cd D:/repos/redkiln-corpus/runner && nodispatch cargo test --bin redkiln-spike-runner -- sbin::tests:: 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the driver's tests did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 25 passed; 0 failed' || { echo "FAIL: the sbin selection did not run exactly the 25 tests §8i.3 names"; exit 1; }
+# (dated 2026-10-03, s8i build, R5FIX-8i) 33 tests: §8i.3's 25 and R5FIX-8i's 8 named tests (D21-144). It read 25.
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 33 passed; 0 failed' || { echo "FAIL: the sbin selection did not run exactly the 33 tests §8i.3 names"; exit 1; }
 nd_check "B0 driver tests" || exit 1
 printf '%s\n' "$out" > D:/repos/redkiln-corpus/results/s-bin/driver-tests.txt || { echo "FAIL: could not keep the test output"; exit 1; }
-echo "B0 driver tests: 25 passed under the no-dispatch wrapper"
+echo "B0 driver tests: 33 passed under the no-dispatch wrapper"
 )
 ```
 
@@ -748,6 +778,14 @@ What it does and how it was checked:
   carries guard (4)'s own `BAD-<reason>` token, for example `rule_outcome_pass2=BAD-record`, and never
   `unregistered`. The three-record fixture yields `BAD-record` for both passes by design. On the six per-outcome
   fixtures both lines match the six-value pattern. Guard (4) already fails a `BAD` outcome over real records.
+
+*(dated 2026-10-03, s8i build, R5FIX-8i)* **The audit holds a shadow-flagged record (D21-144).** `bin` takes an
+optional third argument, `results/s-bin/oot-shadow-rulings.jsonl`: one line per ruling, `{"raw_ref": …, "ruling":
+"clear" | "void"}`. It reads nothing else. A flagged record with no ruling is shown as `HELD:oot-shadow` and not
+scored, and its pass's outcome is `BAD-held`; a cleared one is scored; an operator void is `out-of-tree(operator)`,
+never a miss. Three fixtures (`held`, `held-cleared`, `held-voided`) were red first and are green (*"fixtures: 10
+checked, 0 failed"*); eight new mutants and P6's six all killed. `var` and `typed` print the same bytes before and
+after over their committed inputs. The superseding patch is `S8I-R5FIX-8i-audit-bin.patch` (§8i.3's R5FIX-8i note).
 
 **The zero-spend dry run — S-BIN's fixture proof.** The driver runs end to end over a dispatch copy of item 1's review repository with the
 runner's global `--claude-bin` pointed at a stub that replays a recorded stream; the record it writes carries
@@ -1178,6 +1216,68 @@ What changed:
   `core.autocrlf=false` to a fresh `git archive` of `runner/`, it gives a `runner/src` byte-identical to the copy.
   Apply only this one, not P4's, P5's, F1's, R1FIX-8i's, R2FIX-8i's or R3FIX-8i's. P6's audit patch is applied beside
   it. §8i.5's packet names it as `DRV`.
+
+*(dated 2026-10-03, s8i build, R5FIX-8i)* **Refuting round 5's findings, fixed in the driver and the audit (package
+R5FIX-8i, under D21-144).** A ninth private copy, `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R5-corpus`, made from
+R4's copy (R4's keeps its bytes, `af5e29b4…2d082ae`), and an audit copy, `S8I-R5A-corpus`, made from P6's. Nothing
+wrote to `D:/repos/redkiln-corpus` or its `.git`, to `D:/sb`, `D:/repos/BrittonGames`, `D:/r6c` or the sweep's other
+roots.
+- **The sweep (D21-144 (d)), read-only, over C: and D:.** 5,066 start points, 15 patterns (the registered tokens, the
+  seed and fix oids, the item commits, the fixture's seed statement), an explicit skip list (the OS and toolchain
+  directories, junction aliases, the roots item 4 registers). 397 files hold a hit, bounded by eleven roots: `D:/r6c`,
+  `D:/repos/redkiln-sev`, `~/.claude-personal`, `~/.claude-backup`, `~/AppData/Local/JetBrains`,
+  `~/AppData/Local/Packages/Claude_pzs8sxrjxfjjc`, and under the temp directory `claude`, `tmp.uDZZzvzEF4`, `h.md`,
+  `l143` and `ms0`. 17 hits state no seed (mypy's `report.py`, *"entirely whitespace"*, and one client document's
+  prose) and are not registered, a judgement named in the METHOD-S extension. The OneDrive roots were checked by
+  metadata and their locally stored recent files only. The copies are bounded, so no escalation to B follows.
+- **What was built (METHOD-S's R5FIX-8i extension).** The runtime void's assignments, ancestor rule, spelling fold and
+  named roots; the shadow audit and the record's `oot_shadow`; `audit-s.py bin`'s hold; `runner_commit` as the commit
+  that last changed `runner/`. The replay found two more faults, fixed red first: a POSIX path is resolved before the
+  fold (`/tmp/../c/…`), and a descriptor before a redirect (`2>`) is not a word.
+- **Red first.** Each of the eight new tests went red for its stated reason with only behaviour-neutral scaffolding in
+  (`R5FIX-8i-red.out`); `the_dispatch_cap_refuses_before_spawning` went red on *"the record lacks §8i.7's
+  `oot_shadow`"*, and `a_dirty_runner_tree_refuses_before_spawning` on *"a results-only commit does not move
+  runner_commit"*. The audit's three hold fixtures went red (*"rule_outcome_pass1=BAD-held"* missing, and the usage
+  text on a third argument). All went green.
+- **Replays, from inside the test binary under `nd.sh`, in a separate replay copy never shipped.** Corpus records: 0
+  of 754 records void (15 files). The records carry only the digest, which is never audited, so this replay audits no
+  read input (`read_inputs=0`) and is not evidence of correctness (round 5's minor). Transcripts: 838 sessions, 13,147
+  tool uses. 71 runtime voids, every one card-shaped: R4FIX-8i's 69, each still voiding, and 2 new. One is genuine
+  (`find /d -name "*.js" -path "*/workflows/*"`, a walk of D:). One is a false void: a session read a mistyped
+  spelling of its own task-output path under `<temp>/claude`, a directory that does not exist. Exempting it would open
+  other slugs, so it is disclosed. Before the task-output exemption and the two replay fixes, 64 more sessions voided
+  on their own task output, and one more on `/tmp/../c/...`. The shadow audit flags 312 of the 838 sessions (10,786
+  reads), all 71 voids among them, so 241 sessions are flagged and not voided: the allowlist's measured false-flag
+  rate. By class of the flagged path: `D:/repos/redkiln-rs` 4,109 reads in 67 sessions; temp not written first 2,420
+  in 58; Git Bash words outside the allowlist (most are regex or sed operands read as paths) 1,544 in 263; other D:
+  paths 1,013 in 22; other words (escapes read as paths) 584 in 156; unresolved `$VAR` or `$(...)` 364 in 116; the
+  session's own task output 305 in 77; other C: paths 257 in 10; the review root outside the copy 185 in 17; the home
+  directory 5 in 2. The `/tmp/*.bak` write-then-restore pattern is clear; one `rm` of a temp path never written stays
+  flagged.
+- **Mutants, from `s8i_R5FIX-8i_mutants.py`, in the copy only, restore verified by sha256.** This package's rows: 78
+  rows, 77 flipped, and R5-B15 survives unobservably: the three repositories add no ancestor the sweep root
+  `D:/repos/redkiln-sev` does not (recorded, not counted). The earlier tables over the final bytes: 96 rows, 95
+  flipped, with R3-N2 unobservable as R4FIX-8i recorded; ten earlier rows whose code was rewritten are carried by
+  re-anchored `@R5` rows of the same wording (R4-S3, R4-S14, R4-S15, R4-S16, R4-S18, R3-N4@R4 and P4's M24, plus
+  R4FIX-8i's three). The audit's: 14 of 14 killed (8 new, P6's 6). The R4FIX-8i driver's summary line read *"SUMMARY
+  103/103 flipped"* with R3-N2 surviving; it counted the unobservable survivor as flipped (round 5's minor). This
+  driver prints the two separately.
+- **Readings, last in the copy, under `nd.sh`.** The sbin selection: `test result: ok. 33 passed; 0 failed`. The whole
+  runner suite: 167 passed, 1 failed, the same pre-existing `p7::tests::the_driver_matches_the_committed_catalog`.
+  clippy exits 0 with nothing for `sbin.rs`; `sbin.rs` is rustfmt-clean.
+- **The patches supersede R4FIX-8i's and P6's.**
+  `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R5FIX-8i-sbin-driver.patch` (sha256
+  `3357c3fb79cd7b0324b8ab40bfaf474be64e4140fd12817754f8633fe0e26bb0`), cumulative against a fresh `main` extract at
+  `285e011`: `runner/src/sbin.rs` (sha256 `bcdd084840e5c6bae3bc0eb887cafa7031915f4ed7eb8211f362925d5476e50f`, 8,024
+  lines) and P4's 6 lines in `runner/src/main.rs`.
+  `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R5FIX-8i-audit-bin.patch` (sha256
+  `e0243d5d4edeb9a7b538889e346d488d6e60c61a2f036c31ea0ccf7cb4eb4d32`), cumulative against `285e011`'s
+  `results/audit-s.py` (sha256 after: `bd6df55b28690913772c0fedef03c3a71526412447617d0566b1d758b16817dd`, CRLF kept)
+  and every file of `results/s-bin/audit-fixtures/` (ten fixtures). Each applied with `core.autocrlf=false` to a fresh
+  extract gives byte-identical files. Apply only these two. §8i.5's packet names them as `DRV` and `AUD`.
+- **Not done here, and owed.** The panel's ruling on the provisional task-output exemption and on the unregistered
+  incidental hits (the blocker returned with this package); refuting round 6; the operator's housekeeping and the
+  item-4 gate (§8i.5's owed items (g) and (h)); the engine-path allowlist entries from B1's transcripts.
 
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
@@ -1761,6 +1861,21 @@ note), and step 2's check names it. The dry-run script's sha256 is now `15990996
 *(dated 2026-10-03, s8i build, R4FIX-8i)* **`DRV` is superseded again (s8i refuting round 4).** `DRV` is now
 `S8I-R4FIX-8i-sbin-driver.patch` (sha256 `934ad2c15c94f5443c0d45aa880851d73f2d6e7b511d9798a14f2b114ce847b4`, §8i.3's dated note), and step 2's check names it.
 
+*(dated 2026-10-03, s8i build, R5FIX-8i)* **`DRV` and `AUD` are superseded (s8i refuting round 5, D21-144).** `DRV` is
+now `S8I-R5FIX-8i-sbin-driver.patch` (sha256 `3357c3fb79cd7b0324b8ab40bfaf474be64e4140fd12817754f8633fe0e26bb0`) and
+`AUD` is `S8I-R5FIX-8i-audit-bin.patch` (sha256 `e0243d5d4edeb9a7b538889e346d488d6e60c61a2f036c31ea0ccf7cb4eb4d32`),
+§8i.3's dated note; step 2 checks both.
+- **(g)**, a deferred gate before B1: the operator confirms item 4's reading as METHOD-S's R4FIX-8i and R5FIX-8i
+  extensions write it, the provisional task-output exemption and the unregistered incidental hits among it, and clears
+  or voids every shadow-flagged replay or record. For a record, the ruling is one line in
+  `results/s-bin/oot-shadow-rulings.jsonl`, `{"raw_ref": …, "ruling": "clear" | "void"}`, committed with that batch's
+  results before the batch is scored. An operator void is `void: out-of-tree`, gets no retry during the AFK run, and
+  does not count toward §8i.6's second-void stop.
+- **(h)**, operator housekeeping before B1, because it deletes or moves directories: move `D:/r6c`, the
+  `D:/repos/redkiln-sev` copies and `~/.claude-backup` off reachable paths, and clear `%TEMP%/claude`'s task outputs
+  and the temp files the sweep named (`tmp.uDZZzvzEF4`, `h.md`, `l143`, `ms0`). This shrinks both the leak surface and
+  the false-void surface. The registered roots stay registered either way.
+
 | step | what | USD bound | check before it |
 | --- | --- | --- | --- |
 | 1 | the corpus on `main`, clean | 0.00 | none |
@@ -1789,9 +1904,12 @@ note), and step 2's check names it. The dry-run script's sha256 is now `15990996
 #    (dated 2026-10-03, s8i build, R2FIX-8i) DRV is S8I-R2FIX-8i's patch, superseding S8I-R1FIX-8i's (sha256 1922bb47…2b08).
 #    (dated 2026-10-03, s8i build, R3FIX-8i) DRV is S8I-R3FIX-8i's patch, superseding S8I-R2FIX-8i's (sha256 81511152…68c1).
 #    (dated 2026-10-03, s8i build, R4FIX-8i) DRV is S8I-R4FIX-8i's patch, superseding S8I-R3FIX-8i's (sha256 0bc28875…ea7dc).
+#    (dated 2026-10-03, s8i build, R5FIX-8i) DRV is S8I-R5FIX-8i's patch, superseding S8I-R4FIX-8i's (sha256 934ad2c1…47b4); AUD is
+#    S8I-R5FIX-8i's audit patch, superseding S8I-P6's (sha256 0d2964ba…7463), and its sha256 is checked too.
 ( C=D:/repos/redkiln-corpus; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
-  DRV=${DRV:-$S/S8I-R4FIX-8i-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
-  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 934ad2c15c94f5443c0d45aa880851d73f2d6e7b511d9798a14f2b114ce847b4 ] || { echo "FAIL: $DRV is not S8I-R4FIX-8i's patch"; exit 1; }
+  DRV=${DRV:-$S/S8I-R5FIX-8i-sbin-driver.patch}; AUD=$S/S8I-R5FIX-8i-audit-bin.patch
+  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 3357c3fb79cd7b0324b8ab40bfaf474be64e4140fd12817754f8633fe0e26bb0 ] || { echo "FAIL: $DRV is not S8I-R5FIX-8i's patch"; exit 1; }
+  [ "$(sha256sum < "$AUD" | cut -c1-64)" = e0243d5d4edeb9a7b538889e346d488d6e60c61a2f036c31ea0ccf7cb4eb4d32 ] || { echo "FAIL: $AUD is not S8I-R5FIX-8i's audit patch"; exit 1; }
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply --check "$p" || { echo "FAIL: $p does not apply"; exit 1; }; done
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply "$p" || exit 1; done
   git -C "$C" add runner/src/main.rs runner/src/sbin.rs results/audit-s.py results/s-bin/audit-fixtures || exit 1
@@ -1901,7 +2019,7 @@ dated line, and nothing resumes without a new go-ahead.
 - **A pre-spawn check fails** on a dispatch copy (§8i.4), or the corpus runner is not committed and clean at a
   batch (§8i.5).
 - **BrittonGames moved**: a snapshot line differs from the first (§8i.5).
-- **The same item voids twice** in one pass — a fixture defect, not noise.
+- **The same item voids twice** in one pass — a fixture defect, not noise. *(dated 2026-10-03, s8i build, R5FIX-8i)* Only the driver's runtime voids count. An operator void of a shadow-flagged record is `void: out-of-tree`, never a miss, gets no retry during the AFK run, and does not count toward *"the same (pass, item) voiding twice"* (D21-144).
 - **A cap is reached** (§8i.5).
 - **The account is refused unexpectedly** (D21-40 decision 2).
 - **The launcher refuses** at `--check wrap` or at a launch, its step 9 fails a launch on a version move, or a capture
@@ -1923,7 +2041,7 @@ verbatim); `results/s-bin/rendered/item-<n>.txt`; `results/s-bin/greenness/item-
 `results/s-bin/audit.txt`; `results/s-bin/captures/item-<n>/` and `results/s-bin/captures/procedure-log.txt`
 (D21-43 N19); `results/s-bin/probes.jsonl` (B1's haiku probes); `results/s-bin/missing-fields.jsonl` (branch 2's
 named fields, possibly empty); `results/s-bin/brittongames-snapshots.txt` (§8i.5); `runner/src/sbin.rs`;
-`results/audit-s.py`.
+`results/audit-s.py`. *(dated 2026-10-03, s8i build, R5FIX-8i)* Also `results/s-bin/oot-shadow-rulings.jsonl`, the operator's rulings on shadow-flagged records, when any record is flagged.
 
 **Every S-BIN record** carries these fields beside the digest (`digest`, the schema-valid structured output):
 - `spike` = `"s-bin"`, `pass`, `item`, `arm`;
@@ -1934,13 +2052,14 @@ named fields, possibly empty); `results/s-bin/brittongames-snapshots.txt` (§8i.
 - METHOD-S §0's pre-flight fields: `card_adopted`, and `api_error_status`, which is `null` unless a platform error;
 - `fix_unreachable`, and `seed_blob_verified`, which is `null` on a clean item; *(dated 2026-10-03, s8i build, R2FIX-8i; refuting round 2, a minor)* `fix_unreachable` is `true` on every record the driver writes, by construction. `dispatch_one` runs `check_fix_unreachable` on its copy, and precheck's `precheck_blob_oids` requires a single commit (`rev-list --all --count` reads 1). Either miss halts before the spawn, so no record is written for a copy whose fix is reachable. That is METHOD-S item 5's *"true only when the dispatch copy passes item 4's checks"*. Checkpoint 8i (4)'s `fix_unreachable` read guards the pinned records file, and the driver's own refusals are what its tests pin;
 - the dispatch copy's `tree_path` and `tree_commit`, and its four `precheck_*` results (§8i.4);
-- `runner_commit`, the corpus commit the runner was built from, read with a clean `runner/` status;
+- `runner_commit`, the corpus commit the runner was built from, read with a clean `runner/` status *(dated 2026-10-03, s8i build, R5FIX-8i)* the commit that last changed `runner/`, so a results-only commit does not move it;
 - `runner_sha256`, the running binary's own bytes;
 - `ceiling_secs`, `started_at` (unix seconds), `wall_secs`;
 - `total_cost_usd`, which is never `null`;
 - `ran_automation`, `cited_fields`, `capture_refs`, `raw_ref`;
 - `detected`, which is `null` on a clean item;
 - `policy_verdict`: the strict policy's `{blocks, blocking_files, counts}`, in S-TYPED's `policy.strict` shape.
+- *(dated 2026-10-03, s8i build, R5FIX-8i)* `oot_shadow`: the shadow audit's `{verdict, flagged_reads, allowlist_version}` (D21-144). The list is now 34 names, and `the_dispatch_cap_refuses_before_spawning` asserts all 34.
 
 **In this repository:** the METHOD-S §7 amendment (§8i.2), and B4's if one is needed; the finding draft
 `spikes/F<next>-DRAFT.md` (next free F id at writing), headed `## F<n> — S-BIN …`, in F31's form — *Established by*
@@ -2237,6 +2356,22 @@ asserts the note.
 
 - **The records are located by the ids recorded at write time** (D21-47). `SBIN_F`, `BIN_ADR` and `SBIN_LEDGER` are
   written into (0) by dated edit, never found by a headline or an "exactly one" count.
+- *(dated 2026-10-03, s8i build, R5FIX-8i)* **The out-of-tree audit's replay readings (D21-144's acceptance), measured
+  before any dispatch.** 838 reviewer transcripts: 838 sessions, 13,147 tool uses. 71 runtime voids, every one
+  card-shaped: R4FIX-8i's 69, each still voiding, and 2 new. One is genuine (`find /d -name "*.js" -path
+  "*/workflows/*"`, a walk of D:). One is a false void: a session read a mistyped spelling of its own task-output path
+  under `<temp>/claude`, a directory that does not exist. Exempting it would open other slugs, so it is disclosed.
+  Before the task-output exemption and the two replay fixes, 64 more sessions voided on their own task output, and one
+  more on `/tmp/../c/...`. The shadow audit flags 312 of the 838 sessions (10,786 reads), all 71 voids among them, so
+  241 sessions are flagged and not voided: the allowlist's measured false-flag rate. By class of the flagged path:
+  `D:/repos/redkiln-rs` 4,109 reads in 67 sessions; temp not written first 2,420 in 58; Git Bash words outside the
+  allowlist (most are regex or sed operands read as paths) 1,544 in 263; other D: paths 1,013 in 22; other words
+  (escapes read as paths) 584 in 156; unresolved `$VAR` or `$(...)` 364 in 116; the session's own task output 305 in
+  77; other C: paths 257 in 10; the review root outside the copy 185 in 17; the home directory 5 in 2. The
+  `/tmp/*.bak` write-then-restore pattern is clear; one `rm` of a temp path never written stays flagged. 754 corpus
+  records: 0 voids, auditing zero read inputs (the records carry only the digest), so not evidence of correctness. (4)
+  now also requires every record to carry an `oot_shadow` verdict and no flagged record to be held unruled, and
+  re-runs the audit with the rulings file.
 - **The S-BIN records exist and are pinned.**
   - The finding draft and its pins exist.
   - Every pinned corpus file matches byte-for-byte at the pinned commit on the corpus's `main`.
@@ -2433,6 +2568,14 @@ for f in s-bin.jsonl s-bin/fixture.json s-bin/probes.jsonl s-bin/missing-fields.
   [ "$rc" -eq 0 ] || { echo "FAIL: results/$f is not in corpus commit $SBIN_CORPUS"; exit 1; }
 done
 [ -s "$T/s-bin.jsonl" ] && [ -s "$T/s-bin_fixture.json" ] && [ -s "$T/s-bin_captures_procedure-log.txt" ] || { echo "FAIL: the records, the fixture or the procedure log is empty at the pinned commit"; exit 1; }
+# (dated 2026-10-03, s8i build, R5FIX-8i) The shadow hold (D21-144): results/s-bin/oot-shadow-rulings.jsonl holds the operator's ruling on each
+# shadow-flagged record, one line {"raw_ref": <its raw_ref>, "ruling": "clear" | "void"}. Absent means no ruling
+# yet, so every flagged record is held unscored. The audit reads it as its third argument.
+if git -C "$CORPUS_REPO" cat-file -e "$SBIN_CORPUS:results/s-bin/oot-shadow-rulings.jsonl" 2>/dev/null; then
+  git -C "$CORPUS_REPO" cat-file blob "$SBIN_CORPUS:results/s-bin/oot-shadow-rulings.jsonl" > "$T/s-bin_oot-shadow-rulings.jsonl" || { echo "FAIL: results/s-bin/oot-shadow-rulings.jsonl is unreadable at $SBIN_CORPUS"; exit 1; }
+else
+  : > "$T/s-bin_oot-shadow-rulings.jsonl" || exit 1
+fi
 # THE RULE-OUTCOME COMPUTATION (§8i.8's mapping), ONE snippet shared by the record probe below and by its synthetic
 # record sets, so that the controls exercise the code that scores the real records and not a copy of it. It reads the
 # globals V (the valid records) and mfm (the named missing fields). D21-48 X3: exactly one seed missed (after any B4
@@ -2547,11 +2690,32 @@ bad=[str(n) for n,(k,w,sb) in enumerate(cases) if got(k,sb)!=w]
 print("ok" if not bad else "BAD:"+",".join(bad))'
 akv=$(python -c "$akctl"); rc=$?
 [ "$rc" -eq 0 ] && [ "$akv" = "ok" ] || { echo "FAIL: the apiKeySource or launch-record check fails its synthetic record sets (rc=$rc): $akv — a retried void with no source must pass; a valid record with another source, or a record whose CLI differs from its launch record's, must not (D21-42 17a; METHOD-S item 11)"; exit 1; }
+# (dated 2026-10-03, s8i build, R5FIX-8i) The shadow hold, ONE snippet shared by the record probe below and by its synthetic records, as `outc`
+# is. A record whose oot_shadow verdict is flagged is held until a ruling clears it (then scored) or voids it (then
+# never a miss, and gone from V); every record carries a verdict (§8i.7).
+holdl='
+def rulings_of(rl): return {str(x.get("raw_ref")): x.get("ruling") for x in rl}
+def flagged(r): return (r.get("oot_shadow") or {}).get("verdict") == "flagged"
+def held_of(sb, ru): return [r for r in sb if r.get("void") is None and flagged(r) and ru.get(str(r.get("raw_ref"))) not in ("clear", "void")]
+def valid_of(sb, ru): return [r for r in sb if r.get("void") is None and not (flagged(r) and ru.get(str(r.get("raw_ref"))) != "clear")]
+def shadow_ok(sb): return all((r.get("oot_shadow") or {}).get("verdict") in ("clear", "flagged") for r in sb)
+'
+hctl='
+def R(ref, v="clear", void=None): return {"raw_ref": ref, "void": void, "oot_shadow": {"verdict": v}}
+'"$holdl"'
+sb=[R("a"), R("b", "flagged"), R("c", "flagged"), R("d", "flagged"), R("e", "flagged", void="timeout")]
+ru=rulings_of([{"raw_ref": "c", "ruling": "clear"}, {"raw_ref": "d", "ruling": "void"}])
+got=(sorted(r["raw_ref"] for r in held_of(sb, ru)), sorted(r["raw_ref"] for r in valid_of(sb, ru)), shadow_ok(sb), shadow_ok([{"raw_ref": "x"}]))
+print("ok" if got == (["b"], ["a", "c"], True, False) else "BAD:" + repr(got))'
+hv=$(python -c "$hctl"); rc=$?
+[ "$rc" -eq 0 ] && [ "$hv" = "ok" ] || { echo "FAIL: the shadow-hold check fails its synthetic records (rc=$rc): $hv — a flagged record with no ruling must be held, a cleared one scored, an operator void dropped (D21-144)"; exit 1; }
 probe='import json,sys,os,re
 def jl(p): return [json.loads(l) for l in open(p,encoding="utf-8") if l.strip()]
 recs=jl(sys.argv[1]); fx=json.load(open(sys.argv[2],encoding="utf-8")); probes=jl(sys.argv[3]); mf=jl(sys.argv[4])
 plog=[dict(t.split("=",1) for t in l.split()) for l in open(sys.argv[5],encoding="utf-8").read().splitlines() if l.strip()]
 dry=jl(sys.argv[6])
+'"$holdl"'
+ru=rulings_of(jl(sys.argv[7]))
 it={int(k):v for k,v in fx["items"].items()}
 print("items", ",".join(str(i) for i in sorted(it)))
 sets={tuple(sorted(v["stripped"])) for v in it.values()}
@@ -2561,7 +2725,10 @@ print("caps", ",".join(str(i) for i in sorted(it) if it[i].get("captures")))
 print("dry", "ok" if dry and all(r.get("dry_run") is True for r in dry) and all(r.get("dry_run") is False for r in recs) else "BAD")
 sb=[r for r in recs if r.get("spike")=="s-bin"]
 print("foreign", len(recs)-len(sb))
-V=[r for r in sb if r.get("void") is None]
+# (dated 2026-10-03, s8i build, R5FIX-8i) V excludes a flagged record that is held or operator-voided (D21-144). It read: V = every record with a null void.
+V=valid_of(sb, ru)
+print("held", len(held_of(sb, ru)))
+print("shadow", "ok" if shadow_ok(sb) else "BAD")
 ok=[r for r in V if not r.get("rerun")]
 keys=sorted((int(r["pass"]),int(r["item"])) for r in ok)
 print("pairs", "ok" if keys==[(p,i) for p in (1,2) for i in (1,2,3,4,5)] else "BAD"+repr(keys))
@@ -2596,7 +2763,7 @@ print("caplog", "ok" if caplog_ok(plog, it) else "BAD")
 mfm={(int(m["pass"]),int(m["item"])): (m.get("missing_fields") or []) for m in mf}
 '"$outc"'
 print("o1", outcome(1)); print("o2", outcome(2))'
-pv=$(python -c "$probe" "$T/s-bin.jsonl" "$T/s-bin_fixture.json" "$T/s-bin_probes.jsonl" "$T/s-bin_missing-fields.jsonl" "$T/s-bin_captures_procedure-log.txt" "$T/s-bin_dry-run.jsonl"); rc=$?
+pv=$(python -c "$probe" "$T/s-bin.jsonl" "$T/s-bin_fixture.json" "$T/s-bin_probes.jsonl" "$T/s-bin_missing-fields.jsonl" "$T/s-bin_captures_procedure-log.txt" "$T/s-bin_dry-run.jsonl" "$T/s-bin_oot-shadow-rulings.jsonl"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pv" ] || { echo "FAIL: the record probe did not run (rc=$rc)"; exit 1; }
 rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 [ "$(rv items)" = "1,2,3,4,5" ] || { echo "FAIL: fixture.json does not hold exactly items 1-5: '$(rv items)'"; exit 1; }
@@ -2619,6 +2786,9 @@ rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 [ "$(rv costnull)" = "0" ] || { echo "FAIL: $(rv costnull) records, probes or capture lines carry no cost — a missing cost is never read as zero (§8i.5)"; exit 1; }
 [ "$(rv opus)" -le 18 ] && [ "$(rv haiku)" = "ok" ] && [ "$(rv cost)" = "ok" ] || { echo "FAIL: a cap was exceeded — $(rv opus) Opus dispatches, haiku $(rv haiku), \$$(rv costsum) over records, probes and capture sessions (§8i.5)"; exit 1; }
 [ "$(rv caplog)" = "ok" ] || { echo "FAIL: the procedure log does not hold one 'yes' line per item with its model, cost and the pinned capture's sha256 (§8i.4)"; exit 1; }
+# (dated 2026-10-03, s8i build, R5FIX-8i) The shadow hold: no flagged record is left unruled, and every record carries its verdict.
+[ "$(rv shadow)" = "ok" ] || { echo "FAIL: a record carries no oot_shadow verdict (§8i.7, R5FIX-8i)"; exit 1; }
+[ "$(rv held)" = "0" ] || { echo "FAIL: $(rv held) shadow-flagged records are held unscored — the operator clears or voids each in results/s-bin/oot-shadow-rulings.jsonl before scoring (D21-144)"; exit 1; }
 # The runner that dispatched: one commit, on the pinned commit's history, with the same runner/ tree it pins.
 RUNNER_C=$(rv runner)
 printf '%s\n' "$RUNNER_C" | grep -qxE '[0-9a-f]{40}' || { echo "FAIL: the records name runner commits '$RUNNER_C', not exactly one (§8i.7)"; exit 1; }
@@ -2632,7 +2802,8 @@ O1=$(rv o1); O2=$(rv o2)
 for o in "$O1" "$O2"; do case "$o" in branch1|branch2-detected|branch3|undecided-fp|undecided-silent|undecided-partial) : ;; *BAD*) : ;; *) echo "FAIL: a computed outcome '$o' is not one of the six registered values (§8i.2 item 9; D21-48 X3)"; exit 1;; esac; done
 case "$O1 $O2" in *BAD*) echo "FAIL: the records cannot be scored: pass 1 $O1, pass 2 $O2"; exit 1;; esac
 [ "$O1" = "$SBIN_O1" ] && [ "$O2" = "$SBIN_O2" ] || { echo "FAIL: the pins say ($SBIN_O1, $SBIN_O2); the records give ($O1, $O2) (§8i.8)"; exit 1; }
-python "$T/audit-s.py" bin "$T/s-bin.jsonl" "$T/s-bin_missing-fields.jsonl" > "$T/audit-now.txt" 2> "$T/audit-err.txt"; rc=$?
+# (dated 2026-10-03, s8i build, R5FIX-8i) The pinned audit reads the rulings too, as its third argument.
+python "$T/audit-s.py" bin "$T/s-bin.jsonl" "$T/s-bin_missing-fields.jsonl" "$T/s-bin_oot-shadow-rulings.jsonl" > "$T/audit-now.txt" 2> "$T/audit-err.txt"; rc=$?
 [ "$rc" -eq 0 ] && [ -s "$T/audit-now.txt" ] || { echo "FAIL: the pinned audit-s.py bin did not run over the pinned records (rc=$rc)"; tail -10 "$T/audit-err.txt"; exit 1; }
 tr -d '\r' < "$T/audit-now.txt" > "$T/audit-now.lf" && tr -d '\r' < "$T/s-bin_audit.txt" > "$T/audit-pin.lf" || { echo "FAIL: could not normalise the two audits"; exit 1; }
 cmp -s "$T/audit-now.lf" "$T/audit-pin.lf" || { echo "FAIL: the pinned audit over the pinned records does not reproduce the pinned audit.txt"; exit 1; }
@@ -2715,13 +2886,14 @@ tar -xf "$R/runner.tar" -C "$R"; rc=$?
 [ "$rc" -eq 0 ] && [ -f "$R/runner/src/sbin.rs" ] || { echo "FAIL: the archived runner has no src/sbin.rs"; exit 1; }
 out=$(cd "$R/runner" && nodispatch cargo build 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the runner does not build at the pinned commit (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
-SB_TESTS="sbin::tests::seed_is_confirmed_by_blob_oid_not_by_file_count sbin::tests::review_repo_holds_one_commit_and_no_fix_object sbin::tests::text_diff_carries_source_and_test_paths_only sbin::tests::asset_size_is_read_from_the_lfs_pointer sbin::tests::warned_and_not_run_fold_into_passed_with_the_raw_report_referenced sbin::tests::a_digest_failing_the_typed_schema_is_void_schema_not_a_miss sbin::tests::exit_zero_without_structured_output_is_void_not_success sbin::tests::strong_detection_needs_a_blocking_finding_naming_the_seeded_path sbin::tests::cited_fields_are_extracted_mechanically_from_the_digest sbin::tests::an_out_of_tree_read_voids_the_record sbin::tests::api_key_source_other_than_none_voids_before_scoring sbin::tests::a_version_move_between_dispatches_halts_the_set sbin::tests::the_dispatch_cap_refuses_before_spawning sbin::tests::resume_is_keyed_per_arm_item_pass sbin::tests::a_surviving_unreal_process_halts_before_the_next_dispatch sbin::tests::stripped_path_set_is_identical_across_all_five_trees sbin::tests::review_tree_carries_no_registered_leak_token sbin::tests::every_item_carries_a_capture_reference_or_rendering_refuses sbin::tests::card_not_adopted_voids_before_scoring sbin::tests::a_platform_error_is_recorded_as_api_error_status_and_voids sbin::tests::each_dispatch_runs_in_a_fresh_copy_at_a_never_used_path sbin::tests::a_dirty_or_mismatched_copy_refuses_before_spawning sbin::tests::an_account_project_dir_for_the_copy_path_refuses_before_spawning sbin::tests::a_dirty_runner_tree_refuses_before_spawning sbin::tests::every_test_spawns_only_an_injected_stub_never_claude"
+# (dated 2026-10-03, s8i build, R5FIX-8i) R5FIX-8i's 8 named tests are added (D21-144), so the selection runs 33. It ran 25.
+SB_TESTS="sbin::tests::seed_is_confirmed_by_blob_oid_not_by_file_count sbin::tests::review_repo_holds_one_commit_and_no_fix_object sbin::tests::text_diff_carries_source_and_test_paths_only sbin::tests::asset_size_is_read_from_the_lfs_pointer sbin::tests::warned_and_not_run_fold_into_passed_with_the_raw_report_referenced sbin::tests::a_digest_failing_the_typed_schema_is_void_schema_not_a_miss sbin::tests::exit_zero_without_structured_output_is_void_not_success sbin::tests::strong_detection_needs_a_blocking_finding_naming_the_seeded_path sbin::tests::cited_fields_are_extracted_mechanically_from_the_digest sbin::tests::an_out_of_tree_read_voids_the_record sbin::tests::api_key_source_other_than_none_voids_before_scoring sbin::tests::a_version_move_between_dispatches_halts_the_set sbin::tests::the_dispatch_cap_refuses_before_spawning sbin::tests::resume_is_keyed_per_arm_item_pass sbin::tests::a_surviving_unreal_process_halts_before_the_next_dispatch sbin::tests::stripped_path_set_is_identical_across_all_five_trees sbin::tests::review_tree_carries_no_registered_leak_token sbin::tests::every_item_carries_a_capture_reference_or_rendering_refuses sbin::tests::card_not_adopted_voids_before_scoring sbin::tests::a_platform_error_is_recorded_as_api_error_status_and_voids sbin::tests::each_dispatch_runs_in_a_fresh_copy_at_a_never_used_path sbin::tests::a_dirty_or_mismatched_copy_refuses_before_spawning sbin::tests::an_account_project_dir_for_the_copy_path_refuses_before_spawning sbin::tests::a_dirty_runner_tree_refuses_before_spawning sbin::tests::every_test_spawns_only_an_injected_stub_never_claude sbin::tests::an_assignment_carried_path_voids sbin::tests::a_recursive_read_of_an_ancestor_voids sbin::tests::a_tool_glob_or_grep_on_an_ancestor_voids sbin::tests::a_sweep_measured_root_voids sbin::tests::tool_results_c_and_tilde_spellings_are_exempt sbin::tests::the_shadow_audit_flags_reads_outside_the_allowlist sbin::tests::a_temp_read_written_earlier_in_the_session_is_not_flagged sbin::tests::an_unresolved_var_in_a_read_position_is_flagged_not_voided"
 out=$(cd "$R/runner" && nodispatch cargo test --bin redkiln-spike-runner -- $SB_TESTS --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the driver's tests did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
 for t in $SB_TESTS; do
   printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok — renamed, deleted or not selected"; exit 1; }
 done
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 25 passed; 0 failed' || { echo "FAIL: the driver selection did not run exactly 25 tests"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 33 passed; 0 failed' || { echo "FAIL: the driver selection did not run exactly 33 tests"; exit 1; }
 nd_check "(6) the driver's tests" || exit 1
 
 # ---- (7) THE RECORD: the ADR recorded in (0), naming this finding as evidence, accepted, in ADR-0085's form, with its
@@ -2876,7 +3048,8 @@ for doc in references/2026-09-08-architecture-design.md:21 references/2026-09-08
   stale=$(printf '%s\n' "$hits" | grep -E "$STALE" | grep -vF '[S-BIN reported (s8i)')
   [ -z "$stale" ] || { echo "FAIL: $f still states S-BIN as pending without a dated s8i note:"; printf '%s\n' "$stale" | cut -c1-160; exit 1; }
   nnote=$(printf '%s\n' "$hits" | grep -cF '[S-BIN reported (s8i)')
-  [ "$nnote" -ge "$floor" ] || { echo "FAIL: $f carries $nnote dated s8i notes; $floor lines stated S-BIN pending at ca8f387"; exit 1; }
+  # (dated 2026-10-03, s8i build, R5FIX-8i) s8i refuting round 5's minor: the message read 'at ca8f387' for both floors.
+  [ "$nnote" -ge "$floor" ] || { echo "FAIL: $f carries $nnote dated s8i notes; $floor lines stated S-BIN pending at its re-derivation (ca8f387 for the design, 730a4cc for the register)"; exit 1; }
 done
 syn=$(printf '22:| ChangeSummary | BLOCKED | S-BIN registered and unrun |\n' | grep -E "$STALE" | grep -vF '[S-BIN reported (s8i)')
 [ -n "$syn" ] || { echo "FAIL: the stale-line guard cannot see a synthetic stale line — it is vacuous"; exit 1; }

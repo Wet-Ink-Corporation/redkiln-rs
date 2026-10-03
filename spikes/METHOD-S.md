@@ -1763,3 +1763,178 @@ Any later change is disclosed here with the date and the records it post-dates.
     containment test, and `resolve_path` drops empty segments. Its mutant from the round-3 extension survives for that
     reason. A `Bash` command's own collapse (`sep_keep_case`) is observable through a heredoc's body, and its mutant
     flips.
+
+- **s8i pre-dispatch amendment, extension: item 4's out-of-tree rule after `s8i` refuting round 5 — the runtime void's
+  four additions, the roots a measured seed sweep names, and a shadow audit that holds a flagged record unscored —
+  2026-10-03, before B1; no S-BIN record exists** (cites the *s8i pre-dispatch amendment* above and its items 4 and 5,
+  and the extension written after refuting round 4, R4FIX-8i, its items 2, 3, 5 and 6; edits nothing in them or in the
+  other extensions above). Written in the AFK build, package R5FIX-8i, under `spikes/DECISIONS-2026-09-21.md` D21-144
+  (TAKEN PROVISIONALLY under D21-105; panel 2-1). It is the operator's to confirm before B1, beside R4FIX-8i.
+
+  **1. Why.** Refuting round 5 measured reads that R4FIX-8i's reads-only audit did not void:
+  - a path carried by a shell assignment and read through `$VAR`, e.g. *"`BG='D:\repos\BrittonGames'; git -C "$BG"
+    log`"*;
+  - a recursive read of an ancestor of a registered root, e.g. `grep -rn LoadoutFill /d/repos`, or the `Grep` tool on
+    `D:/repos`;
+  - copies of seed-stating files outside the registered roots (`D:/r6c`, `D:/repos/redkiln-sev`);
+  - the `/c/…` and `~/…` spellings of the session's own `tool-results`, which voided an honest read.
+
+  **2. The runtime void: it voids the record, and §8i.6's second-void halt applies.** It is R4FIX-8i item 2's
+  reads-only lexer, with four additions. None changes item 4's words.
+  - **(a) Assignments.** A bare `X=val` and a prefix `X=val cmd` are tracked, and so are `export`, `local`,
+    `declare`, `typeset` and `readonly`. A bare assignment persists into later `Bash` calls, as the cwd does. A prefix
+    assignment is seen only by its own command's words. `$X`, `${X}` and `"$X"` in a read position are expanded
+    before the path test. **The assignment's value is itself audited as a read-position word.** R4FIX-8i item 2
+    exempts only `echo`/`printf` operands and a grep's pattern, and never exempted an assignment. A `$` inside single
+    quotes is literal. A descriptor written against a redirect (`2>`, `0<`) is not a word [measured: in the replay's
+    `cp dist/cli.js /tmp/d_cli.bak 2>/dev/null`, the `2` was read as `cp`'s destination]. A `$VAR` that no assignment
+    set does not void
+    at runtime; it goes to the shadow audit (item 5).
+  - **(b) The ancestor rule, as a reading of item 4's existing words** (*"reads … a path outside its review tree"*).
+    A recursive read rooted at a registered root, or at an ancestor of one, or at an ancestor of the review root,
+    reads that root. The recursive readers are:
+    - `grep`, `egrep`, `fgrep` and `zgrep` with `-r`, `-R` or `--recursive`; `rg`, `ag` and `ack`, which recurse by
+      default;
+    - `find`, `ls -R`, `tree` and `du`;
+    - `git grep --no-index` (its paths), and `git -C <dir> grep` (`<dir>`);
+    - the `Glob` tool (its `path`, or its pattern's literal directory) and the `Grep` tool (its `path`).
+    A walk with no root operand walks the cwd. The registered roots for this test are the review root, each account
+    root's `projects/`, `D:/repos/redkiln-rs`, `D:/repos/redkiln-corpus`, `D:/repos/BrittonGames`, and the sweep's
+    roots (item 3).
+  - **(c) One spelling before every containment test.** Each word is folded (`\` to `/`, lower case), then `~`,
+    `$HOME`, `$USERPROFILE` (and their `${…}` forms) become the home directory; `$TEMP`, `$TMP` and `/tmp` become the
+    temp directory (`/tmp` is `%TEMP%`: `cygpath -w /tmp` → `C:\Users\ryanm\AppData\Local\Temp`); and `/mnt/<x>/…` and
+    `/<x>/…` become `<x>:/…`. A path beginning with `/` has its `.` and `..` resolved first, because Git Bash
+    resolves them before it maps a mount: `/tmp/../c/x` is `C:/x`, not the temp directory's parent [measured: the
+    transcript replay's session `eec3efa3` read its own task output that way]. R4FIX-8i item 3's `tool-results`
+    exemption is tested after the fold, so the `/c/`,
+    `/mnt/c/`, `~`, `$HOME` and `$USERPROFILE` spellings of the copy slug's `tool-results` are exempt, and no other
+    slug's.
+  - **(d) The sweep's roots, by name** (item 3), checked like item 4's roots, in the `x:/`, `/x/` and `/mnt/x/`
+    spellings, under a name boundary (`D:/r6cx` is not `D:/r6c`).
+
+  **3. The sweep, and the roots it names** [measured 2026-10-03, read-only: GNU `grep -r -l -F` (symlinks and
+  junctions below a start point not followed; binary files searched) over 5,066 start points on C: and D: (each
+  drive's top-level entries, opened one level into `D:/repos`, `D:/references`, `D:/workspaces`,
+  `D:/repos/redkiln-sev`, `C:/Users`, the home directory, its two account roots, `AppData`, `AppData/Local`,
+  `AppData/Roaming` and `AppData/Local/Temp`), for 15 patterns: the four registered leak tokens `LoadoutFill`,
+  `white-on-white`, `VERIFIED COLD` and `entirely white`; the seed blobs `9415f098…`, `23c79a63…` and seed 5's LFS oid
+  `86123be7…`; the fix blobs `70e2a2e3…`, `c84ea7ac…` and their LFS oids `02b53079…`, `59aa3581…`; the item commits
+  `a71265925` and `6a101bdcd`, and the replaced `bf9c499a1`; and the fixture's seed statement *"the seed reverts to"*.
+  The scripts and every output are under `D:/repos/redkiln-sev/afk-tools/sp/s8i/` (`s8i_R5FIX-8i_sweep2.py`,
+  `R5FIX-8i-sweep-out/`)].
+  - **Skipped, by an explicit list only:** the OS and toolchain directories (`C:/Windows`, `C:/Program Files`,
+    `C:/Program Files (x86)`, `C:/ProgramData`, the recycle bins, `System Volume Information`, `Recovery`, `PerfLogs`,
+    the driver and redistributable folders, the page, hibernate and swap files); the profile's legacy junctions,
+    whose targets are searched under their own names; and the roots item 4 already registers.
+  - **The two OneDrive roots were not grepped**, because reading an online-only file downloads it. By metadata:
+    `~/OneDrive` holds 1,040,560 files, 210 modified on or after 2026-07-01, of which the 48 stored locally were
+    searched with no hit; `~/OneDrive - The IQ Business Group, Inc` holds 158,718 files, 5,466 modified since
+    2026-07-01, of which the 5,430 stored locally were searched. 162 and 36 recent online-only files were not opened.
+  - **Partial reads, named:** 30 start points ended with a grep error (permission denied on some files: browser,
+    Windows and app caches under `AppData`, `NTUSER.DAT` and its logs, one repository). The grep of `<temp>/claude`
+    did not finish (it holds this run's own task outputs and scratch, which grew during the scan); a hit there is
+    confirmed directly, and the directory is registered whole.
+
+  **397 files hold a hit. They are bounded by eleven roots, registered here by name:**
+  - `D:/repos/redkiln-sev` (314 files: runbook and METHOD-S copies, the `s8i` scratch, the seed-5 candidates);
+  - `D:/r6c` (4: a checkout of this repository at `b8e7aa9`);
+  - `~/.claude-personal`, the whole account root (15 outside `projects/`: `file-history` copies of edited files);
+  - `~/.claude-backup` (10: a copy of an account root whose `projects/D--repos-BrittonGames` holds that repository's
+    session transcripts, which item 4's two account names do not cover);
+  - `~/AppData/Local/JetBrains` (7: Rider and RustRover caches and indexes of this repository's files);
+  - `~/AppData/Local/Packages/Claude_pzs8sxrjxfjjc` (21: the desktop app's IndexedDB, agent-session and VM data);
+  - under the temp directory: `claude` (the CLI's task outputs and scratch), `tmp.uDZZzvzEF4` (copies of METHOD-S,
+    the `s8i` stage file and two audit files), and the files `h.md`, `l143` and `ms0`.
+
+  **Hits not registered, a judgement named here.** The ruling reads *"Register every directory holding a hit"*. 17
+  hits state no seed. 16 are mypy's `report.py`, where `entirely white` is a substring of *"entirely whitespace"*, in
+  virtual environments and caches under `D:/repos/{grove, inksmith, inksmith-archive, iqbg-bid-archive, morphica,
+  praecepta, rb, redkiln - Copy, torquem}`, `D:/references/monarch-mcp`, `D:/workspaces/_recovery`,
+  `~/AppData/Local/uv`, `~/My Drive` and Google Drive's content cache. One is a work-OneDrive client document that uses
+  *"white-on-white"* as plain prose. Registering them would void no seed read and could only add false voids. The
+  operator confirms or reverses this at item 4's gate.
+
+  The copies are bounded, so no escalation to an allowlist void follows (D21-144: *"If the sweep finds copies it
+  cannot bound, stop and escalate to B"*).
+
+  **4. The child's own background-task output (PROVISIONAL, and returned to the orchestrator as a blocker the ruling
+  did not foresee).** The CLI keeps a background command's output at `<temp>/claude/<cwd
+  slug>/<session>/tasks/<id>.output`,
+  as it keeps a large output under `tool-results`. Registering `<temp>/claude` voided **64 of the 838 replayed
+  sessions** that read their own task output, each an honest read [measured, the transcript replay of item 7, before
+  this exemption]. So, the R4FIX-8i item 3 shape: a path that resolves under `<temp>/claude/<the dispatch copy's
+  slug>/<one segment>/tasks/` does not void, in every spelling, and no other slug's does, nor the own slug outside
+  `tasks/`. The copy's path is never used before (§8i.4), so nothing there predates the dispatch; no pre-spawn check
+  proves that directory absent, as `precheck_no_project_dir` does for `projects/<slug>`. The shadow audit still flags
+  these reads, as D21-144's allowlist reads (305 reads in 77 sessions of the replay). Whether this exemption stands,
+  whether the pre-spawn check should cover the directory, and whether the shadow allowlist should carry it, are the
+  orchestrator's panel's and the operator's.
+
+  **5. The shadow audit. It never voids, never retries, and never counts toward a cap or a halt.** It runs over the
+  kept raw transcript's tool uses, through the same lexer with assignments expanded, and never over the digest. Each
+  record carries `oot_shadow`: `{verdict: clear | flagged, flagged_reads: [...], allowlist_version}`. A read-position
+  path outside the dispatch copy is flagged unless the allowlist covers it. Allowlist version **`r5fix-8i-1`**:
+  - the copy slug's `tool-results`, in every spelling (item 2 (c));
+  - `C:/Windows`; `C:/Program Files*`, a prefix, which holds `C:/Program Files (x86)`, the Git install and the engine
+    install `C:/Program Files/Epic Games/UE_5.8`; and Git Bash's `/usr`, `/bin`, `/etc`, `/dev/null` and `/mingw64`
+    (the Git install);
+  - `~/AppData/Local/UnrealEngine`, the engine's caches, **listed provisionally**. The engine paths are measured from
+    B1's capture transcripts and replace this entry by a later appended extension;
+  - a temp path, **only** where the same session wrote that path earlier: the `Write` tool's path, a `>` or `>>`
+    target, a `cp` or `mv` destination, or a `NAME=$(mktemp …)` variable. Temp is not allowed wholesale.
+  A read-position word still holding an unresolved `$VAR`, `${…}` or `$(…)` is flagged. A heredoc's body is data:
+  only its absolute paths are read, and its `$` words are not flagged.
+
+  **A flagged record is held unscored.** The driver only records the field: `void`, `detected` and every halt are
+  unchanged, and resume treats the record as done, so it is never retried. `audit-s.py bin` holds it. It takes an
+  optional third argument, `results/s-bin/oot-shadow-rulings.jsonl`, one line per ruling: `{"raw_ref": <the record's
+  raw_ref>, "ruling": "clear" | "void"}`. A cleared record is scored. An operator void is `void: out-of-tree`, shown as
+  `out-of-tree(operator)`, and is never a miss. A held record is shown as `HELD:oot-shadow`, and its pass's outcome
+  is `BAD-held`, which no checkpoint accepts. Checkpoint 8i (4) applies the same rule to the records it scores. The
+  operator rules at item 4's confirmation gate before B1, and for records after B1 before that batch is scored. An
+  operator void gets no retry during the AFK run and does not count toward §8i.6's *"the same (pass, item) voiding
+  twice"*: the driver halts only on its own runtime voids.
+
+  **6. Item 5's named tests.** Item 5's *"Its 25 named tests are listed in `s8i` §8i.3"* reads **33** from this
+  extension on. The eight added, each watched red for its stated reason before its code:
+  `an_assignment_carried_path_voids`,
+  `a_recursive_read_of_an_ancestor_voids`, `a_tool_glob_or_grep_on_an_ancestor_voids`, `a_sweep_measured_root_voids`,
+  `tool_results_c_and_tilde_spellings_are_exempt`, `the_shadow_audit_flags_reads_outside_the_allowlist`,
+  `a_temp_read_written_earlier_in_the_session_is_not_flagged` and
+  `an_unresolved_var_in_a_read_position_is_flagged_not_voided`. §8i.7's record gains `oot_shadow` (34 names).
+  `runner_commit` is the commit that last changed `runner/` (round 5's minor), so a results-only corpus commit during
+  the set leaves it one value.
+
+  **7. The measured rates** [measured 2026-10-03, read-only: both replays run from inside the test binary under the
+  no-dispatch wrapper, in a replay copy never shipped, over this extension's driver (`sbin.rs` sha256
+  `bcdd084840e5…`); outputs `R5FIX-8i-replay-last.out`, `R5FIX-8i-newvoids-last.txt` and
+  `R5FIX-8i-shadowflags-last.txt` under `D:/repos/redkiln-sev/afk-tools/sp/s8i/`]:
+  - **Corpus records: 0 of 754 void. This audits no read input.** The records carry only the digest, which is never
+    audited (R4FIX-8i item 2), so the replay reads zero inputs (`read_inputs=0`) and the zero follows by
+    construction. It shows only that no prose is read, and it is not evidence of correctness. R4FIX-8i item 5's
+    *"Corpus records: 0 of 754"* reads the same way (refuting round 5's minor).
+  - **Reviewer transcripts.** 838 sessions, 13,147 tool uses. 71 runtime voids, every one card-shaped: R4FIX-8i's 69,
+    each still voiding, and 2 new. One is genuine (`find /d -name "*.js" -path "*/workflows/*"`, a walk of D:). One is
+    a false void: a session read a mistyped spelling of its own task-output path under `<temp>/claude`, a directory
+    that does not exist. Exempting it would open other slugs, so it is disclosed. Before the task-output exemption and
+    the two replay fixes, 64 more sessions voided on their own task output, and one more on `/tmp/../c/...`. The
+    shadow audit flags 312 of the 838 sessions (10,786 reads), all 71 voids among them, so 241 sessions are flagged
+    and not voided: the allowlist's measured false-flag rate. By class of the flagged path: `D:/repos/redkiln-rs`
+    4,109 reads in 67 sessions; temp not written first 2,420 in 58; Git Bash words outside the allowlist (most are
+    regex or sed operands read as paths) 1,544 in 263; other D: paths 1,013 in 22; other words (escapes read as paths)
+    584 in 156; unresolved `$VAR` or `$(...)` 364 in 116; the session's own task output 305 in 77; other C: paths 257
+    in 10; the review root outside the copy 185 in 17; the home directory 5 in 2. The `/tmp/*.bak` write-then-restore
+    pattern is clear; one `rm` of a temp path never written stays flagged.
+
+  **8. Residuals, disclosed.**
+  - `cp -r`, `tar`, `zip` and `rsync` are not recursive readers under (b). A read of an ancestor through them is
+    flagged by the shadow audit, not voided.
+  - A prefix assignment's value is visible to its own command's words, which bash would expand with the old value.
+    That can only void more.
+  - The variables persist across `Bash` calls on the same assumption as R4FIX-8i item 6's cwd model, which is not
+    measured.
+  - Under (b), `D:/repos/redkiln-rs`, `D:/repos/redkiln-corpus` and `D:/repos/BrittonGames` add no ancestor the sweep
+    root `D:/repos/redkiln-sev` does not already add: every proper ancestor of one is an ancestor of it, and each is
+    voided by name itself. Their mutant survives for that reason and is recorded rather than counted.
+  - R4FIX-8i item 6's residuals stand.

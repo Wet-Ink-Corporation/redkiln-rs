@@ -1,8 +1,12 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-144), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-145), and what they license
+
+*(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-144)"**; `D21-145` is appended with this move.)*
 
 *(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-143)"**; `D21-144` is appended with this move.)*
 
 *(Title corrected 2026-10-03 at `s8i`'s build, package R1FIX-8i (refuting round 1's minor): it read **"2026-09-21 … 2026-09-28"** while the file carried entries dated 2026-10-02 (`D21-138` … `D21-142`) and `D21-143`, drafted 2026-10-03. The three title moves above corrected the id range only. No entry is added with this correction.)*
+
+*(dated 2026-10-03, `s8i` build, package R5FIX-8i (refuting round 5's minor): the correction above understated what it corrected, and misplaced its moves. The first entry dated after 2026-09-28 is `D21-110` (2026-09-29, `s8f`) [measured: the first date in each entry's opening lines reads 2026-09-28 for `D21-106` … `D21-109` and 2026-09-29 for `D21-110`; the finding's `D21-124` is not the first]. The `s8i` title moves it meant are four, `D21-140` … `D21-143`, and they sit below it, not above; `D21-144`'s move, the line above it, came after it. Each corrected the id range only. No entry is added with this note.)*
 
 *(Title moved 2026-10-03 during `s8i`: it read **"(D21-1 … D21-142)"**; `D21-143` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 142 before the append, the last `D21-142`.)*
 
@@ -6488,6 +6492,25 @@ never the digest or other prose. The child's own saved output under `tool-result
 extension). A corpus replay voids 0 of 754 records, against 59 under R3FIX-8i's driver. The narrowing is the
 operator's to confirm before B1. This entry stays OPEN, and nothing here signs a line.
 
+*(dated 2026-10-03, s8i build, R5FIX-8i)* **Refuting round 5 fixed in the driver and the audit (package R5FIX-8i,
+under D21-144).** The superseding driver patch is
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R5FIX-8i-sbin-driver.patch` (sha256
+`3357c3fb79cd7b0324b8ab40bfaf474be64e4140fd12817754f8633fe0e26bb0`), and the audit patch is superseded too, by
+`S8I-R5FIX-8i-audit-bin.patch` (sha256 `e0243d5d4edeb9a7b538889e346d488d6e60c61a2f036c31ea0ccf7cb4eb4d32`). The B0
+line's *"from the private-copy patches"* now means those two. The out-of-tree void now tracks assignments, reads an
+ancestor's recursive walk as a read of the roots below it, folds every spelling, and names the eleven roots a
+read-only sweep of C: and D: measured; a shadow allowlist audit holds a flagged record unscored for the operator
+(METHOD-S's R5FIX-8i extension). **The R4FIX-8i paragraph above says *"A corpus replay voids 0 of 754 records"*: the
+corpus records carry only the digest, which the audit never reads, so that replay audits no read input and its zero
+follows by construction** (refuting round 5's minor). The measurement that tests the audit is the 838-transcript
+replay: 838 sessions, 13,147 tool uses. 71 runtime voids, every one card-shaped: R4FIX-8i's 69, each still voiding,
+and 2 new. One is genuine (`find /d -name "*.js" -path "*/workflows/*"`, a walk of D:). One is a false void: a session
+read a mistyped spelling of its own task-output path under `<temp>/claude`, a directory that does not exist. Exempting
+it would open other slugs, so it is disclosed. Before the task-output exemption and the two replay fixes, 64 more
+sessions voided on their own task output, and one more on `/tmp/../c/...`. Before B1 the operator confirms item 4's
+reading under both R4FIX-8i and R5FIX-8i, and clears or voids every shadow-flagged replay or record (`s8i` §8i.5, owed
+items (g) and (h)). This entry stays OPEN, and nothing here signs a line.
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
@@ -6542,3 +6565,32 @@ itself is mechanical, and the operator's clear-or-void step is the item-4 confir
 
 **Operator housekeeping before B1** (deferred gate, deletions or moves): move D:/r6c and the redkiln-sev copies off
 reachable paths, and clear %TEMP%/claude task outputs. This lowers both the false-void surface and the leak surface.
+
+*(dated 2026-10-03, s8i build, R5FIX-8i)* **Built, and one point returned to the orchestrator.** The sweep ran
+read-only over 5,066 start points on C: and D:. 397 files hold a hit, bounded by eleven roots: `D:/r6c`,
+`D:/repos/redkiln-sev`, `~/.claude-personal`, `~/.claude-backup` (an account copy holding BrittonGames' session
+transcripts), `~/AppData/Local/JetBrains`, `~/AppData/Local/Packages/Claude_pzs8sxrjxfjjc`, and five under the temp
+directory, `claude` among them. The copies are bounded, so no escalation to B follows. 17 hits state no seed and are
+not registered, a judgement named in METHOD-S's R5FIX-8i extension. **The point returned:** registering
+`<temp>/claude` voided 64 of the 838 replayed sessions, each reading its own background-task output, which the CLI
+keeps at `<temp>/claude/<cwd slug>/<session>/tasks/`. The ruling did not foresee that the child writes there itself.
+The build exempts the dispatch copy's own slug's `tasks/` PROVISIONALLY, in R4FIX-8i item 3's shape, so that every
+acceptance measurement could run. The shadow audit still flags those reads. Whether the exemption stands is a ruling
+owed.
+
+---
+
+## D21-145 · `s8i`: the reviewer's own background-task output under `<temp>/claude/<own slug>/<session>/tasks/` is exempt from the out-of-tree void
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-10-03, pending the operator's confirmation — Weigh-In
+wi-94b181** (two-way door, judgment; defaulted to A). No record moves. The ruling is registered in the R5FIX-8i METHOD-S
+extension.
+
+**The blocker.** Package R5FIX-8i raised it. D21-144 (d) registers `%TEMP%/claude` as a runtime root, because other
+sessions' task outputs there quote seed names. But the CLI also writes a reviewer's OWN background-command output to
+`<temp>/claude/<cwd slug>/<session>/tasks/<id>`. The 838-transcript replay voided 64 honest sessions for reading it.
+
+**Ruled.** That own-slug `tasks/` path is exempt, in every spelling, exactly as R4FIX item 3 exempts the session's own
+tool-results. Other slugs under `<temp>/claude` stay answer-bearing. A background command that itself reads outside the
+copy is audited when it is issued, so the exemption hides nothing the audit has not already seen. The 838 replay then
+reads 71 voids: 70 genuine, and 1 disclosed false void, a mistyped path to the session's own task output.
