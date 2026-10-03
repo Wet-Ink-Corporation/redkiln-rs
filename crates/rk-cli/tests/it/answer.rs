@@ -378,7 +378,32 @@ fn ac248_answer_without_live_token_exits_named_outcome() {
     );
 
     // Past the 1 s deadline. Nothing is alive at the deadline — that is AC-257's whole point.
-    std::thread::sleep(std::time::Duration::from_millis(1500));
+    //
+    // *(Dated 2026-10-03, an ubuntu-latest red.)* ~~a fixed 1500 ms sleep~~: the one clock read
+    // (`clock.rs`) is whole seconds, the deadline is `now + 1` and expiry is `deadline < now`, so a
+    // gate opened at second S expires only from S+2.0 — a 1.5 s sleep missed whenever the gate
+    // opened early in its second, and `answer` applied the "expired" gate (exit 0). The wait is
+    // `lane_e2e`'s: read the recorded deadline, and poll the whole-second clock until it is past.
+    let deadline = crate::support::store_rows(eroot)
+        .iter()
+        .filter(|e| is_answerable_gate(e))
+        .find_map(|e| {
+            e.payload
+                .get("deadline")
+                .and_then(serde_json::Value::as_i64)
+        })
+        .expect("PREMISE: the gate's row records its deadline");
+    let now_secs = || {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+    };
+    let mut polls = 0_u32;
+    while now_secs() <= deadline {
+        polls += 1;
+        assert!(polls < 200, "the 1 s deadline {deadline} never passed");
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
 
     let before = crate::support::store_rows(eroot);
     let out = spawn_answer(eroot, "gate-1", "approve", &BOTH_FLAGS);
