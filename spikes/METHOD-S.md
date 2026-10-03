@@ -2134,3 +2134,63 @@ Any later change is disclosed here with the date and the records it post-dates.
   - A heredoc whose shell is not the last command before its body's line (`bash <<EOF | cat`) is read as data only,
     as before.
   - R4FIX-8i item 6's, R5FIX-8i item 8's and R6FIX-8i item 6's residuals stand.
+
+- **s8i pre-dispatch amendment, extension: item 4's out-of-tree rule after `s8i` refuting round 8. Two residuals are
+  disclosed: a process the reviewer starts, and an interpreter's inline code. 2026-10-03, before B1; no S-BIN record
+  exists** (cites the *s8i pre-dispatch amendment* above and its items 3 and 4; the extension written after refuting
+  round 6, R6FIX-8i, its items 3 and 6; and the extension written after refuting round 7, R7FIX-8i, its item 1. It
+  edits nothing in them or in the other extensions above). Written in the AFK build, package R8-RECORD-8i, under
+  `spikes/DECISIONS-2026-09-21.md` D21-144 and D21-145 (each TAKEN PROVISIONALLY under D21-105). It changes no rule
+  and no code: it discloses. Refuting round 8 is the last round under the AFK build's safety cap of 8, and it found no
+  blocker. This extension is the operator's to confirm before B1, beside R4FIX-8i to R7FIX-8i. Its item 1 is a
+  decision owed before B1 (`s8i` §8i.5, owed item (i)).
+
+  **1. A process the reviewer starts may read paths that no tool input names.** Item 4's runtime void and the shadow
+  audit both read what the reviewer's tool inputs say. Neither sees what a program the reviewer runs reads by itself.
+  An in-tree script the session did not stage is audited only as the words of the command that runs it. That
+  includes Python run inside an editor over port 9316. R6FIX-8i item 3 reads a script's text only when the session
+  staged it.
+  - **The measured instance.** Every base tree ships `_workspace/tooling/RunEditor_OurGame.bat`. Its line 13 reads
+    `set PROJECT=D:\repos\BrittonGames\OurGame\OurGame.uproject`, it then starts the editor on that project, and
+    the tree's `AGENTS.md` names it as the way to launch the editor [measured 2026-10-03, read-only on
+    `D:/sb/base/item-1..5`]. The editor it starts loads the fixed project, and the tree's `CLAUDE.md` says
+    *"`editor_query("run_python", ...)` is arbitrary editor Python"* and *"**Port 9316 has no auth.**"* Round 8's
+    finder measured the launcher's run from inside the test binary, in a private copy (corpus `285e011` with both
+    patches, under the tree `D:/sb/d/p1i4a1`): `VOID=false hits=[]  FLAG=false []`. The R8-RECORD-8i package did not
+    re-run it.
+  - **The class.** In items 1 to 4, 14 executable files under `_workspace/tooling/` name an absolute
+    `D:/repos/BrittonGames` path. Item 5 has 3. In every `.py` among them the path is docstring usage text, which
+    running the script does not read, and which voids by name when typed. The launcher is the one file whose code
+    runs the path.
+  - **Mitigations.** These are partial.
+    - The card's MCP is isolated (`Read` and `Bash`, `--strict-mcp-config`), so reaching the editor needs JSON-RPC
+      written by hand to `localhost:9316`.
+    - Halt 6 fires if the editor survives the dispatch. It fires only after the record is written.
+    - A shadow-held record waits for the operator's review.
+
+  The record of a dispatch that took this route would be unsound and would be scored unheld. Not fixed here. The
+  options are `s8i` §8i.5's owed item (i).
+
+  **2. An interpreter's inline code loses the session's own exemptions.** R7FIX-8i item 1 audits a shell's `-c`
+  string, `eval`'s operands, xargs's command and a heredoc or here-string fed to a shell as the run they are. Inside
+  them, the session's own `tool-results` (R4FIX-8i item 3) and its own task output (D21-145: *"That own-slug `tasks/`
+  path is exempt, in every spelling"*) stay exempt. An interpreter's inline code is different (`python -c`,
+  `node -e`, `powershell -Command` and the rest). R6FIX-8i item 6 reads *"Inline code is not lexed"*, and the code
+  string is still audited as one relative read-position word. So an absolute path to the session's own output inside
+  it is not exempted, and the registered temp root's name in it voids the record.
+  - **Measured by round 8's finder** from inside the test binary, in a private copy whose `sbin.rs` sha256 began
+    `0efe267f`, the R7FIX-8i driver. The copy slug was `D--sb-d-p1i4a1`, and the copy was removed afterwards. A
+    `python -c` reading the session's own `tool-results` file, a `node -e` reading its own task output, and a
+    `powershell -NoProfile -Command "Get-Content '<own task output>' -Tail 50"` each gave `void=true`. The control,
+    the same own path passed as a separate operand to `python -c`, gave `void=false`.
+  - **Scope.** The finder also scanned 856 earlier reviewer transcripts. About 250 `Bash` reads of the session's own
+    `tool-results` or task output were found, and none put the path inside inline code. The 5 `python -c` and
+    `node -e` hits were sleeps beside a bare `tail` or `cat` of the path. The R8-RECORD-8i package did not re-run
+    either measurement.
+  - **Direction.** This is a false void: an honest record is lost, and no read is scored. Such a read voids, and a
+    void is never a miss (METHOD-S §0). It is not fixed here. A fix would apply the own exemptions to each absolute
+    path fragment of an interpreter's inline operand before the by-name check, and add the three cases above to the
+    named tests, with another slug's path in the same place as a must-void control.
+
+  **3. Residuals standing.** R4FIX-8i item 6's, R5FIX-8i item 8's, R6FIX-8i item 6's and R7FIX-8i item 6's residuals
+  stand.

@@ -6533,6 +6533,21 @@ so the program after them is followed as if typed bare (METHOD-S's R7FIX-8i exte
 written with the rulings file as its third argument, and that file is committed and pinned always (`s8i` §8i.3,
 §8i.7). This entry stays OPEN, and nothing here signs a line.
 
+*(dated 2026-10-03, s8i build, R8-RECORD-8i)* **Refuting round 8 reached the AFK cap with no blocker. One residual is a decision owed before B1
+(package R8-RECORD-8i).** Round 8 is the last refuting round under the AFK build's safety cap of 8, and it found no
+blocker. It found one major, on a split vote: one refuter refuted it to minor and one upheld it. Every base tree ships
+`_workspace/tooling/RunEditor_OurGame.bat`, which the tree documents as the way to launch the editor. Its `PROJECT`
+line names `D:\repos\BrittonGames\OurGame\OurGame.uproject`, and running it escapes both the runtime void and the
+shadow audit (`VOID=false FLAG=false`, the finder's measurement). The same tooling directory holds absolute
+BrittonGames paths in eight `author_*.py` and five `synty/` scripts in items 1 to 4 (two `synty/` scripts in item 5),
+as docstring usage text. The residual is recorded,
+not fixed. **It is a pre-B1 operator decision:** `s8i` §8i.5's owed item (i) names it, with the evidence, the partial
+mitigations (MCP isolation, Halt 6, the shadow-hold review) and the operator's three options. METHOD-S's R8-RECORD-8i
+extension discloses it, beside round 8's inline-code minor. No patch moves, so the B0 line's *"from the private-copy
+patches"* still means the R7FIX-8i pair named above. One of round 8's five finder dimensions, crossfile-safety,
+returned an empty result in round 8. That is a coverage gap, not a pass. This entry stays OPEN, and nothing here
+signs a line.
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00

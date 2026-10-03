@@ -2055,6 +2055,57 @@ unchanged, `S8I-R5FIX-8i-audit-bin.patch`. Step 2 checks both. Step 4's script i
 `5d112e098e510bec52d4334e40ebe3d4a6c6f689cd0232d83f1d261105fd2c2c`): the selection stays at 33 tests. D21-143 names the same pair in a dated paragraph,
 so the B0 line's *"from the private-copy patches"* means them; the B1 line names no patch.
 
+*(dated 2026-10-03, s8i build, R8-RECORD-8i)* **A decision owed before B1, recorded and not fixed (s8i refuting round 8, the last under the AFK
+safety cap of 8).** No patch moves: `DRV`, `AUD` and step 4's script are those the R7FIX-8i paragraph above names.
+- **(i)**, a **decision owed before B1**: every base tree ships an editor launcher that opens the answer-bearing
+  project, and neither the runtime out-of-tree void nor the shadow audit sees it run.
+  - *The residual.* `_workspace/tooling/RunEditor_OurGame.bat` is in all five bases, `D:/sb/base/item-1..5` (1,432
+    bytes in items 1 to 4, 774 in item 5), and its line 13 in each reads `set PROJECT=D:\repos\BrittonGames\OurGame\OurGame.uproject`,
+    followed by `start "" "%UE%" "%PROJECT%" -noensuredialog -NoZenAutoLaunch` [measured 2026-10-03, read-only on
+    `D:/sb/base`]. The tree documents it as the way to launch the editor. `AGENTS.md` has *"[RunEditor_OurGame.bat](_workspace/tooling/RunEditor_OurGame.bat)
+    | Launch the editor with `-noensuredialog`"*, and `.claude/skills/unreal-editor-mcp/SKILL.md` has *"Launch via
+    `_workspace/tooling/RunEditor_OurGame.bat` (`-noensuredialog`)"*. The launcher is not in §8i.2 item 3's registered
+    strip set, and the leak-token precheck scans registered content tokens, not paths. The runtime void reads
+    read-position words, and `./_workspace/tooling/RunEditor_OurGame.bat` resolves inside the copy. The shadow audit
+    reads a script's text only when the session staged it (METHOD-S's R6FIX-8i extension, item 3). Round 8's finder
+    measured the run from inside the test binary, in a private copy (corpus `285e011` with both patches, under the
+    tree `D:/sb/d/p1i4a1`, removed afterwards): `VOID=false hits=[]  FLAG=false []`. This package did not re-run that
+    measurement. One refuter reached the same reading from the audit's code without re-running it. BrittonGames'
+    working tree holds every item's fix, because the items are past commits.
+  - *The class, measured.* Counting files under `_workspace/tooling/` (`*.py`, `*.bat`, `*.cmd`, `*.ps1`, `*.sh`) that
+    name an absolute `D:/repos/BrittonGames` path gives 14 in each of items 1 to 4 and 3 in item 5 [measured 2026-10-03,
+    read-only grep]. Items 1 to 4 hold the launcher, the eight `author_*.py`, and `synty/calibrate_deformation.py`,
+    `synty/ci_validate.py`, `synty/diagnostics/diag_conform_axis.py`, `synty/diagnostics/proto_orient_bones.py` and
+    `synty/strip_character_sources.py`. Item 5 holds the launcher, `synty/ci_validate.py` and
+    `synty/strip_character_sources.py`. In every `.py` the path sits in the module docstring's usage text, as
+    `-script="D:/repos/BrittonGames/..."` or, under *USAGE*, `sys.path.insert(0, r"D:/repos/BrittonGames/...")`. So
+    running the script does not read that path, and a reviewer who types it voids by name. The launcher is the one
+    file whose code runs the path.
+  - *Mitigations, partial.*
+    - MCP is isolated: the card's tools are `Read` and `Bash`, under `--strict-mcp-config` (§8i.2 item 5). The tree's
+      Monolith server is therefore unavailable, and reaching the editor needs JSON-RPC written by hand to
+      `localhost:9316`. The tree's `CLAUDE.md` says *"**Port 9316 has no auth.**"* and *"`editor_query("run_python", ...)`
+      is arbitrary editor Python"*.
+    - Halt 6 fires if the editor survives: *"A UE process survives a dispatch (Halt 6)"* (§8i.6). The tasklist that
+      shows it comes after the record is written, though, and the tree ships `ue_editor_quit.py` for closing the
+      editor.
+    - The BrittonGames snapshot is a `git status`. BrittonGames' `.gitignore` ignores `**/Saved/*`,
+      `**/Intermediate/*` and `**/DerivedDataCache/*`, so an editor session there may leave the snapshot unchanged.
+    - The vote on severity split. One refuter called it minor: a chain of steps, with Halt 6 firing in the likely
+      case. The other upheld it as major, because it is the tree's own documented route.
+  - *The operator's options.*
+    - **(a)** Neutralise the launcher and the absolute-path tooling scripts identically in all five trees. Either add
+      them to §8i.2 item 3's registered strip set by an appended METHOD-S extension, or rewrite `PROJECT` relative
+      (`%~dp0..\..\OurGame\OurGame.uproject`) and register that. Then rebuild the five bases and re-run the leak and
+      blob checks. The capture copies are copied from the bases (step 9), so this also takes the launcher out of the
+      capture sessions.
+    - **(b)** Add a precheck that refuses a copy holding an absolute answer-bearing path in an executable file, with
+      a named test showing that such a copy refuses before spawning.
+    - **(c)** Accept the residual as disclosed (METHOD-S's R8-RECORD-8i extension, item 1), relying on MCP isolation,
+      Halt 6 and the shadow-hold review.
+  The choice either narrows or keeps a registered check, or rebuilds the frozen fixture, so it is the operator's. The
+  AFK build does not take it. (c) is the most reversible: it changes no tree and no code.
+
 | step | what | USD bound | check before it |
 | --- | --- | --- | --- |
 | 1 | the corpus on `main`, clean | 0.00 | none |
@@ -2224,7 +2275,7 @@ verbatim); `results/s-bin/rendered/item-<n>.txt`; `results/s-bin/greenness/item-
 `results/s-bin/audit.txt`; `results/s-bin/captures/item-<n>/` and `results/s-bin/captures/procedure-log.txt`
 (D21-43 N19); `results/s-bin/probes.jsonl` (B1's haiku probes); `results/s-bin/missing-fields.jsonl` (branch 2's
 named fields, possibly empty); `results/s-bin/brittongames-snapshots.txt` (§8i.5); `runner/src/sbin.rs`;
-`results/audit-s.py`. *(dated 2026-10-03, s8i build, R5FIX-8i)* Also `results/s-bin/oot-shadow-rulings.jsonl`, the operator's rulings on shadow-flagged records, ~~when any record is flagged~~ *(dated 2026-10-03, s8i build, R7FIX-8i; s8i refuting round 7's minor: always, an empty file when no record is flagged, so the pins block names it and Checkpoint 8i (3) requires it).
+`results/audit-s.py`. *(dated 2026-10-03, s8i build, R5FIX-8i)* Also `results/s-bin/oot-shadow-rulings.jsonl`, the operator's rulings on shadow-flagged records, ~~when any record is flagged~~ *(dated 2026-10-03, s8i build, R7FIX-8i; s8i refuting round 7's minor: always, an empty file when no record is flagged, so the pins block names it and Checkpoint 8i (3) requires it)* *(dated 2026-10-03, s8i build, R8-RECORD-8i: the italic span above closed; s8i refuting round 8's minor)*.
 
 **Every S-BIN record** carries these fields beside the digest (`digest`, the schema-valid structured output):
 - `spike` = `"s-bin"`, `pass`, `item`, `arm`;
