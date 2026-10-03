@@ -1,7 +1,7 @@
 ---
 id: "0198"
 title: "**RT-57's pack scalars, the per-item envelope, and gate expiry are recorded, each value with its warrant and every reachable gate class fail-closed** (`s8h`'s Record B; D21-42 19a, 19c, 21a, 21c; D21-43 N17 Q2, Q3; RT-57; ADR-0146's owed item): the key spellings RT-57 routed to *\"7e's pack schema record\"* are fixed; both installed packs declare `appetite.dispatches = 40` and `appetite.tokens = 24000000` (the sum of `Usage`'s four counters, about twice a happy-path estimate of 17 × 681,083), `gate_deadline_secs = 864000`, `[breaker] consecutive_platform_failures = 3` and `expiry_secs = 600`, and `[margins] five_hour = 10` and `seven_day = 10`; the kernel counts an item's dispatches and charged tokens from the store and refuses the next dispatch past either limit before any spawn, through a kernel envelope class (not `StepError::Overage`) that leaves as `Exit::Overage` (20); every reachable gate class carries a `[[gate_expiry]]` row drafted `fail` for the operator's row-by-row signature, and an unmatched or misspelt class refuses at load. Supersedes nothing"
-status: proposed
+status: accepted
 date: 2026-10-02
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 19a, 19c, 21a, 21c, D21-43 N17 (Q2, Q3), D21-46's integration call (one row per minted gate class), D21-47 cross #7, D21-129 (owed forward to `s8h`); spikes/DECISIONS-2026-09-18.md RT-57; runbook/phase-1/s8h-cards-and-run-environment.md §8h.9, §8h.10, finding 6 and finding 12, and the stage-open readings of 2026-10-02; references/2026-09-08-acceptance-criteria.md AC-020, AC-029, AC-033, AC-039, AC-220, AC-260, AC-276 and the expiry scope note; references/adr/0146 (its owed item); references/adr/0017

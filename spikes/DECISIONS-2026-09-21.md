@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-138), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-139), and what they license
+
+*(Title moved 2026-10-02 after `s8h`'s close: it read **"(D21-1 … D21-138)"**; `D21-139` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 139, the last `D21-139`.)*
 
 *(Title moved 2026-10-02 at `s8h`'s close: it read **"(D21-1 … D21-137)"**; `D21-138` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 138, the last `D21-138`.)*
 
@@ -6231,3 +6233,67 @@ RUST_TEST_THREADS=2` on 2026-10-02, 15:08 to 17:42 local, from the operator's pl
 `CP8H-END-OF-BLOCK reached`, with both records `proposed`. (12)'s whole suite read **1404 passed / 0 failed / 9
 ignored over 44 result lines** (FLOOR 1404), and each replay that (13) ran reached its sentinel (the block exits on
 any failure). No record flipped, so no post-flip re-run is owed.
+
+---
+
+## D21-139 · The operator signs ADR-0198 (Record B) value by value and row by row; ADR-0198 flips to accepted
+
+**Signed 2026-10-02 by the operator, in the operator's own words in the session that records it.** This is the
+operator's dated signing line that ADR-0198 decision 8 and AC-276 require, and ADR-0198 flips `proposed → accepted` on
+it. It is not a provisional ruling under the AFK rules of D21-105: no Weigh-In defaulted it, and the session that
+writes it down takes no ruling of its own. ADR-0198 decision 8: *"The operator signs decision 2 value by value and
+decision 6 row by row on a dated ledger line. This record flips to `accepted` at `s8h`'s close, before `s8i`, on that
+line"*. AC-276, as ADR-0198 quotes it: *"routed to a human gate; not machine-decidable"*. D21-42 19c: *"The scalar
+record is written and signed before any spend"*, and `s8i` spends, so the line comes before `s8i`.
+
+**The signature, verbatim.** The values and the rows were laid out with their warrants, and the operator answered two
+questions:
+- on decision 2: *"Sign all six as drafted"*;
+- on decision 6: *"Sign all 56 as fail"*.
+
+**Signed: decision 2, value by value.** Each is signed as drafted, with the warrant decision 2 gives it:
+- `appetite.dispatches = 40`;
+- `appetite.tokens = 24000000`;
+- `gate_deadline_secs = 864000`;
+- `[breaker] consecutive_platform_failures = 3`;
+- `[breaker] expiry_secs = 600`;
+- `[margins] five_hour = 10` and `seven_day = 10`.
+
+**Signed: decision 6, row by row. All 56 rows are `fail`, with no exceptions.** Rows 1 to 56 of decision 6's table are
+each signed `fail`: the 45 catalog question classes, the seven `unknown_facet:<axis>` classes, `escalation`, and the
+three kernel-minted classes `landing.refused-path`, `render.structured-drift` and `verify.ac-discriminates`. No
+`escalate` exception is signed and no row is `auto-decide`. So Checkpoint 8h (8)'s `EXCEPTIONS` stays empty, and both
+installed packs' `[[gate_expiry]]` rows (54 in `bug-standard`, 56 in `story`) stand as shipped.
+
+**What moves in the flip commit.**
+- ADR-0198 flips `proposed → accepted`, and `date: 2026-10-02` is unchanged. It supersedes nothing, so no
+  `superseded_by` back-link moves. Only its `status:` line moves. Its body does not, as `s8h`'s Closing requires
+  (*"the frontmatter, the README index cell and the census move, and the body does not"*), so decision 6's `signed`
+  cells stay as drafted, and this line is their signature, row by row.
+- `TOKENS_APPETITE` stays `24000000`. The signed appetite equals the draft, so decision 8's dated edit of Checkpoint
+  8h's `TOKENS_APPETITE` is not owed, and Checkpoint 8h's block does not move.
+- `references/adr/README.md` moves ADR-0198's status cell, the lifecycle census (192 → 193 `accepted`, 2 → 1
+  `proposed`), the not-at-accepted sentence and the open-questions sentence, each by dated correction. The
+  not-at-accepted sentence was stale through `s8h`'s build and now reads five, with `0197` at `proposed`.
+  `runbook/00-preamble.md` carries no status census, and the flip moves neither its record count nor its next free
+  number.
+- `runbook/PROGRESS.md` gains this entry's §2 row and a dated note in row 8h. The `s8h` stage file gains a dated note
+  after its close paragraph. `s8i`'s stage file carries no precondition line naming Record B, so it takes no receiver
+  note.
+- 7 prose lines under `runbook/` and `references/`, outside every fence and the record files, call ADR-0198
+  `proposed`, and each takes a dated note naming this line. The comments under `crates/` and in `.redkiln/packs/` that
+  read *"ADR-0198 … proposed"* are left (39 lines), because tests read those bytes: `cards.rs` counts `ADR-0198` in
+  each pack. The flip script lists them.
+
+**What this lifts.** D21-138 held Record B: *"Record B flips on the operator's signing line, when it is written, and
+not on a line this session writes."* This is that line, so D21-138's hold on Record B is lifted. Record B flips on its
+own decision 8, not under D21-105 item 1, so D21-138's reading of item 1 is not exercised. §8h.14's hand-on to `s8i`
+is met: *"Record B must be accepted before S-BIN spends (D21-42 19c)"*. `s8j`'s evidence check refuses while *"RT-57's
+record (ADR-…, s8h's Record B) is not accepted"*, and it no longer refuses on that ground once its evidence file names
+`0198`. Record A (ADR-0197) is untouched and stays `proposed` under its decision 13.
+
+**Checkpoints.** Checkpoint 8h (2) asserts `status: (proposed|accepted)` for Record B, so it holds on both sides of
+the flip. No line of any fenced block under `runbook/` asserts ADR-0198 `proposed` (measured at the flip over 5 fenced
+`status: proposed` lines, none of which reads Record B's file). Checkpoint 8h is re-run whole over the flipped tree as
+`s8i`'s entry gate. The flip is checked by running Checkpoint 8h's INPUTS and (2) from the stage file's own bytes over
+the flipped tree, with two controls, and the four runbook validators.
