@@ -330,6 +330,13 @@ pub fn temp_repo() -> tempfile::TempDir {
         &["config", "user.email", "test@example.invalid"],
     );
     git(dir.path(), &["config", "user.name", "Test"]);
+    // *(Added 2026-10-03, an ubuntu-latest red.)* No auto-maintenance: the root commit below could
+    // start git's DETACHED maintenance, whose `worktree prune` deletes a stale `worktrees/<name>/`
+    // entry — exactly what `doctor/RK-D-WORKTREE-ORPHAN/` plants into a repo built here, so
+    // `ac414_…` saw no finding on the run where the prune won the race. rk-git's fixture repos
+    // carry the same two lines for the same reason.
+    git(dir.path(), &["config", "maintenance.auto", "false"]);
+    git(dir.path(), &["config", "gc.auto", "0"]);
     std::fs::write(
         dir.path().join("README"),
         format!("root {}-{nonce}\n", std::process::id()).as_bytes(),
