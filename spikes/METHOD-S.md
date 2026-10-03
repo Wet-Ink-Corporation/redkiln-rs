@@ -1567,3 +1567,44 @@ Any later change is disclosed here with the date and the records it post-dates.
   **The go-ahead entry's id.** The amendment's *"ledger entry D21-141, reserved for S-BIN"* reads **D21-143**.
   D21-141 was taken first by the Checkpoint 8i (8) ruling, and D21-141's own id note says the S-BIN entry *"takes the
   next free id when it is written"*. D21-142 was taken next, so the go-ahead lines are in D21-143.
+
+- **s8i pre-dispatch amendment, extension: B4's re-run keyed on its arm, and how the driver reads items 5, 6, 7 and
+  10 after `s8i` refuting round 1 — 2026-10-03, before B1; no S-BIN record exists** (cites the *s8i pre-dispatch
+  amendment* above, its items 3, 4, 5, 6, 7 and 10 and its *"Extension, and the one exception after dispatch"*
+  paragraph; edits nothing in it or in the extension above). Written in the AFK build, package R1FIX-8i.
+
+  **1. B4's re-run, keyed on its arm.** Item 4's table names the dispatch copy `D:/sb/d/p<pass>i<n>a<attempt>`, and
+  item 5 names a B4 re-run's arm `b-typed-sbin-plus-<field>`. Under the pass's form a re-run would claim the path the
+  pass's own record used, which item 4 refuses (*"which no earlier record and no capture copy used"*). So a B4
+  re-run's copy is `D:/sb/d/p<pass>i<n>a<attempt>-plus-<field>`, its raw transcript is
+  `results/s-bin/raw/p<pass>i<n>a<attempt>-plus-<field>.jsonl`, and its rendering is
+  `results/s-bin/rendered/item-<n>-plus-<field>.txt`. The pass's own copy path, transcript and rendering keep item 4's
+  and item 6's forms and never move. `<field>` is `[A-Za-z0-9_]+`. The re-run's rendering is the pass's summary with
+  one key added, `<field>`, whose value `fixture.json` carries as `items.<n>.b4_fields.<field>`. A field the summary
+  already renders refuses, after the paragraph's *"adds the named field"*. The driver dispatches a re-run only after
+  the pass's valid record for that item with `detected` false, and resume keys it on its own arm (item 10). Deferred
+  extension 5 still registers the named field, its arm label and the content of the re-run's rendering when branch 2
+  fires. This paragraph registers only where they go.
+
+  **2. How items 5, 6, 7 and 10 read in the driver, unchanged.**
+  - Item 5, *"a record reporting a second id halts the set"*: every record that carries an `observed_model`, voids
+    included, as Checkpoint 8i (4)'s `model` line counts them.
+  - Item 6, the constructed `spec.md` and report *"rendered as E3 renders its spec and report artifacts"*, the summary
+    *"in place of E3's 'files this change was scoped to touch' list"*: the brief is E3's own `build_prompt` text, its
+    24,000- and 16,000-character truncation included, with only the file-list slot replaced, under the header *"This
+    change's binary assets cannot be diffed. Its ChangeSummary:"*. The earlier driver had re-worded two of E3's phrases
+    and dropped the truncation. No rendering had been hashed.
+  - Item 7, *"the same for every dispatch and every retry"*: a real pass reads `fixture.json`'s `ceiling_secs` and
+    refuses before any spawn when it is absent or differs from `--timeout-secs`. The dry run, which comes before
+    extension 2, runs at 3600 s.
+  - Item 10, the caps *"counting voids"*: unchanged, and now tested over voided records. Item 10's *"The same item
+    voiding twice in one pass is a fixture defect, and it stops the stage"*: the run that writes the second void halts
+    once it is written, so no later item in that run is spawned.
+
+  **3. Recorded, not changed: the status rows are not stripped identically.** One registered set,
+  `CLAUDE.md#status-rows`, is stripped from all five trees, by two byte rules. Items 1–4 lose the
+  `Focus/Tier/Verify/Progress` rows and keep `| **Epic** |` and `| **Feature** |`. Item 5 loses `Epic/Feature/Focus/Next`
+  under D21-142's rule [measured: `git -C D:/sb/base/item-<n> show HEAD:CLAUDE.md | grep -cF` → `| **Epic** |` and
+  `| **Feature** |` 1 and 1 at items 1–4, 0 and 0 at item 5]. D21-43 N20's *"stripped from all five trees
+  identically, and recorded"* holds for the set's name, not for the bytes removed, and this is its record. Whether to
+  widen item 3's rule is the operator's.

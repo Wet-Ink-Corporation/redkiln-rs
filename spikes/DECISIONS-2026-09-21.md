@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-143), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-143), and what they license
+
+*(Title corrected 2026-10-03 at `s8i`'s build, package R1FIX-8i (refuting round 1's minor): it read **"2026-09-21 … 2026-09-28"** while the file carried entries dated 2026-10-02 (`D21-138` … `D21-142`) and `D21-143`, drafted 2026-10-03. The three title moves above corrected the id range only. No entry is added with this correction.)*
 
 *(Title moved 2026-10-03 during `s8i`: it read **"(D21-1 … D21-142)"**; `D21-143` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 142 before the append, the last `D21-142`.)*
 
@@ -6401,7 +6403,7 @@ white-on-white"**.
 **OPEN. Drafted 2026-10-03 in the AFK build, package S8I-P8. Nothing in this entry is a go-ahead until the operator
 signs a line in it.** It takes no ruling. It is the entry `s8i` §8i.5 opens: *"in the ledger entry this stage opens
 (next free D21 id at writing)"*. Checkpoint 8i (0) records its id as `SBIN_LEDGER=D21-143`, written by dated edit on
-the day this entry is written (D21-47: *"a record is located by the id recorded when it was written"*).
+the day this entry is written (D21-47: ~~*"a record is located by the id recorded when it was written"*~~ *"Records are located by the id recorded at write time"*; *(dated 2026-10-03, R1FIX-8i: the struck words were a paraphrase in quotation marks)*).
 
 **The id.** The stage-open note reserved D21-141 for this entry. The METHOD-S `s8i pre-dispatch amendment` (introduced
 at `285b659`) says *"The go-ahead lines for B1–B4 are written by the operator into ledger entry D21-141, reserved for
@@ -6447,6 +6449,17 @@ stands, so the dry run is run by the operator from a plain terminal after the B0
 on the B1 line. METHOD-S's extension of 2026-10-03 (seed 5's R = `6a101bdcd`, D21-142's second rule) is appended, and
 base item 5 is built (`292cabad7e073a977010e7e84261cd4ad204389e`). Not yet done before B1: the five greenness runs,
 then extensions 2, 3 and 4. This entry stays OPEN, and nothing here signs a line.
+
+*(dated 2026-10-03, s8i build)* **Refuting round 1 fixed in the driver (package R1FIX-8i).** The superseding driver
+patch is `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R1FIX-8i-sbin-driver.patch` (sha256
+`1922bb473b14a2bd57914e0ce7092e95accd3766eaca39ae80ab214192c12b08`), so the B0 line's *"from the private-copy patches"* means that patch and P6's. The B4 re-run
+now dispatches into a path of its own, a real pass runs only under `fixture.json`'s `ceiling_secs`, and the run that
+writes an item's second void halts (`s8i` §8i.3's dated note). Two things for the operator to see before signing B1,
+neither decided here: base items 1 and 4 hold the same tree, so a block on clean item 1 naming `WBP_LoadoutScreen.uasset`
+is scored as a false positive under the registered rule (`s8i` §8i.4's dated note); and owed item (e), the constructed
+specs and reports, the review repositories and the completed `fixture.json` (`s8i` §8i.5). At the close the corpus
+goes back on the pin before the formal Checkpoint 8i (§8i.5 step 11). This entry stays OPEN, and nothing here signs
+a line.
 
 **The go-ahead lines (unsigned):**
 
