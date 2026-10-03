@@ -96,6 +96,25 @@ assert_cmd = "2"    # 2.2.2; dev — the process-level refusals
 [workspace.lints.rust]
 unsafe_code = "deny"
 
+# temper (rust-craft) adoption, 2026-10-03: the template's named lints at WARN, never deny, so the
+# CI `clippy` step (no -D warnings) keeps passing; temper's ratchet fails only NEW findings against
+# .claude/temper-baseline.json. ADR-0102 decision 5 stands: no group-level pedantic, nursery stays warn;
+# unsafe_code stays deny (rk-containment's one approved allow, ADR-0127).
+missing_docs = "warn"   # H-15 / API-15
+missing_debug_implementations = "warn"   # API-06
+unreachable_pub = "warn"   # API-14
+unused_qualifications = "warn"
+unused_lifetimes = "warn"   # OWN-05
+redundant_lifetimes = "warn"   # OWN-05
+let_underscore_drop = "warn"   # H-10
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unit_bindings = "warn"
+non_ascii_idents = "warn"
+ambiguous_negative_literals = "warn"   # `-1i32.abs()` parses as `-(1i32.abs())`
+redundant_imports = "warn"   # CRF-05: e.g. importing 2024-prelude items
+rust_2018_idioms = { level = "warn", priority = -1 }
+
 [workspace.lints.clippy]
 # Group entries carry an explicit priority so individual lints below override them (Cargo's
 # lint_groups_priority rule — without it `cargo clippy` fails on the pinned toolchain;
@@ -111,3 +130,48 @@ match_same_arms                    = "deny"
 redundant_closure_for_method_calls = "deny"
 items_after_statements             = "deny"
 nursery = { level = "warn", priority = -1 }
+# temper (rust-craft) named lints, warn-level (see the note on [workspace.lints.rust]).
+unwrap_used = "warn"   # H-02
+expect_used = "warn"   # H-02
+unwrap_in_result = "warn"   # H-02
+panic = "warn"   # H-03
+todo = "warn"   # H-03
+unimplemented = "warn"   # H-03
+unreachable = "warn"   # H-03
+indexing_slicing = "warn"   # H-04
+string_slice = "warn"   # H-04
+allow_attributes = "warn"   # H-05
+allow_attributes_without_reason = "warn"   # H-05
+dbg_macro = "warn"   # H-06
+print_stdout = "warn"   # H-06 (bins: writeln!(io::stdout().lock(), ..)?)
+print_stderr = "warn"   # H-06
+mem_forget = "warn"   # H-07
+rc_mutex = "warn"   # H-07 / OWN-11
+let_underscore_must_use = "warn"   # H-10
+unused_result_ok = "warn"   # H-10
+as_conversions = "warn"   # H-11
+exit = "warn"   # ARC-14: main returns ExitCode
+clone_on_ref_ptr = "warn"   # PERF-11
+redundant_clone = "warn"   # H-08
+rc_buffer = "warn"   # OWN-15
+map_err_ignore = "warn"   # ERR-04
+str_to_string = "warn"
+mod_module_files = "warn"   # ARC-06
+empty_structs_with_brackets = "warn"
+format_push_string = "warn"   # PERF-04
+significant_drop_tightening = "warn"   # PERF-12
+cognitive_complexity = "warn"   # CRF-02
+large_futures = "warn"   # PERF-05
+needless_collect = "warn"   # PERF-02 / OWN-13
+or_fun_call = "warn"   # ERR-07 / PERF-04
+significant_drop_in_scrutinee = "warn"   # ASY-14
+debug_assert_with_mut_call = "warn"   # H-03
+future_not_send = "warn"   # ASY-11
+too_long_first_doc_paragraph = "warn"   # API-15
+missing_assert_message = "warn"   # H-03
+assertions_on_result_states = "warn"   # TST-05
+renamed_function_params = "warn"   # API-18
+empty_drop = "warn"   # ERR-13
+negative_feature_names = "warn"   # API-16
+redundant_feature_names = "warn"   # API-16
+cargo_common_metadata = "warn"   # ARC-01: fires only once a crate can publish
