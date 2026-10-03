@@ -918,3 +918,19 @@ pub fn help_captures() -> Vec<(String, String)> {
     out.sort();
     out
 }
+
+/// Whether `pid` is dead, polled for up to 5 s (250 polls of 20 ms, [`wait_until`]'s tick) — the
+/// dispatch tests' counterpart of rk-containment's own `wait_dead`. On POSIX `Group::kill` is a
+/// `killpg` that does not wait for its members, and an orphan the kill reached is reparented to
+/// PID 1 (or the nearest subreaper) and reads alive through `kill(pid, 0)` until that process reaps
+/// it, so a ZOMBIE counts as dead here: [`rk_containment::process_start_time`] reads nothing for
+/// one (state `Z`). A container whose PID 1 never reaps leaves the zombie in place indefinitely;
+/// it is still a killed process, which is what these assertions are about. On Windows the kill
+/// through the job has already waited for every member, and `is_alive` is the reading.
+#[must_use]
+pub fn wait_dead(pid: u32) -> bool {
+    wait_until(250, || {
+        !rk_containment::is_alive(pid)
+            || (cfg!(unix) && rk_containment::process_start_time(pid).is_none())
+    })
+}

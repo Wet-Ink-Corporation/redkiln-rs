@@ -563,11 +563,22 @@ fn ac225_cancelled_keyed_on_token_not_exit_code() {
     let o = h.dispatch(&spec, &mut store);
     killer.join().expect("killer");
     match &o.result {
-        Err(StepError::NonZero { code, .. }) => assert_eq!(
-            *code,
-            Some(i32::try_from(rk_containment::CANCEL_EXIT_CODE).expect("fits")),
-            "the exit code is recorded per platform (the adapter's own code on Windows)"
-        ),
+        // The exit code is recorded per platform: on Windows `TerminateProcess` carries the
+        // adapter's own code; on POSIX `terminate_pid` is a SIGKILL and ignores it, so the status
+        // has no code at all (`ExitStatus::code()` is `None` for a signal death) — rk-containment's
+        // `CANCEL_EXIT_CODE` doc: "On POSIX the group is killed with `SIGKILL` and there is no
+        // code to choose".
+        Err(StepError::NonZero { code, .. }) => {
+            #[cfg(windows)]
+            let expected = Some(i32::try_from(rk_containment::CANCEL_EXIT_CODE).expect("fits"));
+            #[cfg(unix)]
+            let expected = None;
+            assert_eq!(
+                *code, expected,
+                "the exit code is recorded per platform (the adapter's own code on Windows, no \
+                 code for a POSIX signal death)"
+            );
+        }
         other => panic!(
             "an EXTERNAL kill with CANCEL_EXIT_CODE and neither arm fired must not classify as \
              Cancelled (AC-225: keyed on the token, not the exit code); got {other:?}"
@@ -658,7 +669,7 @@ fn cancel_reaps_process_tree() {
     assert_eq!(holders.len(), 1, "the holder wrote its own marker");
     assert_eq!(holders[0].pid, holder_pid);
     assert!(
-        !rk_containment::is_alive(holder_pid),
+        crate::support::wait_dead(holder_pid),
         "the orphaned holder (pid {holder_pid}) survived the cancel: only the job holds it, and a \
          PID walk from the live child misses it (AC-224; F22)"
     );
@@ -727,11 +738,29 @@ fn cancel_reaps_process_tree() {
         // O-2: the attempt spawned — then it landed INSIDE the job (no BREAKAWAY_OK is granted)
         // and the kill through the job reaped it; a survivor here is a breakaway that succeeded.
         let pid: u32 = rest.parse().expect("pid");
+        #[cfg(windows)]
         assert!(
             !rk_containment::is_alive(pid),
             "the breakaway attempt SUCCEEDED: its holder (pid {pid}) is alive after the kill \
              through the job (ADR-0127 d7: the job never grants BREAKAWAY_OK; O-2)"
         );
+        // POSIX: a MEASUREMENT, not a control (rk-containment's posix.rs module doc; the fixture's
+        // mode table). The holder was spawned with `process_group(0)`, the POSIX analogue of
+        // `CREATE_BREAKAWAY_FROM_JOB` that no flag on the group can refuse, so `killpg` on the
+        // child's group cannot reach it and ADR-0127 (:194) forbids the PID walk that would. The
+        // hole is asserted present so that closing it reads red here and is recorded, and the
+        // survivor is killed by pid so it does not hold the fixture's 600 s cap.
+        #[cfg(unix)]
+        {
+            let survived = rk_containment::is_alive(pid);
+            let _ = rk_containment::terminate_pid(pid, rk_containment::CANCEL_EXIT_CODE);
+            assert!(
+                survived,
+                "the POSIX breakaway holder (pid {pid}) did NOT survive the kill through the \
+                 group: the hole posix.rs records is closed — update this measurement and \
+                 ADR-0127 d7's POSIX reading"
+            );
+        }
     } else {
         assert!(
             line.starts_with("breakaway=err os="),
@@ -1272,7 +1301,7 @@ fn exit_with_stdout_holder_is_decided_by_the_frame() {
         r.markers.read()
     );
     assert!(
-        !rk_containment::is_alive(holders[0].pid),
+        crate::support::wait_dead(holders[0].pid),
         "the leftover holder (pid {}) survived the child's exit: it is reaped through the group \
          (AC-278's shape)",
         holders[0].pid

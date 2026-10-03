@@ -69,6 +69,24 @@ jobs:
           cargo install cargo-audit --version 0.22.2 --locked
           cargo install cargo-deny --version 0.20.2 --locked
 
+      # D21-42 14a (s8j §8j.7): the Node toolchain adapter's fixture project needs node_modules before
+      # `cargo test --workspace`, or fourteen rk-adapter-toolchain-node tests fail at tests/it/support.rs's
+      # preflight (992d257 counted ten; s8c's build, bound, verbs and red_suite tests make it fourteen), as
+      # do rk-adapter-toolchain-rust's verbs::setup_installs_each_declared_node_project_offline (which also
+      # spawns `pnpm` itself) and rk-cli's verify_pass::node_detected_fixture_records_the_node_adapter.
+      # pnpm comes from npm at the version that wrote pnpm-lock.yaml -- no marketplace action -- and
+      # --frozen-lockfile makes a lockfile drift fail HERE. Placed BEFORE the nextest install so that step
+      # still sits immediately before `test` (Checkpoint 8c (2)); it is still before `test` (Checkpoint 8j (7)).
+      - name: node fixture dependencies (pnpm, frozen lockfile)
+        shell: bash
+        run: |
+          node --version
+          npm install --global pnpm@10.33.0
+          pnpm --version
+          pnpm install --frozen-lockfile --dir crates/rk-adapter-toolchain-node/tests/fixtures/project
+          test -e crates/rk-adapter-toolchain-node/tests/fixtures/project/node_modules/.bin/vitest \
+            || { echo "FAIL: no node_modules/.bin/vitest after pnpm install -- the node suite would fail at its preflight"; exit 1; }
+
       # s8c (D21-48 X15): cargo-nextest at THE PIN, the version `cargo nextest --version` read on the build box at stage
       # open. It sits immediately BEFORE the test step, because the Rust adapter's nextest-path tests run inside that
       # step's `cargo test --workspace` and spawn `cargo nextest run` against the fixtures. The gate's own command stays
@@ -282,12 +300,29 @@ jobs:
           #       SYNTHETIC 7d fixtures, no corpus provenance: authored against `classify.rs`'s numbered
           #       order and modelled on rk-adapter-claude's own *.scripted.ndjson shapes, never copied from
           #       its recorded/ directory. Two `[^/]+` segments, never `.*`, for the same reason as (c).
+          #   (e)-(h) added 2026-10-03 (CI's first run of this job flagged them; the dated AC-465 amendment naming
+          #       them is OWED with (a)-(d)'s). Each is a SYNTHETIC rk-cli fixture by its own README, no corpus byte:
+          #   (e) crates/rk-cli/tests/fixtures/cost/<case>/rows.jsonl and cost/run-frames.jsonl -- `redkiln cost`'s
+          #       fixture corpus (ADR-0163 decision 6); cost/README.md: "every row here is SYNTHETIC". run-frames
+          #       copies its frames from exit/schema-invalid-structured-output, itself allowlisted synthetic (d).
+          #   (f) crates/rk-cli/tests/fixtures/doctor/<code>/events.jsonl -- doctor/README.md §Provenance: "No corpus
+          #       byte enters the tree ... Every file here is hand-authored for Step 7d Slice 4".
+          #   (g) crates/rk-cli/tests/fixtures/unread/*.jsonl -- unread/README.md: "SYNTHETIC. No corpus byte enters
+          #       the tree"; hand-authored 2026-09-21 for Step 7d Slice 4 cycle 8.
+          #   (h) crates/rk-cli/tests/fixtures/pack-min/lane/implement-frames.jsonl and slice/approved/frames.jsonl --
+          #       pack-min/README.md: "No byte of this directory comes from the pinned corpus"; both are two-frame
+          #       synthetic transcripts (session_id `synthetic-lane` / `synthetic-review`).
+          #   One `[^/]+` segment at most per entry, never `.*`, for the same reason as (c).
           bad=$(git ls-files 'spikes/corpus/*' 'spikes/results/*' 'spikes/runner/*' '*.jsonl' \
                  | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' \
                  | grep -vE '^crates/rk-adapter-claude/tests/fixtures/recorded/[^/]+\.jsonl$' \
                  | grep -vE '^crates/rk-kernel/tests/fixtures/(findings/ac282_f20_golden_transcript|logs/implement-bf1d8cec3b22d288/events|retry/api-retry-rows)\.jsonl$' \
                  | grep -vE '^crates/rk-cli/tests/fixtures/explain/[^/]+/events\.jsonl$' \
-                 | grep -vE '^crates/rk-cli/tests/fixtures/exit/[^/]+/[^/]+\.jsonl$' || true)
+                 | grep -vE '^crates/rk-cli/tests/fixtures/exit/[^/]+/[^/]+\.jsonl$' \
+                 | grep -vE '^crates/rk-cli/tests/fixtures/cost/([^/]+/rows|run-frames)\.jsonl$' \
+                 | grep -vE '^crates/rk-cli/tests/fixtures/doctor/[^/]+/events\.jsonl$' \
+                 | grep -vE '^crates/rk-cli/tests/fixtures/unread/[^/]+\.jsonl$' \
+                 | grep -vE '^crates/rk-cli/tests/fixtures/(pack-min/lane/implement-frames|slice/approved/frames)\.jsonl$' || true)
           if [ -n "$bad" ]; then
             echo "FAIL: corpus artifacts tracked in the product repo (ADR-0013, AC-465):"
             printf '%s\n' "$bad"
