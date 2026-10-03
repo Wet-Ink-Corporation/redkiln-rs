@@ -613,6 +613,8 @@ disclosed here:
   `/repos/redkiln-corpus`, `/repos/brittongames`, `/.claude-personal/projects` and `/.claude/projects`. It is also
   checked against any path under the review root, in its `D:/sb`, `/d/sb` and `/mnt/d/sb` spellings, other than
   the dispatch copy's own. Paths outside all of these, such as the engine install, are not out-of-tree.
+  *(dated 2026-10-03, s8i build, R3FIX-8i)* Before that test, each string's separators are collapsed and its `.` and `..` resolved, and a
+  relative path is resolved against the child's cwd: the copy, as moved by `cd` (METHOD-S's R3FIX-8i extension, item 1).
 - **Cited fields** are read from the digest's findings only, never from the prose. A field counts when its name
   appears as the rendering writes it (dotted, indexed or in backticks), or when a finding names a path the summary
   attributes to it. The token table is `FIELD_TOKENS`. A finding naming an item's asset path cites `assets`.
@@ -656,8 +658,8 @@ is authored and run **from Python, never the shell**, and must flip its test.
 | `a_digest_failing_the_typed_schema_is_void_schema_not_a_miss` | METHOD-S §0 rule 2 | score the invalid digest |
 | `exit_zero_without_structured_output_is_void_not_success` | Halt 3 | read exit 0 as a completed dispatch |
 | `strong_detection_needs_a_blocking_finding_naming_the_seeded_path` | METHOD-S §3.4 primary | credit any blocking finding; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `dispatch_one` scoring a seeded item as clean (`seeded_paths` empty) |
-| `cited_fields_are_extracted_mechanically_from_the_digest` | METHOD-S §3.4 *"Recorded"* | read cited fields from the prose |
-| `an_out_of_tree_read_voids_the_record` | §8i.2 item 4 | audit `Read` paths only, not `Bash` commands; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `ran_automation` counting a command that only names the suite |
+| `cited_fields_are_extracted_mechanically_from_the_digest` | METHOD-S §3.4 *"Recorded"* | read cited fields from the prose; *(dated 2026-10-03, s8i build, R3FIX-8i)* also `dispatch_one` passing no asset paths to scoring |
+| `an_out_of_tree_read_voids_the_record` | §8i.2 item 4 | audit `Read` paths only, not `Bash` commands; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `ran_automation` counting a command that only names the suite; *(dated 2026-10-03, s8i build, R3FIX-8i)* also no `..` resolution, no separator collapse, relative paths ignored, no `cd` tracking, and `dispatch_one` handing the audit no copy path or another review root |
 | `api_key_source_other_than_none_voids_before_scoring` | D21-42 17a | skip the init check |
 | `a_version_move_between_dispatches_halts_the_set` | Halt 2 | compare against the floor, not the set's first version; *(dated 2026-10-03, s8i build, R1FIX-8i)* also, on `dispatch_one`'s path: the set check reading no records, no Halt 2 when init's CLI differs from the pre-read, no halt on a second observed model, the first model read from valid records only, and the model compared only when this dispatch is valid; *(dated 2026-10-03, s8i build, R2FIX-8i)* also probe's loop reading the version once per run, ignoring a pre-spawn or a post-record halt; `dispatch_one` skipping the launch-record check, admitting no launch record or a different version, or recording no launch version; and the launch record read from the first of two `CLI_VERSION_BEFORE` lines |
 | `the_dispatch_cap_refuses_before_spawning` | §8i.5 caps | check the cap after the child is spawned; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `cap_state` skipping voided records, and `fixture.json`'s `ceiling_secs` ignored, defaulted to `--timeout-secs`, or accepted when it differs; *(dated 2026-10-03, s8i build, R2FIX-8i)* also a cost-less dispatch charged 0.00, not the bound |
@@ -668,7 +670,7 @@ is authored and run **from Python, never the shell**, and must flip its test.
 | `every_item_carries_a_capture_reference_or_rendering_refuses` | §8i.2 item 2 (D21-43 N19) | render captures for the seeded items only; *(dated 2026-10-03, s8i build, R1FIX-8i)* also F1's hand-written brief (E3's wording changed, no truncation), B4's rendering written over the pass's, B4's field not added, and a B4 field replacing one the summary renders |
 | `card_not_adopted_voids_before_scoring` | METHOD-S §0's `card_adopted` | score a record whose init tool set differs from the card's |
 | `a_platform_error_is_recorded_as_api_error_status_and_voids` | METHOD-S §0's *"platform errors named as such (`api_error_status`)"* | record a platform error as a scored miss |
-| `each_dispatch_runs_in_a_fresh_copy_at_a_never_used_path` | §8i.2 item 4, §8i.4 | reuse the previous dispatch's path; *(dated 2026-10-03, s8i build, R1FIX-8i)* also a B4 re-run's copy path or raw stem without its arm, a re-run with no valid missed original or after a detected one, the arm and `--rerun` disagreeing, and any field name accepted |
+| `each_dispatch_runs_in_a_fresh_copy_at_a_never_used_path` | §8i.2 item 4, §8i.4 | reuse the previous dispatch's path; *(dated 2026-10-03, s8i build, R1FIX-8i)* also a B4 re-run's copy path or raw stem without its arm, a re-run with no valid missed original or after a detected one, the arm and `--rerun` disagreeing, and any field name accepted; *(dated 2026-10-03, s8i build, R3FIX-8i)* also a B4 re-run with no `--only-item` run over the default five items, and an `--only-item` outside 1–5 accepted |
 | `a_dirty_or_mismatched_copy_refuses_before_spawning` | §8i.4's pre-spawn checks | read tracked files only, not untracked and ignored ones; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` ignoring the pre-spawn miss |
 | `an_account_project_dir_for_the_copy_path_refuses_before_spawning` | §8i.4 (transcripts and auto-memory are keyed by path) | check `~/.claude` only, not `~/.claude-personal`; *(dated 2026-10-03, s8i build, R1FIX-8i)* also exercised through `dispatch_one`, whose miss the row above's mutant removes; *(dated 2026-10-03, s8i build, R2FIX-8i)* also the production account roots without `~/.claude-personal` |
 | `a_dirty_runner_tree_refuses_before_spawning` | §8i.7's `runner_commit` | record `runner_commit` without reading `runner/`'s status; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `dispatch_one` recording `HEAD` without reading `runner/`'s status |
@@ -1010,6 +1012,87 @@ status empty, before and after.
   is `runner/target/`, and the new form passing it. Both forms refuse a modified or untracked runner file and a
   modified audit.
 
+*(dated 2026-10-03, s8i build, R3FIX-8i)* **Refuting round 3's findings, fixed in the driver (package R3FIX-8i).** A seventh private copy,
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R3-corpus`, made from R2's copy (R2's copy keeps its own bytes,
+`4f64c7d0…8636`). Nothing wrote to `D:/repos/redkiln-corpus` or its `.git`, to `D:/sb`, or to `D:/repos/BrittonGames`.
+What changed:
+- **The out-of-tree void implements the registered rule.** The bullet above checks each string *"against any path
+  under the review root, in its `D:/sb`, `/d/sb` and `/mnt/d/sb` spellings, other than the dispatch copy's own"*, and
+  METHOD-S item 4 names *"every other copy under `D:/sb`"* as answer-bearing. Round 3 measured, from inside the test
+  binary, that `<copy>/../../base/item-1/…`, `../../base/item-1/…`, a doubled-backslash `D:\\sb\\…` and `git -C
+  "D:\\repos\\BrittonGames"` each gave 0 hits. The fold never collapsed `//`, and the own-copy test accepted any `..`
+  after the copy's prefix. Round 3 also measured that bases 1–4 hold a post-fix `WBP_GameVitals.uasset` (`9e7f8829…`),
+  so another base is answer-bearing for seed 5. Now `out_of_tree_reads` does three things:
+  - It folds each string and collapses each run of `/` (`norm_sep`). It does the same to the review root and the copy
+    path, so the answer-bearing names match `D:\\repos\\BrittonGames` and `D://repos//BrittonGames`.
+  - It resolves `.` and `..` in every path before the containment test (`resolve_path`). That covers each root
+    spelling found anywhere in the string and every absolute token.
+  - It resolves every relative token against the child's cwd. The cwd starts at the copy. A `cd` or `pushd` in a
+    `Bash` command moves it, and the move persists into later `Bash` calls, because Claude Code's `Bash` tool keeps its
+    working directory between calls. A `cd` inside any other string, such as a finding's repro command or a
+    description, moves only that string's own cwd. A relative path that resolves under the review root outside the
+    copy, or under an answer-bearing root, voids. One that stays in the copy, or lands elsewhere such as the engine
+    install, does not.
+
+  METHOD-S's R3FIX-8i extension, item 1, records the normalisation. It implements item 4's rule and does not widen it.
+- **`dispatch_one`'s wiring into scoring is tested.** Round 3 measured three mutants surviving 25/25: `asset_paths: &[]`
+  (major 2), and `tree_path: ""` and `review_root: "Q:/elsewhere"` (a minor). Two tests now cover them:
+  - `cited_fields_are_extracted_mechanically_from_the_digest` dispatches a rig item whose finding names only its asset
+    path, and asserts `cited_fields` `["assets"]` on the record.
+  - `an_out_of_tree_read_voids_the_record` dispatches two rig items. A `Read` inside the dispatch copy leaves `void`
+    null. A `Read` of the review repository beside it, under the rig's root, voids as `out-of-tree`.
+- **B4 names its one item.** `probe`'s item list is now `pass_items(--only-item, --rerun)`. A re-run with no
+  `--only-item` refuses before anything renders, and so does an item outside 1–5. Before this, a B4 re-run over the
+  default list reached item 1 first and refused there. B4's argv is in §8i.5's dated note and in METHOD-S's R3FIX-8i
+  extension, item 2.
+- **Red first.** The test cases went in first:
+  - `an_out_of_tree_read_voids_the_record` went red for its stated reason: *"each of these must void as out-of-tree:
+    ["<copy>/../../base", "../../base", "doubled backslashes under the root", "doubled backslashes to BrittonGames",
+    "doubled slashes to BrittonGames", "a file URL to BrittonGames", "a file URL under the root", "Read
+    <copy>/./../sibling", "cd, then ../../../base", "ls ..", "a relative Glob pattern into a sibling copy"]"*. It went
+    green on the normalisation. A new control then gave a second red: *"paths that stay in the copy must not void:
+    [("a repro command in the digest that changes directory", …)]"*. That went green once a `cd` outside a `Bash`
+    command moved only its own string's cwd. These in-copy controls do not void: `./OurGame/…`;
+    `OurGame/../OurGame/x`; `cd OurGame && ls ../_s-bin/report`; an absolute `cd` into the copy; a revision range
+    `HEAD~3..HEAD`; `<copy>/OurGame/../CLAUDE.md`; the engine install reached through `..`; and a `cd` that persists
+    across two `Bash` calls.
+  - `each_dispatch_runs_in_a_fresh_copy_at_a_never_used_path` went red with `pass_items` scaffolded at the old
+    behaviour: *"a B4 re-run with no --only-item must refuse: Ok([1, 2, 3, 4, 5])"*. It went green after the guard.
+  - The three wiring cases passed at once, because the wiring was right. Their red is their mutants. Over the R2 bytes
+    and the old tests, `R3-W1`, `R3-W2` and `R3-W3` each SURVIVED, and each flips now.
+
+  **The selection stays at 25**: every case went into an existing test.
+- **Mutants, from `s8i_R3FIX-8i_mutants.py`, in the copy only, restore verified by sha256.** Nine are new and all nine
+  flipped:
+  - the three wiring mutants;
+  - no `..` resolution, no separator collapse, relative paths ignored, and no `cd` tracking;
+  - a B4 re-run with no `--only-item` run over the default five, and an `--only-item` outside 1–5 accepted.
+
+  Only the two file-URL cases kill "no separator collapse". For a plain absolute token the resolver also drops empty
+  segments, so the collapse shows only where a name sits mid-token, as in `file:///D:\\repos\\…`. R2FIX-8i's 17,
+  R1FIX-8i's 24, F1's 7, P4's 13 and P5's 12 were re-run over the final bytes: **82/82 flipped**.
+- **Recorded, not changed.**
+  - No test reaches `probe`'s call of `pass_items`, just as none reaches `probe`'s launch-record read (R2FIX-8i's
+    note).
+  - The relative-path rule audits every string, as the bullet above does. So a bare `..` token anywhere in a tool
+    input, a finding's prose included, resolves out of the copy and voids. A void is retried once, and a second void
+    halts (§8i.6). This residual is disclosed for the operator. It is not narrowed here, because narrowing a
+    registered check is the operator's call.
+  - Checkpoint 8i (4)'s `haiku` line reads every probe's `observed_model`, so a probe with no init line prints `haiku
+    BAD` (round 3, refuted to minor). The line is left as it stands. A probe with no init line is a failed B1, so it is
+    Halt 3: §8i.6 says *"No Opus dispatch follows a failed B1"*, and packet step 8 says *"A probe that fails refuses
+    non-zero: stop and report."* Any later probe needs a ledger line and a new go-ahead first, and a guard change
+    would be settled at that go-ahead. The line fails safe, because it is stricter than the stage. Its one fault in
+    that case is the misleading "a cap was exceeded" message.
+- **Readings, last in the copy, all under `nd.sh`.** The sbin selection: `test result: ok. 25 passed; 0 failed`. The whole runner suite: 159 passed, 1 failed, the same pre-existing `p7::tests::the_driver_matches_the_committed_catalog`.
+  clippy exits 0 with nothing for `sbin.rs`, and `sbin.rs` is rustfmt-clean.
+- **The patch supersedes R2FIX-8i's.** `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R3FIX-8i-sbin-driver.patch` (sha256
+  `0bc288756c57010517c32d4f71169db4c8e601411261be74f6a8e315f58ea7dc`) is cumulative against a fresh `main` extract at `285e011`. It adds
+  `runner/src/sbin.rs` (sha256 `8115008816e5efce3e76c85d2a6942363b72fa32249ad310b82e2165ac545fe4`, 6,022 lines) and
+  P4's same 6 lines in `runner/src/main.rs`. Applied with `core.autocrlf=false` to a fresh `git archive` of `runner/`,
+  it gives a `runner/src` byte-identical to the copy. Apply only this one, not P4's, P5's, F1's, R1FIX-8i's or
+  R2FIX-8i's. P6's audit patch is applied beside it. §8i.5's packet names it as `DRV`.
+
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
 Everything here costs no model spend, and all of it happens in B0, before B1.
@@ -1133,7 +1216,7 @@ read-only on `D:/repos/BrittonGames`. Its HEAD (`ee6e450`), the sha256 of `git -
 --no-checkout --shared` under `D:/sb/tmp-p7` into `D:/sb/base/item-<n>`, as a separate work tree with the LFS smudge
 skipped and `core.autocrlf=false`. Seed 4 was applied with `git checkout a71265925^ -- <path>`. Every LFS pointer was
 then replaced by its object, read from BrittonGames' own `.git/lfs/objects`, and each materialised file's SHA-256 and
-size equal its pointer's `oid` and `size` (30,014, 30,015, 30,022 and 30,014 objects; 0 missing). The clone was then
+size equal its pointer's `oid` and `size` (30,014, 30,015, 30,022 and 30,014 ~~objects~~ *(dated 2026-10-03, s8i build, R3FIX-8i)* LFS pointer paths; 0 missing; the distinct objects number 29,576, 29,577, 29,584 and 29,576 [measured: `find .git/lfs/objects -type f | wc -l`, read-only]). The clone was then
 deleted, and `D:/sb/tmp-p7` is gone. The strip removed `CLAUDE.md`'s four rows, each prefix once, from every tree,
 and 19 files: `_workspace/backlog/`'s 18 and the gotchas reference. The set is one set, and the removed files are
 the same 19 on all four trees. In the work tree `CLAUDE.md` carries CRLF (153 CRs, from BrittonGames'
@@ -1200,7 +1283,7 @@ over BrittonGames' blob).
 `s8i_S8I-F1_build5.py`, which `s8i_S8I-F1_mkbuild5.py` derives from P7's script by anchored replacements: `ITEMS[5]`,
 D21-142's second `CLAUDE.md` rule and R's three leak tokens, nothing else. A disposable `git clone --no-checkout
 --shared` under `D:/sb/tmp-f1` (deleted afterwards); seed 5 applied as `git checkout 6a101bdcd^ --
-OurGame/Content/UI/HUD/WBP_GameVitals.uasset`; 11,886 LFS objects materialised from BrittonGames' store, each
+OurGame/Content/UI/HUD/WBP_GameVitals.uasset`; 11,886 ~~LFS objects~~ *(dated 2026-10-03, s8i build, R3FIX-8i)* LFS pointer paths (11,447 distinct objects, measured the same way) materialised from BrittonGames' store, each
 file's SHA-256 and size equal to its pointer's, none missing. BrittonGames' HEAD (`ee6e450`), status sha256
 (`a6751b0c…69ed`) and worktree-list sha256 (`ba14505a…e0ab`) were the same before and after.
 - **`CLAUDE.md`, by the old-table rule.** `git merge-base --is-ancestor 07fe80ab6 <item>` reads rc 0 at items 1–4
@@ -1566,6 +1649,29 @@ note), and step 2's check names it. The dry-run script's sha256 is now `15990996
   it is built, or an appended METHOD-S extension registers that the batch pre-check above carries it. That choice
   narrows or keeps a registered check, so it is the operator's (METHOD-S's R2FIX-8i extension, item 5).
 
+*(dated 2026-10-03, s8i build, R3FIX-8i)* **`DRV` is superseded again, B4's argv is written, and the close removes the review root
+(s8i refuting round 3).**
+- `DRV` is now `S8I-R3FIX-8i-sbin-driver.patch` (sha256 `0bc288756c57010517c32d4f71169db4c8e601411261be74f6a8e315f58ea7dc`, §8i.3's dated
+  note), and step 2's check names it.
+- **B4's argv.** A B4 re-run names its one item, and the driver refuses one that does not (§8i.3's dated note). It is
+  the pass's argv with three flags added, run once per (pass, item) that fired branch 2 through the runner launch
+  block above: `SBIN_ARGV=(sbin-probe --pass <p> --fixture results/s-bin/fixture.json --out results/s-bin.jsonl
+  --model opus --effort xhigh --timeout-secs <ceiling> --arm b-typed-sbin-plus-<field> --rerun --only-item <n>)`. The
+  field and its content stay with B4's amendment (deferred extension 5).
+- **Step 12 removes the review root at the close.** Checkpoint 8i (12) ends with `test ! -e "$SBIN_ROOT"`, and its
+  header reads *"no review tree left registered in BrittonGames or left on disk (Halt 6)"*. No step removed `D:/sb`.
+  So a packet followed to the letter reached (12) with `D:/sb/base` and `D:/sb/rev` still in place, and (12) failed
+  (round 3, refuted to minor). The faithful route is a close step, not a narrower guard, for these reasons:
+  - Nothing in Checkpoint 8i reads a tree under the root [measured on this file]. Its only uses of `rev/item` are the
+    synthetic `ctl` line and the `test ! -e`, and `treecommit` compares the records with `fixture.json`.
+  - What the finding is re-derived from is committed in the corpus (§8i.7): renderings, raw transcripts, captures,
+    greenness reports and `review_commit`.
+  - *"Frozen"* in METHOD-S item 4's table means unchanged while the batches run, and B4 comes before the close.
+
+  So step 12 removes `D:/sb` after the last results commit and the last snapshot, and before the formal Checkpoint 8i.
+  What it gives up is the trees themselves: after the close, no dispatch can be re-run from them. Step 12 is never run
+  before the close.
+
 | step | what | USD bound | check before it |
 | --- | --- | --- | --- |
 | 1 | the corpus on `main`, clean | 0.00 | none |
@@ -1579,6 +1685,7 @@ note), and step 2's check names it. The dry-run script's sha256 is now `15990996
 | 9 | 5 capture sessions through `wrap`, each with its procedure-log line | ≤ 2.00 each, ≤ 10.00 in all, unmeasured | (90.00 − spent) > 2.00 before each |
 | 10 | the BrittonGames snapshot before B2 | 0.00 | none |
 | 11 *(dated 2026-10-03, s8i build, R1FIX-8i)* | at the close, before the formal Checkpoint 8i: the corpus back on the pin, clean | 0.00 | none |
+| 12 *(dated 2026-10-03, s8i build, R3FIX-8i)* | at the close, after the last results commit, the last snapshot and step 11, before the formal Checkpoint 8i: the review root `D:/sb` removed | 0.00 | none |
 
 ```bash
 # 1. The corpus onto main. It is detached at the pin 61f590e today, and its main is at 285e011.
@@ -1591,9 +1698,10 @@ note), and step 2's check names it. The dry-run script's sha256 is now `15990996
 #    (dated 2026-10-03, s8i build) The fix landed: DRV is S8I-F1's patch, superseding P5's S8I-P5-sbin-driver.patch.
 #    (dated 2026-10-03, s8i build, R1FIX-8i) DRV is S8I-R1FIX-8i's patch, superseding S8I-F1's (sha256 dd3ee74e…4f3a).
 #    (dated 2026-10-03, s8i build, R2FIX-8i) DRV is S8I-R2FIX-8i's patch, superseding S8I-R1FIX-8i's (sha256 1922bb47…2b08).
+#    (dated 2026-10-03, s8i build, R3FIX-8i) DRV is S8I-R3FIX-8i's patch, superseding S8I-R2FIX-8i's (sha256 81511152…68c1).
 ( C=D:/repos/redkiln-corpus; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
-  DRV=${DRV:-$S/S8I-R2FIX-8i-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
-  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 815111521f351e61b8ea884124eb26ef34321c9767dd48792311f9cf4a8868c1 ] || { echo "FAIL: $DRV is not S8I-R2FIX-8i's patch"; exit 1; }
+  DRV=${DRV:-$S/S8I-R3FIX-8i-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
+  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 0bc288756c57010517c32d4f71169db4c8e601411261be74f6a8e315f58ea7dc ] || { echo "FAIL: $DRV is not S8I-R3FIX-8i's patch"; exit 1; }
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply --check "$p" || { echo "FAIL: $p does not apply"; exit 1; }; done
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply "$p" || exit 1; done
   git -C "$C" add runner/src/main.rs runner/src/sbin.rs results/audit-s.py results/s-bin/audit-fixtures || exit 1
@@ -1652,6 +1760,22 @@ WHEN=before-B2
   git -C "$C" switch --detach "$PIN" || exit 1
   [ "$(git -C "$C" rev-parse HEAD)" = "$PIN" ] && [ -z "$(git -C "$C" status --porcelain)" ] || { echo "FAIL: the corpus is not at the pin and clean"; exit 1; }
   git -C "$C" merge-base --is-ancestor "$PIN" main || { echo "FAIL: the pin is not on the corpus's main"; exit 1; } )
+# 12. (dated 2026-10-03, s8i build, R3FIX-8i; s8i refuting round 3) At the close, after the last results commit, the
+#     last BrittonGames snapshot (after-B3, or after-B4 when B4 ran) and step 11, and BEFORE the formal Checkpoint 8i:
+#     remove the review root, which Checkpoint 8i (12) requires gone. Nothing Checkpoint 8i or the finding reads lives
+#     under it: the records, renderings, raw transcripts, captures and greenness reports are in the corpus (§8i.7).
+#     Never run this before the close: B4 dispatches from the review repositories.
+( R=D:/sb
+  test -d "$R" || { echo "FAIL: $R does not exist; check it is the registered review root before going on"; exit 1; }
+  pl=$(tasklist //FO CSV //NH); rc=$?
+  [ "$rc" -eq 0 ] && [ -n "$pl" ] || { echo "FAIL: the process list is unreadable (rc=$rc)"; exit 1; }
+  printf '%s\n' "$pl" | grep -qi '^"unrealeditor' && { echo "FAIL: an UnrealEditor process survives (Halt 6); close it first"; exit 1; }
+  bg=$(git -C D:/repos/BrittonGames worktree list --porcelain); rc=$?
+  [ "$rc" -eq 0 ] && [ -n "$bg" ] || { echo "FAIL: BrittonGames' worktree list is unreadable (rc=$rc)"; exit 1; }
+  printf '%s\n' "$bg" | grep -qiE '^worktree d:/sb(/|$)' && { echo "FAIL: a tree under $R is registered in BrittonGames (§8i.4 forbids it); report it, never prune it here"; exit 1; }
+  rm -rf "$R"; rc=$?
+  [ "$rc" -eq 0 ] && [ ! -e "$R" ] || { echo "FAIL: $R did not delete (rc=$rc); Halt 6: a tree that will not delete is the handle, so stop and report"; exit 1; }
+  echo "the review root $R is removed" )
 ```
 
 `ARGS[N]` follows amendment item 2's rule: the item commit's changed `.uasset`/`.umap` paths in git's order, mapped to

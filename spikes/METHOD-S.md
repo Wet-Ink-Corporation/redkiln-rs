@@ -1642,3 +1642,39 @@ Any later change is disclosed here with the date and the records it post-dates.
   not run it, and `s8i` §8i.5's batch pre-check reads the free space once per batch. Building the per-copy check, or
   registering that the batch check carries it, is owed before B2 (`s8i` §8i.5's owed item (f)). Choosing between them
   narrows or keeps a registered check, so it is not taken here.
+
+- **s8i pre-dispatch amendment, extension: how item 4's out-of-tree rule and item 5's B4 argv read in the driver, and a
+  column label corrected, after `s8i` refuting round 3 — 2026-10-03, before B1; no S-BIN record exists** (cites the
+  *s8i pre-dispatch amendment* above, its items 4 and 5 and its deferred extension 5, and the extension of 2026-10-03
+  that lists the five base repositories; edits nothing in it or in the three extensions above). Written in the AFK
+  build, package R3FIX-8i.
+
+  **1. Item 4's out-of-tree rule, as the driver applies it.** Item 4 reads *"A reviewer that reads or runs `git`
+  against a path outside its review tree voids the record"*, and names *"every other copy under `D:/sb`"* among the
+  answer-bearing paths. `s8i` §8i.3 records the driver's check. Each string is folded (`\` to `/`, lower case) and
+  checked by name against the answer-bearing roots, and against *"any path under the review root … other than the
+  dispatch copy's own"*. Before that test the driver now normalises each path [measured: refuting round 3 found that
+  `<copy>/../../base/…`, `../../base/…` and a doubled-backslash `D:\\repos\\BrittonGames` each read as in-tree]:
+  - Every run of `/` is collapsed to one, in the string, in the review root and in the copy path.
+  - `.` and `..` segments are resolved, for each root spelling found in the string and for each absolute path.
+  - A relative path is resolved against the child's working directory, which starts at the dispatch copy. A `cd` or
+    `pushd` in a `Bash` command moves it, and the move persists into later `Bash` calls. A `cd` in any other string
+    moves only that string's own reading.
+  - A relative path voids if it resolves under the review root outside the copy, or under an answer-bearing root. It
+    does not void if it stays in the copy or resolves anywhere else.
+
+  This is how item 4's rule reads. It names no new answer-bearing path, and it voids nothing the rule does not cover.
+  One residual is disclosed: a bare `..` token in any tool input, a finding's prose included, resolves out of the copy
+  and voids.
+
+  **2. Item 5's argv for a B4 re-run.** Item 5 registers B2/B3's argv and the B4 arm label, and deferred extension 5
+  registers B4's field. A re-run covers one item. Its argv is B2/B3's with `--arm b-typed-sbin-plus-<field> --rerun
+  --only-item <n>` added, and it runs once for each (pass, item) that fired branch 2. Before anything renders, the
+  driver refuses a re-run with no `--only-item`, and any `--only-item` outside 1–5.
+
+  **3. A column label corrected.** In the extension that lists the five base repositories, the column *"LFS objects"*
+  (30,014 / 30,015 / 30,022 / 30,014 / 11,886) counts LFS pointer paths, each checked against its object. It does not
+  count distinct objects. The distinct objects number 29,576 / 29,577 / 29,584 / 29,576 / 11,447 [measured
+  2026-10-03, read-only: `find D:/sb/base/item-<n>/.git/lfs/objects -type f | wc -l`, which equals the count of
+  distinct oids in `git lfs ls-files -l`; the pointer paths are `git lfs ls-files | wc -l`]. This file is
+  append-only, so the table is not edited. Read its column as *"LFS pointer paths"*.
