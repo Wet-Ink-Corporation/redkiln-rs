@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-140), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-141), and what they license
+
+*(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-140)"**; `D21-141` is appended with this move.)*
 
 *(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-139)"**; `D21-140` is appended with this move.)*
 
@@ -6329,3 +6331,27 @@ operator, the operator answered **"Private copy + patch"**.
 
 **Effect on `s8i`.** The amendment's item 10 registers the driver's USD cap at 90.00, citing this entry, and the spend
 table's cap column reads 90.00.
+
+---
+
+## D21-141 · `s8i`: Checkpoint 8i (8)'s kernel type scan blanks string literals before it matches, as Checkpoint 8a's `k_filter` does
+
+**TAKEN PROVISIONALLY under the AFK rule (D21-105) of 2026-10-02, pending the operator's confirmation — Weigh-In
+wi-45f99f** (two-way door, judgment; defaulted to A). No record moves.
+
+**The defect.** Package S8I-P1-OPEN measured it read-only at `09018dd`. Checkpoint 8i (8)'s `KT_RE` scan drops comment
+lines, but it does not blank string literals. So it fires on two rk-kernel code lines that hold the artifact-kind
+string, not the type:
+- `crates/rk-kernel/src/lattice.rs`: `&& ["Changeset", "ImplReport", "ChangeSummary"]`;
+- `crates/rk-kernel/src/workflow/memo.rs`: `Self::SummariseChanges => "ChangeSummary",`.
+
+Checkpoint 8a's `k_filter` blanks string literals before it matches, which is why 8a passes on the same lines. As
+written, (8) cannot pass on today's tree.
+
+**Ruled.** (8)'s scan blanks string literals before it matches, by dated edit in the `s8i` build. A synthetic control
+admits a string-literal line, so the blanking is shown to work, and a second control shows a real type use is still
+caught. Not taken: a counted exemption of the two lines, and renaming the literals in rk-kernel. The rename would be a
+kernel change no stage owes, and it would make 7b, 7b-ii and 8a provisional.
+
+**Id note.** The stage-open note reserved D21-141 for the S-BIN entry that holds the go-ahead lines. That entry takes
+the next free id when it is written, and the reservation note is corrected by dated line.
