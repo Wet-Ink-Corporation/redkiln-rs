@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-139), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-140), and what they license
+
+*(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-139)"**; `D21-140` is appended with this move.)*
 
 *(Title moved 2026-10-02 after `s8h`'s close: it read **"(D21-1 … D21-138)"**; `D21-139` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 139, the last `D21-139`.)*
 
@@ -6297,3 +6299,33 @@ the flip. No line of any fenced block under `runbook/` asserts ADR-0198 `propose
 `status: proposed` lines, none of which reads Record B's file). Checkpoint 8h is re-run whole over the flipped tree as
 `s8i`'s entry gate. The flip is checked by running Checkpoint 8h's INPUTS and (2) from the stage file's own bytes over
 the flipped tree, with two controls, and the four runbook validators.
+
+---
+
+## D21-140 · The operator raises S-BIN's spend cap to US$90 (amending D21-105 item 2) and routes `s8i`'s corpus build through a private copy and a patch
+
+**Taken by the operator on 2026-10-02** in the session running the AFK chain, with the trade-off in view, answering two
+questions. This is the operator's own ruling, not a D21-105 provisional one.
+
+**1. The cap.** Asked *"S-BIN's batches likely exceed your US$30 cap (B1 ≤ ~$10.50 + B2 ≤ ~$25 at their bounds; B3,
+retries and B4 after; the stage file's own cap is $90). What should the cap be?"*, the operator answered **"Raise to $90
+(file's cap)"**.
+- D21-105 item 2's *"capped at **US$30 total**"* now reads **US$90 total**, for S-BIN's dispatches only. Every other
+  live or paid step stays deferred, exactly as item 2 lists them.
+- The figure is the stage file's own registered cap (`s8i` §8i.5: 18 Opus, 3 haiku, $90 API-equivalent).
+- AFK rule 2 still applies. Before each batch, the orchestrator sums the spend so far from the dispatch cost records,
+  and a batch launches only if (90 − spent) exceeds that batch's configured bound. The spend table lives in the stage
+  file and in the review packet.
+- Every S-BIN launch is the operator's, made from a plain terminal and behind its own go-ahead line (`s8i` §8i.1; D17-5's
+  foreground half). No subagent dispatches.
+
+**2. The corpus.** Asked how to build the S-BIN driver and audit, given that the stage file reserves corpus writes to the
+operator, the operator answered **"Private copy + patch"**.
+- The driver (`runner/src/sbin.rs`) and `audit-s.py bin` are built and tested in a private `git archive` copy of the
+  corpus's `main` under `target/`.
+- The operator receives a patch with its apply and commit commands.
+- Nothing writes to `D:/repos/redkiln-corpus` or its `.git`. `s8i` §8i.3's *"Every write to D:/repos/redkiln-corpus is
+  the operator's"* holds unchanged.
+
+**Effect on `s8i`.** The amendment's item 10 registers the driver's USD cap at 90.00, citing this entry, and the spend
+table's cap column reads 90.00.
