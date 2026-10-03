@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-137), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-138), and what they license
+
+*(Title moved 2026-10-02 at `s8h`'s close: it read **"(D21-1 … D21-137)"**; `D21-138` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 138, the last `D21-138`.)*
 
 *(Title moved 2026-10-02 during `s8h`: it read **"(D21-1 … D21-136)"**; `D21-137` is appended with this move.)*
 
@@ -6079,3 +6081,153 @@ dated edit. The operator reads this correction with the ruling on the confirm li
 
 **Unmoved:** D21-42 21b and 21d, RT-1, D21-45 and ~~every accepted ADR~~ *(dated 2026-10-02, s8h build, package
 R2FIX-8h)* every accepted ADR but ADR-0126 decision 1, which moves in part through ADR-0197 as corrected above.
+
+---
+
+## D21-138 · `s8h` closes: the cards bind at least privilege, models are pinned by full id, schemas are read from `EXPORTED`, the child's settings go to it as a file, and one launcher is the only entry to a real run; both records stay `proposed`
+
+**Taken 2026-10-02 by the session executing `s8h`, at the stage's close, under the operator's standing AFK rules
+(D21-105).** It records and cites. It re-takes no ruling, writes no go-ahead line, and **flips no record**: ADR-0197
+(Record A) and ADR-0198 (Record B) both stay `proposed`, each for the reason its own text gives (below). What this
+entry records is what `s8h`'s §8h.0 … §8h.15 record; every figure below is quoted from the stage file's dated notes,
+the tree, the committed records or the refuting rounds' outputs, except the formal reading in the last paragraph,
+which is quoted from the run's output.
+
+Records: Record A = ADR-0197 (cards, models and the run environment) and Record B = ADR-0198 (RT-57's pack scalars,
+the per-item envelope and gate expiry), each written `proposed` at the id free at writing, in that order, by package
+P1-records (§8h.1's dated note), and each recorded at write time in Checkpoint 8h's INPUTS lines, `REC_A=0197` and
+`REC_B=0198` (D21-47: *"Records are located by the id recorded at write time"*).
+
+**Recorded — the two records, and why neither flips at this close.**
+- **Record A (ADR-0197)** supersedes in part ADR-0126 decision 1 (its payload table gains `observed_model` and, by
+  D21-137, `settings_file { path, sha256 }`) and ADR-0074 decision 1 (its finding shape gains `severity`). Its
+  back-links on `0126` and `0074` are not written, and Checkpoint 8h (2) fails if either is (*"the link moves in the
+  flip commit (ADR-0092 cl.2.1)"*). It does not flip here. Its decision 13: *"This record flips only after both `s8h`
+  §8h.11 probes pass at `s8j`, on the operator's dated ledger line (D21-41 (g): "The record is accepted only after two
+  live probes pass"), and after the operator has signed decision 7's table enum by enum."* Checkpoint 8h (2) asserts
+  it: *"Record A must be proposed until both s8j probes pass (D21-41 (g))"*. The probes are spend outside S-BIN, which
+  D21-105 item 2 defers to the review packet.
+- **Record B (ADR-0198)** supersedes nothing. It does not flip here either. Its decision 8: *"The operator signs
+  decision 2 value by value and decision 6 row by row on a dated ledger line. This record flips to `accepted` at
+  `s8h`'s close, before `s8i`, on that line"*. §8h.1 says the same (*"it flips to `accepted` on the operator's dated
+  ledger line **at this stage's close, before `s8i`**"*), and §8h.15 names the signatures *"a stage-close gate
+  (AC-276: "routed to a human gate; not machine-decidable")"*. The stage's Closing puts them before the tracker
+  commit: *"three gates are passed, and none can be decided by a machine"*. No machine can give that line, and the
+  operator is AFK, so the signature goes on the review packet's deferred-gate list. Record B flips on the operator's
+  signing line, when it is written, and not on a line this session writes. D21-105 item 1 carries the standing flip
+  authority to `s8h`'s records under ruling 9's two conditions; both hold (below), but Record B's flip clause names
+  the signing line as the line it flips on, and this entry does not read item 1 as replacing it. The reading is on the
+  review packet for the operator to confirm or reverse.
+- **No `FLIP_PENDING` form is needed** and none is added: Checkpoint 8h (2) asserts `status: proposed` for Record A
+  and `status: (proposed|accepted)` for Record B, and no line of the block asserts `status: accepted` for either
+  (§8h.15's dated note, package P8). The formal reading below ran with both records `proposed`. The README, the
+  preamble census and every predecessor's `superseded_by` line are unchanged at this close.
+- **What holding Record B holds.** §8h.14 hands on to `s8i`: *"Record B must be accepted before S-BIN spends (D21-42
+  19c)"*, and `s8j`'s evidence check refuses while it is not (*"RT-57's record (ADR-…, s8h's Record B) is not accepted
+  (D21-42 19c)"*). So `s8i`'s S-BIN spend, the only spend D21-105 item 2 authorises, waits on the operator's signature
+  of Record B, or on the operator's reversal of this entry's reading.
+
+**Recorded — the provisional rulings this stage carries.** Each was TAKEN PROVISIONALLY under the AFK rule (D21-105)
+pending the operator's confirmation, recorded in the weigh-in ledger, and is on the review packet's confirm list.
+- **D21-137** (`wi-10f1da`, defaulted A): §8h.6's settings go to the child as a file, `--settings <path>`, written per
+  dispatch with `create_new`, read-only, outside the worktree, because the inline JSON exceeds RT-1's 32,767-unit argv
+  cap (about 11,989 units for `.redkiln/worktrees/bug-1`, about 1,068,619 under `%TEMP%`). Every failure is a typed
+  refusal and none falls back to `settings: None`. Corrected by dated line at R2FIX-8h: one accepted Decision moves in
+  part, ADR-0126 decision 1, through Record A's existing supersession (`settings_file` beside `observed_model`), so no
+  new record is owed.
+- **D21-137 item 2, amended** (`wi-f940f2`, defaulted A; ledger line `ed6dc02`): the directory is
+  `<common_dir>/redkiln/child-settings/<run_id>/`, not `runs/<run_id>/`, because `rk_kernel::replay::write_run` begins
+  *"`let _ = std::fs::remove_dir_all(&dir);`"*. The guard
+  `run::a_child_settings_file_survives_write_run_for_its_run_id` pins it, and its mutant M-D21-137-loc measured that
+  `remove_dir_all` does delete the read-only file on Windows. Its residuals are recorded and fail closed: an identical
+  re-run can meet the same file name (`create_new` refuses before spawn), and the directory is unbounded.
+
+**Recorded — what was built** (`d5bfb32` interim 1, `5e5d410` interim 2, `d692e71` D21-137, `55fda45` interim 3,
+`ed6dc02` D21-137 item 2 amended, `6f6bf09` interim 4, `d2c2e9e` interim 5 (refuting round 1 fixed), `e538f09` interim
+6 (refuting round 2 fixed), `d24d15a` refuting round 3's minors).
+- **The records and `rk-types` (`d5bfb32`, S8H-P1, S8H-P2).** ADR-0197 and ADR-0198 written `proposed`; the stage-open
+  readings by dated lines (the installed CLI read `2.1.287` against the `2.1.278` pin, so Halt 2 is recorded and the
+  pin moves once, at `s8j`; the `--permission-mode` help lines captured; `MINTED_CLASSES` written; `BASE_8G` 1337 from
+  D21-129). `rk_types::registry::EXPORTED` holds 25 kinds generated from one table; `Spec` embeds
+  `AcceptanceCriterion` unchanged; `Finding.severity` (`FindingSeverity`), `RootCause.discriminating_test` and
+  `DispatchRecord.observed_model` are typed, each red first; Record A decision 7's AC-133 rows are completed by dated
+  line for the operator's AC-156 signature.
+- **The adapter (`5e5d410`, S8H-P3 … S8H-P5).** `card::PERMISSION_MODES`, a closed set of seven, linted;
+  `PERMISSION_MODE_ARGV` keyed by `Config::tested_cli_version` (D21-48 X12), a pin with no row refused; `card::Tier`
+  replaced by full-id `[models]` rows; guard 2 adopts only on an exact model id, a `permissionMode` equal to the
+  card's mode and `apiKeySource` `"none"` (RT-27 settled; `model_belongs_to_tier` deleted); guard 3 reads both denial
+  channels against D21-45's protected segments; the `Spec` verification-at-ingest check (D21-43 N24); the per-item
+  envelope counted from the store, refusing before spawn and leaving through `Exit::Overage` (finding 12, Record B
+  decision 4). The three live probes are authored and not run.
+- **D21-137 built, the launch gate, the binding and the data (`55fda45`, S8H-P6 … S8H-P8; `6f6bf09`, F1-D21137-loc).**
+  `--settings <path>` with its typed refusals; a real-harness `run` or a binary `answer` refuses without
+  `REDKILN_LAUNCH_RECORD`, before any spawn or row; `bind_one` reads each agent step's schema from `EXPORTED` by its
+  `value:<Kind>` and the `.redkiln/schemas` read is gone; the eight shipped cards follow §8h.2's table; both packs
+  carry `[models]`, the RT-57 scalars and fail-closed `[[gate_expiry]]` rows, with no `NO RECORD` marker;
+  `RK-D-CARD-GRANT`; `tools/live-run.sh` with its `run`, `probe`, `wrap`, `answer` and `--check` modes; Checkpoints 8a
+  (11), 8c (15) and 8d (12a) amended under D21-47's time-bound rule (§8h.14).
+- **The mutants (§8h.13).** M1 … M33, D21-137's eighteen (with M-D21-137-loc) and R1FIX-8h's four `probe_denials`
+  mutants, each KILLED from a Python driver in a private worktree, restore verified.
+- **The count.** Sixty-seven new selected tests beyond Checkpoint 8g's recorded 1337: §8h.12's 54, D21-137's nine, its
+  `rk-cli` survival guard and R1FIX-8h's three `probe_denials::` tests, so `FLOOR=1404` (`FLOOR=$((BASE_8G + 54 + 9 +
+  1 + 3))`).
+
+**Recorded — the checkpoints this stage amended or re-runs.**
+- **Checkpoint 8h (13)** re-runs, whole from their stage files' own bytes, Checkpoints 8g (the entry gate), 5, 7b,
+  7b-ii, 7d and 8b, each under D21-47's no-dispatch wrapper with `RK_CP_NESTED=1`.
+- **Checkpoint 6 was not re-run whole at this stage.** §8h.14's table row, added at R3FIX-8h, reads *"6: Checkpoint 8h
+  (13), whole, inside 8g's replay"*; but (13) runs 8g with `RK_CP_NESTED=1`, under which 8g's (12) prints *"CP8G (12)
+  SKIPPED: this block is itself a replay (RK_CP_NESTED=1)"*, so no replay of 6 happens inside it. The row's own
+  warrant stands (6's read-only fragment passed on the tree, and the change is compile-forced initialisers only); 6's
+  whole re-run is in `s8j`'s chain with 7a's. Named here, and not corrected in the table at this close.
+- **Amended by dated line under D21-47's time-bound rule:** Checkpoints 8a (11), 8c (15) and 8d (12a)'s card-mode
+  guards (P7); Checkpoint 7d's run-on-init-only line, which now exports a fixture `REDKILN_LAUNCH_RECORD` for that one
+  invocation, with an EXIT trap removing it (R1FIX-8h, R2FIX-8h), and `s8j` §8j.8 A10's fourth exemption entry under
+  stem `s7d-cli-and-migrate` (R2FIX-8h). Checkpoint 8d-ii (3) is not amended; this stage's tests no longer trip it
+  (R1FIX-8h).
+- **Not re-run here, each with its owner (§8h.14):** 7c (split, at `s8j`), 7e (not re-runnable whole), 7f, 8a, 8c, 8d,
+  8d-ii and 8e (`s8j`), and 7a (`s8j`'s chain).
+
+**Recorded — the refuting rounds, three.**
+- **Round 1:** two blockers and two majors. Blockers: Checkpoint 7d's run-on-init-only line met the launch check
+  first, and Checkpoint 8d-ii (3)'s one-derivation guard kept ten code lines this stage added. Majors:
+  `classify::denial_of` put an `unwrap_or_default()` under 7c's AC-362 ban, and probes 0 and 1 counted channel entries
+  (`typed.len() >= 4`), so one denial carried on both of guard 3's channels counted twice, and their HALT passed once
+  any denial was typed; their reading moved to the non-live `probe_denials` module, de-duplicated by `tool_use_id` and
+  read per target. Fixed at `d2c2e9e` (R1FIX-8h), FLOOR 1401 → 1404.
+- **Round 2:** no blocker, two majors. Records: ADR-0197 named one of the two members it adds to ADR-0126 decision 1's
+  table, and D21-137 said no accepted Decision moved. Checkpoint: `s8j` (10)'s screen refuses 7d's fixture launch
+  record line under every honest spelling. Fixed at `e538f09` (R2FIX-8h), with its minors.
+- **Round 3: dry** at `e538f09`, no blocker and no major. Its five minors were corrected at `d24d15a` (R3FIX-8h):
+  `s8j` (10)'s split SCREEN comment rejoined; §8h.13's M30 and M32 rows name the `2.1.287` arm; the Closing's mutant
+  count; §8h.14's row for 6 and 7a; PROGRESS's D21-137 cell.
+
+**Recorded — owed forward, each to its named owner.**
+- **The operator (the review packet):** sign Record B's decision 2 value by value and decision 6 row by row on a dated
+  ledger line (AC-276), on which ADR-0198 flips with its README cell and census; sign Record A's decision 7 table enum
+  by enum (AC-156); confirm or reverse D21-137 and its item-2 amendment; confirm or reverse this entry's reading that
+  Record B does not flip under D21-105 item 1 without the signing line. The token appetite the operator signs replaces
+  Checkpoint 8h's `TOKENS_APPETITE` by dated edit if it differs from 24000000 (Record B decision 8).
+- **`s8i`:** Record B accepted before S-BIN spends (D21-42 19c); S-BIN launches through `wrap` (§8h.7); its dispatch
+  scan admits Checkpoint 8h's `--list`, `clippy` and `--check` lines (finding 10).
+- **`s8j`:** the pin move, with §8h.2's spelling edit and the golden argv move in the pin-move commit (D21-48 X12;
+  Halt 2 stays live until then); probes 0, 1 and 2 from a plain terminal on their own go-ahead lines, with D21-137
+  item 6's arms, deferred to the review packet under D21-105 item 2; Checkpoint 7c's split re-run; `s8`'s three
+  `redkiln run` sites and `s8j`'s answers through `tools/live-run.sh`; the 7f / 8a route and the whole re-runs of 6,
+  7a, 8a, 8c and 8d; A10's amendment of 8d-ii's and 8e's card-mode stops; the rows and `MINTED_CLASSES` entries for
+  its three gate classes; Record A's flip and its back-links on `0126` and `0074`, after the probes.
+- **Halt 2** is live: the installed CLI read `2.1.287` at stage open against the `2.1.278` pin, recorded, and moved
+  once at `s8j` (§8h.8).
+- The tracker's §1 row for `s8h`, and the re-run marks that Checkpoint 8h (13) clears (8g, 5, 7b, 7b-ii, 7d, 8b).
+
+**The floor.** Checkpoint 8h (12)'s FLOOR is **1404** (1337, Checkpoint 8g's recorded count, + 67 by dated edit). The
+next stage's floor is re-derived from the formal reading below.
+
+Checkpoint 8h: **passed whole at `d24d15a`**, the formal reading, extracted from
+`runbook/phase-1/s8h-cards-and-run-environment.md`'s own bytes (§8h.15's fenced block, 610 lines, sha256
+`28cfe2a855a878ce3ceeb147cbf5fc9f4b083d6d69895b11d091a1c0dab85971`), run from the main checkout under D21-47's
+no-dispatch wrapper (`runbook/tools/nodispatch.sh`, which the block sources at (0c)) at `CARGO_BUILD_JOBS=2
+RUST_TEST_THREADS=2` on 2026-10-02, 15:08 to 17:42 local, from the operator's plain Git Bash: rc 0, 0 `FAIL`,
+`CP8H-END-OF-BLOCK reached`, with both records `proposed`. (12)'s whole suite read **1404 passed / 0 failed / 9
+ignored over 44 result lines** (FLOOR 1404), and each replay that (13) ran reached its sentinel (the block exits on
+any failure). No record flipped, so no post-flip re-run is owed.
