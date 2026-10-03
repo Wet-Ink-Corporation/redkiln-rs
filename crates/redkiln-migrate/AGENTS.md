@@ -12,7 +12,7 @@ binary.
 - Never: `rk-adapter-*`, `rk-ports`, `rk-kernel`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - Dispatches nothing: its dependency closure reaches no `rk-adapter-*`, no `rk-ports` and no `rk-kernel` (AC-466).
@@ -20,7 +20,7 @@ Workspace-internal, never published (`publish = false`). The deliberate surface 
 - The only crate that may depend on a YAML reader (`yaml_serde`).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p redkiln-migrate` (CI runs `cargo nextest run` through `ci.yml`).

@@ -12,7 +12,7 @@ infrastructure (library).
 - Never: adapter crates, `rk-kernel`, `rk-cli`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - Two tiers by the deleted-database test (ADR-0109 decision 2): tier 1 is written to git first; the step memo is tier 2 (ADR-0097).
@@ -20,7 +20,7 @@ Workspace-internal, never published (`publish = false`). The deliberate surface 
 - One writer connection per process (ADR-0105 clause 7).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-store` (CI runs `cargo nextest run` through `ci.yml`).

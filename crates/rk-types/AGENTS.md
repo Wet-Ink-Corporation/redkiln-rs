@@ -12,14 +12,14 @@ domain.
 - Never: any `rk-*` crate, any async runtime.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - No async runtime: no `tokio`, `async-std`, `futures` or `async-trait` (ADR-0076).
 - The S-BIN-blocked `Binary` arm of `ChangeSummary` is not built here; `ChangeSummary` lives only in `rk-ports` (ADR-0165).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-types` (CI runs `cargo nextest run` through `ci.yml`).

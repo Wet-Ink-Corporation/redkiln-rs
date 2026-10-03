@@ -12,14 +12,14 @@ application (ports).
 - Never: adapter crates, `rk-git`, `rk-kernel`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - Five ports and no sixth; git is deliberately not a port, and a trait matching the git surface is rejected by the denylist test (AC-483).
 - Every port trait has `Send + Sync` supertraits; the composition root holds each as `Arc<dyn Port + Send + Sync>`, with the one recorded exception in `lib.rs`.
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-ports` (CI runs `cargo nextest run` through `ci.yml`).
