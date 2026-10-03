@@ -2194,3 +2194,130 @@ Any later change is disclosed here with the date and the records it post-dates.
 
   **3. Residuals standing.** R4FIX-8i item 6's, R5FIX-8i item 8's, R6FIX-8i item 6's and R7FIX-8i item 6's residuals
   stand.
+
+- **s8i pre-dispatch amendment, extension: item 3's strip set gains the editor launcher, the five base repositories
+  are rebuilt, and the driver refuses a dispatch copy whose executable file names an answer-bearing path, under
+  D21-146 — 2026-10-03, before B1; no S-BIN record exists** (cites the *s8i pre-dispatch amendment* above and its
+  items 3 and 4, the extension of 2026-10-03 that lists the five base repositories, its item 3, and the extension
+  written after refuting round 8, R8-RECORD-8i, its item 1. It edits nothing in them or in the other extensions
+  above). Written in the AFK build, package D21146-8i, under `spikes/DECISIONS-2026-09-21.md` D21-146, the operator's
+  ruling of 2026-10-03 (Weigh-In wi-938b68, *"Neutralise in all 5"*). Its item 1 reads *"The launcher joins §8i.2
+  item 3's registered strip set, by an appended METHOD-S extension, identically in all five trees. It is either
+  removed or rewritten to a tree-relative PROJECT, whichever keeps the stripped set identical across trees; the fix
+  package chooses and states which."*
+
+  **1. Item 3's strip set gains one entry: `_workspace/tooling/RunEditor_OurGame.bat`, removed.** Item 3 registers
+  *"**One strip set**, applied to every tree before its one commit"*. From this extension on the set has four
+  entries, the same in all five trees: `CLAUDE.md#status-rows`, `_workspace/backlog/`,
+  `_workspace/references/UE58_Editor_And_MCP_Gotchas.md` and `_workspace/tooling/RunEditor_OurGame.bat`. The file is
+  removed whole, like the gotchas reference. It is not rewritten. Three reasons [measured 2026-10-03, read-only on
+  `D:/sb/base`]:
+  - **Removing it keeps one rule.** The launcher's blob is not the same in every tree. It is
+    `570e8add27de2e8ea446e02a6172d975791fd9b2` (1,432 bytes) in items 1 to 4 and
+    `548aa4511088233c2d83755699757c73758f6fcb` (774 bytes) in item 5. A rewrite of `PROJECT` would need a byte
+    rule per blob, each asserted, and a fifth registered rule to keep identical. Removal adds one path entry, and it
+    is the same in all five trees.
+  - **Removing it leaves no executable route.** A tree-relative `PROJECT` would still start an editor, on the copy's
+    own project. Removal starts nothing.
+  - **Nothing that runs in the tree calls it.** `verify_headless.ps1` names it in a comment only: *"# Engine root
+    matches RunEditor_OurGame.bat. Override with $env:UE_5_8 if installed elsewhere."* `AGENTS.md`,
+    `.claude/skills/unreal-editor-mcp/SKILL.md`, `_workspace/tooling/Rider_CoDev_Setup.md`, `UE58_MCP_Setup.md`,
+    `UE_MCP_Operating_Procedures.md` and, in items 1 to 4, `_workspace/runbooks/Inventory_Gym_Review.md` mention it as
+    text. Those mentions stay, and they name a file the tree no longer holds. Item 2's capture procedure opens
+    `OurGame/OurGame.uproject` in the capture copy directly, never through the launcher.
+
+  **2. The tooling class, measured (D21-146 item 4).** Every non-asset file of the five old bases, `.git` excluded,
+  was read for an absolute path to an answer-bearing root: amendment item 4's (BrittonGames, `redkiln-rs`,
+  `redkiln-corpus`, the account roots and their `projects/`, the review root) and the R5FIX-8i sweep's (`D:/r6c`,
+  `D:/repos/redkiln-sev`, `~/.claude-personal`, `~/.claude-backup`) [measured 2026-10-03, read-only:
+  `s8i_D21146-8i_measure.py`, output `D21146-8i-measure-old.json`; 3,643, 3,650, 3,666, 3,643 and 3,243 files].
+  - **Executable code: one file, the launcher,** in all five trees, at its line 13.
+  - **Docstring usage text, not stripped:** in items 1 to 4, the eight `_workspace/tooling/author_*.py`
+    (`author_baseline_vessels`, `author_belt_container`, `author_equipment_slots`, `author_item_catalogue`,
+    `author_nested_vessels`, `author_spatial_pack`, `author_starting_loadout`, `author_upgraded_vessels`) and five
+    `synty/` scripts (`calibrate_deformation.py`, `ci_validate.py`, `strip_character_sources.py`,
+    `diagnostics/diag_conform_axis.py`, `diagnostics/proto_orient_bones.py`); in item 5, `synty/ci_validate.py` and
+    `synty/strip_character_sources.py`. Each path sits in the **module** docstring, as `-script="D:/repos/BrittonGames/…"`
+    or, in `strip_character_sources.py`, `sys.path.insert(0, r"D:/repos/BrittonGames/…")` under *USAGE* [measured by
+    `ast`: every hit lies inside the module docstring's line span]. D21-146 item 4: *"They are not stripped unless the
+    precheck finds a path in executable code."* It finds none (item 4 below).
+  - **Prose, not executable, not stripped:** in all five trees `AGENTS.md`, `CLAUDE.md`,
+    `.cursor/rules/britton-ue58-conventions.mdc`, `OurGame/Plugins/Monolith/Docs/SPEC_CORE.md`,
+    `OurGame/Plugins/Monolith/Tools/MonolithProxy/README.md`, `_workspace/references/Migration_Tooling_Remediation_Plan.md`,
+    `_workspace/runbooks/E1_Synty_Pack_Migration_Runbook.md`, `_workspace/tooling/Rider_CoDev_Setup.md` and
+    `_workspace/tooling/UE58_MCP_Setup.md`, and in items 1 to 4 also `_workspace/references/Locomotion_Framework_Strategy.md`.
+  - The bare word `BrittonGames`, with no path, appears in a further 321, 328, 338, 321 and 125 files: C++ copyright
+    headers, C# build files and Markdown. None is an executable script.
+
+  **3. The five base repositories, rebuilt (D21-146 item 2).** Each was built exactly as the extension of 2026-10-03
+  that lists them records, by `s8i_D21146-8i_build.py`, which `s8i_D21146-8i_mkbuild.py` derives from S8I-F1's script
+  by nine anchored replacements: the launcher's removal, the strip set's fourth entry, and a new base root and
+  record directory. A disposable `git clone --no-checkout --shared` of BrittonGames under `D:/sb/tmp-d21146` was used,
+  then deleted. Each repository was built beside the old one, under `D:/sb/base-d21146`, and replaced it at
+  `D:/sb/base/item-<n>` only after all five verified. BrittonGames' HEAD (`ee6e450`), status sha256 (`a6751b0c…69ed`),
+  worktree-list sha256 (`ba14505a…e0ab`) and config sha256 were the same before and after.
+
+  | item | item commit | base commit | base tree | LFS pointer paths | base bytes (`.git` included) |
+  | --- | --- | --- | --- | --- | --- |
+  | 1 | `cc0cf2d01` | `37f0f0e2f679d58316edbf4da7f23ccebca8dde2` | `7f1018de67a96c2c0b545d024838ea62b126c837` | 30,014 | 21,540,843,118 |
+  | 2 | `fa1ea72f4` | `bdff598b83b4cbb5f1f27ca901697cf8aa615994` | `3354f08014e0a986735141625f55e17e713c0955` | 30,015 | 21,541,174,637 |
+  | 3 | `e83463288` | `de3b4ca53758f014c321f1321ed9b6ce7c3997b9` | `a2e25cc92a4a11c16499f958af510406a4c3e503` | 30,022 | 21,560,066,805 |
+  | 4 | `a71265925` | `1553eda41de0b0f5a25a38ed5cdbea9d6258af6c` | `7f1018de67a96c2c0b545d024838ea62b126c837` | 30,014 | 21,540,843,759 |
+  | 5 | `6a101bdcd` | `5f90d80ef4fed42822f955b944b5804cabfc3da6` | `370b48cd11736139ee86039f7c1071fe749b4634` | 11,886 | 10,604,497,923 |
+
+  - **Each new tree is the old tree less one entry.** Entry by entry, each new `HEAD` tree equals the old base's
+    `HEAD` tree, which P7 and F1 verified, except for `_workspace/tooling/RunEditor_OurGame.bat`. That entry is in the
+    old tree and not in the new, and no other entry is added or changed (33,570/33,569, 33,578/33,577,
+    33,595/33,594, 33,570/33,569 and 15,066/15,065 entries). So the seeds, `CLAUDE.md`'s byte rules and the
+    other three strip entries are byte for byte the old bases'. Base items 1 and 4 still hold one tree,
+    `7f1018de67a96c2c0b545d024838ea62b126c837`.
+  - **The strip.** The build removed the launcher from every tree, plus the 19 files of items 1 to 4 and the 8 of
+    item 5 it removed before. `CLAUDE.md` lost its four rows under item 3's rule at items 1 to 4, and under D21-142's
+    rule at item 5. Every build record's `stripped` is the one four-entry set.
+  - **LFS.** For every LFS pointer in each `HEAD`, the work file's size and SHA-256 equal the pointer's, and the
+    object is in the base's own `.git/lfs/objects` at that size: 30,014, 30,015, 30,022, 30,014 and 11,886 pointer
+    paths, holding 29,576, 29,577, 29,584, 29,576 and 11,447 distinct objects, with 0 bad. The build had first proven
+    each materialised file against its pointer.
+  - **Leak tokens.** `LoadoutFill`, `white-on-white`, `VERIFIED COLD` and `entirely white` count 0 over every
+    non-asset file of all five, before and after each commit.
+  - **The seeds, by blob oid**, unchanged. Base 4's `HEAD:` blob at `WBP_LoadoutScreen.uasset` is
+    `9415f0986275a66d01885cc74f58c33e1957e183` = `a71265925^`'s. Base 5's at `WBP_GameVitals.uasset` is
+    `23c79a6337215a7a208d55676081f0fc33fcbeb7` = `6a101bdcd^`'s. The fixed blobs (`70e2a2e3…aa37c`, `c84ea7ac…6f18`)
+    and their LFS objects are absent; the same probes fire on the seeds' own blob and object (the control).
+  - **One commit each.** `main`, `review tree`, `s-bin <s-bin@invalid>`; `git rev-list --all --count` is 1,
+    `refs/heads/main` is alone, and there is no remote and no tag. `git status --porcelain --untracked-files=all
+    --ignored` prints nothing.
+  - **Controls.** Verifying an old base against itself fails, as it must: no entry differs, and the launcher is
+    still in the tree. The leak scan finds planted tokens and skips assets and `.git`. The executable-path rule
+    finds a planted launcher and passes a planted module docstring. Outputs: `D21146-8i-verify-all.json` and
+    `D21146-8i-verify-ctl-oldold.json`.
+
+  This table supersedes, for B1 on, the base commits and trees in the extension that lists the five base repositories,
+  its item 3. That extension is not edited. Its LFS figures and seeds stand.
+
+  **4. The driver's pre-spawn check gains `precheck_exec_paths` (D21-146 item 3).** Item 4's checks on each dispatch
+  copy before it spawns now include one more check. The driver reads every executable file in the copy, `.git` aside.
+  Those are the files whose extension, matched without regard to case, is `.bat`, `.cmd`, `.ps1`, `.psm1`, `.sh`,
+  `.bash` or `.py`. A batch file, a PowerShell script and a shell script are read whole. A Python file is read
+  without its module docstring and its `#` comments. The module docstring is the first statement, a string literal
+  standing alone on its line, and any other docstring is read as code. A file with a UTF-16 byte-order mark is
+  decoded as UTF-16. Each text is folded (`\` to `/`, case folded, runs of `/` collapsed) and checked for amendment
+  item 4's roots by name, on any drive or mount, and for the R5FIX-8i sweep's roots: a drive root in its `x:/`,
+  `/x/` and `/mnt/x/` spellings, and a home root by its path under any home. If any file matches, the driver refuses
+  before the spawn and names the files. A refusal writes no record (R2FIX-8i's extension, item 3), so `s8i` §8i.7's
+  record keeps its 34 names.
+  - **Measured over the real trees,** from inside the test binary over the shipped code, in a control copy that is
+    never shipped (`D21146-8i-ctl`, one `#[ignore]`d test). Each old base yields
+    `["_workspace/tooling/RunEditor_OurGame.bat"]`, and each rebuilt base yields `[]`. The module-docstring scripts
+    pass in both.
+  - **Residuals disclosed.** These are not caught:
+    - a path spelled through a variable (`%REPOS%\BrittonGames`);
+    - a binary or any other extension;
+    - a Python 3.12 f-string that nests its own quote.
+    A path in a function's docstring refuses, which is the stricter reading. The runtime void and the shadow audit
+    are unchanged. R8-RECORD-8i item 1's class (a process the reviewer starts reads paths no tool input names) stands
+    for any program this check does not read.
+
+  **5. The dry run's review repository, rebuilt.** It is a byte copy of base item 1 (`s8i` §8i.3, package S8I-P8), so
+  it held the launcher, and item 4's check refuses it. It is rebuilt from the rebuilt base item 1 by
+  `s8i_D21146-8i_review.py`, which is S8I-P8's script with its two pins of base item 1 moved. It is one parentless commit, `48cd028e2b83b65e12d456c4ca2e2a258cbed593`, base item 1's tree plus exactly the two `_s-bin/report/` files, and it supersedes `378a183fa265f00b6af2a3be02ba2d8adbf87b36`. The dry run's fixture, re-derived unchanged by S8I-P8's own script, hashes `8f98bf430ddf6f461217eab9f89305b6d279bdec011f5282aac691e67f728ea1`. The check reads `[]` over it.
