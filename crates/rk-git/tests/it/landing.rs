@@ -646,6 +646,14 @@ fn a_repository_hook_does_not_run_on_a_landing_commit() {
             format!("#!/bin/sh\necho {name} >> \"{shown}\"\nexit 0\n"),
         )
         .expect("hook");
+        // POSIX git runs a hook only if it is executable (it warns "ignored because it's not set
+        // as executable" and skips it); Windows git has no exec bit to read.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(hooks.join(name), std::fs::Permissions::from_mode(0o755))
+                .expect("chmod hook");
+        }
     }
     lx.git(&["config", "core.hooksPath", &hooks.display().to_string()]);
 

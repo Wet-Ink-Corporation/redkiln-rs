@@ -308,16 +308,35 @@ pub fn redkiln_command(launch: Launch) -> std::process::Command {
 /// The nonce is a process-wide counter, not a clock: `Instant::now` and `SystemTime::now` are on
 /// `clippy.toml`'s `disallowed-methods`, and a counter is both sufficient (the collision is between
 /// repositories in ONE test binary) and deterministic.
+///
+/// # The root is in git's own (long) spelling
+///
+/// *(Added 2026-10-03, the first `windows-latest` run.)* A hosted Windows runner's `%TEMP%` is an
+/// 8.3 short path (`C:\Users\RUNNER~1\…`), while git — and so redkiln, which derives every run tree
+/// from `main_worktree()` — reports the long one (`C:/Users/runneradmin/…`). A root built from the
+/// short spelling made every expected path from `run_tree(root, ..)` miss git's listing, and seven
+/// `rk-cli` tests failed on a correct product. The temp base is canonicalised (which expands 8.3
+/// names on Windows and is a no-op past symlinks elsewhere) and its `\\?\` prefix removed through
+/// [`rk_git::path::WorktreePath`], so `root` is spelled the way git spells it.
 pub fn temp_repo() -> tempfile::TempDir {
     static NONCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let nonce = NONCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    let dir = tempfile::tempdir().expect("a temp dir");
+    let dir = tempfile::Builder::new()
+        .tempdir_in(long_temp_base())
+        .expect("a temp dir");
     git(dir.path(), &["init", "--quiet"]);
     git(
         dir.path(),
         &["config", "user.email", "test@example.invalid"],
     );
     git(dir.path(), &["config", "user.name", "Test"]);
+    // *(Added 2026-10-03, an ubuntu-latest red.)* No auto-maintenance: the root commit below could
+    // start git's DETACHED maintenance, whose `worktree prune` deletes a stale `worktrees/<name>/`
+    // entry — exactly what `doctor/RK-D-WORKTREE-ORPHAN/` plants into a repo built here, so
+    // `ac414_…` saw no finding on the run where the prune won the race. rk-git's fixture repos
+    // carry the same two lines for the same reason.
+    git(dir.path(), &["config", "maintenance.auto", "false"]);
+    git(dir.path(), &["config", "gc.auto", "0"]);
     std::fs::write(
         dir.path().join("README"),
         format!("root {}-{nonce}\n", std::process::id()).as_bytes(),
@@ -326,6 +345,18 @@ pub fn temp_repo() -> tempfile::TempDir {
     git(dir.path(), &["add", "README"]);
     git(dir.path(), &["commit", "--quiet", "-m", "root"]);
     dir
+}
+
+/// The system temp directory in its long, canonical spelling with no `\\?\` prefix (see
+/// [`temp_repo`]'s 8.3 note). Falls back to the canonical path if `WorktreePath` refuses it (a
+/// `\\?\UNC\` temp directory), and to `temp_dir()` itself if it does not canonicalise.
+fn long_temp_base() -> std::path::PathBuf {
+    let raw = std::env::temp_dir();
+    let Ok(canonical) = std::fs::canonicalize(&raw) else {
+        return raw;
+    };
+    rk_git::path::WorktreePath::new(&canonical)
+        .map_or(canonical, |w| std::path::PathBuf::from(w.as_str()))
 }
 
 /// Run git in `cwd`, asserting it succeeded.
