@@ -1938,3 +1938,105 @@ Any later change is disclosed here with the date and the records it post-dates.
     root `D:/repos/redkiln-sev` does not already add: every proper ancestor of one is an ancestor of it, and each is
     voided by name itself. Their mutant survives for that reason and is recorded rather than counted.
   - R4FIX-8i item 6's residuals stand.
+
+- **s8i pre-dispatch amendment, extension: item 4's out-of-tree rule after `s8i` refuting round 6 — D21-145's ruling
+  on the task-output exemption, the temp rule's directory destinations, output that reaches execution, and a
+  correction to the sweep's counts — 2026-10-03, before B1; no S-BIN record exists** (cites the *s8i pre-dispatch
+  amendment* above and its item 4, the extension written after refuting round 4, R4FIX-8i, its items 2 and 6, and the
+  extension written after refuting round 5, R5FIX-8i, its items 3, 4, 5, 7 and 8; edits nothing in them or in the other
+  extensions above). Written in the AFK build, package R6FIX-8i, under `spikes/DECISIONS-2026-09-21.md` D21-144 and
+  D21-145 (each TAKEN PROVISIONALLY under D21-105). It is the operator's to confirm before B1, beside R4FIX-8i and
+  R5FIX-8i.
+
+  **1. The task-output exemption is ruled (R5FIX-8i item 4).** Item 4 calls the exemption of the child's own
+  background-task output *"PROVISIONAL, and returned to the orchestrator as a blocker the ruling did not foresee"*.
+  D21-145 rules it: *"That own-slug `tasks/` path is exempt, in every spelling, exactly as R4FIX item 3 exempts the
+  session's own tool-results. Other slugs under `<temp>/claude` stay answer-bearing."* The exemption stands as built,
+  and item 4 is read with this ruling from here on. D21-145 decides the exemption only. Item 4's other two questions
+  stay with the operator at item 4's gate: whether a pre-spawn check proves `<temp>/claude/<copy slug>/` absent, and
+  whether the shadow allowlist carries the path. As built there is no such check, and the shadow audit flags those
+  reads. *"In every spelling"* is now tested for the `~`, `$HOME`, `$USERPROFILE`, `/c/` and `/mnt/c/` spellings too,
+  with a home the temp directory sits under, as on the operator's machine (`%TEMP%` is `<home>/AppData/Local/Temp`).
+  Before this, only `/tmp`, `$TEMP`, the native form and `/tmp/../c/…` were tested.
+
+  **2. The temp rule's written paths (R5FIX-8i item 5).** Item 5 allows a temp path *"**only** where the same session
+  wrote that path earlier"* and says *"Temp is not allowed wholesale."* Refuting round 6 measured that `cp X /tmp/` and
+  `cp X "$TEMP"` recorded the temp directory itself as written, so every later temp read was clear. From this
+  extension on:
+  - A `cp` or `mv` destination that is a directory receives `<dest>/<basename of each source>`, and the directory
+    itself is not recorded. A destination is a directory when it ends in `/`, when its last segment is `.` or `..`,
+    when it folds to the temp directory or an ancestor of it (`/tmp`, `$TEMP`, `$TMP`, `/tmp/..`), or when the command
+    names several sources.
+  - A written path covers a read only when it lies below the temp directory. The temp directory itself, or an
+    ancestor of it, written by any route (for example `> $TEMP`), covers nothing.
+  - The allowlist's version is now **`r6fix-8i-1`**. Its entries are item 5's.
+
+  **3. Output that reaches execution (R4FIX-8i item 2's `echo`/`printf` exemption).** Item 2 leaves the operands of
+  `echo` and `printf` unaudited, *"which are output text"*. Refuting round 6 measured that a path reaching execution
+  through them escaped both audits, for example `echo D:/sb/base/item-4/CLAUDE.md | xargs cat`, `printf 'cat …' >
+  s.sh; bash s.sh` and `echo "…open('D:/sb/…')…" > p.py && python p.py`, while the heredoc form of the same script
+  voided. The exemption stands for output that goes to the terminal or to a file never run: that is a mention. It ends
+  when the output reaches execution, and what runs is then audited as what it is.
+  - **Piped.** A `|` now ends a command whose output feeds the next one (`||` does not). An `echo` or `printf`'s text
+    in the pipe is known:
+    - piped into `xargs`, its words become the operands of xargs's command (with `-I`'s replacement applied), and that
+      command is audited as a simple command;
+    - piped into a shell (`sh`, `bash`, `zsh`, `dash`, `ksh`) that reads its script from stdin, it is audited as a
+      `Bash` command;
+    - piped into an interpreter (`python`, `python3`, `py`, `node`, `perl`, `ruby`, `pwsh`) that names no script, it is
+      audited as data: its absolute paths are read.
+  - **Staged.** An `echo` or `printf` redirected to a file, and the `Write` tool's content, are kept by the file's
+    path. When the session later runs that file, its text is audited the same way. That holds when the file is run as
+    the program (`./f`), as a shell's script (`bash f`, `sh f`, `bash < f`), by `source f` or `. f`, as xargs's input
+    (`xargs < f`, `xargs -a f`), or as an interpreter's script or stdin.
+  - **Fed to a shell directly.** A shell's `-c` string, `eval`'s operands, and a heredoc's body or a here-string fed
+    to a shell that reads stdin are audited as `Bash` commands. A heredoc's body is still read as data as well, as
+    before.
+  - Each run inside a run is audited in a cwd and variables of its own, as a child shell's are, to a depth of 8.
+  - **The shadow audit's unresolved rule (R5FIX-8i item 5) extends to input that reaches execution and that the audit
+    cannot read.** That is xargs's input from a pipe of any other program, or from a file the session did not stage,
+    and a shell's or interpreter's stdin from such a pipe. Each is flagged, as `unresolved input of xargs` or
+    `unresolved stdin of <program>`, and never voided, as an unresolved `$VAR` is.
+  - The runtime void follows from the rules that already stand: a word read this way voids where it would void as a
+    read anywhere else.
+
+  **4. Measured** [measured 2026-10-03, read-only: both replays run from inside the test binary under the no-dispatch
+  wrapper, in a replay copy never shipped (`S8I-R6FIX-8i-replay`), over R5FIX-8i's driver (`sbin.rs` sha256
+  `bcdd084840e5…`) and this extension's (`6ebe56ffaadc…`), over the same 838 transcripts and 754 records; outputs
+  `R6FIX-8i-replay-r5base.out`, `R6FIX-8i-replay-r6final.out` and `R6FIX-8i-shadowflags-new.txt` under
+  `D:/repos/redkiln-sev/afk-tools/sp/s8i/`]:
+  - **Runtime voids: 71 of 838 under both drivers**, the same 71 sessions with the same 632 evidence lines. Nothing
+    new voids, so R5FIX-8i item 7's check, that every void is a genuine read, stands.
+  - **Shadow: 312 of 838 sessions flagged under both.** The reads flagged go from 10,786 to 10,793. The 7 new flags
+    fall in 6 sessions that were already flagged. Five are `unresolved input of xargs`, e.g. `find … | xargs grep …` and
+    `… | head -1 | xargs -I {} tail …`. One is an `rm -rf /tmp/rkpkg` of a directory the session made with `mkdir`
+    and filled with `cp -r … /tmp/rkpkg/`. One is the JavaScript string fragment `"/spec.md"`, read as an absolute path
+    in a script that `printf` staged and `node` ran.
+  - **Corpus records: 0 of 754**, auditing zero read inputs, as before.
+
+  **5. A correction to the R5FIX-8i extension's item 3** [measured 2026-10-03, read-only: `s8i_R6FIX-8i_sweepcount.py`
+  over `R5FIX-8i-sweep-out/` and `R5FIX-8i-sweep2-roots.txt`, output `R6FIX-8i-sweepcount.out`]. Item 3 reads *"397
+  files hold a hit. They are bounded by eleven roots"* and *"17 hits state no seed. 16 are mypy's `report.py` … One is a
+  work-OneDrive client document"*. The sweep's outputs hold 397 unique hit paths: 378 under the eleven roots, and 19
+  outside them. The 19 are 17 paths to mypy's `report.py` and one Google DriveFS content-cache file, itself a cached
+  copy of that `report.py` (its hit is the same *"entirely whitespace"*). The cache file is listed twice: under its own
+  path and under the profile's legacy `AppData/Local/Application Data` junction. So that junction was not wholly
+  skipped, contrary to item 3's skip list (*"the profile's legacy junctions, whose targets are searched under their
+  own names"*). The OneDrive document came from the separate OneDrive pass, not from these 397. No registered root
+  moves: every unregistered hit still states no seed.
+
+  **6. Residuals, disclosed.**
+  - Inline code is not lexed. A `python -c` that builds a path from parts (`os.path.join('D:/repos', 'BrittonGames',
+    …)`) does not void, and a multi-word read-position word is still resolved as one relative path, so the shadow audit
+    does not see an absolute fragment inside it. A known root's name inside the word still voids, as before.
+  - A profile junction spelling (`/c/Documents and Settings/…`) is not folded to the home directory, so a named root
+    reached that way does not void. The shadow audit flags it, inside a `bash -c` string too.
+  - A heredoc written to a file and run later is not staged. Its absolute paths are read when it is written, but a
+    relative path in it is not resolved when it runs. A file changed by the `Edit` tool and then run is not staged
+    either.
+  - Any program between an `echo` and its executor (`tee`, `tr`, `cat`) makes the text unknown, so the run is flagged,
+    not audited.
+  - A `cp` or `mv` into an existing temp subdirectory named without a trailing `/` (`cp X /tmp/sub`) records `sub`,
+    which then covers `sub`'s subtree. The audit cannot know that `sub` existed. A `mkdir` is not a recorded write, so a
+    read of a directory only `mkdir` made stays flagged.
+  - R4FIX-8i item 6's and R5FIX-8i item 8's residuals stand.

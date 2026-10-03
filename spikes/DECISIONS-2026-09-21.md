@@ -4,6 +4,8 @@
 
 *(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-143)"**; `D21-144` is appended with this move.)*
 
+*(dated 2026-10-03, `s8i` build, package R6FIX-8i (refuting round 6's minor): the two title moves above, for `D21-145` and `D21-144`, were made on 2026-10-03, not on 2026-10-02 [measured: `git log -S'`D21-145` is appended'` → `9243561`, committed 2026-10-03 08:30; `git log -S'`D21-144` is appended'` → `d7a244b`, committed 2026-10-03 04:13]. Each corrected the id range only. No entry is added with this note.)*
+
 *(Title corrected 2026-10-03 at `s8i`'s build, package R1FIX-8i (refuting round 1's minor): it read **"2026-09-21 … 2026-09-28"** while the file carried entries dated 2026-10-02 (`D21-138` … `D21-142`) and `D21-143`, drafted 2026-10-03. The three title moves above corrected the id range only. No entry is added with this correction.)*
 
 *(dated 2026-10-03, `s8i` build, package R5FIX-8i (refuting round 5's minor): the correction above understated what it corrected, and misplaced its moves. The first entry dated after 2026-09-28 is `D21-110` (2026-09-29, `s8f`) [measured: the first date in each entry's opening lines reads 2026-09-28 for `D21-106` … `D21-109` and 2026-09-29 for `D21-110`; the finding's `D21-124` is not the first]. The `s8i` title moves it meant are four, `D21-140` … `D21-143`, and they sit below it, not above; `D21-144`'s move, the line above it, came after it. Each corrected the id range only. No entry is added with this note.)*
@@ -6578,6 +6580,17 @@ The build exempts the dispatch copy's own slug's `tasks/` PROVISIONALLY, in R4FI
 acceptance measurement could run. The shadow audit still flags those reads. Whether the exemption stands is a ruling
 owed.
 
+*(dated 2026-10-03, s8i build, R6FIX-8i (refuting round 6's minors))* **The point returned is ruled by D21-145**
+(TAKEN PROVISIONALLY under D21-105): the own slug's `tasks/` is exempt in every spelling. D21-145 does not decide
+whether a pre-spawn check proves that directory absent, or whether the shadow allowlist carries it; both stay with the
+operator at item 4's gate (METHOD-S's R6FIX-8i extension, item 1). **The counts above are corrected** (that
+extension, item 5) [measured: `s8i_R6FIX-8i_sweepcount.py` over `R5FIX-8i-sweep-out/`, output
+`R6FIX-8i-sweepcount.out`]. The sweep's outputs hold 397 unique hit paths: 378 under the eleven roots, and 19 outside
+them. The 19 are 17 paths to mypy's `report.py` and one Google DriveFS content-cache copy of that file, listed under its
+own path and under the profile's legacy `AppData/Local/Application Data` junction. *"17 hits state no seed"* counted
+16 of the `report.py` hits and the work-OneDrive document, which came from a separate pass. Every unregistered hit still
+states no seed, and no registered root moves.
+
 ---
 
 ## D21-145 · `s8i`: the reviewer's own background-task output under `<temp>/claude/<own slug>/<session>/tasks/` is exempt from the out-of-tree void
@@ -6594,3 +6607,14 @@ sessions' task outputs there quote seed names. But the CLI also writes a reviewe
 tool-results. Other slugs under `<temp>/claude` stay answer-bearing. A background command that itself reads outside the
 copy is audited when it is issued, so the exemption hides nothing the audit has not already seen. The 838 replay then
 reads 71 voids: 70 genuine, and 1 disclosed false void, a mistyped path to the session's own task output.
+
+*(dated 2026-10-03, s8i build, R6FIX-8i (refuting round 6's minors))* Three corrections.
+- **Where it is registered.** The exemption is built in the R5FIX-8i METHOD-S extension's item 4, which still calls it
+  provisional and a returned blocker. METHOD-S is append-only, so this ruling is registered by the R6FIX-8i extension's
+  item 1, and item 4 is not edited. *"No record moves"* stands.
+- **What it decides.** The exemption itself, and nothing else. Item 4's other two questions stay with the operator at
+  item 4's gate: whether a pre-spawn check proves `<temp>/claude/<copy slug>/` absent, and whether the shadow allowlist
+  carries the path. As built, there is no such check, and the shadow audit flags those reads.
+- **The cite *"D21-144 (d)"*.** The letters (a) … (d) are the ruling record's (`target/afk-wf/s8i-ruling-d21-144.json`),
+  not this ledger's. Here (d) is D21-144's Ruled item 1, its fourth bullet: *"named roots taken from a **measured
+  read-only sweep** of the reachable drives"*, whose *"expected set is D:/r6c, D:/repos/redkiln-sev and %TEMP%/claude"*.
