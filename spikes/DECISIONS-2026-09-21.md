@@ -6438,6 +6438,16 @@ tree's work file read as an LFS pointer, is owed first. The operator's dry run p
 `285b659fbcd3cd4d424541c4211e3b6398ea26ed` is the commit that introduced the amendment
 (`git log -S's8i pre-dispatch amendment — 2026-10-02' -- spikes/METHOD-S.md`).
 
+*(dated 2026-10-03, s8i build)* **The driver defect is fixed, and the dry run is still the operator's (package S8I-F1).** The
+review tree's pointer is now read from the committed blob, `git cat-file blob HEAD:<path>`, red first with a killing
+mutant. The superseding driver patch is `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-F1-sbin-driver.patch` (sha256
+`dd3ee74ec8dd2752cdffb42ffb4fb3491f32de3543bcc97003f029ca23414f3a`), and the B0 commit applies it with P6's audit patch (`s8i`
+§8i.5's packet, step 2). The B0 line's *"from the private-copy patches"* means those two. The permission denial
+stands, so the dry run is run by the operator from a plain terminal after the B0 commit, and its sha256 is still owed
+on the B1 line. METHOD-S's extension of 2026-10-03 (seed 5's R = `6a101bdcd`, D21-142's second rule) is appended, and
+base item 5 is built (`292cabad7e073a977010e7e84261cd4ad204389e`). Not yet done before B1: the five greenness runs,
+then extensions 2, 3 and 4. This entry stays OPEN, and nothing here signs a line.
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00

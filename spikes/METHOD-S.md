@@ -1443,3 +1443,127 @@ Any later change is disclosed here with the date and the records it post-dates.
      and the re-run's rendering.
 
   `review_root` is fixed above as `D:/sb` and is not deferred. This entry post-dates no S-BIN record.
+
+- **s8i pre-dispatch amendment, extension: seed 5's replacement R, D21-142's second `CLAUDE.md` rule, the five base
+  repositories, and the measured half of deferred extensions 3 and 4 — 2026-10-03, before B1; no S-BIN record
+  exists** (cites the *s8i pre-dispatch amendment* above, its items 3, 4, 6 and 12 and its deferred-extensions list;
+  edits nothing in it). Written in the AFK build, package S8I-F1, from the operator's ruling in
+  `spikes/DECISIONS-2026-09-21.md` D21-142 and measurements read-only on `D:/repos/BrittonGames` (HEAD `ee6e450`, its
+  `git --no-optional-locks status --porcelain` sha256 `a6751b0c…69ed`, the same before and after every build).
+
+  **1. Deferred extension 1, seed 5's replacement R.** The pool, enumerated by the registered command (for each `c`
+  in `git rev-list --no-merges 041ead2cb284afd3004d07c2826f31d05b2799fd`, `git diff-tree --root --no-commit-id
+  --no-renames -r -z --name-status c`, kept when it changes at least one `.uasset` or `.umap` and every other path
+  lies in item 3's strip set), counts **148 of 575** non-merge commits, the five items included, so **143** were
+  examined [measured twice: package S8I-P3, and an independent re-count by S8I-F1 → 148, 575, 5 items inside]. The
+  2026-09-09 entry's 29 is not reproduced, and the difference of 119 is recorded, not narrowed away. Why each was
+  passed over: 81 add an asset absent at their parent (condition 2). Of the other 62, 49 predate
+  `_workspace/tooling/verify_headless.ps1` (condition 5), and none of the 49 states its defect in its own message. Of
+  the 13 left, 10 fail condition 2's message half or condition 3: `89e3605b0` (names no defect it fixes; the defect
+  it states is seed 4's `LoadoutFill`, and it changes seed 4's asset), `4bf388081` and `8a45c29c3` (resaves),
+  `897c2dbe7` (its stated defect is one it says is not resolved), `1a5e40b00`, `3247588c9` and `a61e1f76a`
+  (features, functional), `e2c7b7b74` (a functional defect, an empty EQS query), `ebc4e95e8` (deletes a non-compiling
+  duplicate) and `352b68b45` (untracks mistaken assets). Three met conditions 1–4 and the LFS half of condition 5,
+  all story 2.8.5, 2026-07-30: `9ca831a42` and `6a101bdcd` (`WBP_GameVitals.uasset`) and `f6269ae7e`
+  (`BP_GamePlayerCharacter.uasset`). The per-candidate table with each condition's reading is
+  `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-P3-seed5-candidates.md`, outside every repository, and goes into the
+  corpus's `results/s-bin/` at the corpus commit.
+  - **The operator's pick (D21-142 item 2):** *"6a101bdcd white-on-white"*. R =
+    `6a101bdcd2954768c498ac19b4dd161a5bbd8de1`, parent `9ca831a420e38571a42a7101477c793cb69e499c`, *"fix(2.8.5): make
+    the vitals styling actually persist to disk"*. It changes `OurGame/Content/UI/HUD/WBP_GameVitals.uasset` (M),
+    `_workspace/backlog/STATUS.md`, `_workspace/backlog/game_foundation_backlog.json` and
+    `_workspace/references/UE58_Editor_And_MCP_Gotchas.md`, so its one asset is `WBP_GameVitals.uasset` and every
+    other path is in the strip set.
+  - **R's asset and its LFS objects, present.** At R the pointer blob is `c84ea7acc32c9ff499b6ee6ad3444b3692e96f18`
+    (oid `59aa3581fb001476ec5a3d157f6e80e452c2284cfb8f4a0c2536f0af01538510`, size 84,345). At R^ it is
+    `23c79a6337215a7a208d55676081f0fc33fcbeb7` (oid `86123be78c4566f951f87f84f19c1adf7890dccf4fce1f725409014a62b0261b`,
+    size 74,460). Both objects are in BrittonGames' `.git/lfs/objects`, and each file's SHA-256 and size equal its
+    pointer's; an all-zero oid reads absent (the control).
+  - **The constructed `spec.md` clause the seed violates** (as S8I-P3 recorded it): *"The vitals widget's styling
+    persists in the saved asset: on a cold load both the authoring tree and the generated class carry the fill
+    texture, fill colours, Grenze font and retainer material, and the HUD renders a dark panel with legible labels,
+    not white-on-white."*
+  - **R's leak tokens:** `white-on-white`, `VERIFIED COLD` and `entirely white`, the words its own diagnosis uses.
+    With item 4's `LoadoutFill`, the four registered tokens count **0** over every non-asset file, tracked or not,
+    of every one of the five built base trees [measured over the work trees, `.git` excluded: 3,643, 3,650, 3,666,
+    3,643 and 3,243 files at items 1–5].
+  - **`$ARGUMENTS` under item 2's rule:** `/Game/UI/HUD/WBP_GameVitals — write the capture_scene_preview of the k-th
+    asset above to _s-bin/captures/capture-<k>.png`.
+  - `bf9c499a1` is recorded as replaced, for correction 5 (item 1) and the 2026-09-09 entry's *"Seed 5 violates no
+    registered AC of 8.5.5g"*. Greenness at R, with the seed applied, is the operator's UE run (deferred extension 4).
+
+  **2. Item 3's `CLAUDE.md` rule at R refuses, as the deferred-extensions list provides, and D21-142 registers a
+  second rule.** BrittonGames' status table carried the rows *Epic / Feature / Focus / Next* until `07fe80ab6`
+  (2026-08-07). At R item 3's four prefixes count 1/0/0/0, so that strip refuses, and the refusal is recorded here
+  as the list requires [measured: `git show 6a101bdcd:CLAUDE.md`, 19,328 bytes, 0 CR]. The operator answered
+  *"Add old-table strip rule"* (D21-142 item 1). The **second byte rule** is item 3's rule word for word with
+  other prefixes: read `CLAUDE.md` as bytes and split it into lines, each keeping its terminator; strip one trailing
+  `\n`, then one trailing `\r`, from a copy of the line; the line matches if that copy begins with exactly one of
+  the four byte prefixes `| **Epic** |`, `| **Feature** |`, `| **Focus** |` or `| **Next** |`. Matching lines are
+  removed with their terminators and every other byte is left unchanged. It **asserts exactly 4 rows removed, each
+  prefix matched exactly once**, and refuses otherwise. It applies **only** to a tree whose `CLAUDE.md` predates
+  `07fe80ab6`, decided as `git merge-base --is-ancestor 07fe80ab6 <item commit>` → rc 1. That is item 5 alone: the
+  check reads rc 0 at items 1–4, which keep item 3's rule unchanged, and rc 1 at R. At R's blob the four prefixes
+  count 1/1/1/1. The work tree's `CLAUDE.md` is CRLF (111 CRs, BrittonGames' `*.md text eol=crlf`), 19,439 bytes
+  before and 14,663 after, so the rule ran on CRLF bytes. Controls: it refuses 3 rows, a duplicated row and the new
+  table, and strips LF, CRLF and mixed input alike. The strip set's entry is still `CLAUDE.md#status-rows`, so the
+  set stays one set across the five. The rule changes fixture construction, not selection, and it stands on
+  D21-142's operator line because it was registered after candidates were examined.
+
+  **3. The five base repositories (item 4).** Each is the one commit of a fresh repository on `main` (`review tree`,
+  `s-bin <s-bin@invalid>`), with no remote, no other ref and no tag, and `git rev-list --all --count` reads 1 on each
+  [measured 2026-10-03]. Each was checked out of a disposable `git clone --no-checkout --shared` of BrittonGames,
+  the LFS smudge skipped and `core.autocrlf=false`. Every LFS pointer was replaced by its object from BrittonGames'
+  own store, and each materialised file's SHA-256 and size equal its pointer's. Each committed tree equals
+  BrittonGames' item tree entry for entry, with the seed applied and the strip removed, and `git status --porcelain
+  --untracked-files=all --ignored` prints nothing.
+
+  | item | item commit | base commit | base tree | LFS objects | base bytes (`.git` included) |
+  | --- | --- | --- | --- | --- | --- |
+  | 1 | `cc0cf2d01` | `85d73729bc908b6dce10eb40df8fa0ac27816ca1` | `59b90c8635c537a4cb89f8231eb1e05b7f9052e4` | 30,014 | 21,540,846,625 |
+  | 2 | `fa1ea72f4` | `78a5ed29a4ac93d3b7685e35c6d6b9cebe7112a8` | `ca9a46bb0795acafc7338e91d2677e3ead0a391e` | 30,015 | 21,541,178,231 |
+  | 3 | `e83463288` | `536eb55f3c3529bf5943b6c8ecf06da873824c8e` | `81e0c57073926d884556fb0037a3686ab16c8619` | 30,022 | 21,560,069,565 |
+  | 4 | `a71265925` | `fd692b75ac96c6d94bf1de084e64bb03c422aaba` | `59b90c8635c537a4cb89f8231eb1e05b7f9052e4` | 30,014 | 21,540,845,865 |
+  | 5 | `6a101bdcd` | `292cabad7e073a977010e7e84261cd4ad204389e` | `143377a3878f9e40a5d937826da9e0ffe9e0d8f8` | 11,886 | 10,604,498,965 |
+
+  - **The seeds, by blob oid.** Seed 4: `a71265925^:OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset` =
+    `9415f0986275a66d01885cc74f58c33e1957e183` = base 4's `HEAD:` blob. Seed 5:
+    `6a101bdcd^:OurGame/Content/UI/HUD/WBP_GameVitals.uasset` = `23c79a6337215a7a208d55676081f0fc33fcbeb7` = base 5's
+    `HEAD:` blob.
+  - **The fix, unreachable.** Base 4 holds neither the fixed pointer blob `70e2a2e3f05d5b4c27930888050e762c1b3aa37c`
+    nor its LFS object `02b53079c9fe24bbafe2603b2f99185ad4a62cfa780515851257479b1b8397db`. Base 5 holds neither
+    `c84ea7acc32c9ff499b6ee6ad3444b3692e96f18` nor `59aa3581fb001476ec5a3d157f6e80e452c2284cfb8f4a0c2536f0af01538510`.
+  - **The strip.** One set on all five, `CLAUDE.md#status-rows`, `_workspace/backlog/` and
+    `_workspace/references/UE58_Editor_And_MCP_Gotchas.md`. It removed 19 files from each of bases 1–4 and 8 from base
+    5, because R's `_workspace/backlog/` holds 7 files, not the 18 item 3 measured at the item commits. The set is
+    the registered one and is not narrowed.
+  - **Measured, not chosen.** Bases 1 and 4 hold the same tree, because `a71265925^` is item 1's commit and
+    `a71265925` changes only `WBP_LoadoutScreen.uasset` plus stripped files. So clean item 1's tree carries seed 4's
+    defect. This is the registration's own consequence.
+  - **Tracked-but-ignored files.** BrittonGames tracks files its own `.gitignore` matches (`git ls-files -ci
+    --exclude-standard`): 11 at items 1–4 and 10 at R. A plain `git add -A` drops them, so each base was committed
+    with `git add -A -f`, and the entry-for-entry comparison shows the commit is exactly the tracked set. The
+    driver's `commit_single` now force-adds exactly the base tree's tracked set and refuses any other ignored file
+    (package S8I-F1's driver patch).
+
+  **4. Item 6's pointer, as the driver reads it.** *"`size` and `lfs_oid` are read from the LFS pointer in the
+  review tree"*: the review tree's work file holds the materialised asset, so that pointer is the blob committed in
+  the review repository, read as `git cat-file blob HEAD:<path>`. This is how item 6 reads, unchanged, and the driver
+  was corrected to it (package S8I-F1; S8I-P8 found the work-file read).
+
+  **5. The measured half of deferred extensions 3 and 4.** The largest base is item 3's, 21,560,069,565 bytes. The
+  growth one greenness run leaves is not measured yet, so `SBIN_NEED_BYTES` is not written here. The pin's
+  2026-09-05 report is staged for the corpus at `results/s-bin/pin-report-2026-09-05/index.json`, SHA-256
+  `c3dae80254299b8400149388d38df91b2885a4cf5c11ac0f8faf534b5d7e6bc6`, as registered. It was taken from
+  BrittonGames' `_workspace/_runs/8.3.3g-20260904-2334/final-suite.json`, byte-identical to the report measured at
+  authoring, because the registered source `_workspace/tooling/TestResults/index.json` was overwritten on 2026-09-25
+  and now hashes `65960f789fc2d6216ced3d84b387f3b1d4a78588fd47488d3d707c9553cc1a8a`. Accepting that source is the
+  operator's at the corpus commit.
+
+  **Not appended here, and owed before B1/B2 in their own dated paragraph:** deferred extension 2 (`W_max` and
+  `ceiling_secs`), the growth and figure of extension 3, and extension 4's greenness results, all of which wait for
+  the operator's five greenness runs. No placeholder is written for them.
+
+  **The go-ahead entry's id.** The amendment's *"ledger entry D21-141, reserved for S-BIN"* reads **D21-143**.
+  D21-141 was taken first by the Checkpoint 8i (8) ruling, and D21-141's own id note says the S-BIN entry *"takes the
+  next free id when it is written"*. D21-142 was taken next, so the go-ahead lines are in D21-143.

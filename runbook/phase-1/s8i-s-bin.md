@@ -649,9 +649,9 @@ is authored and run **from Python, never the shell**, and must flip its test.
 | test (`sbin::tests::`) | pins | mutant that must flip it |
 | --- | --- | --- |
 | `seed_is_confirmed_by_blob_oid_not_by_file_count` | the entry's *"each seed is confirmed by blob oid … and not by a file count"* | compare `git diff --stat` counts |
-| `review_repo_holds_one_commit_and_no_fix_object` | §8i.2 item 4 | check the working tree only, not the object store and `.git/lfs` |
+| `review_repo_holds_one_commit_and_no_fix_object` | §8i.2 item 4 | check the working tree only, not the object store and `.git/lfs`; *(dated 2026-10-03, s8i build)* also `commit_single` as plain `git add -A`, as `add -A -f` without the tracked-set check, without the index check, and force-adding every ignored file |
 | `text_diff_carries_source_and_test_paths_only` | §8i.2 item 6 | admit `_workspace/backlog/` |
-| `asset_size_is_read_from_the_lfs_pointer` | §8i.2 item 6 | infer size from whether the pointer's size line moved |
+| `asset_size_is_read_from_the_lfs_pointer` | §8i.2 item 6 | infer size from whether the pointer's size line moved; *(dated 2026-10-03, s8i build)* also read the pointer from the work-tree file, in `review_pointer`, `asset_entries` or `render_summary` |
 | `warned_and_not_run_fold_into_passed_with_the_raw_report_referenced` | §8i.2 item 6 | drop `succeededWithWarnings` |
 | `a_digest_failing_the_typed_schema_is_void_schema_not_a_miss` | METHOD-S §0 rule 2 | score the invalid digest |
 | `exit_zero_without_structured_output_is_void_not_success` | Halt 3 | read exit 0 as a completed dispatch |
@@ -833,6 +833,47 @@ What is prepared. All of it is zero spend, and none of it is in a repository:
     outcome lines read `BAD-record`, by P6's disclosed design.
   - Last, it prints the two sha256 values the B1 line names.
 
+*(dated 2026-10-03, s8i build)* **The driver defect fixed, and `commit_single` keeps the tracked-but-ignored files (package S8I-F1).** The
+owed items in S8I-P8's note above are discharged, in a fourth private copy,
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-F1-corpus`, made from P5's copy (P5's copy is left at its own bytes,
+`89473ef4…760d8017`). Nothing wrote to `D:/repos/redkiln-corpus` or its `.git`: HEAD `61f590e`, `main` `285e011`,
+status empty, before and after.
+- **The pointer.** A new `review_pointer(review_repo, path)` reads `git cat-file blob HEAD:<path>` in the review
+  repository and parses that. `asset_entries` and `render_summary` both call it, and neither reads the work file any
+  more. Amendment item 6's text is unchanged; the METHOD-S extension of 2026-10-03 records how it reads.
+- **`commit_single(tree, tracked)`.** `tracked` is the base tree's tracked set (the item commit's `git ls-tree -r
+  --name-only` paths with the strip applied). After `git add -A`, every ignored file in `tracked` is force-added as a
+  `:(literal)` pathspec, any other ignored file refuses (untracked junk is neither committed nor silently dropped),
+  and the index must then equal `tracked` exactly. `None` is a throwaway tree, the flag probe's, where any ignored
+  file refuses. `-f` is never applied to the whole tree.
+- **Red first, in the two existing tests, so the selection stays at 25.** `asset_size_is_read_from_the_lfs_pointer`
+  now commits the pointers in a review repository and overwrites the work files with binary bytes, then also renders
+  through `render_summary`. Red on the old read: *"the pointer is read from the committed blob, not the materialised
+  work file: OurGame/Content/UI/V.uasset in the review tree"*, caused by *"an LFS pointer is UTF-8 text"*.
+  `review_repo_holds_one_commit_and_no_fix_object` gains a tree whose `.gitignore` matches two tracked files (one
+  under an ignored directory), an ignored junk file outside the set, a stray untracked file, and a throwaway tree with
+  an ignored file. Red on plain `add -A`: *"a tracked-but-ignored file must be committed: Config/keep.log"*. Both
+  green after the guards.
+- **Mutants, from `s8i_S8I-F1_mutants.py`, in the copy only, restore verified by sha256.** Seven new:
+  `review_pointer` reads the work file (the S8I-P8 defect); `asset_entries` and `render_summary` each bypass it with
+  the work file; `commit_single` as plain `add -A`; as `add -A -f` with no tracked-set check (S8I-P7's build); without
+  the index check; and force-adding every ignored file. All seven flipped. The last first SURVIVED: with a tracked set
+  given, the index check already refuses junk, so the refusal is observable only on a `None` tree. The throwaway-tree
+  case was added, and the mutant then flipped. P4's 13 and P5's 12 were re-run over the final bytes: **32/32
+  flipped**.
+- **Readings, last in the copy, all under `nd.sh`.** The sbin selection: `test result: ok. 25 passed; 0 failed`
+  (the count is unchanged, because both tests were strengthened, not added). The whole runner suite: 159 passed, 1
+  failed, the same pre-existing `p7::tests::the_driver_matches_the_committed_catalog`. clippy exits 0 with nothing for
+  `sbin.rs`, and `sbin.rs` is rustfmt-clean.
+- **The patch supersedes P5's.** `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-F1-sbin-driver.patch` (sha256
+  `dd3ee74ec8dd2752cdffb42ffb4fb3491f32de3543bcc97003f029ca23414f3a`) is cumulative against a fresh `main` extract at `285e011`. It adds
+  `runner/src/sbin.rs` (sha256 `64207927cf4e6b9da1fbf29b8ee116e918dc43ef3569fc5586a55eecbe504de7`) and P4's same
+  6 lines in `runner/src/main.rs`. Applied with `core.autocrlf=false` to a fresh `git archive` of `runner/`, it gives a
+  `runner/src` byte-identical to the copy. Apply only this one, not P4's or P5's. P6's audit patch is unchanged and is
+  applied beside it. §8i.5's packet names it as `DRV`.
+- **Still the operator's:** the B0 corpus commit, B0's block and the dry run. The permission denial recorded above
+  still stands, so the dry run runs from a plain terminal after the B0 commit, with this patch in it.
+
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
 Everything here costs no model spend, and all of it happens in B0, before B1.
@@ -969,7 +1010,8 @@ over BrittonGames' blob).
 | 2 | `fa1ea72f4` | `78a5ed29a4ac93d3b7685e35c6d6b9cebe7112a8` | `ca9a46bb` | `FTEST_Inventory_Stash` `f2335143` | 21,541,178,231 |
 | 3 | `e83463288` | `536eb55f3c3529bf5943b6c8ecf06da873824c8e` | `81e0c570` | `BP_GamePlayerState` `f22e58e2`, `DA_Item_Sword` `2f9895f5` | 21,560,069,565 |
 | 4 | `a71265925` | `fd692b75ac96c6d94bf1de084e64bb03c422aaba` | `59b90c86` | `WBP_LoadoutScreen` `9415f098` (the seed) | 21,540,845,865 |
-| 5 | **awaiting R** | — | — | — | — |
+| 5 | ~~**awaiting R**~~ | — | — | — | — |
+| 5 *(dated 2026-10-03, s8i build)* | `6a101bdcd` | `292cabad7e073a977010e7e84261cd4ad204389e` | `143377a3` | `WBP_GameVitals` `23c79a63` (the seed) | 10,604,498,965 |
 
 - **Seed 4 is confirmed by blob oid.** `a71265925^:OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset` =
   `9415f0986275a66d01885cc74f58c33e1957e183` = base item 4's `HEAD:` blob. The fixed pointer blob `70e2a2e3…aa37c` is
@@ -1007,6 +1049,41 @@ over BrittonGames' blob).
 - **Disk.** Four bases take 86.2 GB, and D: went from 316 GB to 235 GB free. Each base is about 10.8 GB of work tree
   plus 10.7 GB in `.git/lfs`. At peak, five bases, five review repositories and one dispatch copy need about 237 GB
   plus one run's growth.
+
+*(dated 2026-10-03, s8i build)* **Base item 5, built (package S8I-F1).** R = `6a101bdcd` (D21-142 item 2). Built exactly as items 1–4, by
+`s8i_S8I-F1_build5.py`, which `s8i_S8I-F1_mkbuild5.py` derives from P7's script by anchored replacements: `ITEMS[5]`,
+D21-142's second `CLAUDE.md` rule and R's three leak tokens, nothing else. A disposable `git clone --no-checkout
+--shared` under `D:/sb/tmp-f1` (deleted afterwards); seed 5 applied as `git checkout 6a101bdcd^ --
+OurGame/Content/UI/HUD/WBP_GameVitals.uasset`; 11,886 LFS objects materialised from BrittonGames' store, each
+file's SHA-256 and size equal to its pointer's, none missing. BrittonGames' HEAD (`ee6e450`), status sha256
+(`a6751b0c…69ed`) and worktree-list sha256 (`ba14505a…e0ab`) were the same before and after.
+- **`CLAUDE.md`, by the old-table rule.** `git merge-base --is-ancestor 07fe80ab6 <item>` reads rc 0 at items 1–4
+  (item 3's rule, unchanged) and rc 1 at R, so the second rule applied and removed `| **Epic** |`, `| **Feature** |`,
+  `| **Focus** |` and `| **Next** |`, each once (4 rows), from a CRLF work file (111 CRs; 19,439 → 14,663 bytes).
+  Controls (`s8i_S8I-F1_controls.py`, `CONTROLS_OK`): the rule refuses 3 rows, a duplicate and the new table; item
+  3's rule refuses the old table (1/0/0/0); LF, CRLF and mixed input strip alike.
+- **The strip set is items 1–4's**, `["CLAUDE.md#status-rows", "_workspace/backlog/",
+  "_workspace/references/UE58_Editor_And_MCP_Gotchas.md"]`. It removed 8 files, not 19: R's `_workspace/backlog/`
+  holds 7 files.
+- **Leak tokens.** `LoadoutFill`, `white-on-white`, `VERIFIED COLD` and `entirely white` count 0 over every non-asset
+  file of all five base trees (`s8i_S8I-F1_leak5.py`, `ALL_ZERO`; 3,643, 3,650, 3,666, 3,643 and 3,243 files), and 0 in
+  base 5 before and after its commit. The scan's controls find each token when planted and skip `.git` and assets.
+- **One commit.** Base commit `292cabad7e073a977010e7e84261cd4ad204389e`, tree
+  `143377a3878f9e40a5d937826da9e0ffe9e0d8f8`; `main`, `review tree`, `s-bin <s-bin@invalid>`; `rev-list --all --count`
+  1, `refs/heads/main` alone, no remote; `status --porcelain --untracked-files=all --ignored` empty; the tree equals
+  BrittonGames' R tree entry for entry (15,066 entries) with the seed applied and the strip removed. Committed with
+  `add -A -f`, as items 1–4 were: R tracks 10 files its `.gitignore` matches.
+- **The seed, by blob oid.** `6a101bdcd^:OurGame/Content/UI/HUD/WBP_GameVitals.uasset` =
+  `23c79a6337215a7a208d55676081f0fc33fcbeb7` = base 5's `HEAD:` blob. The fixed pointer blob
+  `c84ea7acc32c9ff499b6ee6ad3444b3692e96f18` is absent from base 5's object store, and its LFS object
+  `59aa3581…01538510` from its `.git/lfs/objects`. The asset's work file hashes to its pointer's oid `86123be7…0261b`.
+- **The record** is `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-F1-out/item-5.json`. A copy is at
+  `…/S8I-P7-out/item-5.json` so that `s8i_S8I-P7_green.py table` counts base 5's bytes. `fixture.json`'s `items.5` is
+  still to be added from it (the staged fixture holds items 1–4).
+- **Disk.** Base 5 is 10.6 GB; D: reads 203 GB free.
+
+The greenness runs below now include item 5: its base exists. Its suite at R is the one `verify_headless.ps1` runs
+there, far smaller than the pin's 1,029 tests (S8I-P3: about 175, from the commits' own messages).
 
 **The operator's greenness runs (not run here).** Run them from a plain Git Bash **outside Claude Code**, with the
 Unreal editor **closed**, one item at a time, each in a subshell. The helper refuses inside a Claude Code session,
@@ -1302,6 +1379,12 @@ D21-140 amended it for S-BIN, and is not used. The go-ahead lines go into **D21-
   B1.
 - **(d)** The operator accepts or rejects P7's pin-report source (§8i.4's dated note).
 
+*(dated 2026-10-03, s8i build)* **(a) and (b) are done (package S8I-F1).** (a): the driver reads the committed pointer, and the
+superseding patch is `S8I-F1-sbin-driver.patch` (sha256 `dd3ee74ec8dd2752cdffb42ffb4fb3491f32de3543bcc97003f029ca23414f3a`, §8i.3's
+dated note), so step 2's `DRV` names it. (b): METHOD-S's extension of 2026-10-03 is appended (seed 5's R, D21-142's
+rule, the five bases, and the measured half of extensions 3 and 4), and base item 5 is built (§8i.4's dated note).
+(c) and (d) remain the operator's. The dry run, step 4, is still the operator's after B0.
+
 | step | what | USD bound | check before it |
 | --- | --- | --- | --- |
 | 1 | the corpus on `main`, clean | 0.00 | none |
@@ -1323,8 +1406,10 @@ D21-140 amended it for S-BIN, and is not used. The go-ahead lines go into **D21-
   [ "$(git -C "$C" rev-parse HEAD)" = 285e011c70cfa0fc92d91089792834846d99bcf7 ] || { echo "FAIL: main is not 285e011; re-check the patches apply"; exit 1; } )
 # 2. Sign D21-143's B0 line in place first. Then the B0 corpus commit, from D21-140 item 2's private-copy patches.
 #    DRV is P5's patch until the LFS fix (owed item (a)) lands; after that it is the fixed patch.
+#    (dated 2026-10-03, s8i build) The fix landed: DRV is S8I-F1's patch, superseding P5's S8I-P5-sbin-driver.patch.
 ( C=D:/repos/redkiln-corpus; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
-  DRV=${DRV:-$S/S8I-P5-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
+  DRV=${DRV:-$S/S8I-F1-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
+  [ "$(sha256sum < "$DRV" | cut -c1-64)" = dd3ee74ec8dd2752cdffb42ffb4fb3491f32de3543bcc97003f029ca23414f3a ] || { echo "FAIL: $DRV is not S8I-F1's patch"; exit 1; }
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply --check "$p" || { echo "FAIL: $p does not apply"; exit 1; }; done
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply "$p" || exit 1; done
   git -C "$C" add runner/src/main.rs runner/src/sbin.rs results/audit-s.py results/s-bin/audit-fixtures || exit 1
@@ -1375,7 +1460,7 @@ _s-bin/captures/capture-<k>.png`. The paths come from P7's fixture, and item 5's
 - 2 (`fa1ea72f4`): `/Game/Tests/FTEST_Inventory_Stash`
 - 3 (`e83463288`): `/GameCore/Blueprints/BP_GamePlayerState /GameCore/Data/Items/DA_Item_Sword`
 - 4 (`a71265925`): `/Game/UI/Inventory/WBP_LoadoutScreen`
-- 5 (R = `6a101bdcd`, once extension 1 is appended): `/Game/UI/HUD/WBP_GameVitals`
+- 5 (R = `6a101bdcd`, once extension 1 is appended): `/Game/UI/HUD/WBP_GameVitals` *(dated 2026-10-03, s8i build)* Extension 1 is appended (METHOD-S, 2026-10-03), and base item 5 is built.
 
 After each batch, the spend table's *spent so far* column is updated by dated edit, from the records, the probes and
 the procedure log.
