@@ -6513,6 +6513,26 @@ sessions voided on their own task output, and one more on `/tmp/../c/...`. Befor
 reading under both R4FIX-8i and R5FIX-8i, and clears or voids every shadow-flagged replay or record (`s8i` §8i.5, owed
 items (g) and (h)). This entry stays OPEN, and nothing here signs a line.
 
+*(dated 2026-10-03, s8i build, R6FIX-8i and R7FIX-8i)* **Refuting rounds 6 and 7 fixed in the driver (packages
+R6FIX-8i and R7FIX-8i, under D21-144 and D21-145).** R6FIX-8i superseded the driver patch with
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R6FIX-8i-sbin-driver.patch` (sha256
+`10b0e266fe9015a687a97e55991a30c5d0796300c373cd682c78087da3060fae`) and added no paragraph here, so the R5FIX-8i
+paragraph above still named a superseded patch (refuting round 7's minor). R7FIX-8i supersedes both: the driver patch
+is now `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R7FIX-8i-sbin-driver.patch` (sha256
+`5b84a5392ac5127427253057b634ed70f620d03e52f0fca00ee116d883d700ed`). The audit patch is unchanged,
+`S8I-R5FIX-8i-audit-bin.patch` (sha256 `e0243d5d4edeb9a7b538889e346d488d6e60c61a2f036c31ea0ccf7cb4eb4d32`). The B0
+line's *"from the private-copy patches"* now means those two, the pair `s8i` §8i.5's packet step 2 names as `DRV`
+and `AUD` and checks by sha256. The dry-run script, `D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh`
+(packet step 4), was re-pinned by R6FIX-8i to the 33-test reading (sha256
+`5d112e098e510bec52d4334e40ebe3d4a6c6f689cd0232d83f1d261105fd2c2c`), which supersedes the R2FIX-8i value above
+(`1599099691282b…b7f3`); R7FIX-8i leaves it unchanged. The B1 line names no patch. The out-of-tree void now audits a
+shell's `-c` string, `eval`'s operands, xargs's command, and a heredoc or here-string fed to a shell only as the run
+they are, so the session's own `tool-results` and own task output are exempt inside them exactly as they are bare
+(D21-145), and it peels the precommands (`timeout`, `nice`, `nohup`, `env`, `stdbuf`, `time`, `command`, `exec`),
+so the program after them is followed as if typed bare (METHOD-S's R7FIX-8i extension). `results/s-bin/audit.txt` is
+written with the rulings file as its third argument, and that file is committed and pinned always (`s8i` §8i.3,
+§8i.7). This entry stays OPEN, and nothing here signs a line.
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00

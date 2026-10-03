@@ -2040,3 +2040,97 @@ Any later change is disclosed here with the date and the records it post-dates.
     which then covers `sub`'s subtree. The audit cannot know that `sub` existed. A `mkdir` is not a recorded write, so a
     read of a directory only `mkdir` made stays flagged.
   - R4FIX-8i item 6's and R5FIX-8i item 8's residuals stand.
+
+- **s8i pre-dispatch amendment, extension: item 4's out-of-tree rule after `s8i` refuting round 7 — a text the audit
+  runs is audited only as that run, precommands are peeled, item 9's audit invocation, and a quotation corrected —
+  2026-10-03, before B1; no S-BIN record exists** (cites the *s8i pre-dispatch amendment* above and its items 4 and 9,
+  the extension written after refuting round 4, R4FIX-8i, its item 3, the extension written after refuting round 5,
+  R5FIX-8i, its items 3 and 5, and the extension written after refuting round 6, R6FIX-8i, its items 3, 4 and 6; edits
+  nothing in them or in the other extensions above). Written in the AFK build, package R7FIX-8i, under
+  `spikes/DECISIONS-2026-09-21.md` D21-144 and D21-145 (each TAKEN PROVISIONALLY under D21-105). It is the operator's
+  to confirm before B1, beside R4FIX-8i, R5FIX-8i and R6FIX-8i.
+
+  **1. A text the audit runs is audited only as that run (R6FIX-8i item 3, "Fed to a shell directly").** Item 3
+  audits a shell's `-c` string, `eval`'s operands, and a heredoc's body or a here-string fed to a shell as `Bash`
+  commands, and says *"A heredoc's body is still read as data as well, as before."* Refuting round 7 measured that the
+  `-c` string and `eval`'s operands were also still audited as one operand word of the shell or of `eval`. Such a word
+  does not resolve to the path inside it, so the exemptions of the session's own `tool-results` (R4FIX-8i item 3) and
+  of its own task output (D21-145: *"That own-slug `tasks/` path is exempt, in every spelling"*) were skipped, and the
+  word voided by name. The 838-transcript replay holds a reviewer doing exactly this: session `d695a1ce` waited on its
+  own background task with `timeout 300 bash -c 'while [ ! -f "C:\Users\…\Temp\claude\D--sb-d-p1i1a1\<session>\tasks\byujxk0ry.output" ]; do sleep 2; done; tail -200 "…"'`,
+  and that command voided. From this extension on:
+  - a shell's `-c` string, `eval`'s operands and xargs's command are audited only as the run they are, never also as
+    operand words;
+  - a heredoc's body or a here-string fed to a shell that reads its script from stdin is audited only as that run. It
+    is no longer read as data as well, so item 3's sentence quoted above is withdrawn. A path in it voids exactly where
+    it would void typed bare: a read voids, and a mention (an `echo` operand, a grep pattern) does not;
+  - a heredoc's body or a here-string given to any other program is read as data, as before.
+
+  This is item 3's own rule, applied once: *"a word read this way voids where it would void as a read anywhere
+  else."* Another slug's `tool-results` or task output in the same positions still voids.
+
+  **2. Precommands are peeled (item 3's run-following).** Refuting round 7 measured that a precommand in front of a
+  shell hid its `-c` string, staged script, heredoc or piped stdin from item 3, so a relative climb escaped both the
+  runtime void and the shadow flag, for example `timeout 60 bash -c 'cd ../../base/item-4 && git log -3 --stat'`,
+  `nohup bash s.sh` after `printf 'ls ../..' > s.sh`, and `echo 'ls ../..' | timeout 30 bash`. From this extension on,
+  these precommands are peeled, repeatedly, before the program is read:
+  - `timeout`: `-k`, `-s`, `--kill-after` and `--signal` take a value; then its duration;
+  - `nice`: `-n` and `--adjustment` take a value;
+  - `nohup`;
+  - `env`: `-u`, `--unset`, `-S`, `--split-string`, `-C` and `--chdir` take a value; `-i`, `-` and `NAME=value` words
+    are its own; `-C <dir>` and `--chdir=<dir>` run the program in `<dir>`;
+  - `stdbuf`: `-i`, `-o`, `-e` and their long forms take a value;
+  - `time`: `-f`, `-o`, `--format` and `--output` take a value;
+  - `command` (`-v` and `-V` look a name up and run nothing, so they are not peeled);
+  - `exec`: `-a` takes a value.
+
+  Every other word starting with `-` is a flag of the precommand. The precommand's own words are audited as operands,
+  as an assignment's value is, and the program after them is followed exactly as if typed bare. `time`, `command`,
+  `exec` and `env` were words the lexer skipped before a program; they are peeled now, with their options. xargs is
+  followed as a precommand too: its command runs once even when its input is unknown or empty, as GNU xargs runs it, so
+  that command is audited as a simple command, with its input's words when the audit knows them and flagged as before
+  when it does not.
+
+  **3. Measured** [measured 2026-10-03, read-only: both replays run from inside the test binary under the no-dispatch
+  wrapper, in a replay copy never shipped (`S8I-R7FIX-8i-replay`), over R6FIX-8i's driver (`sbin.rs` sha256
+  `6ebe56ffaadc…`) and this extension's (`0efe267f6872…`), over the same 838 transcripts and 754 records; outputs
+  `R7FIX-8i-replay-r6base.out`, `R7FIX-8i-replay-r7.out` and `R7FIX-8i-replaydiff.out` under
+  `D:/repos/redkiln-sev/afk-tools/sp/s8i/`]:
+  - **Runtime voids: 71 of 838 under both drivers**, the same 71 sessions. The evidence lines go from 632 to 631. The
+    one removed is session `d695a1ce`'s own-task wait quoted in item 1. That session still voids, on `find /d
+    /repos/redkiln-rs -maxdepth 2 -type f -name "*.md"`, a walk of D:, and on `find
+    "C:\Users\ryanm\AppData\Local\Temp\claude" -name "byujxk0ry.output"`, a walk of the registered temp root `claude`,
+    which holds every slug's output. Peeling voids no further session: R5FIX-8i item 7's check, that every void is a
+    genuine read, stands.
+  - **Shadow: 312 of 838 sessions flagged under both.** The reads flagged go from 10,793 to 10,794, all in sessions
+    already flagged. One flag goes: `xargs grep -l "id: $S"` had its pattern flagged as an unresolved word, and the
+    pattern is now read as grep's pattern. Two are new: the same `d695a1ce` wait, whose own task output the shadow audit
+    now sees, as it sees that output read bare (R6FIX-8i item 1: the shadow allowlist does not carry it); and `time`
+    read as a word in a directory outside the copy (`cd /d/tmp/rk77.4fmi && … time ./node_modules/.bin/vitest …`).
+  - **Corpus records: 0 of 754**, auditing zero read inputs, as before.
+
+  **4. Item 9's audit invocation.** Item 9 reads *"`results/audit-s.py bin <s-bin.jsonl> <missing-fields.jsonl>`
+  computes each pass's outcome from the records and that file alone."* R5FIX-8i item 5 gave `bin` an optional third
+  argument, the operator's rulings, and Checkpoint 8i (4) re-runs the pinned audit with it and compares the output byte
+  for byte. From this extension on, `results/s-bin/audit.txt` is written as `python results/audit-s.py bin
+  results/s-bin.jsonl results/s-bin/missing-fields.jsonl results/s-bin/oot-shadow-rulings.jsonl`. The rulings file is
+  committed with every batch's results, an empty file when no record is flagged, and is pinned (`s8i` §8i.7 and
+  Checkpoint 8i (3)). Computed with two arguments, any flagged and ruled record would show as held, and the pinned
+  `audit.txt` could not reproduce.
+
+  **5. A quotation corrected (R5FIX-8i item 3).** Item 3 closes *"The copies are bounded, so no escalation to an
+  allowlist void follows (D21-144: *"If the sweep finds copies it cannot bound, stop and escalate to B"*)."* The ledger
+  entry D21-144 does not hold those words. It reads *"If the sweep finds copies it cannot bound, or the denylist still
+  leaks, escalate to B as the runtime void by a separate proposed extension."* The quoted words are the ruling record's,
+  `target/afk-wf/s8i-ruling-d21-144.json` (an untracked workflow output; sha256 `b500fb8aa4ff…`): *"If the sweep finds
+  copies it cannot bound, stop and escalate to B as a separate proposed extension."* Item 3's conclusion holds under
+  either wording, because the copies are bounded.
+
+  **6. Residuals, disclosed.**
+  - A program-and-args wrapper outside item 2's list (`winpty`, `watch`, `xvfb-run`, `strace`) is not peeled. The
+    program after it is audited as its operand words, and a `-c` string after it as one word, as before this extension.
+  - `env -S`'s string is audited as one operand word, not split into the command it names.
+  - `timeout` before `eval` is followed, although `timeout` cannot run a builtin. The audit only voids more for it.
+  - A heredoc whose shell is not the last command before its body's line (`bash <<EOF | cat`) is read as data only,
+    as before.
+  - R4FIX-8i item 6's, R5FIX-8i item 8's and R6FIX-8i item 6's residuals stand.
