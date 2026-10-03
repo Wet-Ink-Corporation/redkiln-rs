@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-141), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-28 (D21-1 … D21-142), and what they license
+
+*(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-141)"**; `D21-142` is appended with this move.)*
 
 *(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-140)"**; `D21-141` is appended with this move.)*
 
@@ -6355,3 +6357,37 @@ kernel change no stage owes, and it would make 7b, 7b-ii and 8a provisional.
 
 **Id note.** The stage-open note reserved D21-141 for the S-BIN entry that holds the go-ahead lines. That entry takes
 the next free id when it is written, and the reservation note is corrected by dated line.
+
+---
+
+## D21-142 · The operator registers a second CLAUDE.md strip rule for the pre-`07fe80ab6` table and picks seed 5's replacement R = `6a101bdcd`
+
+**Taken by the operator on 2026-10-02**, in the session running the AFK chain, answering two questions with the
+measurement in view. This is the operator's ruling, not a D21-105 provisional one.
+
+**The finding** (package S8I-P3-SEED5, read-only on `D:/repos/BrittonGames`). The registered pool counts 148, and 143 of
+them were open. Three candidates meet conditions 1-4 and the LFS half of condition 5. All three are story 2.8.5,
+2026-07-30:
+- `9ca831a42`: WBP_GameVitals, each label drawn over its bar;
+- `6a101bdcd`: WBP_GameVitals, the styling never reached disk, so the HUD loads white-on-white;
+- `f6269ae7e`: BP_GamePlayerCharacter, the dead W_HUD_Gameplay spawned as three grey boxes.
+
+All three predate BrittonGames `07fe80ab6` (2026-08-07), which renamed CLAUDE.md's status-table rows from
+Epic/Feature/Focus/Next to Focus/Tier/Verify/Progress. The amendment's item 3 byte rule asserts the four new prefixes
+exactly once each. At these trees they count 1/0/0/0, so the strip refuses. The amendment says that refusal is
+*"recorded there and not worked around"*. None of the ten candidates after `07fe80ab6` meets conditions 2-3.
+
+**1. The strip rule.** Asked how to proceed, the operator answered **"Add old-table strip rule"**.
+- A second terminator-agnostic byte rule is registered by an appended METHOD-S §7 extension. It removes the pre-rename
+  rows `| **Epic** |`, `| **Feature** |`, `| **Focus** |`, `| **Next** |`, asserting each exactly once and refusing
+  otherwise.
+- It applies only to a tree whose CLAUDE.md predates `07fe80ab6`. Items 1-4 keep item 3's rule unchanged.
+- This changes fixture construction, not selection. It was registered after candidates were examined, so it stands
+  on this operator line, as the amendment requires.
+
+**2. The pick.** Asked *"Which commit should be seed 5's replacement R?"*, the operator answered **"6a101bdcd
+white-on-white"**.
+- R = `6a101bdcd`, chosen as the most visually unambiguous of the three in a capture.
+- Its leak tokens (`white-on-white`, `VERIFIED COLD`, `entirely white`), its violated spec clause and its `$ARGUMENTS`
+  are as P3 recorded them, and they go into the appended extension.
+- Greenness at R^ remains the operator's UE run (§8i.4).
