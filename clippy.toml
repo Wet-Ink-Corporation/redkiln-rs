@@ -33,3 +33,14 @@ disallowed-types = [
   # Checkpoint 6's type ban — git shells out through exactly one wrapper in rk-git
   "std::process::Command", "tokio::process::Command",
 ]
+
+# temper (rust-craft) adoption, 2026-10-03: the restriction lints the template adds (unwrap_used,
+# expect_used, panic, indexing_slicing, print_*) apply to production code only. The standard lets
+# tests use unwrap/expect/assert!/indexing (rust-craft H-02/H-03/H-04); without these keys clippy
+# fires them inside #[test] and #[cfg(test)] code too. dbg! stays flagged everywhere (H-06).
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-print-in-tests = true
+allow-dbg-in-tests = false
