@@ -1678,3 +1678,88 @@ Any later change is disclosed here with the date and the records it post-dates.
   2026-10-03, read-only: `find D:/sb/base/item-<n>/.git/lfs/objects -type f | wc -l`, which equals the count of
   distinct oids in `git lfs ls-files -l`; the pointer paths are `git lfs ls-files | wc -l`]. This file is
   append-only, so the table is not edited. Read its column as *"LFS pointer paths"*.
+
+- **s8i pre-dispatch amendment, extension: which tool inputs item 4's out-of-tree rule reads, after `s8i` refuting
+  round 4 — 2026-10-03, before B1; no S-BIN record exists** (cites the *s8i pre-dispatch amendment* above and its
+  item 4, and the extension written after refuting round 3, its item 1; edits nothing in them or in the other
+  extensions above). Written in the AFK build, package R4FIX-8i.
+
+  **1. Two sentences withdrawn.** The round-3 extension's item 1 says the driver *"voids nothing the rule does not
+  cover"*, and that *"One residual is disclosed: a bare `..` token in any tool input, a finding's prose included,
+  resolves out of the copy and voids"*. Both sentences are withdrawn. That driver audited every string of every tool
+  input. That included the digest, which arrives as a `StructuredOutput` tool use, and a `Bash` `description`. So a
+  quoted `#include "../Public/…"`, a relative import in a repro, a quoted line from the tree's own
+  `_s-bin/report/headless.log`, or the copy's own path followed by a full stop each voided. None of them is a read.
+  Measured by a replay of the corpus's own records [measured 2026-10-03, read-only: the round-3 driver's
+  `out_of_tree_reads` run from inside a test binary over every record in `D:/repos/redkiln-corpus/results/*.jsonl`
+  that carries reviewer tool uses, with the digest as the `StructuredOutput` input. The copy was `D:/sb/d/p1i1a1` and
+  the root `D:/sb`]: **59 of 754 records voided (7.8%), and every one of those voids came from a digest's prose.**
+
+  **2. What is read.** Item 4 reads *"A reviewer that reads or runs `git` against a path outside its review tree
+  voids the record"*. From this extension on, the driver audits only the inputs through which a tool reads. A
+  mention is not audited.
+  - **`Bash`: the `command` string only.** It is lexed as a shell command: quotes are grouped, `;`, `&`, `|` and a
+    newline end a command, and `(` or `$(` opens a subshell.
+    - Audited: each command's program; every operand, except as below; the file after `<` or `>`; and the absolute
+      paths in a heredoc's body or a here-string.
+    - Not audited: the operands of `echo` and `printf`, which are output text; and a grep's pattern, which is its
+      first operand or each `-e` value, for `grep`, `egrep`, `fgrep`, `rg`, `ag`, `ack`, `zgrep`, `findstr` and `git
+      grep`. A grep's files and its `-f` file are audited.
+    - The cwd starts at the dispatch copy. A `cd` or `pushd` moves it, and the move persists into later `Bash` calls.
+      That holds when the `cd` follows `then`, `do`, `else`, `{`, `!` or an assignment, and when it carries options
+      such as `--`, `-P` or `-L`. `popd` and `cd -` move it back. A `cd` inside `( … )` or `$( … )` lasts until the
+      `)`.
+  - **Path fields:** `Read`'s `file_path`, `Glob`'s `pattern` and `path`, and `Grep`'s `path` and `glob`. For any
+    other tool, its `file_path`, `notebook_path` and `path` are audited.
+  - **Never audited:** the `StructuredOutput` digest, a `Bash` `description`, a `Task` or `Agent` prompt, a `Grep`
+    tool's `pattern` (a regular expression over file contents, the same as a grep's pattern), and every other field.
+
+  This narrows what the driver voids under item 4. It does not change the rule's words. It is written under the AFK run's
+  standing request, and the operator confirms it before B1.
+
+  Each audited word is folded and resolved as the round-3 extension's item 1 says. Before that, a trailing `.`, `,`,
+  `:`, `;`, `!`, `?`, `)`, `]`, `}`, `*` or quote is dropped, so `<copy>.` names the copy. A `..` keeps its dots.
+
+  **3. The child's own saved output is in-tree.** When a tool's output is large, the CLI saves it under
+  `<account>/projects/<slug of the cwd>/<session>/tool-results/`, and the reviewer may read it there. A path that
+  resolves under `<account root>/projects/<the dispatch copy's slug>/<one segment>/tool-results/` does not void. That
+  holds for each account root the driver already knows: `default_account_roots`, i.e. `~/.claude-personal`,
+  `~/.claude`, and `CLAUDE_CONFIG_DIR` when it names a third (`s8i` §8i.3). The copy's path is never used before
+  (§8i.4), and `precheck_no_project_dir` proves its slug absent before the spawn. Every other slug still voids, a
+  capture session's `D--sb-cap-item-<n>` included. So does the copy slug's project directory outside `tool-results`,
+  and a path that climbs out of `tool-results` through `..`.
+
+  **4. The greenness log and the base's own files.** A finding that quotes the review tree's
+  `_s-bin/report/headless.log`, whose lines name the greenness copy `D:/sb/green/item-<n>`, does not void. Neither does
+  a finding that quotes `CLAUDE.md`'s `rootFolder` line, which names `D:\repos\BrittonGames`. Both are mentions, and
+  so are an `echo` of either and a grep whose pattern quotes either over in-copy files. A `Read`, `cat`, `ls` or `git
+  -C` of either path is a read, and it voids.
+
+  **5. The measured false-void rate under this scoping** [measured 2026-10-03, read-only; the same replays, run from
+  inside the test binary under the no-dispatch wrapper]:
+  - **Corpus records: 0 of 754** (the round-3 driver: 59 of 754).
+  - **Reviewer transcripts.** The replay read every session transcript under
+    `~/.claude-personal/projects/D--repos-redkiln-rs-spikes-fixtures-*` (the E3, P7 and P8 fixture sessions). Each
+    session's fixture directory was mapped onto the copy, and its project slug onto the copy's slug. That is 838
+    sessions and 13,147 tool uses, and 779 of the sessions use only the card's tools. The round-3 driver voided 218 of
+    them. This driver voids 69, every one card-shaped, and each of the 69 is a real read outside the fixture:
+    - 68 name a `D:/repos/redkiln-rs` path outside the session's own fixture in a read position. These are `ls` or
+      `diff` of the sibling fixtures, `cd` and `git` in the repository, a `Read` of a mistyped
+      `fixtures/e3-clean/issue-…` path, a `find /d`, and a script run from `spikes/scratch`.
+    - The 69th runs `ls ..` and `cd ../.. && diff` against its sibling fixtures.
+
+    The two sessions that read their own saved output under `tool-results` no longer void.
+
+  **6. Residuals, disclosed.**
+  - A relative path inside inline code is not resolved. That covers `python -c`, `node -e` and a heredoc's body:
+    a relative import there is relative to its file. An absolute path in a heredoc's body is still read, even when the
+    body is only text written to a file.
+  - `cd` with no operand, which goes to `$HOME`, leaves the cwd unchanged.
+  - A path inside a `git log --grep=<x>` value is audited as a path.
+  - The cwd model assumes the `Bash` tool keeps a `cd` that leaves the copy. Whether the CLI resets the cwd to the
+    project directory in that case is not measured here. A read-only probe of the CLI binary for it was refused by the
+    session's permission classifier. A reset would make a later relative read resolve against the wrong directory.
+  - The separator collapse in `norm_sep` is no longer observable: every audited word is resolved before the
+    containment test, and `resolve_path` drops empty segments. Its mutant from the round-3 extension survives for that
+    reason. A `Bash` command's own collapse (`sep_keep_case`) is observable through a heredoc's body, and its mutant
+    flips.

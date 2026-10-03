@@ -608,7 +608,7 @@ disclosed here:
 - **`total_cost_usd` is never null.** A dispatch that reports no cost, such as a timeout or a crash, is charged the
   spend table's per-dispatch bound (5.00 Opus, 0.50 haiku), and `total_cost_source` reads `bound` rather than
   `reported`. A missing cost in an earlier record or probe is refused before spawning, never read as zero.
-- **Out-of-tree.** Every string in every tool input is audited, `Read` and `Bash` alike. Each is folded (`\` to
+- **Out-of-tree.** ~~Every string in every tool input is audited, `Read` and `Bash` alike.~~ *(dated 2026-10-03, s8i build, R4FIX-8i: only what a tool reads is audited: a `Bash` command's words in read positions and path fields, never the digest, a `description` or other prose (METHOD-S's R4FIX-8i extension, item 2))* Each is folded (`\` to
   `/`, lower case) and checked by name against amendment item 4's roots: `/repos/redkiln-rs`,
   `/repos/redkiln-corpus`, `/repos/brittongames`, `/.claude-personal/projects` and `/.claude/projects`. It is also
   checked against any path under the review root, in its `D:/sb`, `/d/sb` and `/mnt/d/sb` spellings, other than
@@ -659,7 +659,7 @@ is authored and run **from Python, never the shell**, and must flip its test.
 | `exit_zero_without_structured_output_is_void_not_success` | Halt 3 | read exit 0 as a completed dispatch |
 | `strong_detection_needs_a_blocking_finding_naming_the_seeded_path` | METHOD-S §3.4 primary | credit any blocking finding; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `dispatch_one` scoring a seeded item as clean (`seeded_paths` empty) |
 | `cited_fields_are_extracted_mechanically_from_the_digest` | METHOD-S §3.4 *"Recorded"* | read cited fields from the prose; *(dated 2026-10-03, s8i build, R3FIX-8i)* also `dispatch_one` passing no asset paths to scoring |
-| `an_out_of_tree_read_voids_the_record` | §8i.2 item 4 | audit `Read` paths only, not `Bash` commands; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `ran_automation` counting a command that only names the suite; *(dated 2026-10-03, s8i build, R3FIX-8i)* also no `..` resolution, no separator collapse, relative paths ignored, no `cd` tracking, and `dispatch_one` handing the audit no copy path or another review root |
+| `an_out_of_tree_read_voids_the_record` | §8i.2 item 4 | audit `Read` paths only, not `Bash` commands; *(dated 2026-10-03, s8i build, R2FIX-8i)* also `ran_automation` counting a command that only names the suite; *(dated 2026-10-03, s8i build, R3FIX-8i)* also no `..` resolution, no separator collapse, relative paths ignored, no `cd` tracking, and `dispatch_one` handing the audit no copy path or another review root; *(dated 2026-10-03, s8i build, R4FIX-8i)* also the digest or a `Bash` description audited, a subshell's `cd` persisted, the tool-results exemption dropped, a `cd` option read as its target, a `cd` after a keyword missed, a grep's pattern or `echo`'s operands audited, no trailing-punctuation trim, `popd` untracked, a heredoc's body not read or read as commands, `grep -f`'s file, an input redirect, a `Grep` path or `git -C`'s directory not read, the whole session directory exempt, the exemption tested before resolution, a grep option's value taken as the pattern, a `Bash` command's separators not collapsed, and `dispatch_one` handing the audit no account roots |
 | `api_key_source_other_than_none_voids_before_scoring` | D21-42 17a | skip the init check |
 | `a_version_move_between_dispatches_halts_the_set` | Halt 2 | compare against the floor, not the set's first version; *(dated 2026-10-03, s8i build, R1FIX-8i)* also, on `dispatch_one`'s path: the set check reading no records, no Halt 2 when init's CLI differs from the pre-read, no halt on a second observed model, the first model read from valid records only, and the model compared only when this dispatch is valid; *(dated 2026-10-03, s8i build, R2FIX-8i)* also probe's loop reading the version once per run, ignoring a pre-spawn or a post-record halt; `dispatch_one` skipping the launch-record check, admitting no launch record or a different version, or recording no launch version; and the launch record read from the first of two `CLI_VERSION_BEFORE` lines |
 | `the_dispatch_cap_refuses_before_spawning` | §8i.5 caps | check the cap after the child is spawned; *(dated 2026-10-03, s8i build, R1FIX-8i)* also `cap_state` skipping voided records, and `fixture.json`'s `ceiling_secs` ignored, defaulted to `--timeout-secs`, or accepted when it differs; *(dated 2026-10-03, s8i build, R2FIX-8i)* also a cost-less dispatch charged 0.00, not the bound |
@@ -1029,12 +1029,12 @@ What changed:
     spelling found anywhere in the string and every absolute token.
   - It resolves every relative token against the child's cwd. The cwd starts at the copy. A `cd` or `pushd` in a
     `Bash` command moves it, and the move persists into later `Bash` calls, because Claude Code's `Bash` tool keeps its
-    working directory between calls. A `cd` inside any other string, such as a finding's repro command or a
-    description, moves only that string's own cwd. A relative path that resolves under the review root outside the
+    working directory between calls. ~~A `cd` inside any other string, such as a finding's repro command or a
+    description, moves only that string's own cwd.~~ *(dated 2026-10-03, s8i build, R4FIX-8i: no other string is read now)* A relative path that resolves under the review root outside the
     copy, or under an answer-bearing root, voids. One that stays in the copy, or lands elsewhere such as the engine
     install, does not.
 
-  METHOD-S's R3FIX-8i extension, item 1, records the normalisation. It implements item 4's rule and does not widen it.
+  METHOD-S's R3FIX-8i extension, item 1, records the normalisation. ~~It implements item 4's rule and does not widen it.~~ *(dated 2026-10-03, s8i build, R4FIX-8i: withdrawn. It audited prose too, and voided 59 of 754 corpus records; METHOD-S's R4FIX-8i extension, item 1)*
 - **`dispatch_one`'s wiring into scoring is tested.** Round 3 measured three mutants surviving 25/25: `asset_paths: &[]`
   (major 2), and `tree_path: ""` and `review_root: "Q:/elsewhere"` (a minor). Two tests now cover them:
   - `cited_fields_are_extracted_mechanically_from_the_digest` dispatches a rig item whose finding names only its asset
@@ -1077,7 +1077,7 @@ What changed:
   - The relative-path rule audits every string, as the bullet above does. So a bare `..` token anywhere in a tool
     input, a finding's prose included, resolves out of the copy and voids. A void is retried once, and a second void
     halts (§8i.6). This residual is disclosed for the operator. It is not narrowed here, because narrowing a
-    registered check is the operator's call.
+    registered check is the operator's call. *(dated 2026-10-03, s8i build, R4FIX-8i: refuting round 4 measured it wider than a bare `..`, at 59 of 754 corpus records. The audit now reads only what a tool reads (the R4FIX-8i note below), and the operator confirms that narrowing before B1)*
   - Checkpoint 8i (4)'s `haiku` line reads every probe's `observed_model`, so a probe with no init line prints `haiku
     BAD` (round 3, refuted to minor). The line is left as it stands. A probe with no init line is a failed B1, so it is
     Halt 3: §8i.6 says *"No Opus dispatch follows a failed B1"*, and packet step 8 says *"A probe that fails refuses
@@ -1092,6 +1092,92 @@ What changed:
   P4's same 6 lines in `runner/src/main.rs`. Applied with `core.autocrlf=false` to a fresh `git archive` of `runner/`,
   it gives a `runner/src` byte-identical to the copy. Apply only this one, not P4's, P5's, F1's, R1FIX-8i's or
   R2FIX-8i's. P6's audit patch is applied beside it. §8i.5's packet names it as `DRV`.
+
+*(dated 2026-10-03, s8i build, R4FIX-8i)* **Refuting round 4's findings, fixed in the driver (package R4FIX-8i).** An eighth private copy,
+`D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R4-corpus`, made from R3's copy (R3's copy keeps its own bytes,
+`8115008816e5…545fe4`). Nothing wrote to `D:/repos/redkiln-corpus` or its `.git`, to `D:/sb`, or to `D:/repos/BrittonGames`.
+- **What round 4 found.** R3FIX-8i's audit read every string of every tool input. That included the digest, which
+  arrives as a `StructuredOutput` tool use, and a `Bash` `description`. So these voided, and none of them is a read:
+  - a relative import quoted in a real S-TYPED repro (`s-typed.jsonl`, memoize-repo-root);
+  - a quoted `#include "../…"`;
+  - a prose `..`;
+  - a line of the tree's own `_s-bin/report/headless.log` naming `D:/sb/green/item-<n>`;
+  - `CLAUDE.md`'s `rootFolder` line;
+  - the copy's own path followed by a full stop.
+
+  Three other faults:
+  - A read of the child's own saved output under `<account>/projects/<copy slug>/<session>/tool-results/` voided.
+  - `cd -- X` and a `cd` after `then` were missed.
+  - A `cd` inside `( … )` persisted, which missed a real read of a sibling.
+- **What the audit reads now (METHOD-S's R4FIX-8i extension, item 2).** `read_inputs` names the inputs through which a
+  tool reads: a `Bash` `command`; `Read`'s `file_path`; `Glob`'s `pattern` and `path`; `Grep`'s `path` and `glob`; and
+  for any other tool its `file_path`, `notebook_path` and `path`. The digest, a `Bash` `description` and a `Task`
+  prompt are never read.
+  - A `Bash` command is lexed. Its program, its operands, the file after `<` or `>`, and the absolute paths in a
+    heredoc's body are audited. The operands of `echo` and `printf` are not, and neither is a grep's pattern.
+  - `cd` is tracked after `then`, `do`, `{`, `!` and assignments, with options skipped. `popd` and `cd -` restore the
+    cwd. A `cd` inside `( … )` or `$( … )` ends at its `)`.
+  - Trailing punctuation is trimmed from each word, `..` aside.
+  - A path under `<account root>/projects/<copy slug>/<session>/tool-results/` is in-tree once resolved (item 3). The
+    account roots are the ones the driver already knows (`default_account_roots`), now handed to scoring as
+    `ScoreInput::account_roots` by `dispatch_one` and `probe`.
+  - **The rule's words decide the headless.log case (item 4).** A finding, an `echo` or a grep pattern that quotes the
+    greenness copy's path is a mention, and it does not void. A `Read`, `cat`, `ls` or `git -C` of that path voids.
+- **Corpus replay, measured** (read-only, from inside a test binary in a separate replay copy,
+  `S8I-R4FIX-8i-replay`, under `nd.sh`, never shipped). The input was every record in
+  `D:/repos/redkiln-corpus/results/*.jsonl` that carries reviewer tool uses, 754 records in 15 files, with the copy
+  `D:/sb/d/p1i1a1` and the root `D:/sb`. The records hold tool names only, and their one recorded input is the digest.
+  - **R4: 0 of 754 void.** R3's driver: 59 of 754 (7.8%).
+  - The same replay over the 838 fixture reviewer transcripts under `~/.claude-personal/projects/D--repos-redkiln-rs-spikes-fixtures-*`
+    (13,147 tool uses, each fixture mapped onto the copy and each slug onto the copy's): R3 voided 218, R4 voids 69.
+    Each of the 69 is a real out-of-tree read. 68 name a `D:/repos/redkiln-rs` path outside the session's own fixture
+    in a read position, and one runs `ls ..` and `cd ../.. && diff` over its siblings. The voids are listed in
+    `R4FIX-8i-replay-r4.out`.
+- **Red first.** The cases went into `an_out_of_tree_read_voids_the_record` before any code. On R3's code it went red
+  for its stated reason, in one assertion: *"each of these must void as out-of-tree: ["a subshell's cd does not
+  outlive it, in one command", "a subshell's cd does not persist into the next call", "popd restores the directory
+  pushd left"]; paths that stay in the copy must not void: [("a real S-TYPED digest's relative import …"), …]"*. It
+  listed 18 false voids, each shown with its evidence string (`R4FIX-8i-redA.out`). It went green on the new audit.
+  Then:
+  - A `dispatch_one` rig case, a `Read` of the child's own saved output, leaves `void` null. Its red is its mutant,
+    `R4-W1`.
+  - A later must-void case, a doubled-backslash file URL to BrittonGames inside a heredoc, pins the `Bash` command's
+    own separator collapse.
+
+  Every round-3 must-void case still voids: `<copy>/../../base` as a `Read` and in a `cat`, `../../base`, `D:\\sb\\base`,
+  `git -C "D:\\repos\\BrittonGames" log`, and now a subshell followed by a relative read of a sibling. **The
+  selection stays at 25.**
+- **Mutants, from `s8i_R4FIX-8i_mutants.py`, in the copy only, restore verified by sha256.** 21 are new,
+  and each flipped. Among them are the four scoping rules the package names:
+  - `R4-S1`: audit the digest again;
+  - `R4-S2`: audit a `description`;
+  - `R4-S3`: persist a subshell's `cd`;
+  - `R4-S4`: drop the tool-results exemption.
+
+  The rest cover `cd` options and keywords, the grep pattern, `echo`, punctuation, `popd`, the heredoc body (not read,
+  or read as commands), `grep -f`, an input redirect, `Grep`'s path, `git -C`, the whole session directory, the
+  exemption tested before resolution, a grep option's value, the command's separator collapse, and the wiring. Three
+  earlier rows no longer find their code, because R4 rewrote it. Each is re-run under the same wording, re-anchored:
+  `R3-N3@R4`, `R3-N4@R4` and P5's `M10@R4`. The earlier tables were re-run over the final bytes: **102 of 103 flipped** (this package's 21 new rows and 3 re-anchored rows; R3FIX-8i's 7 others, R2FIX-8i's 17, R1FIX-8i's 24, F1's 7, P4's 13 and P5's 11 others).
+  One row survives, and it is recorded rather than counted: R3-N2, *"no separator collapse"* in `norm_sep`. It is no
+  longer observable, because every audited word is resolved before the containment test and `resolve_path` drops empty
+  segments. `R4-S20` carries the `Bash` command's own collapse, and it flips.
+- **Readings, last in the copy, all under `nd.sh`.**
+  - The sbin selection: `test result: ok. 25 passed; 0 failed`.
+  - The whole runner suite: 159 passed, 1 failed, the same pre-existing `p7::tests::the_driver_matches_the_committed_catalog`.
+  - clippy exits 0, with nothing for `sbin.rs`.
+  - `sbin.rs` is rustfmt-clean.
+- **Not done here.** The cwd model assumes the `Bash` tool keeps a `cd` that leaves the copy. A read-only probe of the
+  CLI binary for a cwd reset was refused by the permission classifier, so this is disclosed in METHOD-S's R4FIX-8i
+  extension, item 6. That item also discloses the other residuals: relative paths inside inline code, a bare `cd`, and
+  `git log --grep=`. The narrowing is recorded by an appended extension. Confirming it before B1 is the operator's
+  (the review packet).
+- **The patch supersedes R3FIX-8i's.** `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R4FIX-8i-sbin-driver.patch` (sha256
+  `934ad2c15c94f5443c0d45aa880851d73f2d6e7b511d9798a14f2b114ce847b4`) is cumulative against a fresh `main` extract at `285e011`. It adds `runner/src/sbin.rs` (sha256
+  `af5e29b4c5aeeea8b62dc442834f358bb180f0521aae9bf068fb2fdd62d082ae`, 6727 lines) and P4's same 6 lines in `runner/src/main.rs`. Applied with
+  `core.autocrlf=false` to a fresh `git archive` of `runner/`, it gives a `runner/src` byte-identical to the copy.
+  Apply only this one, not P4's, P5's, F1's, R1FIX-8i's, R2FIX-8i's or R3FIX-8i's. P6's audit patch is applied beside
+  it. §8i.5's packet names it as `DRV`.
 
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
@@ -1672,6 +1758,9 @@ note), and step 2's check names it. The dry-run script's sha256 is now `15990996
   What it gives up is the trees themselves: after the close, no dispatch can be re-run from them. Step 12 is never run
   before the close.
 
+*(dated 2026-10-03, s8i build, R4FIX-8i)* **`DRV` is superseded again (s8i refuting round 4).** `DRV` is now
+`S8I-R4FIX-8i-sbin-driver.patch` (sha256 `934ad2c15c94f5443c0d45aa880851d73f2d6e7b511d9798a14f2b114ce847b4`, §8i.3's dated note), and step 2's check names it.
+
 | step | what | USD bound | check before it |
 | --- | --- | --- | --- |
 | 1 | the corpus on `main`, clean | 0.00 | none |
@@ -1699,9 +1788,10 @@ note), and step 2's check names it. The dry-run script's sha256 is now `15990996
 #    (dated 2026-10-03, s8i build, R1FIX-8i) DRV is S8I-R1FIX-8i's patch, superseding S8I-F1's (sha256 dd3ee74e…4f3a).
 #    (dated 2026-10-03, s8i build, R2FIX-8i) DRV is S8I-R2FIX-8i's patch, superseding S8I-R1FIX-8i's (sha256 1922bb47…2b08).
 #    (dated 2026-10-03, s8i build, R3FIX-8i) DRV is S8I-R3FIX-8i's patch, superseding S8I-R2FIX-8i's (sha256 81511152…68c1).
+#    (dated 2026-10-03, s8i build, R4FIX-8i) DRV is S8I-R4FIX-8i's patch, superseding S8I-R3FIX-8i's (sha256 0bc28875…ea7dc).
 ( C=D:/repos/redkiln-corpus; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
-  DRV=${DRV:-$S/S8I-R3FIX-8i-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
-  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 0bc288756c57010517c32d4f71169db4c8e601411261be74f6a8e315f58ea7dc ] || { echo "FAIL: $DRV is not S8I-R3FIX-8i's patch"; exit 1; }
+  DRV=${DRV:-$S/S8I-R4FIX-8i-sbin-driver.patch}; AUD=$S/S8I-P6-audit-bin.patch
+  [ "$(sha256sum < "$DRV" | cut -c1-64)" = 934ad2c15c94f5443c0d45aa880851d73f2d6e7b511d9798a14f2b114ce847b4 ] || { echo "FAIL: $DRV is not S8I-R4FIX-8i's patch"; exit 1; }
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply --check "$p" || { echo "FAIL: $p does not apply"; exit 1; }; done
   for p in "$DRV" "$AUD"; do git -C "$C" -c core.autocrlf=false apply "$p" || exit 1; done
   git -C "$C" add runner/src/main.rs runner/src/sbin.rs results/audit-s.py results/s-bin/audit-fixtures || exit 1
@@ -2115,7 +2205,7 @@ its stop.*
 Each of the four criteria's blocks (AC-154, AC-356, AC-497, AC-475) gains a note in exactly this form, which
 Checkpoint 8i finds:
 `*Amended <date> (s8i, S-BIN reported — F<n>):* …`. And **every line** of the design and the register that states
-S-BIN's pending state — at `ca8f387`, **21** design lines and **17** register lines carry `S-BIN` beside one of
+S-BIN's pending state — at `ca8f387`, **21** design lines and **17** register lines *(dated 2026-10-03, s8i build, R4FIX-8i: at `730a4cc` the register holds **19**, after s8g-era edits; the design still holds 21 [measured: `grep -E 'S-BIN' <file> | grep -cE "$STALE"`]; guard (9)'s floor reads 19)* carry `S-BIN` beside one of
 `unrun`, `UNRUN`, `not been run`, `NOT been run`, `until S-BIN`, `before S-BIN`, `S-BIN reports` or `BLOCKED`
 [measured] — gets an inline dated note containing `[S-BIN reported (s8i)` and is never rewritten. That set includes
 design §0.1's `ChangeSummary` row, the status line's *"Four spikes gate that label — **S-BIN**, …"* (S-BIN leaves the
@@ -2777,7 +2867,9 @@ s8l=$(grep -nF 'S-BIN, S-H1c and P8' runbook/phase-1/s8-exit-criterion.md); rc=$
 [ "$rc" -eq 0 ] && [ -n "$s8l" ] || { echo "FAIL: s8's final-label bullet no longer names S-BIN, S-H1c and P8 — it was rewritten, not noted"; exit 1; }
 printf '%s\n' "$s8l" | grep -qF '[S-BIN reported (s8i)' || { echo "FAIL: s8's final-label bullet carries no dated s8i note (§8i.8)"; exit 1; }
 STALE='unrun|UNRUN|not been run|NOT been run|until S-BIN|before S-BIN|S-BIN reports|BLOCKED'
-for doc in references/2026-09-08-architecture-design.md:21 references/2026-09-08-acceptance-criteria.md:17; do
+# (dated 2026-10-03, s8i build, R4FIX-8i) The register's floor is re-derived at 730a4cc: 19 stale-pattern S-BIN lines
+# (17 at ca8f387; s8g-era edits added two). The design's stays 21. Replaces ~~acceptance-criteria.md:17~~.
+for doc in references/2026-09-08-architecture-design.md:21 references/2026-09-08-acceptance-criteria.md:19; do
   f=${doc%%:*}; floor=${doc##*:}
   hits=$(grep -nE 'S-BIN' "$f"); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: $f no longer mentions S-BIN at all — its lines were rewritten, not noted"; exit 1; }

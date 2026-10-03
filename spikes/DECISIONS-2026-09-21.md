@@ -6478,6 +6478,14 @@ out-of-tree void now resolves `..`, collapses separators, and resolves relative 
 step 12 removes `D:/sb` at the close, before the formal Checkpoint 8i. This entry stays OPEN, and nothing here signs a
 line.
 
+*(dated 2026-10-03, s8i build, R4FIX-8i)* **Refuting round 4 fixed in the driver (package R4FIX-8i).** The superseding driver
+patch is `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-R4FIX-8i-sbin-driver.patch` (sha256
+`934ad2c15c94f5443c0d45aa880851d73f2d6e7b511d9798a14f2b114ce847b4`). The B0 line's *"from the private-copy patches"* now means that patch and P6's.
+The out-of-tree void now reads only what a tool reads: a `Bash` command's words in read positions and path fields,
+never the digest or other prose. The child's own saved output under `tool-results` is in-tree (METHOD-S's R4FIX-8i
+extension). A corpus replay voids 0 of 754 records, against 59 under R3FIX-8i's driver. The narrowing is the
+operator's to confirm before B1. This entry stays OPEN, and nothing here signs a line.
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
