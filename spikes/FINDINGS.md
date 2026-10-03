@@ -2043,6 +2043,8 @@ right; none is folded into this file.
 | F38 | `spikes/F38-DRAFT.md` | P8 (partial) | resume is lossless across a real kill; cost ordering UNMEASURED |
 | F39 | `spikes/F39-DRAFT.md` | P1 arm D | no derived facet clears the 0.95 bar; `auth` 0/12 |
 | F40 | `spikes/F40-DRAFT.md` | P2 | the corpus holds no staleness to detect; recall has no denominator |
+| F41 | `spikes/F41-DRAFT.md` | S-PORTS | ADR-0099's port shape compiles on the spike and pinned toolchains (rustc 1.97.1, 1.98.1): five sync `Arc<dyn Port + Send + Sync>` traits, a blocking `dispatch`, a root-owned `CancelToken`; 5/5 tests, 2/2 `compile_fail` doctests, clippy clean (row added 2026-10-02, s8i) |
+| F42 | `spikes/F42-DRAFT.md` | S-GRAMMAR | under ADR-0103's grammar 285 of 287 live predicates parse to one tree and zero depend on precedence; the literal-versus-field rule is load-bearing on 191 sites; the two failures and three `on_false` values are pack lint errors, one in a shipped pack (row added 2026-10-02, s8i) |
 | F3x (unnumbered) | `spikes/results/s-mig-report.md` | S-MIG | 96.0% of typed slots lift; the losses name three type decisions |
 
 A later F-number is added here the day its draft is written.

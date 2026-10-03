@@ -1104,3 +1104,342 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
      cannot miss it.
 
 Any later change is disclosed here with the date and the records it post-dates.
+
+- **s8i pre-dispatch amendment — 2026-10-02, before any S-BIN dispatch; no S-BIN record exists** (the corpus's
+  `main` at `285e011` holds no `results/s-bin.jsonl` [measured, `git -C D:/repos/redkiln-corpus cat-file -e
+  main:results/s-bin.jsonl` → rc 128]). This entry settles what the 2026-09-09 entry left open, as runbook stage `s8i`
+  §8i.2 requires, and records the operator's decisions on it: `spikes/DECISIONS-2026-09-21.md` D21-43 N19–N22,
+  D21-48 X3 and D21-140 (which amends D21-105 item 2 for S-BIN). **Nothing in §3 changes.** The question, the
+  decision rule, the prediction and the sizing stand exactly as registered, and so does every earlier entry, verbatim.
+  Each item below cites its ledger line and does not re-argue it. Values that can be known only after B0's
+  zero-spend fixture work are **not** written here as placeholders. Each is added later by an appended extension
+  paragraph, dated, citing this entry, and never by an edit to this entry (the list is at the end).
+
+  1. **Two corrections to the 2026-09-09 entry, recorded as measured** (read-only on `D:/repos/BrittonGames`,
+     2026-10-02).
+     - **Under the registered scoping, every item's `text_diff` is empty.** Command: `git -C D:/repos/BrittonGames
+       show --numstat --format= <item>` for each of `cc0cf2d01`, `fa1ea72f4`, `e83463288`, `a71265925` and
+       `bf9c499a1`. Item 1 changes `CLAUDE.md`, `WBP_StashRow.uasset`, `_workspace/backlog/STATUS.md`,
+       `_workspace/backlog/game_foundation_backlog.json` and `_workspace/references/UE58_Editor_And_MCP_Gotchas.md`
+       (55 added). Item 2 changes `FTEST_Inventory_Stash.umap` only. Item 3 changes `CLAUDE.md`,
+       `BP_GamePlayerState.uasset`, `DA_Item_Sword.uasset`, `STATUS.md` and the backlog JSON. Item 4 changes
+       `WBP_LoadoutScreen.uasset`, `STATUS.md` and the backlog JSON. Item 5 changes `WBP_LoadoutScreen.uasset`,
+       `WBP_StashPanel.uasset`, `STATUS.md` and the backlog JSON. No item touches a source or test path. The entry's
+       *"four of five items are not diff-free"* is git's view before the scoping, and the scoping it registered
+       (*"`ChangeSummary.text_diff` carries the item's source and test paths only"*) leaves all five empty. The
+       sentence stands as written, and this records what it means. The design register row that goes further is
+       corrected by its own dated note in `s8i` §8i.8, not here.
+     - **The failure route the entry named for seed 5 does not exist at seed 5's review commit.** Command: `git -C
+       D:/repos/BrittonGames merge-base --is-ancestor 2b0814f78 bf9c499a1` → rc 1. `2b0814f78` (2026-08-31,
+       *"test(E8): close 8.5.6 by walking the player in and out of the stash's 500cm reach under real movement"*)
+       adds `OurGame/Source/OurGameTests/Private/Tests/Inventory/Inventory_StashLoop.cqtest.cpp` [measured, `git
+       show --name-only --format= 2b0814f78`], and it is not an ancestor of `bf9c499a1`. Since each item is reviewed
+       at its own commit, seed 5's greenness check would have been the whole `OurGame.*` suite as it stood at
+       `bf9c499a1`. The point is moot for the dispatch, because seed 5 is replaced (item 12), but it is recorded
+       rather than dropped.
+
+  2. **The captures producer and its procedure** (D21-43 N19: *"**The operator captures by hand** on all five review
+     trees through `/ue-verify`, with one procedure applied identically to clean and seeded trees."*). `/ue-verify`
+     is BrittonGames' Claude Code slash command (`.claude/commands/ue-verify.md`, present at all five item commits),
+     driving the open editor through Monolith MCP. So each capture is an interactive session on the account, made in
+     B1 under its go-ahead. The procedure, identical on all five trees, in items 1 to 5 order:
+     1. **The tree the editor opens** is the item's capture copy (item 4's table), a byte copy of the stripped base
+        repository (item 3). The editor opens `OurGame/OurGame.uproject` in that copy.
+     2. **`$ARGUMENTS`, by one rule, never chosen per tree.** List the asset paths the item's own commit changed:
+        `git diff-tree --no-commit-id --no-renames -r --name-only <item commit>`, keep the paths ending in `.uasset`
+        or `.umap`, and keep git's order. For item 5 the item commit is the replacement commit R. Map each path to
+        its object path: `OurGame/Content/<rel>.<ext>` → `/Game/<rel>`, and `OurGame/Plugins/<P>/Content/<rel>.<ext>`
+        → `/<P>/<rel>`. `$ARGUMENTS` is those object paths, space-separated, followed by the literal text ` — write
+        the capture_scene_preview of the k-th asset above to _s-bin/captures/capture-<k>.png`, with k counted
+        from 1. **No map is added.** A map appears only when it is itself a changed asset (item 2), because adding
+        one would mean choosing it per tree, and N19 forbids a per-tree choice. The seeded trees use their item
+        commit's list, so a seed changes the bytes captured and never the arguments.
+     3. **The capture step is `capture_scene_preview`** (the command's step 7). Its files land at
+        `_s-bin/captures/capture-<k>.png` inside the capture copy, at the same relative paths on every tree. Each is
+        copied to `results/s-bin/captures/item-<n>/capture-<k>.png` in the corpus and hashed with SHA-256.
+     4. **`monolith_status()` must report the capture copy's own project** before anything is captured. Afterwards
+        the session and the editor are closed, and no `UnrealEditor` process survives before the next tree (Halt 6).
+        The capture copy is then deleted.
+     5. **One procedure-log line per session**, in `results/s-bin/captures/procedure-log.txt`, with space-separated
+        fields and no spaces inside a value: `item=<n> tree=<capture copy path> model=<id> cost_usd=<x.xx>
+        sha256=<64 hex, one per capture file, comma-joined> shows_subject=<yes|no> utc=<YYYY-MM-DDTHH:MM:SSZ>`.
+        `shows_subject` is the operator's judgement on framing, never on the defect. A `no` on any tree, clean or
+        seeded, stops the stage, and nothing falls back to empty captures.
+
+     Only the capture files reach the reviewer, never the session's own report. A seeded tree's capture shows the
+     seed, which is exactly what a real `Binary` summary would carry.
+
+  3. **What the review tree holds besides the change** (D21-43 N20: *"**Backlog and status prose stripped from all
+     five trees identically**, and recorded."*). **One strip set**, applied to every tree before its one commit:
+     - `_workspace/backlog/`, whole (18 files at each item commit [measured, `git ls-tree -r --name-only <item>
+       _workspace/backlog | wc -l`]);
+     - `_workspace/references/UE58_Editor_And_MCP_Gotchas.md` (present at all five item commits [measured, `git
+       cat-file -e`]);
+     - `CLAUDE.md`'s four status-table rows, *Focus*, *Tier*, *Verify* and *Progress*, removed by this **byte rule**.
+       Read `CLAUDE.md` as bytes and split it into lines, each line keeping its terminator (a line ends after a
+       `\n`, or at end of file). Strip one trailing `\n`, then one trailing `\r`, from a copy of the line. The line
+       matches if that copy begins with exactly one of the four byte prefixes `| **Focus** |`, `| **Tier** |`,
+       `| **Verify** |` or `| **Progress** |`. Matching lines are removed together with their terminators, and every
+       other byte is left unchanged. The strip **asserts exactly 4 rows removed per tree, each prefix matched exactly
+       once**, and refuses otherwise. The rule is terminator-agnostic: it matches with or without a CR, and it does
+       not depend on the measured fact that `CLAUDE.md` is LF-only at every item commit today (0 CR; 20,923, 22,365,
+       22,376, 20,923 and 20,923 bytes; the four rows at lines 23–26 and each prefix once [measured, byte count over
+       `git show <item>:CLAUDE.md`]).
+
+     `fixture.json` records the set per tree, and it must be one set across the five
+     (`stripped_path_set_is_identical_across_all_five_trees`).
+
+     **Leak tokens.** No non-asset file of any stripped tree, tracked or not, may contain a registered leak token.
+     The fixture asserts zero hits over all five trees (`review_tree_carries_no_registered_leak_token`), and the
+     driver repeats the scan on every dispatch copy (item 4). **Item 4's token is `LoadoutFill`**, the name in its
+     story row's diagnosis. At all five item commits it occurs only inside the strip set: once in
+     `_workspace/backlog/epics/E8_Inventory/E8_Backlog.md` and two or three times in the backlog JSON, and in no
+     file outside it [measured, `git grep -I -c LoadoutFill <item> -- . ':(exclude)_workspace/backlog'
+     ':(exclude)_workspace/references/UE58_Editor_And_MCP_Gotchas.md'` → rc 1 at each]. Item 4's set is that one
+     token. Broader words in the diagnosis (`translucent`, `0.970`, `0.097`, `WBP_LoadoutScreen`) occur in unrelated
+     files outside the strip set at every item commit, so a scan for them would refuse a clean tree. They are not
+     registered. The replacement seed's tokens are the words its own diagnosis uses, registered by extension when it
+     is chosen (item 12). The reason for the whole strip is the one the 2026-09-09 entry gave for `text_diff`:
+     *"because leaving them in would decide §3.5's prediction by fixture construction rather than by the
+     reviewer"*.
+
+  4. **The fix is unreachable** (F17; §0's `fix_unreachable`). Each review tree is a **fresh single-commit
+     repository** holding only that tree. Its one commit is on `main` with the message `review tree` and the
+     identity `s-bin <s-bin@invalid>`. It has no remote, no other ref and no tag. Assets are committed through the
+     tree's own `.gitattributes` and BrittonGames' system-scope LFS filter, so each asset's blob is its LFS pointer.
+     That pointer is byte-identical to BrittonGames' at the commit it came from, so a seed is confirmed by blob oid.
+     Neither the fixed pointer blob nor its LFS object is present (`git rev-list --all --count` is 1). A reviewer
+     that reads or runs `git` against a path outside its review tree voids the record as `void: out-of-tree`, and a
+     void is never a miss.
+
+     **Five copy kinds, and no tree is reused.** A Claude Code session keys its transcripts and auto-memory by its
+     working directory's path: every character outside `[A-Za-z0-9]` becomes `-`, so `D:\repos\BrittonGames`
+     becomes `projects/D--repos-BrittonGames`. A reviewer with `Bash` can also change the tree it is given. All
+     copies sit under one short **review root, registered here as `D:/sb`**. It was absent when this was written
+     [measured, `ls -d /d/sb`]. BrittonGames' longest tracked path is 164 characters, and a UE build adds deeper
+     `Intermediate/` paths, all under Windows' 260-character limit.
+
+     | copy | path | made | holds | afterwards |
+     | --- | --- | --- | --- | --- |
+     | base repository | `D:/sb/base/item-<n>` | B0 | the stripped tree, with its seed on items 4 and 5, as one commit | frozen; nothing runs in it |
+     | greenness copy | `D:/sb/green/item-<n>` | B0 | a byte copy of the base | the operator's UE run; its report is copied out; deleted |
+     | capture copy | `D:/sb/cap/item-<n>` | B1 | a byte copy of the base | the capture session; only the capture files leave; deleted |
+     | review repository | `D:/sb/rev/item-<n>` | after B1, before any rendering is hashed | a fresh single-commit repository of the base tree plus `_s-bin/captures/capture-<k>.png` and `_s-bin/report/{index.json,headless.log}` (item 6) | frozen; its commit is `items.<n>.review_commit` |
+     | dispatch copy | `D:/sb/d/p<pass>i<n>a<attempt>` | by the driver, before each Opus dispatch | a byte copy of the review repository | the dispatch; deleted once its record is written and no UE process survives |
+
+     A copy is a byte copy of the directory, `.git` included. It is never a clone, so it gains no remote. **Before
+     each spawn, the driver checks the dispatch copy and refuses on any miss.** It writes each result into the
+     record:
+     - `precheck_clean`: `git status --porcelain --untracked-files=all --ignored` prints nothing.
+     - `precheck_blob_oids`: `git rev-list --all --count` is 1, `HEAD` is `items.<n>.review_commit`, and every asset
+       path's blob oid is the fixture's.
+     - `precheck_leak_hits`: the registered leak tokens count 0 over every non-asset file, tracked or not.
+     - `precheck_no_project_dir`: neither `~/.claude-personal/projects/<slug>` nor `~/.claude/projects/<slug>` exists
+       for the copy's path.
+     - `tree_path`: the copy's path, which no earlier record and no capture copy used.
+
+     Before each copy, the free space on the root's volume must be at least `SBIN_NEED_BYTES`: the base tree's size,
+     plus the growth one greenness run left behind, plus a tenth. The rule is registered here, and the figure is
+     added by extension from B0's measurements.
+
+     **The answer-bearing paths outside the tree, named** so that the out-of-tree rule is checked against them by
+     name: `D:/repos/redkiln-rs` (this file states the seeds), `D:/repos/redkiln-corpus` (`fixture.json` and the
+     rendered prompts), `D:/repos/BrittonGames` (the fix itself), both accounts' `projects/` directories
+     (`~/.claude-personal/projects/` and `~/.claude/projects/`, which hold the capture sessions' transcripts), and
+     every other copy under `D:/sb`. Claude Code's permission rules cannot fence `Bash`, so prevention is not
+     claimed. The defence is detection: the void, and for BrittonGames' two uncommitted paths, the snapshot series
+     taken before B2 and after every batch.
+
+  5. **The instrument, named.** The driver is `runner/src/sbin.rs` in the corpus runner, behind the new subcommand
+     **`sbin-probe`**. Its 25 named tests are listed in `s8i` §8i.3. The registered argv, run from the corpus root
+     through the launcher's `wrap` mode:
+     - B2/B3, one pass each: `runner/target/debug/redkiln-spike-runner sbin-probe --pass <1|2> --fixture
+       results/s-bin/fixture.json --out results/s-bin.jsonl --model opus --effort xhigh --timeout-secs <ceiling>`.
+       This runs items 1–5 in order, resuming per `(arm, item, pass)`. A retry is the same argv run again: a valid
+       record satisfies resume, a void does not, and the void's `(pass, item)` is dispatched once more as attempt 2.
+     - B1's flag probes: `sbin-probe --flag-probe --model haiku --out results/s-bin/probes.jsonl`, at most three
+       runs, each on a throwaway tree that is never a review tree.
+     - The zero-spend dry run: `redkiln-spike-runner --claude-bin <stub> sbin-probe --dry-run --pass 1 --only-item 1
+       --fixture results/s-bin/fixture.json --out results/s-bin/dry-run.jsonl`. It is the one invocation that passes
+       `--claude-bin`.
+
+     **The arm label is `b-typed-sbin`**: arm b (headless, the card adopted), the typed schema, and the S-BIN summary
+     rendering. Following §6, *"Arm labels carry every instrument variant"*, so a B4 re-run carries
+     `b-typed-sbin-plus-<field>`, registered by its own amendment. Model and effort are E3's, `--model opus --effort
+     xhigh`. The model id is **observed from each init line** and recorded as `observed_model`. The set must report
+     one observed id, as it must one CLI version, and a record reporting a second id halts the set.
+
+     The card is E3's `redkiln-review`, adopted with tools **`Read` and `Bash`** (§3.3: *"the reviewer has `Read` and
+     `Bash` in a disposable clone with the engine available"*). The runner's `e3::CARD_TOOLS` adds the
+     `StructuredOutput` channel the digest returns on (F20), applied identically and not new reach. The dispatch
+     runs with `--strict-mcp-config` and no MCP server. §0's pre-flight fields are recorded on every record:
+     - `card_adopted`: adoption verified by equality between the init tool set and the card's tools; a mismatch
+       voids before scoring.
+     - `api_error_status`: platform errors named as such, `null` otherwise; a platform error is a void and never a
+       miss.
+     - `fix_unreachable`: true only when the dispatch copy passes item 4's checks.
+     - `node_modules_linked`: stated as **not applying** to a UE tree, and recorded as `null`.
+
+     Digests use §2's typed schema as amended 2026-09-06 and are scored under the **strict** policy (§3.4: *"under
+     the typed schema and strict policy from §2"*). A digest failing the schema is `void: schema` (§0 rule 2). An
+     exit 0 without structured output is a void, not a success.
+
+  6. **The rendering.** §3.3's draft fields are *"Rendered into the prompt in place of E3's 'files this change was
+     scoped to touch' list"*. The constructed `spec.md` and implementation report are rendered as E3 renders its spec
+     and report artifacts, built as the 2026-09-09 entry registers. The mappings:
+     - `range`: the review repository's single commit, with the base rendered as *not available in this repository*.
+       This is the same on all five trees, because a base commit would be an object the fix-unreachable rule keeps
+       out.
+     - `text_diff`: source and test paths only, the entry's scoping. A source or test path is one under a `Source/`
+       directory segment (`OurGame/Source/…` or `OurGame/Plugins/<P>/Source/…`). It is empty, and rendered as
+       none, for all five items (item 1).
+     - `assets[]`: one entry per asset path in item 2's list, as `{path, kind, action, size, lfs_oid}`. `kind` is the
+       extension. `action` is git's status for that path in the item commit. `size` and `lfs_oid` are read **from the
+       LFS pointer in the review tree**, the seeded pointer on a seeded item, and the size is *"never inferred from
+       whether the size line moved"*.
+     - `build`: `{command, exit, log_ref}`, from the item's greenness run. The command is `pwsh -File
+       _workspace/tooling/verify_headless.ps1`.
+     - `tests`: `{command, report_ref, passed, failed, skipped}`, from the same run's `index.json`.
+       `succeededWithWarnings` and `notRun` are *"folded into `passed`"* (`passed` = `succeeded` +
+       `succeededWithWarnings` + `notRun`), and `skipped` is rendered as 0, because no state of the report maps to
+       it.
+     - `report_ref` and `log_ref` point **inside the review tree**, to `_s-bin/report/index.json` and
+       `_s-bin/report/headless.log`. Those are the greenness copy's report, also kept in the corpus at
+       `results/s-bin/greenness/item-<n>/`. The raw report must be readable without an out-of-tree read, which
+       would void the record. That is why the review repository's holdings in item 4's table add those two files to
+       the captures.
+     - `captures[]`: one `{path, viewport, note}` per capture file. `path` is `_s-bin/captures/capture-<k>.png`,
+       `viewport` is `capture_scene_preview`, and `note` is the k-th object path from item 2. Nothing else from the
+       session goes in.
+
+     Each item's rendered prompt is written to `results/s-bin/rendered/item-<n>.txt` and hashed **before** its first
+     dispatch. The driver refuses to render an item without its capture references
+     (`every_item_carries_a_capture_reference_or_rendering_refuses`).
+
+  7. **The ceiling: the rule now, the number by extension.** Golden constraint 6: *"When two conditions differ in
+     shape, size the ceiling against the slow one"*. `ceiling_secs` = 3600 + `W_max`, rounded up to the next multiple
+     of 300 s. `W_max` is the slowest greenness run's measured build-plus-suite wall clock over the five trees (B0).
+     3600 s is the uncensored ceiling S-VAR and S-TYPED settled for a review that runs no engine. A reviewer that
+     builds and runs the suite once adds `W_max`. The value is never below 3600 s. It is the same for every dispatch
+     and every retry, and it is added by extension before B2.
+
+  8. **Order.** Pass 1 is items 1–5 in order, then pass 2 is items 1–5 in order, after pass 1's audit has been read.
+     Dispatches are strictly sequential, with one UE process at a time (Halt 6). Monolith listens on one port, so
+     only one editor runs at a time in B1 as well.
+
+  9. **The outcomes the rule does not decide, registered before dispatch.** D21-43 N21: *"**Registered as undecided
+     before dispatch.** If either occurs, the `Binary` variant takes the human-gate route."* D21-48 X3:
+     *"**Registered before dispatch as a third undecided outcome, `undecided-partial`**, routed to the human gate, as
+     D21-43 N21 routes the other two."* Under the 2026-09-11 combination rule, each pass takes exactly one of six
+     values: `branch1`, `branch2-detected` (B4's re-run detected), `branch3` (including a branch 2 whose re-run
+     missed), and these three:
+     - `undecided-fp`: 2/2 detection, after any B4 re-run, with ≥ 2 of the 3 clean items blocked.
+     - `undecided-silent`: a seed missed, with no missing field named and no summary field cited.
+     - `undecided-partial`: exactly one seed missed, counted after any B4 re-run, with summary fields cited and no
+       missing field named.
+
+     Each undecided outcome is reported as *"not decided by the registered rule"* and routes the `Binary` variant to
+     the human gate. **Branch 2's named field is a judgement, and it is named as one** (§0: *"reported with the
+     judgement it needs named"*). After each pass's audit the operator reads each missed seed's digest and writes
+     `results/s-bin/missing-fields.jsonl`, one line per missed seed, `{pass, item, missing_fields: [{field,
+     quote}]}`. Each quote is verbatim from a `claim` or `repro` in that record's digest. The file exists, possibly
+     empty, when no seed was missed, and a B4 re-run exists for a `(pass, item)` exactly when that missed seed has a
+     named field. `results/audit-s.py bin <s-bin.jsonl> <missing-fields.jsonl>` computes each pass's outcome from
+     the records and that file alone. It ends with `rule_outcome_pass1=<v>` and `rule_outcome_pass2=<v>`, and no
+     figure pools the two passes.
+
+  10. **The caps and the void rule.**
+      - **Caps**, enforced by the driver before it spawns (`the_dispatch_cap_refuses_before_spawning`), counting
+        voids:
+        - **18 Opus dispatches**, from 5 + 5 + ≤ 4 retries + ≤ 4 B4 re-runs.
+        - **3 haiku**.
+        - **USD 90.00** API-equivalent, summed over every S-BIN record's `total_cost_usd` and every probe's.
+      - **The USD cap is registered at 90.00, citing D21-140.** In D21-140 item 1 the operator answered *"Raise to $90
+        (file's cap)"*, and the entry reads: *"The amendment's item 10 registers the driver's USD cap at 90.00, citing
+        this entry"*. It amends D21-105 item 2's *"capped at **US$30 total**"* for S-BIN's dispatches only.
+      - The capture sessions are not the driver's to count, because it does not spawn them. The operator adds their
+        procedure-log `cost_usd` to the running total. Before each batch, and before each retry, the batch launches
+        only if (90.00 − spent so far) exceeds that batch's bound in `s8i` §8i.5's spend table. A missing cost is
+        refused, never read as zero. Reaching any cap halts the set, and raising one is a ledger line.
+      - **Retries.** A void is retried **once** per `(pass, item)`, at the same ceiling and inside its batch's
+        go-ahead, as attempt 2 in a fresh dispatch copy. The same item voiding twice in one pass is a fixture defect,
+        and it stops the stage.
+      - **Resume** is keyed per `(arm, item, pass)` (§0's key, with `item` for `slug` and `pass` for `repeat`). A void
+        does not satisfy it, and no record is ever replaced or edited: `results/s-bin.jsonl` is append-only, voids
+        included.
+
+  11. **The CLI version: frozen.** D21-43 N22: *"The CLI is **frozen from S-BIN on**, and the set never spans a
+      version."* The freeze has two parts. The launcher exports `DISABLE_AUTOUPDATER=1` to each `wrap` child, and the
+      operator writes the same row into `~/.claude-personal/settings.json`'s `env` block before B1. The row was absent
+      when this was written [measured, `grep -c DISABLE_AUTOUPDATER` → 0]. Every record carries `cli_version`, which
+      must equal its launch record's `CLI_VERSION`. A version move between the set's first record and any later
+      dispatch **halts the set** (`a_version_move_between_dispatches_halts_the_set`), and it is never reported per
+      version. Halt 2 is recorded, not silently continued: `RUNBOOK-instrument.txt` reads 2.1.278, the CLI read
+      2.1.281 on 2026-09-24, and it reads 2.1.288 on 2026-10-02. The set's version is the one B1's pre-check records
+      after the settings row is written. The CLI freeze has no exception. The method freeze below has exactly one.
+
+  12. **Seed 5 is replaced, by a selection rule registered here before any candidate is examined.** D21-43 N22:
+      *"Seed 5 is **replaced by the registered procedure** before dispatch."* The procedure is the 2026-09-09
+      entry's: *"If a seed goes red it is replaced from the remaining 27 asset-only commits and this amendment is
+      extended, never quietly edited."* A candidate must meet **all five** conditions:
+      1. It is an asset-only commit from the pool below, and not one of the five items' commits.
+      2. Its own message states the defect it fixes. The seed reverts its own asset or assets to its immediate
+         parent, in a tree at that commit, as seeds 4 and 5 did (`git checkout R^ -- <each asset R changed>`), so
+         every asset it changed exists at its parent.
+      3. It shares the registered seeds' selection basis, a perceptual defect. The 2026-09-09 entry's selection
+         threat applies unchanged and is restated: a reviewer good at perceptual defects and bad at others scores
+         well here on a non-representative sample.
+      4. Its constructed `spec.md` has a clause that the seeded state violates, and that clause is named before
+         dispatch. This rules out the defect the entry found in seed 5: *"Seed 5 violates no registered AC of
+         8.5.5g"*.
+      5. Its seeded tree is green at its own commit (`verify_headless.ps1`, `failed` = 0 and exit 0, in a greenness
+         copy), and every LFS object it needs is present locally under BrittonGames' `.git/lfs/objects`.
+
+      **The pool command.** An asset-only commit is a non-merge commit reachable from the pin
+      `041ead2cb284afd3004d07c2826f31d05b2799fd`. It changes at least one `.uasset` or `.umap` path. Every path it
+      changes is either such an asset or inside item 3's strip set (`CLAUDE.md`, `_workspace/backlog/`,
+      `_workspace/references/UE58_Editor_And_MCP_Gotchas.md`), so its `text_diff` under item 6 is empty. The five
+      items meet the definition. It is enumerated by: for each `c` in `git -C D:/repos/BrittonGames rev-list
+      --no-merges 041ead2cb284afd3004d07c2826f31d05b2799fd`, take `git diff-tree --root --no-commit-id -r
+      --name-only c` and apply the test above.
+
+      **The pool does not count 29, and the difference is recorded.** The 2026-09-09 entry's 29 was recorded as
+      *"[measured]"* without its command. Under the definition above, the pool counts **148** of 575 non-merge
+      commits, all five items included, so 143 are open to selection. That was measured 2026-10-02 by a count-only
+      script that printed no candidate's id or message, so no candidate was examined in taking it. The definition is
+      not narrowed to reach 29, because any narrowing chosen now would be chosen against a count rather than
+      registered before it. Conditions 2–5 do the selecting.
+
+      **The operator picks** among the candidates that meet the rule. The extension lists every candidate examined,
+      with the reason each was passed over, and the operator's pick. Item 5 is then that commit R, reviewed at R with
+      its seed applied. `bf9c499a1` is recorded as replaced, and correction 5 (item 1) and the entry's own
+      *"Seed 5 violates no registered AC of 8.5.5g"* are the reasons.
+
+  **Extension, and the one exception after dispatch.** A seed that goes red at its greenness check, the replacement
+  included, is replaced under item 12, and this entry is extended before B2. After the first Opus dispatch no seed,
+  item, rendering or ceiling moves, with **one registered exception, B4**. §3.4's branch 2 says *"add the field,
+  re-run that item"*, so a B4 amendment adds the named field to that item's rendering for its re-run only. It is
+  committed before B4's go-ahead, and the pass's original records stand. Any other change after that point discards
+  the set, as the 2026-09-05 entry did, and the set is re-registered.
+
+  **The go-ahead lines** for B1–B4 are written by the operator into ledger entry D21-141, reserved for S-BIN, in the
+  form `s8i` §8i.5 fixes. The B1 line names Checkpoint 8h's hash, the dry run's SHA-256 and this entry's commit.
+
+  **Deferred extensions: exactly these are appended later, each as its own dated paragraph citing this entry, and none
+  edits it.**
+  1. **Seed 5's replacement R**: the candidates examined, each with the reason it was passed over; the operator's
+     pick; R's full sha and parent; R's assets and their LFS objects shown present; R's constructed `spec.md` clause
+     that the seed violates; R's leak tokens with their zero-hit scan over all five stripped trees; and R's
+     `$ARGUMENTS` under item 2's rule. Also the result of applying item 3's `CLAUDE.md` rule at R: if R's `CLAUDE.md`
+     does not carry the four rows exactly once each, the strip refuses, and that is recorded there and not worked
+     around.
+  2. **The ceiling**: `W_max` and each tree's build-plus-suite wall clock, with the `ceiling_secs` item 7's rule
+     gives.
+  3. **`SBIN_NEED_BYTES`**: the base tree's size, the growth one greenness run left behind, and the resulting figure
+     under item 4's rule.
+  4. **The greenness results**: each tree's `failed`, its exit and its report's SHA-256. Also the pin's 2026-09-05
+     report copied with its SHA-256, which must be `c3dae802…6bc6`.
+  5. **B4's amendment**, only if a pass fires branch 2: the named field, its arm label `b-typed-sbin-plus-<field>`
+     and the re-run's rendering.
+
+  `review_root` is fixed above as `D:/sb` and is not deferred. This entry post-dates no S-BIN record.

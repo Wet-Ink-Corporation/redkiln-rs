@@ -52,7 +52,8 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - **§8i.5 re-quotes `s8h` §8h.7's restated `wrap` guarantee.** The sentence it quoted, which ended
   "neither caller is the adapter", is no longer in `s8h`'s file. The substance is unchanged: `wrap` records the
   version and never compares it to the adapter pin.
-- **The floor chain is recomputed once**: Checkpoint 8h's 1168 + this stage's 6 + N, in place of the drafted 780.
+- **The floor chain is recomputed once**: Checkpoint 8h's ~~1168~~ + this stage's 6 + N, in place of the drafted 780.
+  *(dated 2026-10-02, s8i build)* Superseded by the recorded 1404 (the stage-open block below).
 - **The trap in (11)** asserts that it starts empty, and (0) names `s8d-ii` among the stages that re-run 7f.
 
 *Adversarial-review fixes 2026-09-24 (D21-47)* (the review of this file at `4a8c832`, 3 BLOCKER, 7 MAJOR, 14 MINOR,
@@ -136,7 +137,8 @@ pass brief and the lead's integration findings are the authority). One line per 
   (`nd_setup`, then the scoped `nodispatch`), in place of their inline shell-script fake, which a Windows process never
   resolves. `nd_check` follows every process-level cargo run, every replay, and (12).
 - *Final consistency pass 2026-09-24:* the floor's base is re-derived once more from the files as they now state their counts:
-  Checkpoint 8h's expected 1222 (1171 + 51), so the floor is 1222 + 6 + N = 1228 + N.
+  Checkpoint 8h's expected ~~1222 (1171 + 51), so the floor is 1222 + 6 + N = 1228 + N~~. *(dated 2026-10-02, s8i build)* Superseded
+  by the recorded 1404 (the stage-open block below).
 - *Final consistency pass 2026-09-24:* (11) no longer demands the replayed blocks' record ids from the environment: each block carries its
   own as literals (D21-47), and this block supplies none.
 - *Final consistency pass 2026-09-24:* (11)'s dispatch scan admits Checkpoint 8h (10)'s two sandboxed `wrap` runs and its argv-screen
@@ -172,11 +174,39 @@ One line per edit:
   bullet and Checkpoint 8a's ban stand.
 - *D21-48 (2026-09-24):* **Tests.** The workspace gains 7 + N + G new tests, where G = 3 on the human-gate route and 0
   on the reviewer route, with s8a's sealed-slot test superseded. The floor adds 6 + N + G. This was 7 + N new and
-  6 + N on the floor. The floor chain is 1222 + 6 + N + G = 1228 + N + G, re-derived at stage open from Checkpoint
+  6 + N on the floor. The floor chain is ~~1222 + 6 + N + G = 1228 + N + G~~, re-derived at stage open from Checkpoint
   8h's recorded count. The corpus driver's 25 tests do not change.
 - *D21-48 (2026-09-24), floor propagation:* the predecessors now state `s8c` **78**, `s8d` **62**, `s8d-ii` **50**, `s8f` **85** and `s8h` **54**, so
-  Checkpoint 8h's expected count is **1243** (1189 + 54) and this stage's floor 1243 + 6 + N + G = **1249 + N + G**
+  Checkpoint 8h's expected count is ~~**1243** (1189 + 54)~~ and this stage's floor ~~1243 + 6 + N + G = **1249 + N + G**~~
   (§8i.10's bullet, Checkpoint 8i (0) and (10)). The 1222 base above is superseded.
+
+*Stage open, 2026-10-02 (s8i build, an AFK session; entry HEAD `09018dd`).* Each line below is a dated note. The
+measurements sit in the sections named, and nothing here is a go-ahead or a dispatch.
+- *(dated 2026-10-02, s8i build)* **Floor, re-derived from the RECORDED count, not the drafted chain.** `PROGRESS.md` row 8h records
+  Checkpoint 8h *"1404 passed, 0 failed, 9 ignored over 44 at `d24d15a` (floor 1404)"*, and D21-138 reads *"(12)'s
+  whole suite read **1404 passed / 0 failed / 9 ignored over 44 result lines** (FLOOR 1404)"*. So the base is
+  **1404** over **44** result lines, the drafted 1243 (and the older 1168 and 1222) is struck, Checkpoint 8i (0) sets
+  `FLOOR_8H_PASSED=1404` and `FLOOR_8H_RESULTS=44`, and this stage's floor is **1404 + 6 + NFIELDS + NGATE** (NGATE 3
+  on the human-gate route, 0 on the reviewer route). This build adds 0 workspace tests before S-BIN reports: the
+  driver's 25 tests are the corpus runner's, not this workspace's. NFIELDS and NGATE are known only after S-BIN reports.
+- *(dated 2026-10-02, s8i build)* **Entry held**: Checkpoint 8h passed WHOLE at `d24d15a` and re-ran green after the Record B flip
+  (`9ff08fb`) at `b2ab1dc` (tracker `09018dd`). ADR-0198 (Record B) is accepted (D21-139); ADR-0197 (Record A) stays
+  proposed until `s8j`'s probes; D21-128 stays open (§8i.1).
+- *(dated 2026-10-02, s8i build)* **`s8a`'s split, the review-input seam and the render module** are measured and written into §8i.8
+  before any Rust edit. `CS` = `rk-ports`. The seam is reachable without the kernel naming the type, so §8i.8's
+  remaining STOP does not fire. One unforeseen defect is measured there and raised: Checkpoint 8i (8)'s kernel type
+  scan fires on two string-literal code lines at HEAD.
+- *(dated 2026-10-02, s8i build)* **The corpus** is detached at the pin `61f590e`, and its `main` is at `285e011`, not `f39b2f8` (§8i.0
+  item 2's dated note). The build route is D21-140 item 2's private copy and patch (§8i.3).
+- *(dated 2026-10-02, s8i build)* **Halt 2**: pin 2.1.278, the 2026-09-24 reading 2.1.281, now 2.1.288 (§8i.0 item 8's dated note; §8i.5).
+- *(dated 2026-10-02, s8i build)* **Spend**: S-BIN's cap is US$90.00 total (D21-140 item 1, amending D21-105 item 2's US$30 for S-BIN only).
+  The spend table is in §8i.5, and B4 does not fit at its bound.
+- *(dated 2026-10-02, s8i build)* **`spikes/FINDINGS.md`** gains F41's and F42's rows (§8i.0 item 10; §8i.7).
+- *(dated 2026-10-02, s8i build)* **Ids reserved** (each is the next free at writing; if one is taken first, the next free id is used and
+  this line takes a dated note): ledger **D21-141** for this stage's S-BIN entry, which holds the go-ahead lines;
+  ADR **0199** for the post-dispatch `Binary` record, NOT written in this build; finding **F43** for the S-BIN draft,
+  also post-dispatch. `SBIN_LEDGER`, `BIN_ADR` and `SBIN_F` are written into Checkpoint 8i (0) by dated edit, each
+  on the day its record is written (D21-47), never before.
 
 ---
 
@@ -225,6 +255,16 @@ Items 11 and 12 were added at the 2026-09-24 revision, measured at `a6349b6`.
    commit `f39b2f8`, *"v0+2: Step 7c's live probe and the three D17-6 spike runs, retained raw"*, which did not move
    `CORPUS_PIN`. The corpus working tree is **detached at the pin `61f590e`** while its `main` is at `f39b2f8`
    [measured, `git -C D:/repos/redkiln-corpus branch -a`].
+   *(dated 2026-10-02, s8i build)* Re-measured at stage open, read-only; the item's own text is left as written. The corpus working
+   tree is still **detached at the pin `61f590e`** (`61f590e51cbb00301c310e46aab615563a7787b8`) and clean (`git -C
+   D:/repos/redkiln-corpus status --porcelain=v1` prints 0 lines). Its `main` is now at **`285e011`**
+   (`285e011c70cfa0fc92d91089792834846d99bcf7`, *"S-SEV: Jev's runs (rater of record, D21-58), both sealed keys, the
+   Jev-filled sheets and the scored result"*), not the `f39b2f8` stated above. `git log --oneline 61f590e..main` lists
+   four commits: `f39b2f8`, then the three S-SEV commits `a2f4fab`, `1b3e102` and `285e011`. Both `f39b2f8` and the pin
+   are ancestors of `main` [measured, `git merge-base --is-ancestor`, rc 0 each]. `runner/src/sbin.rs` exists at
+   neither (`git cat-file -e main:runner/src/sbin.rs` exits 128). §8i.3's *"The operator puts the corpus on `main` and
+   clean before B0"* is a **deferred operator gate**, and under D21-140 item 2 the build never writes to the corpus or
+   its `.git` (§8i.3).
 3. **METHOD-S §1 is S-VAR, not a shared-method section.** The shared rules are METHOD-S §0, *"Rules inherited from
    METHOD, METHOD-E3 and METHOD-H"* (isolation, pre-flight checks on every record, *"a void is never a miss"*,
    resume keyed per `(arm, slug, repeat)`, *"nothing is inferred from a single draw"*), and the dispatch ceiling is
@@ -262,6 +302,14 @@ Items 11 and 12 were added at the 2026-09-24 revision, measured at `a6349b6`.
 8. **Halt 2 is live.** `claude --version` reads `2.1.281 (Claude Code)`; `RUNBOOK-instrument.txt` reads
    `2.1.278 (Claude Code)` [measured 2026-09-24]. §8i.5 says what this stage does about it. D21-43 N22 freezes the
    CLI from S-BIN on.
+   *(dated 2026-10-02, s8i build)* Re-read at stage open. `spikes/results/instrument-checks/RUNBOOK-instrument.txt` still reads
+   `2.1.278 (Claude Code)`, and the 2026-09-24 reading above was `2.1.281`. `claude --version` now reads **`2.1.288
+   (Claude Code)`**, from `/c/Users/ryanm/.local/bin/claude` [measured 2026-10-02 from the build session's shell, which
+   agrees with the operator's reading handed to this build; the operator's plain-terminal reading is the one of record,
+   and under `nd.sh` the fake prints the pin instead]. Halt 2 is still live, and it is recorded, not silently
+   continued. The CLI has moved twice since authoring, which is what N22's freeze before B1 is for.
+   `~/.claude-personal/settings.json` has no `DISABLE_AUTOUPDATER` row (`grep -c DISABLE_AUTOUPDATER` prints 0). The
+   operator writes that row, because it is user configuration, and it is a deferred gate before B1 (§8i.5).
 9. **The registered decision rule is not total.** METHOD-S §3.4's three branches cover *"2/2 detection and ≤1/3 false
    positive"*, *"A seed missed and its finding would have needed a field the summary lacks"*, and *"Both seeds missed
    with the summary fields cited but not the asset"*. Two outcomes reach none of them: **2/2 detection with ≥ 2/3
@@ -275,6 +323,9 @@ Items 11 and 12 were added at the 2026-09-24 revision, measured at `a6349b6`.
     *"A later F-number is added here the day its draft is written."* **The 2026-09-24 revision brief assigns the
     repair to this stage**, since it writes a FINDINGS row. The work commit adds F41's and F42's rows beside S-BIN's
     (§8i.7), and guard (2) asserts that every draft is indexed.
+    *(dated 2026-10-02, s8i build)* Done at stage open: the index gains the F41 (`S-PORTS`) and F42 (`S-GRAMMAR`) rows, each headline
+    condensed from its draft's `## F<n> —` line (§8i.7). Guard (2)'s `idx_missing`, run read-only over the edited
+    index, prints nothing. The S-BIN row (reserved F43) is written with its draft, after dispatch.
 11. **`/ue-verify` is a Claude Code slash command that drives the running editor through Monolith MCP. It is not a
     script.** BrittonGames' `.claude/commands/ue-verify.md` opens: *"Verify OurGame in the running UE 5.8 editor via
     Monolith MCP — load key assets, run PIE, scan logs, screenshot"*. Its precondition is *"the editor must be open on
@@ -307,11 +358,18 @@ measured 2026-09-24, read-only].
 ### 8i.1 Entry — what must hold before anything is built or spent
 
 - **Checkpoint 8h passed**, recorded in `PROGRESS.md` §1.
+  *(dated 2026-10-02, s8i build)* Held. `PROGRESS.md` row 8h and D21-138 record Checkpoint 8h passed WHOLE at `d24d15a`, at 1404/0/9 over 44
+  result lines, from the operator's plain Git Bash. Row 8h also records the re-run green after the Record B flip commit
+  `9ff08fb`, at `b2ab1dc` (tracker `09018dd`).
 - **`s8a`'s split is on the tree.** The `Text` variant is finalised and the `Binary` slot is sealed, under the names
   and in the crate `s8a`'s record gives them. `s8a`'s file, read at authoring, says *"`ChangeSummary` is defined only
   in `rk-ports`, as an enum with two arms"*, calls the payloads `TextChangeSummary` and `BinaryChangeSummary`, and
   pins the sealed arm with `change_summary::binary_arm_is_not_constructible_outside_rk_ports`. At this stage's open, measure both and write them into §8i.8 by dated
   note before the first Rust edit; every test name below that says `change_summary::` follows the type into that crate.
+  *(dated 2026-10-02, s8i build)* Measured and written into §8i.8 before any Rust edit: `pub enum ChangeSummary {` and
+  `pub struct BinaryChangeSummary(pub(crate) ());` in `crates/rk-ports/src/toolchain.rs`, and the sealed-slot test
+  `change_summary::binary_arm_is_not_constructible_outside_rk_ports` with its `trybuild` case
+  `tests/ui/change_summary_binary_not_constructible.rs`. So `CS` = `rk-ports`.
 - **The fixture-proof condition, read before B1 and confirmed by the operator in the B1 go-ahead line.** D21-42's
   closing paragraph: *"The spend gates (the probes, the real runs and S-BIN's dispatches) remain behind D21-40
   decision 2's fixture-proof condition"*. D21-40 decision 2: *"The criterion-(1), (1b), (3)-operational and (7) runs
@@ -322,10 +380,17 @@ measured 2026-09-24, read-only].
   Checkpoint 8h, which stands on every sub-stage proof through `s8h`, including `s8e`'s FakeHarness end-to-end test,
   and (ii) S-BIN's own zero-spend dry run (§8i.3). The B1 go-ahead line names both, by hash (§8i.5), and Checkpoint 8i
   reads it.
+  *(dated 2026-10-02, s8i build)* Not yet confirmable. The dry run is built in B0 (§8i.3), so its sha256 does not exist yet. The B1
+  go-ahead line is prepared for the operator in the reserved ledger entry D21-141, naming Checkpoint 8h's recorded
+  hash and the dry run's sha256 once the dry run has run. Nothing this build writes is a go-ahead.
 - **Operator present, foreground.** D17-5 is headed *"The real dispatch runs in this session, in the foreground"*
   (`DECISIONS-2026-09-17`). Only its foreground, operator-present half carries here. Its *"in this session"* does
   not: every S-BIN launch is made from a plain terminal, never a Claude Code session, because the launcher refuses a
   session's variables (s8h §8h.7; §8i.5). Every UE automation run is the operator's hand (§8i.4).
+  *(dated 2026-10-02, s8i build)* The build runs in an AFK Claude Code session, so it prepares and never runs. Every S-BIN launch, every
+  capture session, every UE automation run, and every formal checkpoint from `s8h` on is the operator's. Each is run
+  from a plain terminal, behind its own go-ahead (D21-140 item 1: *"Every S-BIN launch is the operator's, made from
+  a plain terminal and behind its own go-ahead line"*, and *"No subagent dispatches."*).
 
 ### 8i.2 The pre-dispatch amendment — what it must settle, and whose decision each item is
 
@@ -336,6 +401,18 @@ exactly as registered"* — and Checkpoint 8i asserts that §3's bytes at HEAD e
 commit, and that every S-BIN record post-dates it. Four items were **(operator)** fixture decisions that the entry
 left open or the measurement exposed. The operator took all four on 2026-09-24 (D21-43 N19–N22). The amendment
 records each decision and cites its ledger line. It does not re-argue them.
+
+*(dated 2026-10-02, s8i build)* **Written, uncommitted.** The amendment is appended to `spikes/METHOD-S.md` §7 as one entry whose bold lead
+opens with the literal. The file begins with HEAD's bytes and the literal occurs once. It covers items 1–12, and it
+ends with a deferred-extensions list naming what is appended later: seed 5's replacement R (the candidates, the
+pick, its clause, its leak tokens and `$ARGUMENTS`), the item-7 ceiling, `SBIN_NEED_BYTES`, the greenness results
+and the pin report's SHA-256, and B4's amendment if one is needed. `review_root` is fixed now as `D:/sb`. Item 10
+registers the driver's USD cap at 90.00, citing D21-140. The entry must be committed before seed 5's candidates are
+examined, because it registers item 12's rule. Three choices this file left open are made in the entry and
+disclosed there:
+- the `$ARGUMENTS` rule adds no map;
+- the item-7 ceiling is fixed as a formula, 3600 + `W_max` rounded up to 300 s;
+- `report_ref` and `log_ref` point into the review tree (§8i.4's dated note).
 
 1. **Corrections 4 and 5 of §8i.0**, recorded as measured, with the commands.
 2. **The captures producer. Taken, D21-43 N19:** *"**The operator captures by hand** on all five review trees through
@@ -451,6 +528,12 @@ records each decision and cites its ledger line. It does not re-argue them.
     difference is recorded. Item 5 is then that commit, reviewed at that commit. `bf9c499a1` is recorded as
     replaced, and §8i.0 item 5 is the reason.
 
+    *(dated 2026-10-02, s8i build)* **The pool does not count 29.** The 2026-09-09 entry recorded its 29 without a command. The
+    amendment registers this one: non-merge commits reachable from the pin that change at least one `.uasset` or
+    `.umap`, with every other path inside item 3's strip set. Under it the pool counts **148** of 575, all five
+    items included [measured 2026-10-02 by a count-only script that printed no candidate id or message]. As this
+    item provides, the difference is recorded in the amendment, and the definition is not narrowed to reach 29.
+
 A seed that goes red at its greenness check, the replacement included, is handled as registered: *"If a seed goes red it is replaced from the
 remaining 27 asset-only commits and this amendment is extended, never quietly edited."* Extension happens before B2;
 after the first Opus dispatch no seed, item, rendering or ceiling moves, with **one registered exception, B4**. METHOD-S §3.4's own
@@ -467,6 +550,14 @@ go-ahead in the moment — `s7b` §7b.11 precondition 7 reserved *"the corpus wr
 and `f39b2f8` is the precedent for a results commit that leaves `CORPUS_PIN` alone. The operator puts the corpus on
 `main` and clean before B0 (it is detached at the pin today, §8i.0 item 2). Halt 1 and golden constraint 3 apply:
 `cargo build` in `runner/` before every use of its binary.
+
+*(dated 2026-10-02, s8i build)* **The build route, taken by the operator (D21-140 item 2):** *"The driver (`runner/src/sbin.rs`) and
+`audit-s.py bin` are built and tested in a private `git archive` copy of the corpus's `main` under `target/`."*,
+*"The operator receives a patch with its apply and commit commands."* and *"Nothing writes to
+`D:/repos/redkiln-corpus` or its `.git`."* The sentence above, *"Every write to `D:/repos/redkiln-corpus` is the
+operator's"*, holds unchanged. Applying and committing the patch is the operator's write, made after the operator
+has put the corpus on `main` and clean (§8i.0 item 2's dated note). B0's gate, *"operator go-ahead for the corpus
+writes"*, is therefore that apply and commit, and it is a deferred operator gate.
 
 **Named tests**, run as `cargo test --bin redkiln-spike-runner -- sbin::tests::<name> --exact`, each authored and
 **watched red for the stated reason** before the code that turns it green (golden constraint 12's order). Each mutant
@@ -593,6 +684,11 @@ auto-memory by its working directory's path. For example, `D:\repos\BrittonGames
 | review repository | `<root>/rev/item-<n>` | after B1, before any rendering is hashed | a fresh single-commit repository of the base tree plus `_s-bin/captures/<file>` | frozen; its commit is `items.<n>.review_commit` |
 | dispatch copy | `<root>/d/p<pass>i<n>a<attempt>` | by the driver, before each Opus dispatch | a byte copy of the review repository | the dispatch; deleted once its record is written and no UE process survives |
 
+*(dated 2026-10-02, s8i build)* The amendment (§8i.2 item 4) registers the root as `D:/sb`. The review repository also holds the
+greenness report at `_s-bin/report/index.json` and `_s-bin/report/headless.log`, so that `tests.report_ref` and
+`build.log_ref` are readable inside the tree. Read from the corpus, they would be an out-of-tree read and would void
+the record. Captures sit at `_s-bin/captures/capture-<k>.png`, k in `$ARGUMENTS` order.
+
 A copy is a byte copy of the directory, `.git` included. It is never a clone, so it gains no remote. Every item's
 capture file sits at the same relative path in its review repository. **Before each spawn, the driver checks the
 dispatch copy and refuses on any miss.** It writes each result into the record:
@@ -679,6 +775,35 @@ The warrant: METHOD-S §3.6 sizes S-BIN at *"**10 dispatches**, ~$30 plus UE
 automation wall clock"*; S-TYPED's median was *"$3.03/review"* (METHOD-S §7, 2026-09-11 item 3), and a reviewer that
 builds and runs a UE suite is slower, so 18 × ~$5 bounds it. Reaching either cap halts the stage; raising one is a
 ledger line, never an edit here. Throttle margins are the runner's (METHOD-S §0, *"throttle margins honoured"*).
+
+*(dated 2026-10-02, s8i build)* **The spend table: the cap, the per-batch bounds, and the check before each batch.** The cap is
+**US$90.00 total** for S-BIN. In D21-140 item 1 the operator answered **"Raise to $90 (file's cap)"**, and the entry
+reads: *"The amendment's item 10 registers the driver's USD cap at 90.00, citing this entry, and the spend table's cap
+column reads 90.00."* That amends D21-105 item 2's US$30 for S-BIN's dispatches only. Every other live or paid step
+stays deferred. The cap above is unchanged, so this is not an edit raising a cap. The bounds are planning figures,
+and their warrant is above: METHOD-S §3.6's ~$30 over 10 dispatches, S-TYPED's median of $3.03, and 18 × ~$5. The
+capture sessions are unmeasured, so the operator notes each one's actual cost on its procedure-log line.
+
+| batch | contents | per-batch USD bound | cumulative bound | cap (D21-140; D21-105 item 2's 30.00 amended) | spent so far | fits at the bounds? |
+| --- | --- | --- | --- | --- | --- | --- |
+| B0 | driver and audit in the private copy (D21-140 item 2), the stub dry run, the five review trees, the operator's UE greenness runs | 0.00 | 0.00 | 90.00 | 0.00 | yes: no model spend |
+| B1 | ≤ 3 haiku probes (≤ 0.50 in all), then 5 capture sessions (≤ 2.00 each, ≤ 10.00 in all, unmeasured) | 10.50 | 10.50 | 90.00 | 0.00 | yes |
+| B2 | pass 1: 5 Opus (≤ 5.00 each) | 25.00 | 35.50 | 90.00 | 0.00 | yes |
+| B3 | pass 2: 5 Opus (≤ 5.00 each) | 25.00 | 60.50 | 90.00 | 0.00 | yes, if B1 and B2 stayed within their bounds |
+| retries | ≤ 4 Opus inside B2/B3 (≤ 5.00 each) | 20.00 | 80.50 | 90.00 | 0.00 | only while spent stays within the bounds above |
+| B4 | ≤ 4 Opus re-runs (≤ 5.00 each), only on METHOD-S §3.4 branch 2 | 20.00 | 100.50 | 90.00 | 0.00 | **no, at the bounds**: only if spent before it is under 70.00 |
+
+**The check.** Before each batch, and before each retry at its own 5.00 bound, the orchestrator sums the spend so far
+from the cost records. Those are every record's `total_cost_usd`, `probes.jsonl` and the procedure log's `cost_usd`.
+A missing cost is refused, never read as zero. The batch launches only if (90.00 − spent) > that batch's bound.
+**Said plainly: B3, the retries and B4 may not fit.** At the bounds, B1 to B3 and all four retries reach 80.50, and B4
+does not fit. B3 and the retries fit only if B1 and B2 came in at or under their bounds. If per-dispatch cost sits
+near S-TYPED's $3.03, the whole table fits (18 × 3.03 + 10.50 = 65.04). Under D21-105 item 2's original US$30, B2
+alone would not have fitted (35.50), and D21-140 superseded that cap for S-BIN. The driver's own caps stand
+(`the_dispatch_cap_refuses_before_spawning`): 18 Opus, which is the table's 5 + 5 + 4 + 4, plus 3 haiku and 90.00
+summed. The amendment's item 10 registers the driver's USD cap at 90.00, citing D21-140. After each batch, the
+*spent so far* column is updated by dated edit from the records, never estimated. The build ends at the first B1
+go-ahead line, prepared in D21-141 (reserved) and not run.
 
 **The go-ahead line.** Before each batch the operator writes, in the ledger entry this stage opens (next free D21 id at
 writing), one dated line of the fixed form `S-BIN go-ahead B<n> <YYYY-MM-DDTHH:MM:SSZ> — <scope>, <caps used so far>`. The B1
@@ -862,6 +987,12 @@ does not dispatch through that adapter. That is why `wrap` does not compare to i
 `cli_version`. The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`. If it is not, the freeze failed, and that is `s8j`'s Halt 2 to report. Inside the set,
 `a_version_move_between_dispatches_halts_the_set` enforces the rule.
 
+*(dated 2026-10-02, s8i build)* **Halt 2 at stage open** (§8i.0 item 8's dated note): the pin file reads 2.1.278, the 2026-09-24 reading
+was 2.1.281, and the CLI now reads 2.1.288. The account row is absent: `~/.claude-personal/settings.json` carries no
+`DISABLE_AUTOUPDATER`. Writing it is the operator's, as a **deferred gate before B1**, and the pre-check above
+refuses without it. The set's version is the one the CLI reads once the row is written. The B1 pre-check's
+`CLI_VERSION` records it. Halt 2 also goes on the stage's `PROGRESS.md` row, at the tracker edit (owed, not made here).
+
 ### 8i.6 Kill and abort conditions
 
 Each of these stops the stage where it stands. The batch in progress is recorded as far as it went, the ledger gets a
@@ -950,6 +1081,8 @@ with one `file=` line per corpus file listed above, per raw transcript and per c
 - **Three rows in `spikes/FINDINGS.md`'s index**, in its own `| F | draft | spike | headline |` form: **F41**
   (`S-PORTS`) and **F42** (`S-GRAMMAR`), missing since their drafts were written (§8i.0 item 10; assigned here by the
   2026-09-24 revision brief), and the S-BIN row. Each headline is condensed from the draft's own `## F<n> —` line.
+  *(dated 2026-10-02, s8i build)* F41's and F42's rows are written at stage open, after F40's row and in its form. The S-BIN row waits for its
+  draft, at the reserved F43.
 - The ledger entry with every go-ahead.
 - The `Binary` record and the dated notes, AC-475's replacement among them (§8i.8).
 - The tracker rows.
@@ -1010,6 +1143,57 @@ evidence problem. The review gate's applicability to binary-asset toolchains is 
 adapter loses its premise, and the five toolchain-keyed kinds (ADR-0073) are re-cut."* The `Binary` variant then
 encodes that answer — the human-gate route and the recorded requirement — and each of the three consequences is
 either taken in the record or named as owed with an owner.
+
+*(dated 2026-10-02, s8i build)* **Stage-open measurements, before any Rust edit** (read-only, at `09018dd`):
+
+1. **`s8a`'s split.** `crates/rk-ports/src/toolchain.rs` declares `pub enum ChangeSummary {`,
+   `pub struct TextChangeSummary {` and `pub struct BinaryChangeSummary(pub(crate) ());` [measured, `grep -n`]. The
+   sealed-slot test is `change_summary::binary_arm_is_not_constructible_outside_rk_ports` in
+   `crates/rk-ports/tests/it/change_summary.rs`, whose body is
+   `t.compile_fail("tests/ui/change_summary_binary_not_constructible.rs");`. Its `trybuild` case is
+   `crates/rk-ports/tests/ui/change_summary_binary_not_constructible.rs`, beside its `.stderr`. So **`CS` = `rk-ports`**,
+   and Checkpoint 8i (8)'s default `CS_CRATE=rk-ports` stands.
+2. **The review-input seam (`review_input`'s hook point).** The `step.rs` arm quoted below
+   (`"change_summary" => toolchain.change_summary("").map(|_| ())`) no longer exists. `s8d` P4 replaced it with
+   `ToolCall::Port(PortMethod::SummariseChanges) =>`, which calls
+   `let summary = toolchain.change_summary(range, bound)?;` and serialises the value with
+   `serde_json::to_value(&summary)` under `PortMethod::SummariseChanges.output_kind()`. The review dispatch's input
+   is then assembled **type-neutrally in rk-kernel**:
+   - The shipped `adversarial-review` activity's `review` agent step declares `change = "artifact:ChangeSummary"`.
+   - `runtime::reference::resolve_inputs` resolves that binding to a `serde_json::Value`.
+   - `agent_arm`'s `with_resolved_inputs(own, &step.id, &run.inputs)` joins it into the step's own
+     `ActivitySpec.inputs`, which `rk-adapter-claude`'s `user_message` serialises into the prompt.
+
+   rk-cli holds the *typed* value at two places, and the kernel types neither:
+   - The `Toolchain` decorators in `crates/rk-cli/src/verbs/run.rs`, for example
+     `impl rk_ports::toolchain::Toolchain for ChecklistBridge`, whose `change_summary` delegates
+     `self.inner.change_summary(range, bound)`.
+   - The per-step spec builder in the same file
+     (`let mut step_specs: std::collections::BTreeMap<String, rk_types::activity::ActivitySpec> =`).
+
+   `review_pass.rs` is ADR-0162's re-execution pass, and it is not the input seam. **`review_input` hooks at rk-cli's
+   `Toolchain` decorator layer in `verbs/run.rs`.** There it reads the item's typed `ChangeSummary` for the item's range
+   and builds what the reviewer receives, and the kernel carries the serialised value opaque. On the human-gate route,
+   its refusal leaves through X16's type-neutral request. The seam is reachable **without the kernel naming the
+   type**, so the STOP below does not fire on this measurement. Which of the two rk-cli places carries the code is the
+   post-dispatch Rust package's choice, made under the record's route, and neither needs rk-kernel to name the type.
+3. **rk-store's render module.** `crates/rk-store/src/render.rs` (`pub mod render;` in `lib.rs`) and
+   `crates/rk-store/tests/it/render.rs` (`mod render;` in `tests/it/main.rs`) exist. So the two `render::ac154_*`
+   tests keep the module name `render::`, and no rename note is owed.
+4. **Measured and raised, not repaired here: Checkpoint 8i (8)'s kernel type scan cannot pass on today's tree.** Its
+   `KT_RE` scan drops comment lines but does not blank string literals. At HEAD it fires on two kernel code lines that
+   carry the artifact-kind *string* and do not name the type:
+   - `crates/rk-kernel/src/lattice.rs`: `&& ["Changeset", "ImplReport", "ChangeSummary"]`
+   - `crates/rk-kernel/src/workflow/memo.rs`: `Self::SummariseChanges => "ChangeSummary",`
+
+   [measured: (8)'s own grep and `comment_line` filter, run read-only]. Checkpoint 8a's kernel filter (`k_filter`)
+   blanks string literals before it matches, so 8a passes on the same lines. The options, most reversible first:
+   - (a) Blank string literals in (8)'s scan as 8a's `k_filter` does, and add a control that admits a string-literal
+     line.
+   - (b) Admit the two lines by a counted, reasoned exemption.
+   - (c) Rename the two literal sites, which is a kernel change no stage owes.
+
+   This gates Checkpoint 8i, not B0 or B1, and it is left for a ruling.
 
 **The Rust — named, red first, each with its mutant.** `CS` below is the crate `s8a`'s record homes the type in
 (`rk-ports` at `ca8f387`; ADR-0099 clause 5). `s8a`'s own test that the slot is sealed —
@@ -1202,8 +1386,9 @@ asserts the note.
   - `s8`'s final-label bullet carries its dated note.
   - No design or register line still states S-BIN as pending without a note.
   - Every finding draft has its index row, F41 and F42 included.
-- **The whole suite is green**, over the floor re-derived from Checkpoint 8h's recorded count (1243 expected:
-  1189 + 54, D21-48 floor propagation, 2026-09-24; it read 1222) plus this stage's 6 + N + G, and fmt and clippy are clean. G is 3 on the human-gate route and 0 on the
+- **The whole suite is green**, over the floor re-derived from Checkpoint 8h's recorded count (~~1243 expected:
+  1189 + 54, D21-48 floor propagation, 2026-09-24; it read 1222~~ *(dated 2026-10-02, s8i build)* **1404** passed over **44** result lines,
+  Checkpoint 8h's recorded count at `d24d15a`, `PROGRESS.md` row 8h and D21-138) plus this stage's 6 + N + G, and fmt and clippy are clean. G is 3 on the human-gate route and 0 on the
   reviewer route (D21-48 X16).
 - **Checkpoints 8h, 8a and 5 re-run whole and green.** Checkpoint 8h is the entry gate. Checkpoints 8a and 5 are made
   provisional by this stage's edits. No other checkpoint is re-run directly.
@@ -1268,13 +1453,16 @@ test -n "$sess_before" || { echo "FAIL: the account holds no session transcript 
 test -f runbook/tools/nodispatch.sh || { echo "FAIL: runbook/tools/nodispatch.sh is absent — D21-47's shared wrapper"; exit 1; }
 . runbook/tools/nodispatch.sh || { echo "FAIL: could not source runbook/tools/nodispatch.sh"; exit 1; }
 nd_setup "$PWD/target/cp8i/nd" || exit 1
-# THE FLOOR's base (guard (10)). Expected value, re-derived at stage open from Checkpoint 8h's recorded count: 1243
-# (740 at 992d257, ADR-0164's evidence, + 9 + 25 + 78 + 62 + 50 + 74 + 85 + 66 + 54 over 8a..8h), so the floor is
-# 1243 + 6 + NFIELDS + NGATE (NGATE is set in (8): 3 on the human-gate route, 0 on the reviewer route; D21-48 X16).
+# THE FLOOR's base (guard (10)). Expected value, re-derived at stage open from Checkpoint 8h's recorded count: ~~1243~~
+# ~~(740 at 992d257, ADR-0164's evidence, + 9 + 25 + 78 + 62 + 50 + 74 + 85 + 66 + 54 over 8a..8h)~~, so the floor is
+# ~~1243~~ 1404 + 6 + NFIELDS + NGATE (NGATE is set in (8): 3 on the human-gate route, 0 on the reviewer route; D21-48 X16).
 # Edit these two values by a dated edit before the first run; 44 is the result-line floor.
 # (Final consistency pass 2026-09-24: was 1168, on sibling counts since revised. D21-48 floor propagation,
 # 2026-09-24: was 1222, before s8c 78, s8d 62, s8d-ii 50, s8f 85 and s8h 54.)
-FLOOR_8H_PASSED=1243
+# *(dated 2026-10-02, s8i build)* Re-derived from the RECORDED count, not the drafted chain: PROGRESS.md row 8h and D21-138 record
+# Checkpoint 8h passed WHOLE at d24d15a, 1404 passed / 0 failed / 9 ignored over 44 result lines. The drafted 1243
+# (and the older 1168 and 1222) is struck: FLOOR_8H_PASSED=1404, FLOOR_8H_RESULTS=44.
+FLOOR_8H_PASSED=1404
 FLOOR_8H_RESULTS=44
 
 # ---- (1) BUILD-OR-FAIL.
