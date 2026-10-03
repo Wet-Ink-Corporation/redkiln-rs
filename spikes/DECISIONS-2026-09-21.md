@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-145), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-146), and what they license
+
+*(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-145)"**; `D21-146` is appended with this move.)*
 
 *(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-144)"**; `D21-145` is appended with this move.)*
 
@@ -6653,3 +6655,25 @@ reads 71 voids: 70 genuine, and 1 disclosed false void, a mistyped path to the s
 - **The cite *"D21-144 (d)"*.** The letters (a) … (d) are the ruling record's (`target/afk-wf/s8i-ruling-d21-144.json`),
   not this ledger's. Here (d) is D21-144's Ruled item 1, its fourth bullet: *"named roots taken from a **measured
   read-only sweep** of the reachable drives"*, whose *"expected set is D:/r6c, D:/repos/redkiln-sev and %TEMP%/claude"*.
+
+---
+
+## D21-146 · The operator rules that the review trees' editor launcher is neutralised in all five trees before B1
+
+**Taken by the operator on 2026-10-03** at a Weigh-In sitting (wi-938b68, decided A), with the evidence and options laid
+out: *"Neutralise in all 5"*. This is the operator's ruling, not a D21-105 provisional one. It resolves owed item (i),
+recorded by R8-RECORD-8i after refuting round 8.
+
+**The residual.** Every base tree ships `_workspace/tooling/RunEditor_OurGame.bat`, whose line 13 reads `set
+PROJECT=D:\repos\BrittonGames\OurGame\OurGame.uproject`. The tree documents it as the way to launch the editor, and
+running it escapes both the runtime out-of-tree void and the shadow audit.
+
+**Ruled.**
+1. The launcher joins §8i.2 item 3's registered strip set, by an appended METHOD-S extension, identically in all five
+   trees. It is either removed or rewritten to a tree-relative PROJECT, whichever keeps the stripped set identical
+   across trees; the fix package chooses and states which.
+2. The five base trees are rebuilt at zero spend, with the leak-token, blob-oid and strip checks re-run.
+3. The driver gains a precheck that refuses a copy holding an absolute answer-bearing path in an executable file
+   (.bat, .cmd, .ps1, .sh, or Python outside docstrings), with a named test.
+4. The tooling scripts whose absolute BrittonGames paths sit only in docstrings are measured and stated. They are not
+   stripped unless the precheck finds a path in executable code.
