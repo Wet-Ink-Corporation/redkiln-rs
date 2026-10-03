@@ -107,6 +107,16 @@ impl Fixture {
         let repo = self.sub(name);
         std::fs::create_dir_all(&repo).expect("mkdir repo");
         self.git(&repo, &["init", "--quiet"]);
+        // Repo-local config, because the product's `GitExec` does not carry this fixture's env:
+        // (1) the identity, so a commit the wrapper makes has one on a box with no global identity
+        // (an `ubuntu-latest` runner: "Author identity unknown"); (2) no auto-maintenance, so this
+        // fixture's own commit does not start git's detached maintenance, which kept writing under
+        // `.git` (`objects/maintenance.lock`) while AC-174's before/after fingerprint was taken.
+        // *(Added 2026-10-03, the first ubuntu-latest run.)*
+        self.git(&repo, &["config", "user.name", "rk"]);
+        self.git(&repo, &["config", "user.email", "rk@example.invalid"]);
+        self.git(&repo, &["config", "maintenance.auto", "false"]);
+        self.git(&repo, &["config", "gc.auto", "0"]);
         std::fs::write(repo.join("a.txt"), b"one\n").expect("write a.txt");
         self.git(&repo, &["add", "a.txt"]);
         self.git(&repo, &["commit", "--quiet", "-m", "one"]);

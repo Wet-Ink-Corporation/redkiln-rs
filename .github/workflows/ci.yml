@@ -69,6 +69,20 @@ jobs:
           cargo install cargo-audit --version 0.22.2 --locked
           cargo install cargo-deny --version 0.20.2 --locked
 
+      # (dated 2026-10-03, the first windows-latest run) a hosted Windows runner's %TEMP% is the 8.3 short path
+      # C:\Users\RUNNER~1\..., while git reports worktrees in the long form C:/Users/runneradmin/...; seven rk-cli
+      # tests built expected run-tree paths from the short spelling and missed git's listing on a correct product.
+      # rk-cli's temp_repo() now canonicalises its base (the code fix); this points TMP/TEMP at RUNNER_TEMP
+      # (D:\a\_temp, no short names) as well, so every other tempdir in the suite is long-form too. Windows only:
+      # POSIX temp paths have no 8.3 form. Before the pnpm and nextest steps, so nextest stays immediately
+      # before `test` (Checkpoint 8c (2)).
+      - name: long-form temp directory (Windows, 8.3)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+
       # D21-42 14a (s8j §8j.7): the Node toolchain adapter's fixture project needs node_modules before
       # `cargo test --workspace`, or fourteen rk-adapter-toolchain-node tests fail at tests/it/support.rs's
       # preflight (992d257 counted ten; s8c's build, bound, verbs and red_suite tests make it fourteen), as
