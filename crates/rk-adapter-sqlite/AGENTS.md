@@ -12,14 +12,14 @@ adapter.
 - Never: `rusqlite` directly, `rk-kernel`, `rk-cli`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - Consumes `rk-store`'s connection discipline and opens no second writer connection (ADR-0105 clause 7); `rusqlite` is not a dependency of this manifest.
 - The on-disk layout is `rk-store`'s, applied unchanged (AC-371).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-adapter-sqlite` (CI runs `cargo nextest run` through `ci.yml`).

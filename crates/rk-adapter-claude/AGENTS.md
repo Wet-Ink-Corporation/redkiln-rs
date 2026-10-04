@@ -12,7 +12,7 @@ adapter.
 - Never: `rk-kernel`, `rk-store`, `rk-cli`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - Constructed once at the composition root, never per call (design §9.1).
@@ -20,7 +20,7 @@ Workspace-internal, never published (`publish = false`). The deliberate surface 
 - tokio is a dependency of this crate only, confined behind sync port methods (ADR-0076, RT-15).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-adapter-claude` (CI runs `cargo nextest run` through `ci.yml`).

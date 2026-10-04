@@ -12,14 +12,14 @@ application (workflow).
 - Never: `rk-containment`, `rk-adapter-*`, `rk-cli`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - Never depends on `rk-containment` or any `rk-adapter-*` (ADR-0127 decision 3; Checkpoint 7c).
 - Unbuilt steps are not stubbed: "powerless is reported as powerless" (golden constraint 10).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-kernel` (CI runs `cargo nextest run` through `ci.yml`).

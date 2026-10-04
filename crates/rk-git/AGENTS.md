@@ -12,13 +12,13 @@ infrastructure (library).
 - Never: adapter crates, `rk-kernel`, `rk-cli`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - All shelling out to git goes through one wrapper type in this crate; no `std::process::Command` for git exists anywhere else (ADR-0077:70, ADR-0105 clause 5).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-git` (CI runs `cargo nextest run` through `ci.yml`).

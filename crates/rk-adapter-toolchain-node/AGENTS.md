@@ -12,14 +12,14 @@ adapter.
 - Never: `rk-kernel`, `rk-store`, `rk-cli`.
 
 ## Public surface
-Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports (inferred, confirm).
+Workspace-internal, never published (`publish = false`). The deliberate surface is what `lib.rs` re-exports.
 
 ## Invariants
 - Every child it spawns goes through `rk_containment::run_bounded` under a construction-time timeout.
 - The test fixture needs `pnpm install --frozen-lockfile` once before the suite (CI does this; §8j.7).
 
 ## Errors
-See the error types named in `lib.rs` and the ADRs it cites (inferred, confirm).
+See the error types named in `lib.rs` and the ADRs it cites.
 
 ## Test strategy
 Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo test -p rk-adapter-toolchain-node` (CI runs `cargo nextest run` through `ci.yml`).
