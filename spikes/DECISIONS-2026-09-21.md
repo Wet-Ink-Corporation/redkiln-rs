@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-146), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-147), and what they license
+
+*(Title moved 2026-10-03 during `s8i`, R9FIX-8i: it read **"(D21-1 … D21-146)"**; `D21-147` was appended at `aca5d04` without the move. Measured: `grep -c '^## D21-'` → 147.)*
 
 *(Title moved 2026-10-02 during `s8i`: it read **"(D21-1 … D21-145)"**; `D21-146` is appended with this move.)*
 
