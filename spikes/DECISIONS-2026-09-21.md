@@ -6560,6 +6560,8 @@ S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of
 
 S-BIN go-ahead B1 <YYYY-MM-DDTHH:MM:SSZ> — at most 3 haiku flag probes on throwaway trees, then the five /ue-verify capture sessions on D:/sb/cap/item-1..5, caps used so far $0.00; fixture proofs: Checkpoint 8h d24d15a, dry run <sha256 of results/s-bin/dry-run.jsonl>; amendment 285b659fbcd3cd4d424541c4211e3b6398ea26ed
 
+*(dated 2026-10-03, operator sitting, s8i step 1)* **The dry run's review repository is accepted after an independent rebuild.** The operator first rejected the D21146-8i build of `D:/sb/dry/rev/item-1` and rebuilt it from a plain Git Bash with the same script (`s8i_D21146-8i_review.py`, sha256 `f80a7814…365d`): `remove`, then `build` with the author and committer dates pinned to the original's (`1791065007 -0700`). The rebuild reproduced commit `48cd028e2b83b65e12d456c4ca2e2a258cbed593` exactly (tree `3c0fb0e6…b645`, parentless, `rev-list --all --count` 1, base item 1's tree plus exactly the two `_s-bin/report/` files, report sha256 `c3dae802…6bc6`, `VERIFY OK`). Step 4's inputs stand unchanged, and the fixture hash `8f98bf43…ea1` stands. This signs no line.
+
 ---
 
 ## D21-144 · `s8i`: the S-BIN driver's out-of-tree audit is a hardened, measured denylist at runtime, with an allowlist shadow audit that holds flagged records unscored
@@ -6633,6 +6635,8 @@ own path and under the profile's legacy `AppData/Local/Application Data` junctio
 states no seed, and no registered root moves.
 
 *(dated 2026-10-03, operator sitting, s8i step 1)* **The operator CONFIRMS A; no escalation to B.** Grounded by a read-only panel over the final replay (`R7FIX-8i-replay-r7final.out`): under A, 71 runtime voids of 838 sessions (70 genuine, 1 disclosed false); under B, 241 further honest sessions would void, and every leak rounds 6 to 8 found escaped both audits alike. Owed item (g)'s replay half is discharged **by class**: the historical replay flags (10,794 R5SHADOW-FLAG lines in the final replay, not the R5 build's 11,064) are acceptance evidence only, cleared by the class table, and get no line in `results/s-bin/oot-shadow-rulings.jsonl`. S-BIN records are ruled line by line, defaulting to void.
+
+*(dated 2026-10-03, operator sitting, s8i step 2)* **Housekeeping (h) done by the operator, by deletion** (the operator's choice; a move elsewhere on C: or D: would stay reachable and outside the registered roots). Deleted: `D:/r6c` (a 2026-09-25 scratch clone, HEAD `b8e7aa9`, with staged scratch edits), `~/.claude-backup` (a 2026-08-02 account backup), every `%TEMP%/claude` entry except this orchestrating session's own folder (`D--repos-redkiln-rs/d93cf9d3-…`), and the temp files the sweep named (`tmp.uDZZzvzEF4`, `h.md`, `l143`, `ms0`). Verified after: the targets are absent, and no `D--sb-*` slug exists under `%TEMP%/claude` (D21-145's absence check, first reading: OK). By the operator's split, `D:/repos/redkiln-sev`'s seed-bearing tooling (`afk-tools/sp`, `afk-tools/close-templates`) is removed after packet step 4 and before the B1 line is signed, because steps 2 and 4 read it by pinned path.
 
 ---
 
