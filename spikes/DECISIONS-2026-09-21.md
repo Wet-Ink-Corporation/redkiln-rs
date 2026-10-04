@@ -6372,6 +6372,8 @@ kernel change no stage owes, and it would make 7b, 7b-ii and 8a provisional.
 **Id note.** The stage-open note reserved D21-141 for the S-BIN entry that holds the go-ahead lines. That entry takes
 the next free id when it is written, and the reservation note is corrected by dated line.
 
+*(dated 2026-10-03, operator sitting, s8i step 1)* **The operator REJECTS this provisional ruling and takes (B), a counted exemption.** Grounded first by a read-only panel (two lensed judges and a synthesiser): the blanking admitted three real type uses on synthetic lines (a raw string with an inner quote, the closing line of a multi-line string, `r"\"`), which none of the block's seven controls covers; (C) is ruled out because `"ChangeSummary"` is wire vocabulary (`spikes/p9/registry.toml:10`). Ruled: (8)'s `kt_scan` loses its string and char blanking; exactly the two lines above are exempt, matched on path plus the whole trimmed line (never a line number), each entry matching exactly once and exactly 2 admitted; new F controls for a type use appended to an exempt line, exempt content at another path, a duplicated exempt line, each of the three probes, and a stale entry. It is built by dated edit before the formal Checkpoint 8i, with one refuting round scoped to (8); it moves no DRV, AUD or dry-run byte. Correction: the block has seven controls, not the two this entry names, and it also blanks char literals, which 8a's `k_filter` does not.
+
 ---
 
 ## D21-142 · The operator registers a second CLAUDE.md strip rule for the pre-`07fe80ab6` table and picks seed 5's replacement R = `6a101bdcd`
@@ -6630,6 +6632,8 @@ own path and under the profile's legacy `AppData/Local/Application Data` junctio
 16 of the `report.py` hits and the work-OneDrive document, which came from a separate pass. Every unregistered hit still
 states no seed, and no registered root moves.
 
+*(dated 2026-10-03, operator sitting, s8i step 1)* **The operator CONFIRMS A; no escalation to B.** Grounded by a read-only panel over the final replay (`R7FIX-8i-replay-r7final.out`): under A, 71 runtime voids of 838 sessions (70 genuine, 1 disclosed false); under B, 241 further honest sessions would void, and every leak rounds 6 to 8 found escaped both audits alike. Owed item (g)'s replay half is discharged **by class**: the historical replay flags (10,794 R5SHADOW-FLAG lines in the final replay, not the R5 build's 11,064) are acceptance evidence only, cleared by the class table, and get no line in `results/s-bin/oot-shadow-rulings.jsonl`. S-BIN records are ruled line by line, defaulting to void.
+
 ---
 
 ## D21-145 · `s8i`: the reviewer's own background-task output under `<temp>/claude/<own slug>/<session>/tasks/` is exempt from the out-of-tree void
@@ -6657,6 +6661,8 @@ reads 71 voids: 70 genuine, and 1 disclosed false void, a mistyped path to the s
 - **The cite *"D21-144 (d)"*.** The letters (a) … (d) are the ruling record's (`target/afk-wf/s8i-ruling-d21-144.json`),
   not this ledger's. Here (d) is D21-144's Ruled item 1, its fourth bullet: *"named roots taken from a **measured
   read-only sweep** of the reachable drives"*, whose *"expected set is D:/r6c, D:/repos/redkiln-sev and %TEMP%/claude"*.
+
+*(dated 2026-10-03, operator sitting, s8i step 1)* **The operator CONFIRMS the exemption and answers its two questions, with no driver change.** (1) The absence proof is the operator's: after housekeeping (h), and before each batch B1 to B4, from a plain Git Bash, `ls /c/Users/ryanm/AppData/Local/Temp/claude | grep -i '^D--sb-'` must print nothing (0 of 257 entries matched on 2026-10-03). (2) The shadow allowlist does not carry the path; those reads stay flagged, and a flag whose only evidence is a read under `<temp>/claude/<copy slug>/<the record's own session id>/tasks/` is cleared. Correction: a background command is audited after the session, over the transcript's tool uses, not *"when it is issued"*.
 
 ---
 
