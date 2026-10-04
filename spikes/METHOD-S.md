@@ -2321,3 +2321,106 @@ Any later change is disclosed here with the date and the records it post-dates.
   **5. The dry run's review repository, rebuilt.** It is a byte copy of base item 1 (`s8i` §8i.3, package S8I-P8), so
   it held the launcher, and item 4's check refuses it. It is rebuilt from the rebuilt base item 1 by
   `s8i_D21146-8i_review.py`, which is S8I-P8's script with its two pins of base item 1 moved. It is one parentless commit, `48cd028e2b83b65e12d456c4ca2e2a258cbed593`, base item 1's tree plus exactly the two `_s-bin/report/` files, and it supersedes `378a183fa265f00b6af2a3be02ba2d8adbf87b36`. The dry run's fixture, re-derived unchanged by S8I-P8's own script, hashes `8f98bf430ddf6f461217eab9f89305b6d279bdec011f5282aac691e67f728ea1`. The check reads `[]` over it.
+
+- **s8i pre-dispatch amendment, extension: item 3's strip writes one generated backlog stub back into all five
+  trees, and the driver refuses a dispatch copy whose stub differs, under D21-147 — 2026-10-03, before B1; no S-BIN
+  record exists** (cites the *s8i pre-dispatch amendment* above and its items 3 and 4, and the D21146-8i extension
+  above, its items 1 and 4. It edits nothing in them or in the other extensions above). Written in the AFK build,
+  package D21147-8i-A, under `spikes/DECISIONS-2026-09-21.md` D21-147, the operator's ruling of 2026-10-03. Its item 1
+  reads *"After the existing whole-directory strip, one generated file is written at
+  `_workspace/backlog/game_foundation_backlog.json`, byte-identical in all five trees"*, and *"No further story is
+  admitted"*.
+
+  **1. The rule.** Item 3's strip set is unchanged: the same four entries, the same in all five trees
+  (`CLAUDE.md#status-rows`, `_workspace/backlog/`, `_workspace/references/UE58_Editor_And_MCP_Gotchas.md` and
+  `_workspace/tooling/RunEditor_OurGame.bat`). `_workspace/backlog/` is still removed whole. Right after that removal,
+  the strip writes exactly one file back, at `_workspace/backlog/game_foundation_backlog.json`. Its bytes are the ones
+  in item 2, the same in all five trees. After the strip, `_workspace/backlog/` holds that one file and nothing else.
+  The stub is written content, not a fifth strip entry, so every tree's `stripped` set stays the one four-entry set.
+
+  **2. The bytes, registered.** UTF-8 (all ASCII), one line, LF-terminated, no byte-order mark, compact JSON with no
+  whitespace. The stories are in the order `8.3.5a`, `8.3.5b`, `8.5.8`. Each story has `id` then `status`, and
+  `status` is `todo`. There is no other field and no other story. These are the 109 bytes:
+
+  ```
+  {"stories":[{"id":"8.3.5a","status":"todo"},{"id":"8.3.5b","status":"todo"},{"id":"8.5.8","status":"todo"}]}
+  ```
+
+  followed by one LF. sha256 `211a4dcf7be9eb68ef73dfcb6e67a832b1713f1e3c9aa8f148fb52df189f8787`. A copy is kept
+  at `D:/repos/redkiln-sev/afk-tools/sp/s8i/D21147-8i-A-backlog-stub.json`. The stub holds none of the registered
+  leak tokens.
+  - **The shape is the one the specs read** [measured 2026-10-03, read-only on `D:/sb/base`]. The spec
+    `OurGame/Source/OurGameTests/Private/Tests/Architecture_NoInertCapability.spec.cpp` exists in bases 2 and 3 only
+    (sha256 `81e90ac9…8628` and `af0f7643…f396`). Both read the file at test time in `TryGetStoryStatus`. Each
+    deserialises the root, takes `Root->TryGetArrayField(TEXT("stories"), Stories)`, and keeps an entry only when
+    `TryGetStringField(TEXT("id"), Id)` and `TryGetStringField(TEXT("status"), Status)` both hold. Item 2's waivers
+    name `8.3.5a`, `8.3.5b` and `8.5.8`, and its anti-blindness story is `8.3.5a`. Item 3's one waiver names `8.3.5b`,
+    and so does its anti-blindness story. In each of the five trees no other code reads the file: `OurGameTests.Build.cs`
+    names it in a comment, `check_docmap.py` (items 1 to 4) names it only in an exemption set, and the rest are Markdown.
+  - **Under the stub,** item 2's two failing assertions read as follows. *"Expected '8.3.5a exists in the backlog' to
+    be true"* finds `8.3.5a` as `todo`. *"Expected 'the backlog JSON parsed and yielded stories' to be true"* finds
+    three stories. Every waiver names a story that is not `done`. That is the prediction; the greenness runs are the
+    operator's (D21-147 item 3).
+
+  **3. Disclosed: the stub is fixture content, not the item's backlog.** Read-only at the five item commits
+  [measured 2026-10-03, `git show <commit>:_workspace/backlog/game_foundation_backlog.json` piped to a reader that
+  printed only these three ids' statuses; nothing was written]:
+  - at `cc0cf2d01`, `fa1ea72f4` and `a71265925`, all three read `todo`, as in the stub;
+  - at item 3's commit `e83463288`, `8.3.5a` and `8.5.8` read `done`, and `8.3.5b` reads `todo`. Item 3's spec reads
+    only `8.3.5b`, so the two stories the stub states as `todo` there are never read by its tests;
+  - at item 5's commit `6a101bdcd`, none of the three ids is in the file, which holds 189 stories. Item 5 has no such
+    spec.
+
+  No further story is admitted. `8.5.5b` tracks the seed. The stub states no title, epic or prose, so it carries
+  nothing the reviewer could read as the item's status.
+
+  **4. The driver writes it and checks it (D21-147 item 2).** In the driver patch that supersedes
+  `S8I-D21146-8i-sbin-driver.patch`, `strip_tree` writes `BACKLOG_STUB` at `BACKLOG_STUB_PATH` right after it removes
+  `_workspace/backlog/`. `stripped_path_set_is_identical_across_all_five_trees` now admits exactly that one file
+  under `_workspace/backlog/` in each of the five trees, at the registered bytes. It also pins the sha256 and the
+  shape above. Item 4's pre-spawn checks gain one more check, `precheck_backlog_stub`. It refuses before the spawn,
+  naming the check, unless the copy's `_workspace/backlog/` holds exactly one entry, the stub file, at the registered
+  bytes. A missing directory, a missing stub, a second file, CRLF, a byte-order mark, a missing LF, a further story
+  or field, or a pretty-printed equivalent all refuse. A refusal writes no record (R2FIX-8i's extension, item 3), so
+  `s8i` §8i.7's record keeps its 34 names. The cases sit in two existing named tests, so the driver's selection
+  stays at 33 tests. The base trees and the dry run's review repository built before this extension hold no stub, so
+  the check refuses each of them (`D21147-8i-A-ctl-old.out`). They are rebuilt under D21-147 item 3, not by this
+  extension.
+
+  **5. Residuals standing.** Every earlier extension's residuals stand. The stub changes no seed, item, rendering or
+  ceiling, and no part of METHOD-S §3.
+
+  **6. The bases and the dry run's review repository, rebuilt (D21-147 item 3).** Recorded in the AFK build, packages
+  D21147-8i-B and D21147-8i-C. Each base was built as the D21146-8i extension's item 3 records, by
+  `s8i_D21147-8i_build.py`, which `s8i_D21147-8i-B_mkbuild.py` derives from `s8i_D21146-8i_build.py` by eight anchored
+  replacements: the stub's bytes and their write right after the backlog strip, the expected tree admitting exactly
+  the stub's blob, a check of the committed stub, and new base, clone and record roots. Each was built beside the old
+  one, under `D:/sb/base-d21147`, from a disposable clone under `D:/sb/tmp-d21147` (deleted), and replaced it at
+  `D:/sb/base/item-<n>` only after all five verified (`ALL_OK`). BrittonGames' HEAD (`ee6e450`), status sha256
+  (`a6751b0c…69ed`), worktree-list sha256 (`ba14505a…e0ab`) and config sha256 were the same before and after. This
+  table supersedes the D21146-8i extension's item 3 table.
+
+  | item | item commit | base commit | base tree | LFS pointer paths | base bytes (`.git` included) |
+  | --- | --- | --- | --- | --- | --- |
+  | 1 | `cc0cf2d01` | `58e9896335f2009a7772fb99d6df9cf123418dd4` | `6782b95bf399274efbc6e20ea28ab00a5976c958` | 30,014 | 21,540,844,470 |
+  | 2 | `fa1ea72f4` | `e8954b617f4a8b30e7ed2b1dfd221655caf65186` | `72ff014f359c6ce4dbb4af37f53826084bbb09a5` | 30,015 | 21,541,173,139 |
+  | 3 | `e83463288` | `efcc24297540af65905c699cb41a25464dd69082` | `86bc1c51b2375ac99f8ec4070f6e846bb55c0f9d` | 30,022 | 21,560,067,392 |
+  | 4 | `a71265925` | `2878d79dda6ae72a1143a63937834ed3fb327eff` | `6782b95bf399274efbc6e20ea28ab00a5976c958` | 30,014 | 21,540,843,094 |
+  | 5 | `6a101bdcd` | `e0620bfaac31a388fc2863a4f01f8b3f1c16a0a4` | `f1c3d6cff4e004ec05014e81a5028f651a596f51` | 11,886 | 10,604,498,743 |
+
+  - **Each new tree is the D21146-8i tree plus the stub.** Entry for entry, each new `HEAD` tree equals the D21146-8i
+    base's, except for one added entry, `_workspace/backlog/game_foundation_backlog.json`, blob
+    `999761537faf3961b3424f1cb3a36bbcd2cec967` (the registered bytes, LF), with none removed or changed. The LFS,
+    leak-token, seed blob-oid and single-commit checks were re-run and pass, and every build record's `stripped` is
+    the one four-entry set (`s8i` §8i.4's D21147-8i note). Base items 1 and 4 still hold one tree.
+  - **The dry run's review repository** is rebuilt from the new base item 1 by `s8i_D21147-8i-B_review.py`, S8I-P8's
+    script with its two pins of base item 1 moved. It is one parentless commit,
+    `a8d9478b54556d6617963cab622b385109928ab3` (tree `4bf6ff94d001720f2f550448cb3bcc9d42bfb7e5`), base item 1's tree plus
+    exactly the two `_s-bin/report/` files, and it supersedes the D21146-8i extension item 5's
+    `48cd028e2b83b65e12d456c4ca2e2a258cbed593`. The dry run's fixture, re-derived unchanged by S8I-P8's own script,
+    hashes `62f6469c11e3bc5e656b565ba28c79709ad30526b954d88017ebd69024b6a8b1`, superseding
+    `8f98bf430ddf6f461217eab9f89305b6d279bdec011f5282aac691e67f728ea1`. The driver's check reads
+    `backlog_stub_ok=true` and `exec_path_hits=[]` over each new base and over it.
+  - **The driver patch** item 4 describes is `D:/repos/redkiln-sev/afk-tools/sp/s8i/S8I-D21147-8i-sbin-driver.patch`
+    (sha256 `0bf69ab4a1a1e8a396f278c63d1cd4fb943ac64ffc1898392a3c6e8cce54da3c`), applied with `S8I-R5FIX-8i-audit-bin.patch` and no
+    other. The dry-run script is unchanged (sha256 `5d112e09…2c2c`).
