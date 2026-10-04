@@ -6689,3 +6689,44 @@ running it escapes both the runtime out-of-tree void and the shadow audit.
    (.bat, .cmd, .ps1, .sh, or Python outside docstrings), with a named test.
 4. The tooling scripts whose absolute BrittonGames paths sit only in docstrings are measured and stated. They are not
    stripped unless the precheck finds a path in executable code.
+
+---
+
+## D21-147 · The operator rules that one generated backlog stub is written into all five review trees, and that the greenness helper's `UnrealTraceServer` survivor is not Halt 6
+
+**Taken by the operator on 2026-10-03** at a sitting in the session that walks `s8i`'s operator steps, with the evidence
+grounded by a read-only panel (two lensed judges and a synthesiser). This is the operator's ruling, not a D21-105
+provisional one.
+
+**The defect.** The operator's greenness run of clean item 2 (`fa1ea72f4`) read 920 tests, 2 failed, exit 1. Both are
+`OurGame.Architecture.NoInertCapability` (*"Expected '8.3.5a exists in the backlog' to be true"*, *"Expected 'the
+backlog JSON parsed and yielded stories' to be true"*). The spec reads `_workspace/backlog/game_foundation_backlog.json`
+at test time, and `_workspace/backlog/` is in amendment item 3's registered strip set, whole. The spec exists in bases 2
+and 3 only; items 1, 4 and 5 lack it. Item 1 read 892 tests, 0 failed, exit 0. The registration requires green only on
+the seeded trees (`s8i` §8i.4 step 2), but the report is each item's `tests.report_ref`, so two strip-caused failures
+would reach the reviewers of two of the three clean items and no one else, and METHOD-S counts two of three clean items
+blocked as `undecided-fp`. Restoring the real file is ruled out by measurement: at every item commit it carries the
+registered leak tokens (`LoadoutFill` 2 to 5 times, `white-on-white`, `VERIFIED COLD`).
+
+**Ruled.**
+1. After the existing whole-directory strip, one generated file is written at
+   `_workspace/backlog/game_foundation_backlog.json`, byte-identical in all five trees: `{"stories":[...]}` holding
+   exactly the ids the NoInertCapability specs read, `8.3.5a`, `8.3.5b` and `8.5.8`, each with `"status": "todo"`, and
+   no other field or story. It is registered by an appended METHOD-S extension, which discloses it as fixture content:
+   at item 3's commit `8.3.5a` and `8.5.8` read `done`, and item 3's spec reads only `8.3.5b`. No further story is
+   admitted (`8.5.5b` tracks the seed).
+2. The driver writes and checks it: the strip writes the stub, the identical-strip-set test admits exactly that one
+   file, and a named check refuses a copy whose stub differs from the registered bytes. A new driver patch supersedes
+   `S8I-D21146-8i-sbin-driver.patch`.
+3. The five bases are rebuilt at zero spend, with the leak-token, blob-oid, LFS and strip checks re-run; the dry run's
+   review repository is rebuilt from the new base item 1, and its commit and fixture hash move; all five greenness runs
+   are redone on the new bases (item 1's 892/0 and item 2's red are superseded). One refuting round follows before B1.
+4. **The greenness helper's Halt 6.** `s8i_S8I-P7_green.py` matches any process name containing `unreal`, which is
+   broader than the registered rule (an `UnrealEditor` process: `UNREAL_PROCESS_PREFIX = "unrealeditor"` in the driver;
+   packet step 12's `^"unrealeditor`). It stopped items 1 and 2 on `UnrealTraceServer.exe`, UE's shared trace daemon,
+   with no `UnrealEditor*` surviving. That is not Halt 6. Before and after each greenness run the operator confirms no
+   `UnrealEditor*` process and ends `UnrealTraceServer.exe`; the helper is not changed.
+5. **Disclosed.** Grounding this ruling, one panel judge wrote the five item commits' full backlog JSONs to
+   `%TEMP%/bl_*.json`, new answer-bearing copies outside the registered roots after housekeeping (h). The orchestrator
+   deleted them the same evening, before any dispatch.
+
