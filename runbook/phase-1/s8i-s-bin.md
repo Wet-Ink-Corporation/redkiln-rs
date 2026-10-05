@@ -2236,6 +2236,10 @@ safety cap of 8).** No patch moves: `DRV`, `AUD` and step 4's script are those t
 #    first run read 'FAIL: nd_setup needs an absolute POSIX directory'. Fixed to /d/repos/redkiln-rs/target/s8i-dry/nd, the
 #    one change (the old script is kept as S8I-P8-dryrun-before-nd.sh). Its sha256 is now
 #    c3353777ec4828ac34b7028f4a85e0bae4418b18f775c30e0b8da3038d92351f, superseding 5d112e09...2c2c.
+#    (dated 2026-10-05, s8i, operator sitting) The second run read 'sed: can't read crates/rk-adapter-claude/src/config.rs':
+#    nd_setup reads that file and runbook/tools/fake-claude.rs relative to the cwd (nodispatch.sh:47,49), and the script
+#    had already cd'd into the corpus. It now runs nd_setup from /d/repos/redkiln-rs and cd's back (old bytes kept as
+#    S8I-P8-dryrun-before-cwd.sh). Its sha256 is now c25b1387d3045d2f1d6a4d2e52ea709e66dc47ae5ba9efae86a2b65eaa97a007.
 bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
 #    Then commit its results in the corpus, and remove the dry run's 21.5 GB review repository:
 ( C=D:/repos/redkiln-corpus

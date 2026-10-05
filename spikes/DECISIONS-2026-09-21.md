@@ -6560,6 +6560,8 @@ signs a line.
 
 *(dated 2026-10-05, operator sitting)* **The dry-run script is fixed and re-pinned.** Its line 36 passed `nd_setup` a `D:/` path, which `runbook/tools/nodispatch.sh` refuses, so every dry run refused before it built (the operator's first run, after the B0 commit `40c0332` and the B0 block's 33-test reading). The one-line fix passes `/d/repos/redkiln-rs/target/s8i-dry/nd`. The script's sha256 is now `c3353777ec4828ac34b7028f4a85e0bae4418b18f775c30e0b8da3038d92351f`, superseding `5d112e09…2c2c`; the old bytes are kept as `S8I-P8-dryrun-before-nd.sh`. Nothing else moves, and this signs no line.
 
+*(dated 2026-10-05, operator sitting)* **Re-pinned again.** The second run refused at `nd_setup`'s cwd-relative read of `crates/rk-adapter-claude/src/config.rs` (the script had already entered the corpus). `nd_setup` now runs from `/d/repos/redkiln-rs`, and the script returns to the corpus. sha256 `c25b1387d3045d2f1d6a4d2e52ea709e66dc47ae5ba9efae86a2b65eaa97a007`, superseding `c3353777…351f` (old bytes kept as `S8I-P8-dryrun-before-cwd.sh`).
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 2026-10-05T03:06:00Z — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
