@@ -6560,7 +6560,7 @@ signs a line.
 
 **The go-ahead lines (unsigned):**
 
-S-BIN go-ahead B0 <YYYY-MM-DDTHH:MM:SSZ> — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
+S-BIN go-ahead B0 2026-10-05T03:06:00Z — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
 
 S-BIN go-ahead B1 <YYYY-MM-DDTHH:MM:SSZ> — at most 3 haiku flag probes on throwaway trees, then the five /ue-verify capture sessions on D:/sb/cap/item-1..5, caps used so far $0.00; fixture proofs: Checkpoint 8h d24d15a, dry run <sha256 of results/s-bin/dry-run.jsonl>; amendment 285b659fbcd3cd4d424541c4211e3b6398ea26ed
 
