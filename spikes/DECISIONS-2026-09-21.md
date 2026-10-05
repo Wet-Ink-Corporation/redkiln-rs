@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-04 (D21-1 … D21-148), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-05 (D21-1 … D21-149), and what they license
+
+*(Title moved 2026-10-05 during `s8i`: it read **"2026-09-21 … 2026-10-04 (D21-1 … D21-148)"**; `D21-149` is appended with this move.)*
 
 *(Title moved 2026-10-04 during `s8i`: it read **"2026-09-21 … 2026-10-03 (D21-1 … D21-147)"**; `D21-148` is appended with this move.)*
 
@@ -6782,3 +6784,38 @@ replaced"* does not apply: this is not a red seed. Replacing seed 5 would not he
    operator.
 4. If the newer script fails on R's tree for a reason inside the script itself, the fallback is a one-line backport
    of `-DisablePlugins=Monolith` into R's script, disclosed as not byte-identical across trees.
+
+---
+
+## D21-149 · B1's capture step meets an asset type it cannot render: the operator rules that the tool's own rejection gives an empty capture list, identically on every tree
+
+**Taken by the operator on 2026-10-05**, at a §8i.6 stop in B1, grounded by a read-only panel (two lensed judges and a
+synthesiser). This is the operator's ruling, not a D21-105 provisional one.
+
+**The stop.** B1's capture session for item 2 (`D:/sb/cap/item-2`, Opus 5.5, **$0.90**) ran the registered
+`/ue-verify /Game/Tests/FTEST_Inventory_Stash — write the capture_scene_preview of the k-th asset above to
+_s-bin/captures/capture-<k>.png`. The map resolved, PIE ran on it and stopped, and no capture was written:
+`capture_scene_preview` rejects a World. `MonolithEditorActions.cpp:2765`, byte-identical in all five bases, returns
+*"Unsupported asset_type: %s (supported: niagara, material, static_mesh, skeletal_mesh, widget)"*. Item 3's two assets
+(`BP_GamePlayerState`, a Blueprint class; `DA_Item_Sword`, a data asset) are unsupported too, read from the same source
+but not yet measured in a session. §8i.0 item 11 left this *"Unmeasured"*; §8i.6 makes it a stop for a ledger line, and
+METHOD-S's amendment item 2 step 5 says *"nothing falls back to empty captures"*. Item 1 captured as registered
+(`WBP_StashRow`, $0.98, `shows_subject=yes`). Spent so far: $1.90 (probe $0.021026; items 1 and 2).
+
+**Ruled (B).**
+1. Every changed asset still gets the registered `capture_scene_preview` call, unchanged ($ARGUMENTS and the capture step
+   as registered). When the tool rejects an asset's class, that asset carries no capture. An item where every asset is
+   rejected carries `captures: []`; its procedure-log line reads `sha256=none shows_subject=n/a` with the session's model
+   and `cost_usd`. A partly previewable item carries a capture for each accepted asset, matched to its asset by explicit
+   index. The tool's rejection decides, never a per-tree choice, so N19 holds.
+2. Registered by an appended METHOD-S extension that amends item 2 step 5 and discloses the confound: capture presence
+   follows asset type, and both seeds are widgets (P(seeded | capture) = 2/3 over the five items), which F43 must state
+   beside the false-positive outcome. Each reviewer sees only its own item, and clean item 1 carries a capture.
+3. The driver accepts an empty capture list and renders it neutrally; captures carry an explicit asset index; the dry
+   run no longer injects a synthetic capture; `every_item_carries_a_capture_reference_or_rendering_refuses` is inverted,
+   red first. That is a new runner commit, a new zero-spend dry run, and a re-signed B1 line naming it, all before B2.
+   Checkpoint 8i's `caplog_ok`, its synthetic controls and the per-item capture pins are amended by dated edit.
+4. Order: item 2's procedure-log line is written now (`n/a`, $0.90, so its cost stays in the cap accounting); item 3's
+   session runs under the unchanged step so its rejection is measured; items 4 and 5 are captured under the unchanged
+   step; then the driver change, the dry run and the re-signed line. Before B2, item 2's and item 3's constructed specs
+   are checked for an acceptance criterion that names a capture.
