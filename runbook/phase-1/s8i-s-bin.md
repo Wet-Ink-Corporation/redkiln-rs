@@ -1803,6 +1803,8 @@ capture sessions are unmeasured, so the operator notes each one's actual cost on
 | B3 | pass 2: 5 Opus (≤ 5.00 each) | 25.00 | 60.50 | 90.00 | 0.00 | yes, if B1 and B2 stayed within their bounds |
 | retries | ≤ 4 Opus inside B2/B3 (≤ 5.00 each) | 20.00 | 80.50 | 90.00 | 0.00 | only while spent stays within the bounds above |
 | B4 | ≤ 4 Opus re-runs (≤ 5.00 each), only on METHOD-S §3.4 branch 2 | 20.00 | 100.50 | 90.00 | 0.00 | **no, at the bounds**: only if spent before it is under 70.00 |
+*(dated 2026-10-05, s8i, operator sitting)* **Spent so far, from the cost records: $0.021026.** B1's probe 1 (`results/s-bin/probes.jsonl`, `observed_model` `claude-haiku-4-5-20251001`, `total_cost_usd` 0.021026, `total_cost_source` reported; launch record `20261005T042425.618581700Z-wrap.txt`, CLI 2.1.289 before and after) showed all three properties: `card_adopted` true (init tools `[Read, Bash, StructuredOutput]` = `CARD_TOOLS`), `apiKeySource` `none`, and `--json-schema` live. The probes stop at 1 of 3; haiku used 1 of 3. Capture sessions: none yet. (90.00 − 0.02) = 89.98.
+
 
 **The check.** Before each batch, and before each retry at its own 5.00 bound, the orchestrator sums the spend so far
 from the cost records. Those are every record's `total_cost_usd`, `probes.jsonl` and the procedure log's `cost_usd`.
