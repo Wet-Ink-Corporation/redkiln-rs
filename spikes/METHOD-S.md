@@ -2440,3 +2440,41 @@ Any later change is disclosed here with the date and the records it post-dates.
   **6. Residuals standing.** Every earlier extension's residuals stand. The script changes no seed, item, rendering or ceiling, and no part of METHOD-S §3.
 
 *(dated 2026-10-04, s8i, operator sitting)* **The swap is done, by the operator.** From a plain Git Bash the operator renamed `D:/sb/base/item-5` (`e0620bfa`) aside, moved `D:/sb/base-d21148/item-5` into its place, re-read it there (HEAD `c2f948ecb902d972f19c2b4b87491be22159f314`, `status --ignored` empty, `verify_headless.ps1` blob `ebe7e58f`), replaced `S8I-P7-out/item-5.json` with the D21148 record (`base_path` `D:/sb/base/item-5`; the D21-147 record and the build-time record are kept under `S8I-D21148-out/superseded/`), then deleted the old base. `s8i_D21148-8i-A_prepcheck.py` reads `PREPARE_PRECONDITIONS_HOLD` (its first run failed only on its own `p7 == rec` condition, because the D21148 record still named the build-time path; the record's `base_path` was aligned). Item 5's single binding greenness run may start.
+
+- **s8i pre-dispatch amendment, extension: the deferred extensions 2, 3 and 4 — the greenness results, `ceiling_secs`
+  and `SBIN_NEED_BYTES` — 2026-10-04, before B1; no S-BIN record exists.** This paragraph cites the entry above and
+  edits nothing in it. It is written from the operator's five greenness runs (D:/repos/redkiln-sev/afk-tools/sp/s8i/
+  `s8i_S8I-P7_green.py`, `prepare`/`run`/`collect`/`cleanup`, from a plain Git Bash, the editor closed) and the
+  staged `state.json` files. The draft at `S8I-P7-extension-draft.md` is superseded: its base paragraph named the
+  P7-era bases, which the D21146-8i, D21147-8i and D21148-8i extensions above replaced; the bases are theirs.
+  - **The greenness results (deferred extension 4).** Each tree ran `pwsh -File _workspace/tooling/verify_headless.ps1`
+    in its own copy `D:/sb/green/item-<n>`, which was then deleted. All five carry the same script blob
+    (`ebe7e58f3df5756ad016d9075512a27cd2417fae`, D21-148) and the D21-147 backlog stub.
+
+    | item | commit | seeded | base | exit | failed | succeeded | succeededWithWarnings | notRun | tests | wall s | suite s | index.json SHA-256 | headless.log SHA-256 |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 1 | `cc0cf2d01` | no | `58e9896335f2009a7772fb99d6df9cf123418dd4` | 0 | 0 | 732 | 160 | 0 | 892 | 693.1 | 41.0 | `49e3b3f084d2c3bcbb7a00fd679567e81eec0cb62b4ab8ea94a6c6a496f41a0c` | `1a675cd0870be05b38560937794da23b0d57cc1b64fa63978eefe2bfe38aa27c` |
+    | 2 | `fa1ea72f4` | no | `e8954b617f4a8b30e7ed2b1dfd221655caf65186` | 0 | 0 | 754 | 166 | 0 | 920 | 728.0 | 51.4 | `f511374108406e549174ccefc127dca78037d3fb51fbfa22b4821ecb9a830582` | `058e7c5bd8b378f516859f8d6d26e0b403a35bab8f995dc91bdb979d5356fa70` |
+    | 3 | `e83463288` | no | `efcc24297540af65905c699cb41a25464dd69082` | 0 | 0 | 826 | 171 | 0 | 997 | 755.2 | 56.0 | `9176f1ff8ace344a5e993f5efb9c7fdbe74e058aa6e0e208bb3dbb6f545e32ed` | `f383279c4c0724684935200d0eda327e4f259f683e1152297bca516bbbfc7e45` |
+    | 4 | `a71265925` | yes | `2878d79dda6ae72a1143a63937834ed3fb327eff` | 0 | 0 | 732 | 160 | 0 | 892 | 702.7 | 41.1 | `ea43a11b3839a40d0c679b67a9b9bd536b1b75ca7c3ab7dd1509a0b9248d9d9e` | `e3031a72ecb5e3b8f45584993afb80787cd1126c31f5471d505685f6b3df551c` |
+    | 5 | `6a101bdcd` | yes | `c2f948ecb902d972f19c2b4b87491be22159f314` | 0 | 0 | 139 | 36 | 0 | 175 | 644.4 | 13.1 | `755517b4312585def291fc8c1fc28a2806b7f3dfca69bf7128b5f8bd452c1139` | `fabbcc89d8c8daab2c2fd11441c1406cef897eb62cdd61a6ff3e87acfb5fccfb` |
+
+    Both seeded trees are green (`failed` = 0, exit 0), and so are the three clean trees. Superseded readings, kept
+    with their diagnoses: items 1 and 2 on the D21-146 bases (item 1 green, item 2 red from the backlog strip, D21-147)
+    and item 3's on its D21-146 base, under `S8I-D21147-out/superseded/greenness/`; item 5's red run on `e0620bfa`
+    (Monolith's indexer, D21-148) under `S8I-D21148-out/superseded/greenness/item-5/`. Each survivor the helper
+    reported was `UnrealTraceServer.exe` only, which D21-147 item 4 rules is not Halt 6.
+  - **The pin report (owed item (d)), accepted by the operator on 2026-10-04.** It is copied to
+    `results/s-bin/pin-report-2026-09-05/index.json`, SHA-256 `c3dae80254299b8400149388d38df91b2885a4cf5c11ac0f8faf534b5d7e6bc6`,
+    the value measured at authoring. The registered source, BrittonGames' `_workspace/tooling/TestResults/index.json`,
+    was overwritten on 2026-09-25 (it hashes `65960f78…1a8a`), so the copy was taken from
+    `_workspace/_runs/8.3.3g-20260904-2334/final-suite.json` (2026-09-05, `reportCreatedOn` `2026.09.05-08.40.33`,
+    849/180/0/0 over 1029 tests), which is byte-identical (re-hashed 2026-10-04).
+  - **The ceiling (deferred extension 2).** Build-plus-suite wall clock per tree: item 1 693.1 s, item 2
+    728.0 s, item 3 755.2 s, item 4 702.7 s, item 5 644.4 s.
+    `W_max` = 755.2 s (item 3). Under item 7's rule, `ceiling_secs` = 3600 + `W_max` rounded up to the next multiple
+    of 300 = **4500**, the same for every dispatch and every retry. `fixture.json`'s top-level `ceiling_secs` is
+    4500.
+  - **`SBIN_NEED_BYTES` (deferred extension 3).** The largest base (`.git` included) is 21,560,067,392 bytes (item 3);
+    the largest growth one greenness run left behind is 9,550,135,442 bytes (item 3). Under item 4's rule,
+    `SBIN_NEED_BYTES` = ceil((21,560,067,392 + 9,550,135,442) × 1.1) = **34221223118**.

@@ -1734,11 +1734,12 @@ the exit and the wall clock. `collect` copies `index.json` and `headless.log` to
 
 | item | seeded | exit | failed | wall s (build + suite) | suite s (`totalDuration`) | copy bytes before | copy bytes after | green (`failed`=0, exit 0) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | no | | | | | | | |
-| 2 | no | | | | | | | |
-| 3 | no | | | | | | | |
-| 4 | **yes** | | | | | | | must be yes |
+| 1 | no | 0 | 0 | 693.1 | 41.0 | 21,540,844,470 | 31,061,486,590 | yes *(dated 2026-10-04, s8i, operator sitting)* |
+| 2 | no | 0 | 0 | 728.0 | 51.4 | 21,541,173,139 | 31,067,922,220 | yes *(dated 2026-10-04, s8i, operator sitting)* |
+| 3 | no | 0 | 0 | 755.2 | 56.0 | 21,560,067,392 | 31,110,202,834 | yes *(dated 2026-10-04, s8i, operator sitting)* |
+| 4 | **yes** | 0 | 0 | 702.7 | 41.1 | 21,540,843,094 | 31,061,607,828 | yes *(dated 2026-10-04, s8i, operator sitting)* |
 | 5 | **yes** *(dated 2026-10-04, s8i build, D21148-8i-B)* run only on the rebuilt base `c2f948ec`, after the operator swaps it into `D:/sb/base/item-5`; the run on `e0620bfa` (175 tests, 2 failed, exit 1) is superseded (D21-148), and this one binds | | | | | | | must be yes |
+| 5 | **yes** *(dated 2026-10-04, s8i, operator sitting)* the binding run on `c2f948ec` | 0 | 0 | 644.4 | 13.1 | 10,604,502,675 | 19,583,418,307 | yes |
 
 The two formulas, pending the operator's numbers:
 - `ceiling_secs` = 3600 + `W_max`, rounded up to the next multiple of 300 s, where `W_max` is the slowest wall clock
@@ -2025,6 +2026,7 @@ D21-140 amended it for S-BIN, and is not used. The go-ahead lines go into **D21-
   `SBIN_NEED_BYTES` and the greenness results. B1's pre-check reads `SBIN_NEED_BYTES`, so extension 3 comes before
   B1.
 - **(d)** The operator accepts or rejects P7's pin-report source (§8i.4's dated note).
+  *(dated 2026-10-04, s8i, operator sitting)* **(c) and (d) are done.** The five greenness runs are green (METHOD-S's extension of 2026-10-04 for deferred extensions 2, 3 and 4 is appended: `ceiling_secs` = 4500, `SBIN_NEED_BYTES` = 34221223118), and the operator ACCEPTED the pin-report source, byte-identical at `c3dae802…6bc6`.
 
 *(dated 2026-10-03, s8i build)* **(a) and (b) are done (package S8I-F1).** (a): the driver reads the committed pointer, and the
 superseding patch is `S8I-F1-sbin-driver.patch` (sha256 `dd3ee74ec8dd2752cdffb42ffb4fb3491f32de3543bcc97003f029ca23414f3a`, §8i.3's
@@ -2242,7 +2244,9 @@ bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
 # 6. Sign D21-143's B1 line in place, with the dry run's sha256 from step 4, only if (90.00 - spent) > 10.50.
 # 7. §8i.5's pre-check block, as written, with these two values set in the same shell first:
 export SBIN_ROOT=D:/sb
-export SBIN_NEED_BYTES=0   # REPLACE 0 with extension 3's figure (0 makes the pre-check refuse). It is
+# *(dated 2026-10-04, s8i, operator sitting)* extension 3's figure is appended to METHOD-S: SBIN_NEED_BYTES = 34221223118. The line below
+# was `export SBIN_NEED_BYTES=0` (0 makes the pre-check refuse); the comment after it is kept as written.
+export SBIN_NEED_BYTES=34221223118   # was 0: REPLACE 0 with extension 3's figure (0 makes the pre-check refuse). It is
                            # ceil((largest base + largest growth) x 1.1). The largest base alone is 21,560,069,565
                            # bytes (item 3), so the figure is above 23,716,076,522.
                            # (dated 2026-10-03, s8i build, D21147-8i) This supersedes the two lines above. The
