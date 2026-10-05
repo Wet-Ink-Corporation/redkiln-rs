@@ -6562,6 +6562,8 @@ signs a line.
 
 *(dated 2026-10-05, operator sitting)* **Re-pinned again.** The second run refused at `nd_setup`'s cwd-relative read of `crates/rk-adapter-claude/src/config.rs` (the script had already entered the corpus). `nd_setup` now runs from `/d/repos/redkiln-rs`, and the script returns to the corpus. sha256 `c25b1387d3045d2f1d6a4d2e52ea709e66dc47ae5ba9efae86a2b65eaa97a007`, superseding `c3353777…351f` (old bytes kept as `S8I-P8-dryrun-before-cwd.sh`).
 
+*(dated 2026-10-05, operator sitting)* **B0 is complete, and the CLI is frozen.** Corpus commits `40c0332` (the B0 commit from `DRV` `0bf69ab4…` and `AUD` `e0243d5d…`, byte-identical to the private copy) and `f94a196` (the dry run and `driver-tests.txt`, 33 passed). The dry run's sha256 is `d730d14f11cfed7a68bcd8edba17efccf5faa62850b99f4dcf134b24faf4ed5a` (`driver-tests.txt` `7cd1260e…1797`); the 21.5 GB dry-run review repository is removed. The account's `env` row `DISABLE_AUTOUPDATER=1` is written, and the set's CLI version is **2.1.289** (Halt 2). Spent so far: $0.00. This signs no line.
+
 **The go-ahead lines (unsigned):**
 
 S-BIN go-ahead B0 2026-10-05T03:06:00Z — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00

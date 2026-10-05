@@ -2010,6 +2010,8 @@ was 2.1.281, and the CLI now reads 2.1.288. The account row is absent: `~/.claud
 refuses without it. The set's version is the one the CLI reads once the row is written. The B1 pre-check's
 `CLI_VERSION` records it. Halt 2 also goes on the stage's `PROGRESS.md` row, at the tracker edit (owed, not made here).
 
+*(dated 2026-10-05, s8i, operator sitting)* **Packet step 5 done: the CLI is frozen at 2.1.289.** The operator added `"env": { "DISABLE_AUTOUPDATER": "1" }` to `~/.claude-personal/settings.json` (its ten top-level keys now include `env`; the other nine are unchanged). A plain-terminal `claude --version` read `2.1.289 (Claude Code)` both just before and just after the row was written: the CLI had moved again since stage open (2.1.278 pin, 2.1.281 on 2026-09-24, 2.1.288 at stage open). **2.1.289 is the set's version** (D21-43 N22), recorded under Halt 2; B1's pre-check `CLI_VERSION` and every launch record must read it, and `s8j` pins it. The B0 batch is complete: the corpus commits `40c0332` (the driver and the audit, byte-identical to the private copy) and `f94a196` (the dry run and `driver-tests.txt`), the B0 block's 33-test reading, and the dry run's sha256 `d730d14f11cfed7a68bcd8edba17efccf5faa62850b99f4dcf134b24faf4ed5a`. Spent so far: $0.00.
+
 *(dated 2026-10-03, s8i build)* **The operator packet, from B0's corpus write to the snapshot before B2 (package S8I-P8).** All of
 it is prepared and none of it has been run. Every step is the operator's, from a plain Git Bash outside Claude Code,
 each in a subshell. The cap is US$90.00 (D21-140 item 1). Before each batch and each retry, the orchestrator checks
