@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-03 (D21-1 … D21-147), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-04 (D21-1 … D21-148), and what they license
+
+*(Title moved 2026-10-04 during `s8i`: it read **"2026-09-21 … 2026-10-03 (D21-1 … D21-147)"**; `D21-148` is appended with this move.)*
 
 *(Title moved 2026-10-03 during `s8i`, R9FIX-8i: it read **"(D21-1 … D21-146)"**; `D21-147` was appended at `aca5d04` without the move. Measured: `grep -c '^## D21-'` → 147.)*
 
@@ -6734,3 +6736,37 @@ registered leak tokens (`LoadoutFill` 2 to 5 times, `white-on-white`, `VERIFIED 
    `%TEMP%/bl_*.json`, new answer-bearing copies outside the registered roots after housekeeping (h). The orchestrator
    deleted them the same evening, before any dispatch.
 
+---
+
+## D21-148 · The operator rules that tree 5's headless verify script is BrittonGames' later Monolith-disabling blob, identical in all five trees, and that item 5's red is an instrument defect, not a red seed
+
+**Taken by the operator on 2026-10-04** at a sitting in the session that walks `s8i`'s operator steps, grounded by a
+read-only panel (two lensed judges and a synthesiser). This is the operator's ruling, not a D21-105 provisional one.
+
+**The reading.** The operator's greenness run of seeded item 5 (R = `6a101bdcd`, base `e0620bfa`) read 175 tests, 2
+failed, exit 1. Both are `OurGame.Combat.AttackRootMotion.BlendAttackRootMotionVelocity`, and their failure events hold
+no spec assertion: only `LogBlueprint` asset-load errors from the ALS-era notifies (`BP_AnimNotify_FoleyEvent`,
+`BP_NotifyState_MontageBlendOut`), whose `/Game/AdvancedLocomotionV4/` dependencies `fb0f856f7` removed before R. The
+Monolith plugin's first-launch deep indexer loaded them while those tests ran (1,383 `LogMonolithIndex` lines). The
+seed asset appears 0 times in the log.
+
+**The cause is the instrument.** Bases 1 to 4 carry `_workspace/tooling/verify_headless.ps1` blob
+`ebe7e58f3df5756ad016d9075512a27cd2417fae`, from BrittonGames `71e8f6c91` (2026-08-18, *"stop Monolith running inside
+the headless test editor, where it can fail any test"*), which passes `-DisablePlugins=Monolith`; their logs show the
+flag twice and 0 indexer lines. Base 5 carries R's blob `a2047f2d836d2d48e1f37c2145a2f1328091736f`, which predates it.
+The five runs did not use one instrument. The suite did not catch the seed, so §8i.4 step 2's *"A red seed is
+replaced"* does not apply: this is not a red seed. Replacing seed 5 would not help: every qualifying candidate
+(`9ca831a42`, `6a101bdcd`, `f6269ae7e`) predates `71e8f6c91`.
+
+**Ruled.**
+1. Tree 5's `_workspace/tooling/verify_headless.ps1` is set to blob `ebe7e58f…`, so that all five trees carry one
+   identical script. It is registered by an appended METHOD-S extension, which discloses that base 5's tooling file
+   differs from R's. The registered greenness command (§8i.4 step 1) is unchanged; the fix is in the tree, so a
+   reviewer who runs the suite in its copy runs it with Monolith disabled too.
+2. Base 5 alone is rebuilt at zero spend, with its leak-token, seed blob-oid, LFS, strip, D21-147 stub and exec-path
+   checks re-run. Bases 1 to 4 and their green reports stand. The seed and R do not move.
+3. Item 5's greenness is re-run **once**, and that run binds; the red run is kept as superseded, with this diagnosis.
+   It must read 175 tests. If it is still red with Monolith disabled, the cause is in R's tree and it returns to the
+   operator.
+4. If the newer script fails on R's tree for a reason inside the script itself, the fallback is a one-line backport
+   of `-DisablePlugins=Monolith` into R's script, disclosed as not byte-identical across trees.
