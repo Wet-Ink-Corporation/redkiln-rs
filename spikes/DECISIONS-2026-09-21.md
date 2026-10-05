@@ -6568,7 +6568,7 @@ signs a line.
 
 S-BIN go-ahead B0 2026-10-05T03:06:00Z — the corpus writes: the B0 commit of runner/src/sbin.rs and audit-s.py bin from the private-copy patches (D21-140 item 2), the driver's tests, the zero-spend dry run and its results, caps used so far $0.00
 
-S-BIN go-ahead B1 <YYYY-MM-DDTHH:MM:SSZ> — at most 3 haiku flag probes on throwaway trees, then the five /ue-verify capture sessions on D:/sb/cap/item-1..5, caps used so far $0.00; fixture proofs: Checkpoint 8h d24d15a, dry run <sha256 of results/s-bin/dry-run.jsonl>; amendment 285b659fbcd3cd4d424541c4211e3b6398ea26ed
+S-BIN go-ahead B1 2026-10-05T04:18:27Z — at most 3 haiku flag probes on throwaway trees, then the five /ue-verify capture sessions on D:/sb/cap/item-1..5, caps used so far $0.00; fixture proofs: Checkpoint 8h d24d15a, dry run d730d14f11cfed7a68bcd8edba17efccf5faa62850b99f4dcf134b24faf4ed5a; amendment 285b659fbcd3cd4d424541c4211e3b6398ea26ed
 
 *(dated 2026-10-03, operator sitting, s8i step 1)* **The dry run's review repository is accepted after an independent rebuild.** The operator first rejected the D21146-8i build of `D:/sb/dry/rev/item-1` and rebuilt it from a plain Git Bash with the same script (`s8i_D21146-8i_review.py`, sha256 `f80a7814…365d`): `remove`, then `build` with the author and committer dates pinned to the original's (`1791065007 -0700`). The rebuild reproduced commit `48cd028e2b83b65e12d456c4ca2e2a258cbed593` exactly (tree `3c0fb0e6…b645`, parentless, `rev-list --all --count` 1, base item 1's tree plus exactly the two `_s-bin/report/` files, report sha256 `c3dae802…6bc6`, `VERIFY OK`). Step 4's inputs stand unchanged, and the fixture hash `8f98bf43…ea1` stands. This signs no line.
 
