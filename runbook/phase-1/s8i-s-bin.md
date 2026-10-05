@@ -2231,6 +2231,11 @@ safety cap of 8).** No patch moves: `DRV`, `AUD` and step 4's script are those t
 #    (dated 2026-10-03, s8i build, D21147-8i) The script is unchanged. Its inputs moved (D21-147 item 3): D:/sb/dry/rev/item-1
 #    is commit a8d9478b54556d6617963cab622b385109928ab3, and the dry-run fixture hashes
 #    62f6469c11e3bc5e656b565ba28c79709ad30526b954d88017ebd69024b6a8b1 (§8i.4's D21147-8i note).
+#    (dated 2026-10-05, s8i, operator sitting) Line 36 called nd_setup with D:/repos/..., which runbook/tools/nodispatch.sh
+#    refuses (it needs an absolute POSIX directory), so the script refused every dry run before it built; the operator's
+#    first run read 'FAIL: nd_setup needs an absolute POSIX directory'. Fixed to /d/repos/redkiln-rs/target/s8i-dry/nd, the
+#    one change (the old script is kept as S8I-P8-dryrun-before-nd.sh). Its sha256 is now
+#    c3353777ec4828ac34b7028f4a85e0bae4418b18f775c30e0b8da3038d92351f, superseding 5d112e09...2c2c.
 bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
 #    Then commit its results in the corpus, and remove the dry run's 21.5 GB review repository:
 ( C=D:/repos/redkiln-corpus
