@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-06 (D21-1 … D21-151), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-06 (D21-1 … D21-152), and what they license
+
+*(Title moved 2026-10-06 during `s8i`: it read **"(D21-1 … D21-151)"**; `D21-152` is appended with this move.)*
 
 *(Title moved 2026-10-06 during `s8i`: it read **"2026-09-21 … 2026-10-05 (D21-1 … D21-150)"**; `D21-151` is appended with this move.)*
 
@@ -6877,3 +6879,31 @@ test, red first. It is built in the same driver change as D21-149 item 3. The ba
 *(dated 2026-10-06, s8i build, D21149-8i-A)* **Built (proposed, unsigned).** `dispatch_one` reads the free space on the review root's volume (`df -B1 --output=avail`, no new dependency) after the copy path is claimed and before the copy. It halts on a reading under `SBIN_NEED_BYTES` = `34_221_223_118` or on an unreadable reading. The named test is `a_volume_under_sbin_need_bytes_refuses_before_the_copy`, red first (*"one byte under the registered figure refuses: Recorded { … }"*), and its ten mutants flipped. METHOD-S's D21149-8i-A extension, item 5, registers it. It reaches the corpus with the D21149-8i runner commit (`s8i` §8i.5).
 
 *(dated 2026-10-06, operator sitting)* **The binding 34-test reading is the operator's.** Package D21149-8i-A's selection read 34 run, 30 passed, 4 failed in the agents' sandbox: `a_sweep_measured_root_voids`, `a_temp_read_written_earlier_in_the_session_is_not_flagged`, `an_out_of_tree_read_voids_the_record` and `the_shadow_audit_flags_reads_outside_the_allowlist` void their own reads because the AFK rule puts test scratch under `D:/repos/redkiln-sev`, a registered sweep root; the same four are red at pristine `cc7f222` (29/4). The operator rules that the reading which binds is the §8i.3 B0 block re-run from a plain shell with the default TEMP over the D21149-8i runner commit (packet step 3a), which must read `34 passed; 0 failed`; the re-pinned dry-run script refuses otherwise.
+
+---
+
+## D21-152 · The operator accepts the five constructed spec/report pairs as registered, diagnosis included, with an F43 disclosure and a recorded-only evidence-source tag
+
+**Taken by the operator on 2026-10-06**, before B2 and before any rendering is hashed, grounded by a read-only panel
+(two lensed judges and a synthesiser, which split). This is the operator's ruling, not a D21-105 provisional one.
+
+**The question.** Owed item (e)'s five pairs (METHOD-S's D21149-8i-B extension) render each report as *"the commit
+message rendered"*, so the two seeded items' reports carry the fix commit's own diagnosis: item 4's quotes *"alpha was
+0.097 where 0.97 was intended"* and names the fill widget; item 5's carries the three R tokens and names cold
+verification as the missing check. The review tree carries none of them (amendment item 3).
+
+**Ruled (K).**
+1. The five pairs are accepted exactly as built (report sha256 `9ae0c522…`, `a916fa90…`, `00696b45…`, `f0a9f60f…`,
+   `8848e41c…`, with their spec hashes as the D21149-8i-B extension tables them). No report byte moves. Grounds: the
+   diagnosis does not reach the tree, so detection still means reading the asset's binary state; the ChangeSummary and
+   the spec already name the seeded asset and property by design; E3's fix-lane reports describe the pre-fix state the
+   same way, so S-BIN stays comparable with E3; and any redaction chosen now would be chosen after the B1 captures, for
+   its effect on the seeded items (§3.6's author-chosen threat).
+2. **F43 discloses it:** the seeded items' reports carry the commit's own diagnosis (the widget, the pre-fix value or
+   state, and for item 5 the cold-verification method); a §3.4 branch-1 result reads as *"sufficient given the
+   report"*, not *"ChangeSummary alone sufficient"*; and branch 2's signal is less likely for the same reason.
+3. **A recorded-only tag**, applied when F43 is written and never in scoring: for each blocking finding, whether its
+   evidence cites something read from the asset (an editor, Python or binary read, or a capture) or only strings that
+   appear in the spec or report. §3.4's decision rule is unchanged.
+4. Registered by an appended METHOD-S extension. The panel's fallback, a cut of all five reports at `## Notes`, is
+   recorded as considered and not taken.

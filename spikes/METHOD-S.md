@@ -2612,3 +2612,17 @@ Any later change is disclosed here with the date and the records it post-dates.
   names a `/ue-verify` PIE pass; items 1, 4 and 5 carry a capture.
 
   Nothing here changes a seed, an item, a ceiling, `$ARGUMENTS`, the rendering's mappings, or any part of METHOD-S §3.
+
+- **s8i pre-dispatch amendment, extension: the five constructed spec/report pairs accepted as registered, and an
+  F43 disclosure and evidence-source tag (D21-152) — 2026-10-06, before B2; no S-BIN record exists, and no rendering
+  is hashed.** This paragraph cites the D21149-8i-B extension above and edits nothing in it.
+  1. **Accepted as built.** The operator accepts the five pairs exactly as the D21149-8i-B extension tables them,
+     reports included with the commit message's diagnosis (that extension's item 3, first bullet, is settled as K).
+  2. **Disclosed in F43.** The seeded items' reports carry the commit's own diagnosis (widget, pre-fix value or state,
+     and for item 5 the cold-verification method); the review tree does not. A §3.4 branch-1 result reads as
+     *"sufficient given the report"*, not *"ChangeSummary alone sufficient"*, and branch 2's signal is less likely.
+  3. **Recorded-only tag.** When F43 is written, each blocking finding is tagged by its evidence source: read from the
+     asset (editor, Python or binary read, or a capture), or only strings that appear in the spec or report. The tag is
+     never used in scoring; §3.4's decision rule is unchanged.
+  4. **Considered and not taken:** cutting all five reports at `## Notes` (one mechanical rule, identical across
+     items), because it departs from E3's fix-lane report shape and would be chosen after the B1 captures were seen.
