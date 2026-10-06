@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-05 (D21-1 … D21-149), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-05 (D21-1 … D21-150), and what they license
+
+*(Title moved 2026-10-05 during `s8i`: it read **"(D21-1 … D21-149)"**; `D21-150` is appended with this move.)*
 
 *(Title moved 2026-10-05 during `s8i`: it read **"2026-09-21 … 2026-10-04 (D21-1 … D21-148)"**; `D21-149` is appended with this move.)*
 
@@ -6819,3 +6821,26 @@ METHOD-S's amendment item 2 step 5 says *"nothing falls back to empty captures"*
    session runs under the unchanged step so its rejection is measured; items 4 and 5 are captured under the unchanged
    step; then the driver change, the dry run and the re-signed line. Before B2, item 2's and item 3's constructed specs
    are checked for an acceptance criterion that names a capture.
+
+---
+
+## D21-150 · Item 5's capture session stalled on the instrument: the operator rules one retry on a fresh capture copy
+
+**Taken by the operator on 2026-10-05**, in B1. This is the operator's ruling, not a D21-105 provisional one.
+
+**The reading.** Item 5's capture session (`D:/sb/cap/item-5`, editor PID 3020, Opus 5.5, **$0.76**) loaded
+`/Game/UI/HUD/WBP_GameVitals` cleanly, then lost Monolith during `start_pie`: port 9316 stopped listening while the
+editor stayed alive and responding, after Monolith's indexer had logged *"Critical memory situation detected (<2GB
+available)"*. No capture was written and nothing was substituted. The launcher read `RC=0`, CLI 2.1.289 after. The
+editor recovered (9316 listening again, 5.1 GB free) after the session exited. This is an instrument stall, not a
+framing judgement and not a type rejection (D21-149), so `shows_subject=no`'s §8i.6 stop does not describe it, and the
+registration provides no second session for an item.
+
+**Ruled.**
+1. The stalled session gets its own procedure-log line, `sha256=none shows_subject=stalled`, with its model and
+   `cost_usd`, so its cost stays in the cap accounting.
+2. The editor is closed (PIE stopped first if it is running), Halt 6 is checked, the copy and its temp slug are
+   removed, and memory is freed. Item 5 then gets **one** retry on a **fresh** capture copy from base 5 (a copy is never
+   reused), under the unchanged registered step. The retry's line binds. A second stall is a stop for a ruling.
+3. Checkpoint 8i's `caplog_ok` (already owed a dated amendment by D21-149) also admits exactly one `stalled` line per
+   item ahead of that item's binding line, and sums every line's `cost_usd`.
