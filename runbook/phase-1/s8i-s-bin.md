@@ -2306,7 +2306,7 @@ bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
   2. step 3a, the B0 block, which is the binding 34-test reading;
   3. step 4a, the dry run and its results commit, then the dry run's review repository removed (about 21.5 GB);
   4. step 6a, D21-143's B1 line re-signed in place with the new dry run's sha256 (D21-149 item 3);
-  5. ~~reading the five constructed pairs and accepting them or having them rebuilt (METHOD-S's D21149-8i-B extension: the seeded items' reports carry the commit message's own diagnosis), then~~ *(dated 2026-10-06, s8i build, R10FIX-8i: D21-152)* the reading is done: the operator accepts the five pairs exactly as built (D21-152 (K), METHOD-S's D21-152 extension), so none is rebuilt and nothing is owed before step 6b but step 6a; then step 6b below, owed item (e)'s corpus commit;
+  5. ~~reading the five constructed pairs and accepting them or having them rebuilt (METHOD-S's D21149-8i-B extension: the seeded items' reports carry the commit message's own diagnosis), then~~ *(dated 2026-10-06, s8i build, R10FIX-8i: D21-152)* the reading is done: the operator accepts the five pairs exactly as built (D21-152 (K), METHOD-S's D21-152 extension), so none is rebuilt and none is rebuilt, and between steps 6a and 6b nothing more is owed *(dated 2026-10-06, R11FIX-8i: was "nothing is owed before step 6b but step 6a"; steps 2a, 3a and 4a are owed too)*; then step 6b below, owed item (e)'s corpus commit;
   6. step 10, the BrittonGames snapshot before B2;
   7. steps 10a and 10b below: the B2 line, the pre-check and pass 1.
 - **Step 6b was run only against synthetic corpora** (`s8i_D21149-8i-D_test6b.py`, `D21149-8i-D-test6b.out`). On a repository in step 4a's state it commits 22 paths. It refuses a second run, a repository without step 4a's superseded dry run, an untracked file, and a staged file with one byte changed; in that last case it commits nothing.
@@ -2538,6 +2538,8 @@ After each batch, the spend table's *spent so far* column is updated by dated ed
 the procedure log.
 
 *(dated 2026-10-03, s8i, R9FIX-8i; refuting round 9)* **Refuting round 9 (D21-147 item 3's round on the changed fixture): no blocker, no major.** Five dimensions, every one returned; 12 minors. The documentation minors are fixed here. One coverage minor is recorded, not fixed, because it would re-cut `DRV`: `a_dirty_or_mismatched_copy_refuses_before_spawning`'s case *"the stub missing"* builds no backlog directory at all, so no case holds the directory without the stub; the code refuses that shape (`[one]` arity plus `stub.is_file()`). Two finders each wrote one file to `%TEMP%` by mistake and removed it at once (an earlier panel's five backlog JSONs, D21-147 item 5; round 9's `ms_old`, a METHOD-S copy); a scan of %TEMP% after found no leak-token file outside `%TEMP%/claude`.
+
+*(dated 2026-10-06, s8i, R11FIX-8i)* **Refuting rounds 10 and 11.** Round 10 (base `7fcca61`) found no blocker and one major, upheld 2-0: Checkpoint 8i did not tie the pinned capture files to `fixture.json`; R10FIX-8i (`94082e2`) built `capfiles_ok` with 14 synthetic pins, 7/7 guard mutants killed, and fixed its seven minors. Round 11 (base `524aadd`) found no blocker and no major, and four minors. Two wording minors are fixed here. **Two are owed before the formal Checkpoint 8i, by dated edit with synthetic controls:** (a) a read-only guard that lists the pinned corpus commit's `results/s-bin/captures/` (`git ls-tree -r --name-only`) and requires its `item-<n>/` entries to equal the pinned capture paths, so that an unpinned committed capture refuses; (b) a §8i.9 criterion and a (9) guard that F43 carries D21-152 item 2's disclosure, D21-152 item 3's evidence-source tag on each blocking finding, and D21-149 item 2's confound. Neither touches B2's inputs.
 
 ### 8i.6 Kill and abort conditions
 
@@ -3213,10 +3215,12 @@ print("ok" if not bad and len(seen)==6 else "BAD:"+",".join(bad)+" reached="+str
 ov=$(python -c "$octl"); rc=$?
 [ "$rc" -eq 0 ] && [ "$ov" = "ok" ] || { echo "FAIL: the rule-outcome computation fails its synthetic record sets (rc=$rc): $ov (D21-48 X3)"; exit 1; }
 # *(dated 2026-10-03, s8i build, R1FIX-8i)* s8i refuting round 1's blocker. METHOD-S's amendment (item 2, step 5) registers
-# the procedure log's sha256 as "<64 hex, one per capture file, comma-joined>", and item 3 has two captures. The drafted
+# the procedure log's sha256 as "<64 hex, one per capture file, comma-joined>", ~~and item 3 has two captures~~. The drafted
 # test, whole value IN capsha(item), could not accept item 3's correct line. The log's hashes are now split on ',' and
-# must equal the item's pinned capture hashes exactly, as a multiset: each capture logged once, none extra, none
+# must equal ~~the item's pinned capture hashes~~ fixture.json's capture hashes exactly, as a multiset: each capture logged once, none extra, none
 # missing. ONE snippet, shared by the record probe below and by its synthetic logs, as `outc` is.
+# (dated 2026-10-06, s8i, R11FIX-8i; refuting round 11) The struck words were stale: item 3 carries captures: [] (D21-149), and caplog_ok
+# compares the log against fixture.json's captures, which capfiles_ok (R10FIX-8i, below) ties to the pinned files.
 # (dated 2026-10-06, s8i build, D21149-8i-A) D21-149 and D21-150. An item whose every asset capture_scene_preview
 # rejected carries captures: [] in fixture.json and a binding line "sha256=none shows_subject=n/a" (items 2 and 3); a
 # capture session that stalled on the instrument has its own line "sha256=none shows_subject=stalled", at most one per
