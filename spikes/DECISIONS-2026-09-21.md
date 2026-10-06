@@ -6844,3 +6844,5 @@ registration provides no second session for an item.
    reused), under the unchanged registered step. The retry's line binds. A second stall is a stop for a ruling.
 3. Checkpoint 8i's `caplog_ok` (already owed a dated amendment by D21-149) also admits exactly one `stalled` line per
    item ahead of that item's binding line, and sums every line's `cost_usd`.
+
+*(dated 2026-10-06, operator sitting)* **The stall's cause, measured on the retry.** It was not memory. `start_pie` opens UE's modal *"Blueprint Asset Compilation Error … BP_AnimNotify_FoleyEvent"* (the ALS-era notify that R's tree still carries, D21-148), and the modal blocks the game thread, so Monolith stops answering. On the retry the operator dismissed it with *Play in Editor*; PIE ran on `TestOpenWorld` and `stop_pie` returned `{"stopped":true}`. The retry (Opus 5.5, $1.00) captured `WBP_GameVitals` before PIE, `capture_scene_preview` type widget, `capture-1.png` `0de695357e86f170ed59f40432634988ecc8ba9ddd2071033d3bfc5f261bf026`, `shows_subject=yes` (the operator's judgement on framing). B1 is complete at $5.561026 spent.
