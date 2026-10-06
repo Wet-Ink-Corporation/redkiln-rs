@@ -1,0 +1,507 @@
+warning: method `with_token` is never used
+   --> crates\rk-cli\tests\it\support.rs:162:12
+    |
+150 | impl ScriptedHarness {
+    | -------------------- method in this implementation
+...
+162 |     pub fn with_token(self, token: CancelToken) -> Self {
+    |            ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `queries` and `appends` are never used
+   --> crates\rk-cli\tests\it\support.rs:347:12
+    |
+335 | impl CountingStore {
+    | ------------------ methods in this implementation
+...
+347 |     pub fn queries(&self) -> usize {
+    |            ^^^^^^^
+...
+352 |     pub fn appends(&self) -> usize {
+    |            ^^^^^^^
+
+warning: `rk-cli` (test "it") generated 2 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.90s
+     Running unittests src\lib.rs (<scratchpad>/audit-target\debug\deps\rk_adapter_toolchain_rust-0ce7a089a4949aab.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\it\main.rs (<scratchpad>/audit-target\debug\deps\it-2ab8d600acca6ad5.exe)
+
+running 72 tests
+test libtest_lines::a_block_whose_record_count_differs_from_its_header_is_unverifiable ... ok
+test libtest_lines::a_nonzero_exit_with_no_failed_record_is_unverifiable_never_green ... ok
+test libtest_lines::a_record_line_outside_a_block_is_never_counted ... ok
+test classify::classify_source_spawns_nothing ... ok
+test libtest_lines::a_slow_test_notice_inside_a_block_is_skipped_never_refused ... ok
+test libtest_lines::a_summary_that_disagrees_with_its_records_is_unverifiable ... ok
+test libtest_lines::an_unpinned_toolchain_version_is_refused_by_name ... ok
+test affected::a_named_selection_the_adapter_does_not_declare_is_refused_by_name ... ok
+test nextest_lines::a_nonzero_exit_with_no_fail_line_is_unverifiable_never_green ... ok
+test libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally ... ok
+test nextest_lines::a_summary_that_disagrees_with_its_status_lines_is_unverifiable ... ok
+test nextest_lines::a_retry_or_timeout_line_is_unverifiable_never_counted ... ok
+test nextest_lines::an_argument_nextest_rejects_is_refused_naming_it ... ok
+test nextest_lines::an_unpinned_nextest_version_is_refused_by_name ... ok
+test libtest_lines::the_pinned_goldens_parse_to_their_recorded_counts ... ok
+test pack::rust_pack_fixture_binds_kinds_per_adr0029 ... ok
+test registry::ac492_unknown_capability_token_fails ... ok
+test classify::ac497_classify_binary_paths ... ok
+test classify::classify_is_invariant_to_a_cargo_manifest ... ok
+test nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts ... ok
+test change_summary::change_summary_refuses_a_range_carrying_an_lfs_pointer_path ... ok
+test change_summary::change_summary_refuses_a_range_carrying_a_binary_path ... ok
+test registry::ac489_capability_registry_dated ... ok
+test change_summary::change_summary_text_variant_from_git_diff ... ok
+test change_summary::change_summary_refuses_an_empty_range ... ok
+test report::ac344_missing_binary_is_not_a_candidate_failure ... ok
+test report::os_killed_run_is_keyed_by_detail_prefix ... ok
+test change_summary::change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold ... ok
+test build::a_build_stream_without_build_finished_is_err ... ok
+test report::a_build_failure_is_err_never_a_red_suite ... ok
+test build::a_compile_error_is_ok_with_status_failing ... ok
+test registry::ac328_affected_selection_unsupported_without_probe ... ok
+test report::ac325_recorded_argv_is_os_vector ... ok
+test selection::ac348_selection_is_byte_identical_over_200_change_sets ... ok
+test report::a_red_test_in_an_early_binary_still_tallies_every_binary ... ok
+test runner::the_probe_finds_the_installed_nextest_and_names_its_version ... ok
+test report::passed_plus_failed_is_the_executed_count_and_survives_both_decoys ... ok
+test runner::the_probe_falls_back_to_cargo_test_where_nextest_is_absent ... ok
+test report::nextest_fallback_recorded_on_report ... ok
+test verbs::a_package_binary_outside_the_target_dir_is_refused_by_name ... ok
+test verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band ... ok
+test verbs::a_v4_vector_scoring_zero_counts_low_never_unrated ... ok
+test verbs::an_empty_setup_set_is_ok_with_no_projects ... ok
+test verbs::an_undeclared_verb_is_refused_by_name ... ok
+test report::a_nextest_list_failure_is_unverifiable_never_green ... ok
+test report::ac329_report_conforms_no_prose_parse ... ok
+test verbs::a_failing_setup_is_refused_naming_the_project ... ok
+test verbs::sca_scan_refuses_a_database_moved_mid_scan ... ok
+test verbs::sca_scan_refuses_a_deny_db_path_with_other_than_one_database ... ok
+test verbs::sca_scan_refuses_a_non_git_database ... ok
+test verbs::setup_installs_each_declared_node_project_offline ... FAILED
+test bound::a_step_bound_tighter_than_construction_fires_first ... ok
+test verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample ... ok
+test conformance::port_conformance_real_row_rust ... ok
+test report::red_suite_is_ok_with_failed_counts ... ok
+test verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero ... ok
+test verbs::a_matched_v4_vector_is_scored_and_banded_high ... ok
+test report::the_nextest_path_records_its_runner_and_tallies_a_red_suite_as_ok ... ok
+test report::concurrent_verify_reports_share_no_output_file ... ok
+test verbs::package_digests_only_the_declared_binaries_of_a_locked_release_build ... ok
+test verbs::smoke_runs_each_checklist_row_against_the_built_binary ... ok
+test verbs::a_failing_smoke_row_is_a_failing_result_not_an_error ... ok
+test verbs::a_matched_malformed_vector_refuses_the_scan_by_name ... ok
+test verbs::sca_scan_records_the_advisory_database_commit ... ok
+test report::the_nextest_path_runs_doctests_beside_it_so_the_count_matches_list ... ok
+test bound::the_construction_bound_caps_a_larger_step_bound ... ok
+test report::ac331_killed_verify_is_unverifiable ... ok
+test affected::a_package_set_that_lists_no_test_escalates_selection_empty ... ok
+test affected::affected_set_is_touched_crates_plus_reverse_dependency_closure ... ok
+test selection::ac355_lockfile_change_is_whole_suite_and_one_file_is_affected ... ok
+test affected::no_recorded_whole_suite_runs_the_whole_suite_probe_unverified ... ok
+test affected::a_path_in_no_package_runs_the_whole_suite_with_a_reason ... ok
+
+failures:
+
+---- verbs::setup_installs_each_declared_node_project_offline stdout ----
+
+thread 'verbs::setup_installs_each_declared_node_project_offline' (16960) panicked at crates\rk-adapter-toolchain-rust\tests\it\verbs.rs:730:5:
+PREFLIGHT: the Node fixture is installed once (Checkpoint 8c (2))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    verbs::setup_installs_each_declared_node_project_offline
+
+test result: FAILED. 71 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 27.27s
+
+error: test failed, to rerun pass `-p rk-adapter-toolchain-rust --test it`
+     Running unittests src\lib.rs (<scratchpad>/audit-target\debug\deps\rk_cli-ef6ed2b878314fce.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (<scratchpad>/audit-target\debug\deps\redkiln-d607a9f620a53d5e.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\it\main.rs (<scratchpad>/audit-target\debug\deps\it-193c8cf3607e6c6f.exe)
+
+running 329 tests
+test answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher ... ok
+test cards::shipped_cards_are_the_least_privilege_table ... ok
+test catalog::ac436_catalog_search_finds_by_keyword ... ok
+test cards::shipped_role_rows_resolve_through_the_models_table ... ok
+test cards::the_models_table_pins_the_three_full_ids ... ok
+test cards::shipped_rt57_scalars_carry_no_no_record_marker ... ok
+test adapter_selection::the_composition_root_binds_the_row_inputs_no_step_declares ... ok
+test answer::ac405_gate_answer_has_exactly_one_call_site ... ok
+test checklist_bridge::a_malformed_checklist_envelope_refuses_by_name ... ok
+test checklist_bridge::an_envelope_is_unwrapped_to_its_items_and_everything_else_passes_unchanged ... ok
+test checklist_bridge::no_adapter_constructor_in_rk_cli_src_is_reachable_undecorated ... ok
+test cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class ... ok
+test checklist_bridge::the_undecorated_rust_smoke_still_refuses_the_envelope ... ok
+test config::ac422_config_reads_the_one_denylist ... ok
+test config::ac426_unread_window_runs_required_no_default ... ok
+test config::ac474_config_surface_snapshot_has_no_dual_write_key ... ok
+test config::ac486_init_scaffold_resolves_four_reals ... ok
+test answer::ac263_stub_channel_refused_named_outcome ... ok
+test cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected ... ok
+test adapter_selection::the_chosen_adapters_value_table_reaches_the_kernel_without_its_name ... ok
+test cost::ac395_cost_dispatches_nothing_under_a_panicking_harness ... ok
+test change_deriver::build_item_derives_change_over_the_recorded_range ... ok
+test change_deriver::the_run_branch_reader_reads_the_items_changeset_paths_through_rk_git ... ok
+test cost::cost_output_grammar_is_closed ... ok
+test cost::no_breakdown_for_an_item_that_owns_no_dispatch_completed_row ... ok
+test cost::per_activity_breakdown_from_owned_dispatch_completed_rows ... ok
+test cost::per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero ... ok
+test cost::render_empty_is_nothing_to_attribute_never_low_sample ... ok
+test cost::render_refuses_an_owned_reading_that_is_not_the_six_member_shape ... ok
+test adapter_selection::a_candidate_whose_config_is_refused_does_not_end_the_run_before_detect_chooses ... ok
+test demands::a_failing_smoke_result_fails_the_stage ... ok
+test demands::build_artifact_carries_release_digests ... ok
+test change_deriver::a_record_supplied_value_for_a_derived_facet_is_refused ... ok
+test demands::confirmation_not_fixed_opens_its_gate ... ok
+test demands::confirmation_result_passes_at_the_fix_sha ... ok
+test demands::scan_high_finding_opens_scan_accept_findings ... ok
+test demands::scan_clean_emits_without_a_gate ... ok
+test demands::smoke_checklist_carries_no_init_or_status_row_until_ruled ... ok
+test demands::scan_unrated_advisory_opens_scan_accept_findings ... ok
+test demands::smoke_result_is_produced_through_the_registry_verb ... ok
+test demands::every_restored_demand_writes_one_artifact_write ... ok
+test change_deriver::an_empty_range_abstains_and_never_defaults ... ok
+test checklist_bridge::the_real_rust_smoke_gets_past_input_parsing_through_real_toolchain ... ok
+test config::ac486_misconfigured_adapter_refuses_before_spawn_or_store_write ... ok
+test doctor::ac203_agents_without_agent_doctor_row ... ok
+test doctor::ac290_reproduced_finding_without_reexecution_record_doctor_row ... ok
+test doctor::ac220_last_reading_within_margin_doctor_row ... ok
+test doctor::ac306_live_quarantines_listed_with_ages_doctor_row ... ok
+test doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two ... ok
+test doctor::ac310_sink_count_below_finding_count_doctor_row ... ok
+test doctor::ac314_regression_corpus_sha_unresolvable_doctor_row ... ok
+test doctor::ac370_stray_store_under_linked_worktree_is_an_error ... ok
+test doctor::ac349_equal_specificity_claim_is_a_doctor_row ... ok
+test doctor::ac377_margin_under_two_ticks_doctor_row ... ok
+test doctor::ac383_card_without_cache_profile_doctor_row ... ok
+test doctor::ac402_reconcile_called_on_run_answer_doctor ... ok
+test doctor::ac414_doctor_module_names_no_adapter_constructor ... ok
+test adapter_selection::run_binds_sca_scans_advisory_databases_before_the_step_reaches_the_port ... ok
+test doctor::ac412_redkiln_hook_in_git_hooks_is_an_error ... ok
+test answer::a_binary_answer_without_a_launch_record_refuses_before_any_row ... ok
+test doctor::ac413_ac369_ac370_store_identity_rows ... ok
+test cost::a_real_run_writes_its_activitys_id_at_version_on_dispatch_completed ... ok
+test doctor::ac409_gate_outputs_binding_rejected ... ok
+test answer::ac410_unadmitted_attachment_refused_zero_events ... ok
+test answer::a_binary_answer_with_a_launch_record_passes_the_launch_check ... ok
+test cost::cost_after_a_real_run_renders_low_sample_through_the_binary ... ok
+test answer::ac410_admitted_attachment_stored_as_human_root ... ok
+test doctor::ac418_tier_leak_on_card_model_and_filler_effort ... ok
+test answer::a_failed_answer_commit_leaves_zero_rows ... ok
+test doctor::ac397_rebuilt_store_tier2_emptiness_is_ok_expected ... ok
+test doctor::ac419_missing_or_non_numeric_timeout_rejected ... ok
+test answer::ac406_answer_after_commit_is_void_gate_stays_open ... ok
+test doctor::ac423_probe_is_one_version_spawn_not_a_dispatch ... ok
+test doctor::ac422_ac488_denylisted_env_name_is_a_doctor_error ... ok
+test doctor::ac417_card_without_structured_output_or_tools_key_rejected ... ok
+test answer::ac407_second_token_refused_one_gate_answered_event ... ok
+test doctor::ac416_role_unresolved_and_ambiguous_rejected ... ok
+test doctor::ac426_rule_fire_leaves_write_set_unchanged ... ok
+test doctor::ac425_facet_without_registered_fact_rejected ... ok
+test doctor::ac421_dead_definition_and_unfilled_slot_reported ... ok
+test doctor::doctor_rule_table_covers_every_register_named_row ... ok
+test doctor::ac486_unknown_adapter_is_a_doctor_error ... ok
+test doctor::ac455_verification_none_under_requiring_pack_doctor_row ... ok
+test doctor::ac423_ac526_cli_version_and_ttl_mismatch_rejected ... ok
+test doctor::ac530_advisory_ledger_imbalance_doctor_row ... ok
+test change_deriver::a_null_change_at_triage_opens_the_unknown_facet_gate_and_its_answer_binds_the_facet ... ok
+test doctor::ac426_ac472_unread_window_49_not_flagged_51_flagged ... ok
+test doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair ... ok
+test doctor::ac532_executed_ledger_reports_never_executed_activities ... ok
+test doctor::ac438_doctor_error_rule_exits_config_error ... ok
+test doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported ... ok
+test doctor::ac427_rebuild_from_git_alone_matches_recorded_next_action ... ok
+test doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation ... ok
+test doctor::ac420_dangling_role_slot_attach_rejected ... ok
+test doctor_artifact::a_rewrite_through_the_store_is_not_reported ... ok
+test doctor::rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table ... ok
+test doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read ... ok
+test doctor::ac429_rebuild_writes_no_object_ref_or_file ... ok
+test doctor_journal::the_doctor_verb_never_selects_the_fixture_source ... ok
+test doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set ... ok
+test doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record ... ok
+test doctor_journal::a_present_store_is_the_journal ... ok
+test exit::ac438_exit_codes_distinct ... ok
+test exit::ac438_exit_table_snapshot ... ok
+test exit::ac438_poisoned_lock_halt_is_seventy_through_code_for ... ok
+test exit::ac438_step_error_mapping_is_exhaustive ... ok
+test doctor_journal::events_jsonl_is_read_only_in_fixture_mode ... ok
+test doctor_journal::unread_reads_a_cross_stage_read_as_consuming_the_write ... ok
+test doctor::ac424_unknown_facet_value_and_new_facet_rejected ... ok
+test doctor_artifact::an_out_of_band_structured_edit_is_reported_as_an_unrecorded_mutation ... ok
+test doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value ... ok
+test doctor_journal::headroom_margin_fires_on_a_flat_last_reading ... ok
+test doctor::adr0105_doctor_rows_network_fs_credential_orphan ... ok
+test doctor_journal::headroom_margin_reads_the_latest_five_hour_bearing_reading ... ok
+test exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three ... ok
+test exit::an_envelope_refusal_leaves_through_overage ... ok
+test explain::ac432_explain_from_record_only_and_errors_without_resolution ... ok
+test explain::ac432_explain_over_replayed_log_is_byte_identical ... ok
+test explain::ac430_explain_prints_both_row_families ... ok
+test explain::ac431_explain_names_card_skills_fillers_tier ... ok
+test doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported ... ok
+test doctor_journal::unread_reads_a_null_run_as_an_unknown_run_never_a_match ... ok
+test explain::ac433_explain_names_excluding_clause_never_not_selected ... ok
+test explain::ac434_unknown_facet_rendered_unknown ... ok
+test explain::explain_prints_one_output_digest_per_committed_step_activation ... ok
+test init::ac412_init_installs_zero_hooks ... ok
+test init::ac437_init_scaffold_bytes_pinned ... ok
+test init::ac531_preexisting_rk_name_reported_not_overwritten ... ok
+test init::ac531_init_created_names_match_regex ... ok
+test doctor_drift::a_structured_drift_with_no_drift_gate_is_reported ... ok
+test init::ac437_init_twice_identical_tree_and_identity_rows ... ok
+test init::init_leaves_the_operators_exclude_lines_untouched ... ok
+test answer::ac248_answer_without_live_token_exits_named_outcome ... ok
+test init::init_writes_the_redkiln_runtime_exclude_block_once ... ok
+test item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run ... ok
+test cost::cost_fixture_corpus_binary_arm ... ok
+test exit::ac438_table_driven_exit_codes_over_fixtures ... ok
+test doctor::ac415_every_rule_id_has_a_rejecting_fixture ... ok
+test doctor::ac414_doctor_over_corpus_fires_every_expected_rule_with_zero_dispatches ... ok
+test landing::a_refused_landing_is_not_due_and_answer_derives_the_gates_tree ... ok
+test landing::a_gate_escalating_during_answer_lands_nothing ... ok
+test doctor::ac184_rebuild_differential_over_anchored_tier_one_rows ... ok
+test landing::a_refused_entry_landing_opens_its_gate_over_an_empty_commit_and_lands_nothing ... ok
+test doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes ... ok
+test landing::a_refused_landings_gate_escalating_during_answer_is_not_refused ... ok
+test doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean ... ok
+test explain::explain_prints_the_landed_commit_and_the_merge_command ... ok
+test answer::ac435_answer_refuses_without_explain_sufficiency_and_records_it ... ok
+test landing::a_drift_entry_lands_its_accepted_write_once_through_its_gate ... ok
+test landing::a_refused_landing_under_a_tracked_exclusion_is_answerable ... ok
+test landing::a_refused_path_stops_the_lane_at_a_landing_gate_with_nothing_landed ... ok
+test landing::a_document_drift_answered_move_to_prose_applies_and_the_lane_walks_on ... ok
+test landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit ... ok
+test landing::a_replayed_entry_landing_makes_no_git_write ... ok
+test landing::a_move_to_prose_answer_is_served_to_a_later_stages_artifact_read ... ok
+test landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it ... ok
+test landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered ... ok
+test landing::a_tracked_exclusion_leaves_the_next_gates_answer_applied ... ok
+test landing::an_accepted_prose_edit_is_served_to_a_later_stages_artifact_read ... ok
+test landing::a_tree_recreated_on_an_existing_branch_lands_the_entrys_stored_root ... ok
+test landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref ... ok
+test landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it ... ok
+test landing::a_drift_gate_answered_move_to_prose_under_a_tracked_exclusion_is_applied ... ok
+test landing::an_entry_landing_is_ignored_by_heal_and_the_tier1_folds ... ok
+test landing::a_vouched_root_stored_at_entry_lands_at_entry_before_any_step_checkpoint ... ok
+test landing::an_accepted_prose_edit_lands_at_entry_before_the_first_read ... ok
+test landing::closure_record_walks_past_audit_on_the_backlog_feed ... ok
+test lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch ... ok
+test landing::debt_logging_walks_past_file_through_item_create ... ok
+test landing::an_entry_that_writes_nothing_makes_no_entry_act ... ok
+test landing::an_exclude_over_a_refused_managed_path_is_refused_by_name_and_abort_stops_the_lane ... ok
+test landing::a_refused_drift_gate_landing_opens_its_gate_and_the_lane_is_not_stuck ... ok
+test landing::reentry_names_every_discarded_path ... ok
+test lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice ... ok
+test landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile ... ok
+test landing::the_lane_end_lands_the_final_stages_work ... ok
+test landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run ... ok
+test lane_e2e::a_second_invocation_reuses_the_run_worktree ... ok
+test landing::only_the_run_ref_moves_across_a_lane ... ok
+test lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing ... ok
+test lint::lint_refusals_name_the_facet ... ok
+test lint::lint_wraps_kernel_facet_rules_and_exits_by_table ... ok
+test lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step ... ok
+test landing::an_entry_whose_writes_leave_the_tree_unchanged_makes_no_entry_commit ... ok
+test processes::the_lanes_nine_gate_questions_and_the_change_question_load_from_redkiln_processes ... ok
+test lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered ... ok
+test review_pass::a_candidate_that_cannot_run_is_unverifiable_never_a_flip ... ok
+test review_pass::a_fix_spec_adversary_findings_row_does_not_seal ... ok
+test review_pass::a_later_non_review_findings_row_does_not_displace_the_review_verdict ... ok
+test review_pass::a_malformed_payload_refuses_rather_than_reading_as_zero_findings ... ok
+test reconcile::ac402_status_and_explain_do_not_reconcile ... ok
+test review_pass::adversarial_review_seals_approved_at_its_own_stage ... ok
+test review_pass::adversarial_review_seals_changes_requested_at_its_own_stage ... ok
+test review_pass::an_empty_arm_is_no_record_never_a_flip ... ok
+test review_pass::an_unresolvable_activity_id_at_version_is_refused_by_name ... ok
+test review_pass::findings_come_from_the_journal_and_absence_is_not_an_empty_set ... ok
+test review_pass::formal_inspections_second_reader_row_is_the_verdict ... ok
+test review_pass::four_cells_over_two_arms_and_both_fail_is_not_a_flip ... ok
+test review_pass::mutate_and_selectionless_repros_produce_no_record ... ok
+test review_pass::security_review_and_design_review_do_not_seal ... ok
+test review_pass::selection_is_the_double_dash_tail_or_nothing ... ok
+test lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer ... ok
+test lane_e2e::an_empty_stage_records_stage_empty_with_its_reason ... ok
+test root::ac485_adapter_set_resolved_once_and_run_scoped ... ok
+test root::ac404_rate_limited_writes_retry_mark_and_exits ... ok
+test lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order ... ok
+test root::adr0118_a_poisoned_store_lock_inside_a_kernel_called_seam_halts_exit_70 ... ok
+test root::adr0118_acquire_returns_halt_on_poisoned_lock ... ok
+test landing::the_user_checkout_is_unchanged_across_a_landing_lane ... ok
+test root::adr0118_a_poisoned_writer_mutex_halts_exit_70 ... ok
+test root::adr0083_config_constructed_once_at_root_and_threaded ... ok
+test root::signal_handler_fires_cancel_token ... ok
+test root::ac413_store_opened_from_other_repo_refused_zero_rows ... ok
+test root::adr0118_poisoned_store_lock_halts_run_exit_70 ... ok
+test root::signal_outside_dispatch_exits_130_writes_nothing_partial ... ok
+test root::common_dir_discovered_from_inherited_cwd_via_wrapper ... ok
+test lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity ... ok
+test run::a_child_settings_file_survives_write_run_for_its_run_id ... ok
+test processes::a_gate_kind_the_registry_does_not_declare_refuses_by_name ... ok
+test review_pass::a_shipped_lane_reaching_review_without_a_slice_is_refused_at_entry ... ok
+test processes::the_answer_verb_validates_against_the_loaded_registry_not_the_default ... ok
+test root::signal_during_dispatch_is_cancelled_by_signal_exit_13 ... ok
+test run::ac401_second_run_issues_no_dispatch_for_memoised_step ... ok
+test lane_e2e::the_lane_end_mints_a_terminal_closed_mark ... ok
+test lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane ... ok
+test run::every_binary_spawn_withholds_or_supplies_the_launch_record ... ok
+test run::no_cli_flag_skips_the_entry_reconcile ... ok
+test run::a_real_harness_run_with_a_launch_record_passes_the_launch_check ... ok
+test lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer ... ok
+test run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn ... ok
+test run::run_on_init_only_repo_is_a_config_outcome ... ok
+test lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it ... ok
+test lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child ... ok
+test lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted ... ok
+test run_worktree::a_failed_setup_refuses_by_name ... ok
+test run::ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting ... ok
+test run::adr0128_lane_maps_to_pack_fix_bug_standard_story_story ... ok
+test run::ac257_expired_gate_resolved_by_fresh_process ... ok
+test run::a_gate_expiry_row_naming_no_reachable_class_is_refused ... ok
+test lane_e2e::two_items_in_one_store_do_not_fold_together ... ok
+test schemas::every_agent_output_kind_the_two_lanes_reach_is_exported ... ok
+test slice_verdict::a_slice_equal_to_the_item_id_is_refused ... ok
+test slice_verdict::an_absent_slice_is_refused_by_name ... ok
+test run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load ... ok
+test slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop ... ok
+test schemas::a_kind_absent_from_exported_refuses_at_bind ... ok
+test run::ac264_run_after_applied_answer_resumes_past_gate ... ok
+test story_axis::adr0155_a_second_identical_story_mark_is_drift_not_a_transition ... ok
+test story_axis::adr0155_the_emitted_story_value_parses_as_a_qualified_story ... ok
+test story_axis::adr0159_an_empty_project_degrades_to_a_bare_story_and_records_no_transition ... ok
+test status::status_prints_no_headroom_line_for_an_item_with_no_reading ... ok
+test support::spawn_bound_is_the_thirty_seconds_the_stage_file_states ... ok
+test surface::ac400_denylist_absent_from_parser_tree ... ok
+Testing tests\cmd\root.trycmd:2 ... ok 30ms 873us 400ns
+Testing tests\cmd\init.trycmd:2 ... ok 36ms 545us 800ns
+Testing tests\cmd\cost.trycmd:2 ... ok 47ms 380us 200ns
+Testing tests\cmd\doctor.trycmd:2 ... ok 57ms 562us 100ns
+Testing tests\cmd\run.trycmd:2 ... ok 67ms 831us 200ns
+Testing tests\cmd\status.trycmd:2 ... ok 74ms 417us 700ns
+Testing tests\cmd\lint.trycmd:2 ... ok 82ms 391us 100ns
+Testing tests\cmd\answer.trycmd:2 ... ok 88ms 550us
+Testing tests\cmd\explain.trycmd:2 ... ok 98ms 903us 100ns
+Testing tests\cmd\catalog.trycmd:2 ... ok 58ms 581us 800ns
+Testing tests\cmd\catalog.trycmd:17 ... ok 70ms 375us 600ns
+test surface::ac400_help_snapshot_every_verb ... ok
+test surface::ac400_resume_refused_as_unknown_argument ... ok
+test surface::ac402_no_skip_reconcile_flag_in_snapshot ... ok
+test surface::ac403_no_blocking_stdin_read_in_rk_cli ... ok
+test surface::ac441_no_migrate_verb_in_tree ... ok
+test surface::adr0128_run_lane_value_enum_closed ... ok
+test surface::adr0129_answer_grammar_positional_option_no_token_flag ... ok
+test surface::doctor_fix_flag_absent_from_snapshot ... ok
+test lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one ... ok
+test status::status_prints_every_flag_beside_its_reading ... ok
+test support::spawn_bound_fires_on_a_holding_child_and_kills_it ... ok
+test run_worktree::git_lfs_skip_smudge_in_runs_environment_refuses_creation_by_name ... ok
+test run::adr0128_lane_derived_from_item_or_refused ... ok
+test run_worktree::a_run_tree_locked_by_a_live_process_refuses_the_next_run_by_name ... ok
+test tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused ... ok
+test tag_release::first_release_names_its_rollback_target_as_none ... ok
+test tag_release::release_record_carries_the_build_artifact_digest ... ok
+test toolchain::a_tool_step_reaches_the_rust_adapter_and_not_the_fixture ... ok
+test run_worktree::a_leftover_reference_tree_without_rk_base_is_refused_and_kept ... ok
+test run_worktree::the_run_worktree_is_created_under_dot_redkiln_worktrees ... ok
+test landing::answering_the_drift_gate_either_way_releases_the_stage_exit ... ok
+test transcription::the_comment_filter_is_doing_real_work_on_run_rs ... ok
+test transcription::the_production_path_transcribes_a_step_list_and_never_supplies_none ... ok
+test tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item ... ok
+test slice_verdict::approved_is_sealed_on_the_advance_path ... ok
+test verb_rows::verdict_record_routes_to_review_confirm ... ok
+test verify_pass::a_two_toolchain_item_holds_on_the_second_key ... ok
+test verify_pass::ac139_shipped_packs_block_a_missing_verification ... ok
+test verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call ... ok
+test verify_pass::ac331_timeout_and_kill_are_unverifiable ... ok
+test verify_pass::ac337_a_node_lane_with_criteria_is_refused_by_name ... ok
+test schemas::bind_reads_the_schema_from_exported_by_name ... ok
+test slice_verdict::changes_requested_is_sealed_on_the_findings_block_path ... ok
+test verify_pass::ac337_a_registry_and_pack_disagreement_is_refused_by_name ... ok
+test verify_pass::ac337_the_shipped_rust_row_is_read_through_the_pass_adapter ... ok
+test tag_release::release_record_tags_the_landed_commit_locally ... ok
+test verify_pass::ac341_the_pass_calls_no_tracker_method ... ok
+test tag_release::the_tag_is_never_pushed ... ok
+test verify_pass::ac344_missing_binary_is_cannot_run ... ok
+test verify_pass::ac348_selection_is_recomputed_from_verify_completed ... ok
+test verb_rows::shallow_clone_routes_to_the_retained_review_clone ... ok
+test run_worktree::creation_carries_worktreeinclude_files_and_runs_setup ... ok
+test tag_release::rollback_target_is_the_previous_release_tag ... ok
+test tag_release::trial_runs_one_activity_with_zero_dispatches ... ok
+test verify_pass::node_detected_fixture_records_the_node_adapter ... FAILED
+test verify_pass::red_suite_is_a_failed_verify_never_green ... ok
+test run_worktree::the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves ... ok
+test verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree ... ok
+test run_worktree::a_fresh_tree_whose_setup_failed_is_rolled_back_and_the_next_run_recarries ... ok
+test verify_pass::ac338_restored_mutation_is_unverifiable ... ok
+test verify_pass::ac339_mutation_runs_in_a_disposable_worktree ... ok
+test verify_pass::writes_one_keyed_test_report_with_one_artifact_write ... ok
+test run_worktree::no_redkiln_reader_sees_a_planted_run_worktree ... ok
+test transcription::the_spec_a_real_run_binds_carries_its_steps ... ok
+test lane_e2e::terminal_read_reports_only_an_awaited_gate ... ok
+test lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit ... ok
+test transcription::an_agent_steps_timeout_resolves_through_the_toolchain_table_and_never_exceeds_the_activity_budget ... ok
+test transcription::each_agent_step_carries_its_own_card_and_schema_in_the_run_record ... ok
+test transcription::every_selected_node_is_bound_including_one_with_no_agent_step ... ok
+test tag_release::selection_picks_tag_release_over_the_deploy_patterns ... ok
+test worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed ... ok
+test worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row ... ok
+test worktree_assigned::a_reentry_records_reused_and_its_discard_list ... ok
+test worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds ... ok
+test worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention ... ok
+test verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter ... ok
+test verify_pass::ac347_the_pass_dispatches_nothing ... ok
+test verify_pass::the_lane_reaches_the_pass_through_verbs_run_run ... ok
+test verify_pass::verify_completed_names_the_adapter_detect_chose ... ok
+test verify_pass::selected_by_required_kind_not_stage_name ... ok
+test verify_pass::ac337_a_shipped_rust_lane_with_criteria_reaches_the_ledger ... ok
+test verify_pass::ac353_killed_verify_resumes_to_the_same_decision ... ok
+test verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry ... ok
+test verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger ... ok
+test run::ac438_table_driven_exit_codes_over_fixtures_binary_arm ... ok
+test verify_pass::n24_a_verification_less_criterion_is_held_at_verify_through_the_lane ... ok
+
+failures:
+
+---- verify_pass::node_detected_fixture_records_the_node_adapter stdout ----
+
+thread 'verify_pass::node_detected_fixture_records_the_node_adapter' (25040) panicked at crates\rk-cli\tests\it\verify_pass.rs:601:5:
+PREMISE: run `pnpm install --frozen-lockfile --dir <scratchpad>\audit-wt\crates\rk-cli\../rk-adapter-toolchain-node/tests/fixtures/project` once
+
+
+failures:
+    verify_pass::node_detected_fixture_records_the_node_adapter
+
+test result: FAILED. 328 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 111.49s
+
+error: test failed, to rerun pass `-p rk-cli --test it`
+   Doc-tests rk_adapter_toolchain_rust
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rk_cli
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: 2 targets failed:
+    `-p rk-adapter-toolchain-rust --test it`
+    `-p rk-cli --test it`

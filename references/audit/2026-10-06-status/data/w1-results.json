@@ -1,0 +1,885 @@
+{
+ "results": [
+  {
+   "key": "w1-vision",
+   "summary": "The vision is fully specified and the design is coherent: a Rust binary owns the loop, with a deterministic kernel, git-trailer state, human gates as durable marks and typed agent output. 10 of 39 design areas are still BLOCKED and the \"design final\" label is explicitly forbidden. The Phase-1 build surface is largely present (12 crates, about 237,600 lines of Rust, all four Phase-1 real adapters exist as crates). The Phase-1 exit has never been met: Step 8 is recorded as re-opened with \"Checkpoint 8 has NOT passed, and M5 is not reached\", stage 8i (S-BIN) is in progress and 8j is not started. No real fix-lane or story-lane run has landed under Redkiln-RS. Phases 2-4 (the remaining packs and parallel DAG, the .NET/Python/Unreal adapters, plugin generation, and the GitHub/docs/web surfaces and extra harness adapters) are specified only. Roughly 35% of the full vision is delivered, by my judgement from the records and file inventory, not a measurement.",
+   "completeness_pct": 35,
+   "quality_grade": "B",
+   "works_today": [
+    "Phase 0 closed: M0 reached at Checkpoint 2 (bbdaf35); blocking gate discharged by ADR-0090 (runbook/PROGRESS.md:21-26) [RECORDS]",
+    "M3 'kernel decides' reached 2026-09-17 at Checkpoints 7b (ddc57be) and 7b-ii (164e212) (runbook/INDEX.md Milestones) [RECORDS]",
+    "Five sync-trait ports present: EventStore, Harness, Tracker, DocsSite, Toolchain (crates/rk-ports/src/event_store.rs:184, harness.rs:34, tracker.rs:37, docs_site.rs:19, toolchain.rs:392); no async fn in rk-ports (only a doc comment at lib.rs:28) [CODE]",
+    "Async runtime confined to the Claude adapter: tokio only at crates/rk-adapter-claude/Cargo.toml:35, and rk-kernel/Cargo.toml:170 records 'No async runtime' (AC-528, ADR-0076) [CODE]",
+    "Determinism ban encoded as workspace clippy.toml disallowed-methods (clock, rand, sleep, env::set_var) (clippy.toml:1-30; AC-001..004) [CODE]",
+    "All four Phase-1 real adapters exist as crates: rk-adapter-sqlite, rk-adapter-claude, rk-adapter-toolchain-node, rk-adapter-toolchain-rust [CODE]",
+    "Catalog v0 (102 activity files), cards, checklists and packs under .redkiln/; redkiln-migrate v0 crate (~4,000 lines) [CODE]",
+    "Clean-break decision executed: ADR-0002 dissolves the YAML byte-parity risk R3; S-GIX executed with a shell fallback (ADR-0091/0098) [RECORDS]",
+    "Sub-stages 8a-8h recorded passed or re-run green, several still marked provisional/re-run pending 8j (PROGRESS.md:40-48) [RECORDS]",
+    "Exit checks (2), (4), (6) on both lints, and (3)'s asserted half measured passing on 2026-09-24 at 4c282d7 (PROGRESS.md:51) [RECORDS, stale before the s8a-s8j insertion]"
+   ],
+   "stubbed_fake_or_missing": [
+    "Phase-1 exit not met: AC-473 (fix-lane self-hosting) and AC-521 (story-lane twin) have no recorded real run; Step 8 re-opened, M5 not reached (PROGRESS.md:51)",
+    "Stage 8j (fixture proof of both lanes, CI green, run preparation) not started (PROGRESS.md:50); stage 8i (S-BIN) in progress (PROGRESS.md:49)",
+    "BLOCKED design areas (10): LLM context-vector source, derived-facet source (S-FACET), stale_policy (P2-B), ChangeSummary Binary arm (S-BIN), card-append route (S-H1c), quality-shorthand default (S-P7B), design-final (P8 arms), gix write path (S-GIX/a), trailer writing (S-GIX/b), cache-TTL verification (S-TTL1)",
+    "Review gate not shown guarded against false approval (S-SUBTLE-CB unrun); reviewer verdict instability (2 of 3 flip) unbounded",
+    "Phase 2 not started: remaining process packs, parallel project DAG and merge queue (GitOp::Integrate has no caller), .NET/Python/Unreal adapters, rk-plugin-gen, old-corpus migration (AC-463)",
+    "Phase 3 not started: GitHub adapter, mdBook adapter, web view, DORA metrics; Tracker and DocsSite are fakes only",
+    "Phase 4 not started: Codex (gated on S-CODEX, unrun), Linear, Astro adapters",
+    "No plugin surface shipped (principle 19 is PROVISIONAL on borrowed evidence)"
+   ],
+   "risks": [
+    "The Phase-1 exit has never been achieved. The first real run of the shipped pack failed to load (cycle lint, then a rank tie), and later stages 8e-8h built missing mechanisms that no real run has yet exercised (PROGRESS.md:51)",
+    "Scope growth against the RFC: the RFC priced Bet 1 at roughly 10k LOC of new work and an Experiment 4 fix lane of 1-2 weeks (RFC:261-276, :322). After five weeks the tree is about 237,600 lines of Rust plus about 130k lines of markdown, and the fix lane has still not run for real",
+    "Heavy 'provisional, re-run pending' re-run chain across stages 5-8h means checkpoint evidence is repeatedly invalidated by later stages; closing 8j and Step 8 requires whole-chain replays",
+    "The cost case for inversion rests on one number (1.72x in-session premium, one corpus, one machine), and the in-session 5m-cache premise was falsified (amendment:208-283)",
+    "The differentiating human-gate capability is only partly evidenced: suspension lossless at 174/174, but mid-graph resume n=3, P8 arms and controls unrun, cost ordering unmeasured",
+    "Reviewer reliability is the most under-measured property: detection saturated but verdicts unstable, and the false-approval mirror risk is unmeasured (S-SUBTLE-CB unrun)",
+    "Phase-placement inconsistency for the Codex adapter: ADR-0094 d2 says Phase 2, design 10.2 says Phase 4 after S-CODEX. The exit-run story item is a Codex story",
+    "S-BIN may fail: the falsifier would withdraw review-gate applicability to binary-asset toolchains and remove the premise for the Phase-2 Unreal adapter (design 10.6)",
+    "Stale cross-references in the registers (the SM header still says AC-001..AC-519 plus AC-520, though the AC register reaches AC-532); minor, but they show drift between registers"
+   ],
+   "key_facts": [
+    "Design 0.1 tally verified by row recount: 26 DECIDED, 3 PROVISIONAL, 10 BLOCKED of 39 areas (references/2026-09-08-architecture-design.md:15, rows :19-57)",
+    "19 principles confirmed at architecture-design.md:167-185 (13 restated from the proposal, 6 new, :159)",
+    "AC register: 526 unique ids, max AC-532, header says 480 binding / 20 provisional / 20 human-gated / 6 conditional as of 2026-09-15 (acceptance-criteria.md:41-42); SM register: 135 measure definitions, SM-001..SM-154 plus SM-157",
+    "198 ADR records (README says 198; 200 files on disk include README.md and ERRATA.md)",
+    "Phase-1 exit sequence is (1) (1b) (2) (3) (4) (6) (7); check (5) WITHDRAWN 2026-09-15 and its number retired (D-14). (1)=AC-473 fix lane on D:/repos/redkiln-rs with toolchain stage through rk-adapter-toolchain-rust; (1b)=AC-521 story lane authors a Phase-2 story (acceptance-criteria.md:7651-7701; design:1867)",
+    "Phase 1 ships four real adapters: SQLite (EventStore), Claude (Harness), Node and Rust (Toolchain); Tracker and DocsSite fake-only until Phase 3; two packs only: bug-standard and story (ADR-0094, ADR-0011)",
+    "Roadmap (design:1868-1870): Phase 2 packs plus parallel DAG plus .NET/Python/Unreal plus plugin-gen plus migration (entry: Phase 1 exit (1) recorded); Phase 3 GitHub/mdBook/web view/DORA (entry: Phase 2 stable on one initiative); Phase 4 Codex after S-CODEX, Linear, Astro (entry: Phase 3 stable for a quarter)",
+    "Crate inventory (git ls-files .rs lines): rk-kernel 102,484; rk-cli 54,488; rk-adapter-claude 19,063; rk-git 15,690; rk-store 10,648; rk-adapter-toolchain-rust 10,240; rk-types 7,888; rk-ports 4,181; redkiln-migrate 4,009; rk-adapter-toolchain-node 3,626; rk-adapter-sqlite 2,662; rk-containment 2,651; total about 237,630",
+    "Runbook: Step 8 RE-OPENED 2026-09-24; 'Checkpoint 8 has NOT passed, and M5 is not reached' (runbook/PROGRESS.md:51); 8i in progress (:49); 8j not started (:50); 517 commits from 2026-09-01 to 2026-10-05",
+    "Core bets: Bet 1 invert control (taken); Bet 2 engine port (replaced by the ADR-0002 clean break); keep the plugin surface (PROVISIONAL, Phase 2). RFC kill criterion (Exp 2) did not fire: 23/23 vs 23/23 detection, 1.72x in-session cost premium (amendment:208-283)"
+   ],
+   "unverified": [
+    "Whether any crate builds or passes tests at 36dd8ac (cargo not run, by rule)",
+    "AC provisional/binding/human-gated split after the 2026-09-15 amendment (later reading notes through 2026-10-02 exist)",
+    "Whether S-FACET, S-H1c, S-P7B, S-CODEX, P8-B or S-SUBTLE-CB have run since the design; my greps found no result and s8-exit-criterion.md:324 says S-BIN, S-H1c and P8's unrun arms still gate 'design final'",
+    "Current internal state of stage 8i beyond the tracker row and the task brief's statement that B1 just completed",
+    "Whether milestone M4 is marked reached (the INDEX row defines it; I saw no 'reached' annotation)",
+    "Every per-stage 're-run WHOLE and passed at <hash>' claim is RECORDS only; I did not re-run checkpoints",
+    "The completeness percentage is a judgement (about half of the effort in Phase 1 at about 80% built, discounted for the unproven exit), not a measured quantity",
+    "Whether the story item .redkiln/items/rk-story-codex-adapter.toml was authored by an actual story-lane run or hand-written as a fixture (the file header says 'A REAL Phase-2 story' but no run record was checked)"
+   ],
+   "report_path": "<scratchpad>/audit/w1-vision.md"
+  },
+  {
+   "key": "w1-plan-status",
+   "summary": "27 of 30 stages have a recorded passed checkpoint (90%); 8i (S-BIN) is in progress with its B0 and B1 batches done, 8j has not started, and Step 8 (the Phase-1 exit) is formally re-opened and not passed. Milestones M0 to M4 are reached by the record (only M3 is stamped in INDEX) and M5 is not. The plan has more than doubled: 14 stages existed at the 2026-09-11 baseline and 16 were inserted (7b-ii, 7f to 7i, and the eleven s8 sub-stages), each with a recorded reason. Five of the 27 passes are provisional with a re-run owed (7c, 7f, 8a, 8c, 8d), so only 22 are clean. The branch is 416 commits ahead of main and has never been pushed, so the CI has never run on a remote. The tracker is mildly stale: the 8i row lags git, INDEX does not stamp M4, and PROGRESS line 16 omits 8a-8j. I did not run cargo, so every checkpoint pass is a record claim whose commit exists and is dated as stated.",
+   "completeness_pct": 90,
+   "quality_grade": "B",
+   "works_today": [
+    "27 of 30 stages have recorded checkpoint passes; commit hashes exist and are dated 2026-09-11 to 2026-10-02 (git show on each)",
+    "M0, M1 and M2 reached per tracker Result cells (bbdaf35, 96ba9c2, ea83eac)",
+    "M3 stamped REACHED 2026-09-17 (INDEX:98; ddc57be 2026-09-15, 164e212 2026-09-17)",
+    "M4's condition (Checkpoint 7e, dddcdbd, 2026-09-21) is met by the record",
+    "Stages 8a to 8h closed in eight days (2026-09-25 to 2026-10-02) with whole re-runs recorded at d5bfc4f and d24d15a",
+    "8i B0 and B1 are complete per git (4a3d344, ee44bf1); $5.561026 spent of the US$90 cap"
+   ],
+   "stubbed_fake_or_missing": [
+    "8i has no checkpoint: B2 (pass 1) and B3 (pass 2) have not run, B4 is conditional",
+    "8j (fixture proof of both lanes, CI green, run preparation) is not started",
+    "Checkpoint 8 / M5 not reached; the six-check exit is unmet: criterion (1) was NOT SATISFIED and (7) NOT RUN at the 2026-09-24 re-open",
+    "CI (ci.yml) has never executed on a remote; branch never pushed (s8j-run-preparation.md:1178-1179)",
+    "Arm L labels deferred; M-06 Part 2 (30 P2 labels) owed; S-SUBTLE-CB unrun; no corpus remote"
+   ],
+   "risks": [
+    "Five provisional passes (7c, 7f, 8a, 8c, 8d) all depend on s8j's whole-chain re-run; 7c's re-run needs a plain terminal and a paid haiku probe",
+    "The 27/30 count flatters progress: the remaining three stages hold the live paid runs and the self-hosting proof that define Phase 1 exit",
+    "Plan growth: 16 stages inserted after a 14-stage baseline, the eleven s8 sub-stages alone total about 31,900 lines of stage text, so further inserts are plausible",
+    "416 commits ahead of main (353ea01, 2026-09-11) is a large unreviewed merge; the CI that guards it has never run",
+    "Tracker drift: PROGRESS:16 omits 8a-8j, INDEX does not stamp M4, and the 8i row lags git"
+   ],
+   "key_facts": [
+    "27 of 30 stages passed = 90%; 22 clean, 5 provisional (7c, 7f, 8a, 8c, 8d) (PROGRESS.md:20-52)",
+    "Baseline plan 14 stages (git show 0e34384:runbook/INDEX.md, line 18); 16 inserted: 7b-ii on 2026-09-13 (80a40da), 7f-7i on 2026-09-21 (D21-3, 8634de8), eleven s8 stages on 2026-09-24 (D21-40; a1d35ac, b8e7aa9, c9e7b6e)",
+    "Milestones: M0 bbdaf35 2026-09-12, M1 96ba9c2 2026-09-12, M2 ea83eac 2026-09-13, M3 ddc57be and 164e212 reached 2026-09-17, M4 dddcdbd 2026-09-21 (unstamped), M5 not reached",
+    "Checkpoint 8 not passed; d6160ff (2026-09-21) was only the mechanical block (D21-40 item 3; PROGRESS.md:51)",
+    "8i B1 complete 2026-10-05 (ee44bf1), $5.561026 of US$90 cap spent; HEAD 36dd8ac is D21-151",
+    "Branch is 416 commits ahead of main; never pushed; ci.yml never run (s8j-run-preparation.md:1178-1179)",
+    "D21-3 found 185 of 574 catalog steps are agent steps and 102 of 102 activities carry a non-agent step with no executor (DECISIONS-2026-09-21:200-238)",
+    "HASHES: bf5086a 66276bf 9b2c848 b39581a db6b55c bbdaf35 96ba9c2 ea83eac 3c8e880 ddc57be 164e212 2791f1d 99e209c dddcdbd 0718741 79e0ef4 18eb4ae 490c755 6907312 bf12a1c 83d1268 42a7f53 4ab7c67 e8e4f68 b183eb9 0b470ee 497266b be32cda 492e516 abeb578 ae38553 fff1112 4777941 d5bfc4f d24d15a 9ff08fb b2ab1dc d6160ff 8634de8 80a40da a1d35ac b8e7aa9 c9e7b6e 62f795d 085d1aa 00c6975 a811cea 285b659 4a3d344 ee44bf1 36dd8ac b66ba53 0e34384 353ea01"
+   ],
+   "unverified": [
+    "Whether any checkpoint actually passes (rc 0, 0 FAIL): cargo was not run, only the existence and dates of the recorded hashes were confirmed",
+    "The live tree's uncommitted edits to PROGRESS.md, s8i-s-bin.md, DECISIONS-2026-09-21.md and METHOD-S.md are outside the snapshot, so 8i's true current state may be ahead of what is reported",
+    "INDEX says 120 gate criteria for 7b-ii while the 80a40da commit message says 105; neither was recounted",
+    "M0, M1 and M2 reached status comes from tracker Result cells, since INDEX stamps only M3"
+   ],
+   "report_path": "<scratchpad>/audit/w1-plan-status.md",
+   "hash_check": {
+    "ok": [
+     "Ready to conduct comprehensive codebase audit. Awaiting user responses to 5 clarifying questions on scope, priorities, and deliverable preferences before launching multi-agent audit strategy."
+    ],
+    "missing_or_not_ancestor": []
+   }
+  },
+  {
+   "key": "code-rk-types",
+   "summary": "rk-types is the most disciplined crate in the programme and is substantially complete for Phase 1. It has no async deps, no unsafe, no production panics and no lint suppressions. StepError (11 variants), the closed-output schema transform and lint, 25 exported schemas under a golden snapshot, EventKind (42 kinds) and the dispatch/usage types are all genuinely built and tested with discriminating tests. The gaps are minor: Digest deserialisation bypasses its own validation, Drift has no tests in the crate despite a doc claim, and GateBasis is named but absent. DocSet is a deliberate empty placeholder, and 22 of 23 lane kinds are covered only by schema-shape and snapshot tests. ChangeSummary and its Binary arm are not in this crate by record (ADR-0165); the Binary arm is still sealed in rk-ports pending S-BIN. S-SCHEMA-CAP, the vendor rejection-shape spike, appears never to have been run.",
+   "completeness_pct": 92,
+   "quality_grade": "B",
+   "works_today": [
+    "StepError: 11 closed variants with exhaustive spoke(), retry_class() and event(); a totality test (step_error_is_total.rs) read off ADR-0095/0112 (error.rs:65-204)",
+    "Closed-output schema: KindOneOfToAnyOf transform plus src-level lint (16 union / 24 optional caps); both-ways mutant tests schema_caps.rs and schema_no_oneof.rs",
+    "Golden snapshot over all 25 EXPORTED schemas (25 exported__*.snap files) and 6 companion sidecar snapshots; single-table registry macro keeps EXPORTED and EXPORTED_NAMED in step (registry.rs)",
+    "Findings ingest with typed repro and prose-only command rejection (AC-281, ADR-0096); AcceptanceCriterion ingest; verify and review gate record types",
+    "sha256 and sha256_lp checked against published vectors plus a length-prefix collision test (digest_compute.rs)",
+    "EventKind closed enum, ALL=42, tier totality, wire-name round trip (event_kinds.rs, 16 tests)",
+    "DispatchRecord, Usage, Timings and CliVersion with no Default and Option-for-absent (AC-362), covered by dispatch_record.rs and usage.rs",
+    "Dependency hygiene: serde, serde_json, schemars and sha2 only; no async runtime (ADR-0076)"
+   ],
+   "stubbed_fake_or_missing": [
+    "DocSet(()) is an opaque empty newtype; contents OWED, justified by DocsSite being Phase 3 (docset.rs:31)",
+    "Typed/SchemaId have no Serialize or JsonSchema and their home record is OWED (typed.rs:5-12)",
+    "GateBasis is named in design, s5 and lib.rs:4 but no such type exists; functionally covered by verify::Basis/BasisReason and review::ReviewBasis",
+    "No Drift tests in rk-types although drift.rs:13-15 claims distinctness is asserted by a test",
+    "Digest derives transparent Deserialize, bypassing the from_hex validation documented as the only constructor",
+    "Lane kinds: only RootCause has a behavioural test; the other 22 have schema-shape lint and snapshot only, with no round-trip or conformance test against spikes/p9/schemas.toml",
+    "StepError has no Display, Error or Serialize impls, and IngestError and DigestError lack std::error::Error while sibling error types have it",
+    "S-SCHEMA-CAP (vendor rejection shape for over-cap schemas) appears never run",
+    "ChangeSummary and its Binary arm are not in rk-types by record (ADR-0165); the Binary arm is still a sealed placeholder in rk-ports (toolchain.rs:153) pending S-BIN 8i"
+   ],
+   "risks": [
+    "Digest read-path validation gap: a malformed digest can be deserialised from a stored payload and treated as valid",
+    "Over-cap or non-conformant schemas are enforced only against the vendor's documentation, never observed; F20 says violations fail open at exit 0",
+    "The snapshot is change detection, not correctness; a rubber-stamped insta accept is guarded by convention only",
+    "Lane-kind fields are hand-transcribed from a spike stand-in with no mechanical conformance check",
+    "Three production .expect() calls on serde_json::to_value: schema/mod.rs:35, schema/judgement.rs:141, verify.rs:275 (to_payload is pub and returns a bare Value); effectively infallible, but a strict no-escape-hatch standard would reject them",
+    "About 33% of src lines are comments, much of it dated ADR/PIA provenance and strike-through history; the lib.rs header contradicts itself and still lists GateBasis",
+    "Doc and record staleness: design :1834 says StepError::Schema carries raw but the code has {attempts, last_error}",
+    "Checkpoint 5 is re-run whole after every stage that edits rk-types, so any 8i/8j edit forces another re-run"
+   ],
+   "key_facts": [
+    "src 4,437 lines, tests 3,451 lines, 83 test fns, one integration binary tests/it/main.rs (19 modules) plus 2 in-src tests (findings.rs:228); 23 commits touch the crate; Cargo.toml added 2026-09-12",
+    "Census unwrap/expect=4 qualifies to 3 real production expects (schema/mod.rs:35, schema/judgement.rs:141, verify.rs:275) plus 1 doc-comment hit (lib.rs:49)",
+    "Census allow/expect-attr=1 is a doc-comment mention only (usage.rs:171); zero real lint suppressions; unsafe=0; panics=0; unsafe_code=deny at workspace level",
+    "StepError has 11 variants (error.rs:65); EventKind::ALL has 42 entries (event_kind.rs:193); the registry exports 25 schemas (registry.rs:39-64); 6 companion kinds (companion.rs:58)",
+    "Records claim Checkpoint 5 re-run whole and passed at d24d15a on 2026-10-02 (runbook/PROGRESS.md:28); not re-verified here, no cargo run",
+    "ChangeSummary is defined only in crates/rk-ports/src/toolchain.rs:71; BinaryChangeSummary(pub(crate) ()) at :153 is still sealed",
+    "Comment lines are about 1,469 of 4,437 src lines; the heaviest are usage.rs (57%) and activity.rs (52%)"
+   ],
+   "unverified": [
+    "That cargo test -p rk-types and Checkpoint 5 pass at 36dd8ac; none run, last stated pass is d24d15a (records claim)",
+    "Whether S-SCHEMA-CAP was ever run; no result record found in this tree",
+    "Whether the AC-229 eight-vs-eleven erratum was filed in references/adr/ERRATA.md",
+    "Where AC-124/127/128/165/167/176/193 Drift behaviours are tested in rk-git, rk-store and rk-cli",
+    "Field-level fidelity of the 23 lane kinds to spikes/p9/schemas.toml",
+    "Relationship of the pinned snapshot to the live working tree, deliberately not examined"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-rk-types.md"
+  },
+  {
+   "key": "code-store-git",
+   "summary": "rk-git and rk-store are the strongest part of the codebase: about 12k lines of source and 14k lines of tests (257 test functions), with no unsafe code and effectively no unwrap, expect or panic in production code. The git store, trailer write path, reconcile, landing, run worktrees and the render/write/read path are all implemented, wired into the CLI and kernel, and covered by real-git and real-SQLite integration tests with type-level (trybuild) guards. The main gaps are the orphaned-anchor / rewrite-event subsystem (AC-167, 169, 170, 171, 190), which has no producer and no scheduled stage, and gix being used for only three narrow reads while history and common-dir reads shell out to git. Quality debt is concentrated in operator-facing errors (`GitError` has no Display, so failures print Debug with stderr as byte arrays), a few silent-coercion guards (`identity::read`), dead duplicate helpers that rk-cli re-implemented worse, a 2.9k-line `worktree.rs`, and heavy provenance noise and stale module docs in comments. Grade B overall (rk-git about B+, rk-store B), about 85% complete against what Phase 1 asks of this area.",
+   "completeness_pct": 85,
+   "quality_grade": "B",
+   "works_today": [
+    "One git wrapper (git_exec.rs) with a closed 29-op GitOp set, startup version floor (>=2.20), -c core.hooksPath/trailer.ifexists=add prelude and LC_ALL=C on every child; the only process-exec site for git in the workspace (git_exec.rs:484-560)",
+    "Trailer write path (commit --trailer, interpret-trailers --if-exists=add, HEAD re-read) and a three-axis grammar with typed drift; 16 trailer tests include the discriminating duplicate-token case",
+    "reconcile() fold (Story with stage, Slice-Verdict, Gate with kind/reach/state/history) and Reconciled<T> backed by a trybuild must-fail fixture; idempotence and no-mutation tests",
+    "Journalled GitOps seam (struct, replay performs zero writes, argv digest only, no env field) used by kernel tier_one, landing, release, verify",
+    "tree_hash single derivation via temporary index; landing (denylist, 2 MiB cap, commit-tree, tree re-read, update-ref with old value, index resync)",
+    "Run-worktree lifecycle (ADR-0180): ownership-as-parameter, typed refusals, reuse on re-entry, locks, rollback, filter and pointer checks, .worktreeinclude carry; 57 worktree tests",
+    "gix review clone (bare unless declared), gix range diff with binary/LFS/newline marks, gix head_commit",
+    "rk-store: WAL + busy_timeout writer behind a mutex (poison halts per ADR-0118), genuine two-process AC-181 contention test, identity/schema refusal with byte-unchanged assertions, v1-store fixture, migration 0002, tiered_state! compile-time tier check, schema lint, tier-1 append-only statements and rebuild",
+    "rk-store render/write/read path (layout C, one artifact.write per write, replay zero-write, structured drift then restore, move-to-prose, digest-checked reads, vouched roots, item_write, backlog), canonical serialiser and eight-field memo key, finding identity and sink accounting"
+   ],
+   "stubbed_fake_or_missing": [
+    "MISSING: orphaned-anchor / rewrite-event subsystem (AC-167, 169, 170, 171, 190; SM-050). EventKind::Rewrite and Drift::OrphanedAnchor are declared only (rk-types/src/drift.rs:93; kernel match arms) with no producer; GitOp::PatchId has zero callers; no runbook stage file mentions AC-169/170/190",
+    "DEFERRED by record to Phase 2: merge queue and GitOp::Integrate (no caller; s8f-landing-and-rendering.md:632-640; AC-196, AC-197)",
+    "PARTIAL: gix read path. Common dir is resolved by spawning git rev-parse (landing.rs:397, worktree.rs:1301) and reconcile::read_commits spawns git log; gix only in diff.rs, head.rs, clone.rs; S-GIX/a go not carried into production and no successor record narrows ADR-0077",
+    "NOT WIRED: rk_git::clone::remove_review_clone has no production caller (review_pass.rs:365 uses std::fs::remove_dir_all on stale leftovers only); its journalled CloneRemove op is a cosmetic rev-parse whose result is ignored (clone.rs:113)",
+    "DEAD IN PRODUCTION: rk_store::retention::looks_like_credential, conn::looks_like_network_filesystem, artifacts::ledger::validate_ledger, identity::file_digest; rk-cli doctor/rules.rs:1304-1342 re-implements the first two with weaker rules (only 'sk-ant-'/'Bearer '; treats /Volumes/ as network)",
+    "Only one human-facing render template (Spec; render.rs:87-92) by ADR-0006/0075 reading",
+    "GitError has no Display or std::error::Error; StoreError/CanonError/LocatorError lack std::error::Error; thiserror not used despite ADR-0102 decision 6"
+   ],
+   "risks": [
+    "Rebase/amend/force-push of a run ref orphans tier-1 anchors with no detector, rewrite event or human gate (AC-171); operator hand-merge of rk-run/<item> is the documented Phase-1 hand-off",
+    "Operator-facing git errors print Debug with stderr as Vec<u8> integers (rk-cli verbs/doctor.rs:115, repo.rs:47-52), hurting triage during the self-hosting run",
+    "identity::read swallows any sqlite_master probe error as 'no identity' (identity.rs:67-74) so migrate::establish can skip the AC-179 foreign-store refusal on that path",
+    "parse_body treats every column-0 'key: value' line anywhere in a commit body as a trailer (grammar.rs:229-247), not only the final trailer paragraph; quoted prose could register as Story/Gate/Slice-Verdict state",
+    "read_commits coerces bad timestamps to 0 and silently drops malformed chunks (reconcile.rs:308-332); Writer::transaction commits then returns TransactionExceededBusyTimeout, inviting a duplicate retry (conn.rs:146-163)",
+    "reconcile() reads git log --all for the entire history on every run/answer/doctor; O(history) with no budget or measurement",
+    "Cross-platform and CI-runner conformance unproven by any record found; cfg(unix) branches unexecuted on Windows",
+    "worktree.rs is a 2,883-line god-module; duplicated commit_with_trailers/interpret_trailers_in_place; two unrelated types both named Reconciled",
+    "Comment noise (~25% of lines; 90 dated annotations, struck-through text in doc comments) and stale docs (rk-git lib.rs:1-20 still says 'spike harness and nothing more'; ~66 'proposed' references to ADRs now accepted); Checkpoint 6 greps source comments so prose is load-bearing",
+    "No property/fuzz tests for the parsers and serialisers despite proptest being a workspace dependency; rk-store has no in-src unit tests"
+   ],
+   "key_facts": [
+    "rk-git: 7,614 src lines, 8,076 test lines, 159 tests; rk-store: 4,745 src lines, 5,903 test lines, 98 tests (census escape-hatches.txt; wc -l on git ls-files)",
+    "Escape hatches in production code: census unsafe=7 is a false positive (identifiers UnsafeCharacter/UnsafeItemId, worktree.rs:279,416); real count is 0 unsafe; 2 unreachable! (clone.rs:44, gitops.rs:273); 1 expect on poisoned writer mutex by ADR-0118 (conn.rs:150); 2 scoped #[expect] with reasons (git_exec.rs:484, conn.rs:142); no todo!/dbg!/#[allow]",
+    "Workspace lints do not enable clippy::unwrap_used/expect_used; cleanliness is discipline not a gate (Cargo.toml lints table)",
+    "GitOp::ALL = 29 (git_exec.rs:128); Integrate (line 44) and PatchId (line 42) have no non-test callers; no Command::new(\"git\") outside rk-git in production code",
+    "ADR-0091: S-GIX/a go, /b no-go, /c go, git floor >= 2.20 (s6-store-and-git.md:59-66); all governing ADRs (0077, 0091, 0097, 0098, 0105, 0109, 0115, 0116, 0118, 0180-0185, 0188, 0189, 0191, 0193) are status accepted at 36dd8ac",
+    "Tracker record: Checkpoint 6 re-run whole and passed at 4777941 and d5bfc4f (2026-10-02); only later change to these crates is 2 test lines in rk-store/tests/it/store.rs (55fda45)",
+    "81 ACs are labelled rk-store/rk-git in the register; 58 cited in crates/; 23 uncited: AC-136,140,141,142,145,153,169,170,177,182,190,192,194,195,197,291,292,398,399,440,456,459,460 (some covered under other ACs/crates)",
+    "Real two-process AC-181 contention test: rk-store/tests/it/contention.rs:1-86; trybuild guards: rk-git/tests/ui/reconciled_cannot_be_constructed.rs, rk-store/tests/ui/{tier_missing,ac122_sibling_write}.rs"
+   ],
+   "unverified": [
+    "No cargo build/test/clippy was run; every 'passed' statement is the tracker's record, not re-measured",
+    "Whether .github/workflows/ci.yml has ever executed on a hosted runner and whether Linux/macOS branches pass (S6-close record said unmeasured; no later clearing record found)",
+    "Whether the corpus-bound F12 test (--features corpus) and the three #[ignore] S-GIX arms pass on the current tree",
+    "Whether any record formally narrows ADR-0077's 'gix owns the read path' to the current partial reality",
+    "Whether AC-333 persisted-ledger completeness (validate_ledger) is enforced elsewhere in the kernel",
+    "Whether AC-136, 140-142, 145, 153, 398, 399, 440, 456, 459, 460 are satisfied in rk-kernel/redkiln-migrate or still owed",
+    "Whether the any-line-in-body trailer parsing is the intended grammar (record says 'column 0, case-sensitive')",
+    "reconcile() performance on large histories"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-store-git.md"
+  },
+  {
+   "key": "code-ports",
+   "summary": "rk-ports is a small, clean crate (1,130 code lines) that does what Phase 1 asks. It has five sync dyn-safe traits, five public fakes, a conformance body per port, a number-asserted parity test and compile-fail fixtures, all green with fmt and clippy at exit 0. EventStore (SQLite), Harness (Claude) and Toolchain (Node and Rust) have real adapters that run the same conformance bodies. Tracker and DocsSite are fake-only by recorded design until Phase 3, and nothing in the kernel or CLI calls either (an equality lint pins that). The gaps are a vacuous Tracker idempotency assertion, an inert `Query::ByRun` that callers use as read-all, a sealed `ChangeSummary::Binary` arm that waits on S-BIN (8i), and a Harness live row that is operator-only. About 42% of the source lines are doc-comment archaeology, with stale 'proposed' labels. Grade B, about 95% complete.",
+   "completeness_pct": 95,
+   "quality_grade": "B",
+   "works_today": [
+    "Five sync Send+Sync object-safe port traits: EventStore (5 methods), Harness (1), Tracker (2), DocsSite (3), Toolchain (7). Ports struct holds the store as Arc<Mutex<dyn EventStore>> (ADR-0115) and the rest as Arc<dyn>, pinned by tests and doctests (crates/rk-ports/src/root.rs:31-43)",
+    "Five public fakes: VecStore, FakeHarness, BoardTracker, RecordingDocs, FixtureToolchain (src/fakes.rs)",
+    "Parity as a number from a source parse: port_fake_parity asserts traits.len() == fakes.len() (tests/it/parity.rs:24), with git-not-a-port and no-async denylists carrying positive controls (tests/it/denylist.rs)",
+    "Shared conformance bodies behind the `conformance` feature (src/conformance.rs). Fake rows pass (port_conformance_fake_rows). Real rows pass for SQLite, Claude (fixture child) and Rust in the audit test log (log-test.txt:200,538,737)",
+    "Event store tier-1 arm and snapshot/rebuild round trip are exercised over both fake and SQLite (src/conformance.rs:136-250)",
+    "Compile-fail pinning via 5 trybuild cases with committed .stderr plus 2 doctests; 24 integration tests pass (log-test.txt:2551-2625; log-conformance.txt:35-86)",
+    "Real adapters implement the traits: SqliteStore (rk-adapter-sqlite/src/lib.rs:347), ClaudeHarness (rk-adapter-claude/src/lib.rs:510), NodeToolchain (:401), RustToolchain (:623). The shipped `redkiln run` wires real store, harness and toolchain (rk-cli/src/verbs/run.rs:1009-1018)"
+   ],
+   "stubbed_fake_or_missing": [
+    "Tracker and DocsSite have no real adapter anywhere (GitHub and mdBook are Phase 3). ExternalRef and TypedInput are unit newtypes (tracker.rs:30,34), DocSet is an opaque newtype with contents OWED, and no idempotency key exists. `redkiln run` fills both ports with BoardTracker and RecordingDocs (run.rs:1016-1017), and the kernel never calls them (rk-kernel/tests/it/conformance.rs:585-660)",
+    "ChangeSummary::Binary payload is sealed: BinaryChangeSummary(pub(crate) ()) (toolchain.rs:153), and its serialiser refuses. Step 8i (S-BIN) must open it (s8i-s-bin.md:364-372, :2364). Every fake and adapter refuses Binary ranges by name",
+    "conform_tracker's first==again idempotency check is vacuous: it compares unit newtypes, and the source says 'ARMED, NOT ASSERTED' (conformance.rs ~321-336). Only the fake's own board() window discriminates",
+    "AC-500's route-around half (a pack path that runs on Unsupported, with a mutation-style check) is ARMED, not built. Records say 'ARMED, not claimed' (rk-kernel/src/lib.rs:239-240) and I found no test for it",
+    "Query::ByRun is inert and returns every row on both fake and SQLite (fakes.rs:129; rk-adapter-sqlite/src/lib.rs:383). Callers use it as read-all (status.rs:131, cost.rs:186, doctor/mod.rs:529). Query keys are untyped Strings, and interim ByItem also returns unkeyed rows",
+    "The Harness live-CLI conformance row is #[ignore], paid and operator-run, never in CI (rk-adapter-claude/tests/it/live.rs:1-8). The real-row CI matrix is ARMED. The real row that runs in the suite uses a fixture child",
+    "Node toolchain implements no run_verb verbs and refuses change_summary (rk-adapter-toolchain-node/src/lib.rs:527-540)"
+   ],
+   "risks": [
+    "Tracker/DocsSite trait shapes are unvalidated, so Phase-3 adapters will likely force signature, newtype and conformance-body changes",
+    "S-BIN (8i) is the one external dependency in this crate: if it cannot complete, the Binary variant stays sealed, 8i does not close, and Phase-1 exit needs a new operator decision (s8i-s-bin.md:2364-2366)",
+    "Doc rot: 42% of src lines are comments (934 of 2,218). 39 dated/struck-through amendment markers. 23 lines still call ADR-0181/0169/0171 'proposed' while the ADR frontmatter says accepted. A reader or model could act on a superseded sentence",
+    "Inert/untyped Query selectors (ByRun, String keys, unkeyed rows match every item) are a latent correctness trap, though recorded in ADR-0182",
+    "10 expect() calls in library code shipped in the production binary (9 mutex expects plus 1 serde expect in fakes.rs, per ADR-0118). Tracker/docs ones are never reached, but the workspace does not deny expect_used",
+    "Parity is only behavioural for 3 of 5 ports. Tracker and DocsSite 'conformance' is the fake tested against itself. The Harness Ok-path journal differs between fake and real by recorded decision D21-72, and the fake snapshot omits tree/opening_run",
+    "Real conformance rows are environment-sensitive: the Node row failed red on a fresh worktree until `pnpm install` is run, and the live Harness row needs paid operator dispatch",
+    "Text-based source-parse tests (column-0 `pub trait`) are brittle, though guarded by non-empty floors and positive-control fixtures"
+   ],
+   "key_facts": [
+    "crates/rk-ports: src 2,218 lines (1,130 code, 934 comment, rest blank); tests 1,963 lines (1,247 code); 26 #[test] fns plus 2 compile_fail doctests plus 5 trybuild cases",
+    "Audit build logs: fmt rc=0, build rc=0, clippy rc=0 (rk-ports lib has 4 nursery warnings, log-clippy.txt:428-480), `cargo test -p rk-ports --features conformance` rc=0 with 24+2 passed (log-conformance.txt)",
+    "Workspace test rc=101 only from other crates. The Node toolchain row failed because the fixture's `pnpm install` was not run in the fresh worktree (log-test.txt:650-655). The rk-cli failures belong to other auditors",
+    "Escape hatches in src: 0 #[allow]/#[expect], 0 unsafe, 0 todo. 10 expects in fakes.rs (9 poisoned-lock per ADR-0118, 1 serde). 26 expects and 2 panics in feature-gated conformance.rs (assertions). The census's 38 expects and 4 panics include doc-comment mentions",
+    "Real adapters: EventStore=SQLite, Harness=Claude, Toolchain=Node+Rust (4 reals across 3 ports, matching ADR-0094/AC-499). Tracker and DocsSite are fake-only",
+    "Records: PROGRESS.md:30 says Checkpoint 7a was re-run whole and passed at 492e516 and abeb578 (2026-09-28). I did not re-run it",
+    "15 commits touch crates/rk-ports, from 3c8e880 (2026-09-13) to 55fda45",
+    "AC-507/508/510 (Tracker/DocsSite) are Phase 3 (s7a-ports-and-fakes.md:1229); the kernel's expected-uncalled lint is an equality over {docs, tracker} (ADR-0134)"
+   ],
+   "unverified": [
+    "Checkpoint 7a block and the `cargo tree -p rk-ports/-p rk-kernel -e normal` async-runtime graph assertion (AC-528 second half) were not rerun; I relied on records and logs",
+    "Whether any test discharges AC-500's route-around half: `git grep` in rk-kernel/tests found none and the records say ARMED, but I did not exhaustively search rk-cli tests or later stage files",
+    "Whether the live ClaudeHarness conformance probe has been run since 2026-09-18 (records say R-18 was closed by it at CLI 2.1.277), and its results",
+    "Which conformance rows are CI matrix rows (no CI workflow or redkiln-corpus read)",
+    "Node real-row failure is attributed to a missing `pnpm install` from the panic text; I did not install and rerun",
+    "A few line citations marked ~ in the report (fakes.rs toolchain section, tests/it/conformance.rs) are approximate to a few lines",
+    "Uncommitted changes in D:/repos/redkiln-rs are not covered; this audit is the 36dd8ac snapshot only"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-ports.md"
+  },
+  {
+   "key": "w1-code-kernel-select",
+   "summary": "The selection side of rk-kernel is real, pure and well tested (grade B, about 85% complete against Phase 1's needs). The grammar, the three facet lints, the seven-step select(), rigor monotonicity, the catalog loader and the lattice port all exist and fail closed. The kernel test target ran 417 passed, 0 failed on the snapshot. Several instruments are built but not wired into any product path (step 7 deviation, AC-495/AC-494, and the AC-105 monotonicity, AC-527 and lattice checks run only as CI tests). Three separate models of selection have no differential between them. The load-time rank-tie and monotonicity sweeps hard-code a toolchain set that omits rust, the toolchain of Redkiln-RS's own lane. A real wrong-winner bug in step 4 survived Checkpoint 7b for 14 days and was caught only when the fix lane first ran. Crate docs are heavily layered and partly stale.",
+   "completeness_pct": 85,
+   "quality_grade": "B",
+   "works_today": [
+    "select() runs steps 1-5 as a pure function, with step 6 as Selection::plan and step 7 as step7; it is called in production at crates/rk-cli/src/verbs/run.rs:6044 and in replay (replay.rs:1508)",
+    "Determinism gate: #![deny(disallowed_methods/types)] on select (select.rs:107-108), a committed select-clock-reintroduce positive control, a source scan for fs/env/event-log reads, and trybuild cases for RequiredSet (tests/ui/ac061_*)",
+    "ADR-0103 grammar (lexer, parser, three-valued evaluator, AC-069 narrowing lint, closed on_false set) with a per-string differential against the captured S-GRAMMAR probe verdicts (tests/it/probe_differential.rs:49)",
+    "AC-071, AC-520 and AC-072 facet lints fail closed, collect every violation, and are wired into rk-cli (verbs/lint.rs, doctor/rules.rs:1482)",
+    "Rank is lowest method_rank, and a tie is LoadError::RankTie at runtime (select/step4.rs:456-466); load_lints (forward-ref, cycle, excludes, dangling, rank tie) runs inside every select()",
+    "Rigor monotonicity (AC-105) is red on the pre-ceiling fixture and green on .redkiln/catalog (tests/it/rigor.rs:102)",
+    "Lattice port has byte-parity goldens against the Python and a pinned shipped reading: pairs=279936 unsat=1296 dead=57/102, ties=0, hard cycles=0 (tests/it/lattice.rs:45-47)",
+    "AC-527 quality-block terminal-condition rule, with red tests on the frozen p9 catalog",
+    "7f conformance lints are all discharged: no #[ignore] remains and 7 conformance tests were ok",
+    "No commit has touched crates/rk-kernel since the whole re-run at d24d15a, so the recorded checkpoint passes for this area are current"
+   ],
+   "stubbed_fake_or_missing": [
+    "Step 7 (deviation) has no production caller; the runtime refuses on_false = deviate by name (runtime/step.rs:2238-2244)",
+    "AC-045 SelectionMemoKey type does not exist (ARMED under ADR-0119); AC-044 is ARMED pending an amendment",
+    "AC-072 'anchor' clause is not built and no record defines it (facet_registry.rs:64-76)",
+    "pack_validation.rs and resolver.rs (AC-495/AC-494, about 900 lines) have tests but no production call site",
+    "AC-105, AC-527 and lattice checks are not reachable from redkiln lint/doctor/run; they are CI test jobs over the shipped pack only",
+    "AC-520/AC-071 corpus resolution reads a hand-transcribed .redkiln/corpus-records.toml via --pinned-corpus rather than the git object store at CORPUS_PIN",
+    "Toolchain sweep in rank_lint (step4.rs:595-639) and rigor monotonicity (rigor.rs:565-568) omits rust and python; only lattice.rs adds rust",
+    "No property-based or fuzz tests on the parser, evaluator or select(); no recursion depth bound on the parser",
+    "Owed record corrections never written: ADR-0103's two missing productions, connective commutativity, ADR-0081 clause 2 instrument, AC-072 anchor and domain shape, AC-066 table; ERRATA.md has no entries",
+    "AC-102 20% dead-activity threshold is reported, not enforced, on the shipped pack (57/102 dead under 2 packs; D21-47 V3)"
+   ],
+   "risks": [
+    "Unwired instruments read as built: protection of edited catalogs rests on CI only (medium; matters for Phase 2 agent-authored catalogs)",
+    "Three selection models (step4 judge, lattice::Run, rigor::Prepared) share only the evaluator, with no differential between them; the reported unsat and dead figures are the lattice's model, not select()'s (medium)",
+    "Hard-coded toolchain domain omits rust and python from two load-time checks, though the self-hosting lane is Rust (medium)",
+    "Catalog header loader is lenient: wrong-typed or misspelled keys silently default (catalog.rs:1025-1036, :1339), and inputs_digest omits excludes and deviation_ok, which affect step 5 and step 7 (low now, rising)",
+    "Step-4 sort bug (alphabetical id winning over lowest rank) existed from 8444221 (2026-09-13) to bfe0324 (2026-09-27), showing 7b fixtures did not pin multi-candidate rank (medium; fixed)",
+    "Records lag the code (about 8 OWED corrections) and crate-level docs are stale or layered (lib.rs:8-13, catalog.rs:4-6, facet_*.rs CLI-deferred notes) (medium for auditability)",
+    "Tests are pinned to product content (SHIPPED_DEAD=57 etc.), so any pack edit trips kernel tests, producing long re-run-pending chains (process overhead)"
+   ],
+   "key_facts": [
+    "Selection-side src is about 18.4k lines (select, predicate, registry, facet_*, rigor, catalog, lattice, pack_validation, toml_subset, quality_block, resolver, config); dedicated tests are about 16.8k lines in 29 files plus 198 fixture files; 15 trybuild cases kernel-wide, 4 on selection",
+    "Snapshot run (audit/log-test.txt:2032-2549, :2014-2030): rk-kernel it 417 passed / 0 failed / 5 ignored (child entrypoints); lib 12 passed; clippy and fmt rc 0 (audit/build.txt)",
+    "Shipped lattice: pairs=279936 unsat=1296 (0.46%) dead=57/102 (55.9%) ties=0 hard_cycles=0 over 2 packs (tests/it/lattice.rs:45-47; DECISIONS-2026-09-21.md:1928)",
+    "Production escape hatches in selection-side code: 3 expect() in predicate/parser.rs (252, 333, 371) with invariant messages; 0 unwrap; 0 panic; 0 unsafe; 7 #[expect] with reasons and no #[allow]",
+    "Comment-to-code ratio is 0.40 across these modules (4407 vs 11069 lines); lib.rs:8-13 still claims steps 5-7 are not built",
+    "Whole-checkpoint status: 7b, 7b-ii and 8b re-run whole and passed at d24d15a (2026-10-02); 7f is still marked re-run pending s8g .redkiln in PROGRESS row 36; 7e CLOSED at dddcdbd"
+   ],
+   "unverified": [
+    "Did not run cargo; results come from pre-existing audit/log-test.txt, log-clippy.txt and build.txt on the snapshot (Windows)",
+    "The --features corpus run (golden_log_replay, ac161_ac164_delete_db_replay) is not in that log",
+    "The determinism-gate bite (cargo clippy --features rk-kernel/select-clock-reintroduce rc 101) was not run",
+    "Live-corpus parse reading of 279/279 comes from PROGRESS row 31, not my run",
+    "Mutant campaigns recorded in stage files were not re-run",
+    "Whether ci.yml has ever run green on the two-OS matrix",
+    "Per-call runtime cost of select(), which runs rank_lint every call",
+    "Per-criterion AC register state lines beyond the cited criteria; the owed-amendment list is taken from stage-file prose",
+    "Stack-overflow behaviour on deeply nested predicates was not tested"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-kernel-select.md"
+  },
+  {
+   "key": "code-kernel-gates",
+   "summary": "The kernel's three-gates code (human gate, review gate, verify gate) is well built: pure functions, closed enums, types that make the key invariants unconstructible, about 7,900 lines of tests, and almost no escape hatches in the gate modules. The weak point is the wiring. On the real run path the verify harness hard-codes assertion_flipped=None and the CLI passes an empty assertion map to the ledger, so a criterion can only be closed by a human 'discriminates' answer, never by a mutation pin. The real review re-executor handles only kind=run findings. Quarantine, advisory retirement and several pack and ingest rules have no production caller. S-SUBTLE-CB has not run, so the review gate cannot be called guarded against false approval, and no kernel code or doc claims it is. Grade B, about 72% complete against Phase 1's requirement for this area. The records are honest about most of these gaps.",
+   "completeness_pct": 72,
+   "quality_grade": "B",
+   "works_today": [
+    "Human gate: single-use token, tree-hash void-not-reconciled, wrong-gate refusal, fresh record per re-reach (AC-524, PROVISIONAL), expiry at a journaled instant. Code in crates/rk-kernel/src/workflow/gate.rs and fsm.rs:315-367; tests/it/gates.rs has 16 tests, all ok in the audit's default test log.",
+    "Review gate core: total classifier (review/classify.rs:102), policy table as the only place a block is built (review/policy.rs:145-173, Block has private fields), four-cell re-execution rule, confirm_with with one block-append site, drift row for the model label, advisory_created for every non-block. tests/it/review.rs (19 ok) and review_confirm.rs (12 ok), plus trybuild cases for AC-244 and AC-294.",
+    "Verify gate core: flip predicate, ledger whose signature has no suite-verdict/finding/quarantine input, stage-exit refusal as one row (ADR-0125), bootstrap comparator, verify_completed recorder, AC gate, claim binder. tests/it/verify.rs has 27 tests, all ok.",
+    "Real run-path call sites exist and are exercised: run.rs:4655-4700 review pass with journal re-read, step.rs:771-890 verdict_record, run.rs:4228-4235 ledger and stage_exit, verify_pass.rs:556-720 ephemeral-worktree mutation harness with the AC-338 region re-hash.",
+    "Architecture rules (source-text scanners in module_boundary.rs) and positive-control fixtures guard AC-285, 286, 294, 302, 307, 318 and the ADR-0125 single-site rule.",
+    "Audit's default workspace log: rk-kernel lib 12 passed, integration 417 passed, 0 failed, 5 ignored (the ignored ones are child entry points). The kernel has not changed since the d24d15a whole-checkpoint pass (git log d24d15a..HEAD on crates/rk-kernel, rk-types, rk-store, rk-ports is empty)."
+   ],
+   "stubbed_fake_or_missing": [
+    "pinned/mutation_survived are unreachable in production: verify_pass.rs:667,707 set assertion_flipped None; run.rs:4231 passes an empty assertion map; ledger.rs:83,88 require assertion.is_some(). AC-334 is ARMED, and the records say so.",
+    "Real review re-executor returns None for kind=mutate (review_pass.rs:220) and never reports an assertion flip (:266), so only kind=run findings can block in a real run and narrowed-pin cannot arise.",
+    "Quarantine grant/remove have no non-test caller; the run path hard-codes an empty quarantine map (review_pass.rs:285-287, step.rs:842). retire_not_re_raised (confirm.rs:351) has no non-test caller, so the advisory sink only grows in a real run.",
+    "No production caller for RegressionRecord (AC-314), GateEligible (AC-239), fix_lane_review_is_strict (AC-300), cascade_is_refused (AC-301) and review::ingest::findings_from_result_event (AC-282, enforced instead in rk-adapter-claude/src/classify.rs:576).",
+    "A lane with no Spec sidecar has an empty ledger and the verify exit is permitted (verify_pass.rs:741, a stated build choice).",
+    "ARMED to later stages: AC-317, AC-295, AC-307 corpus replay half and AC-354 (Step 8 corpus run), AC-312 and the S-SUBTLE-CB framing fixtures (authored, undispatched), AC-349 plan-time binding, the doctor halves (7d), AC-289 workflow fixture, AC-301 lift.",
+    "gate_request tests for the S-BIN human-gate route (s8i) are not on disk."
+   ],
+   "risks": [
+    "The verify guarantee is overstated if described as live per-AC mutation pinning; today every AC needs a human discriminates answer, which is fail-closed but loads the operator and was not the design.",
+    "Mutation-style and narrowed-pin review findings never block a real run, so those Strict-weight policy rows are unreached at run time.",
+    "Review gate calibration is unknown: S-SUBTLE-CB has not run, and AC-284's table is PROVISIONAL on S-CLASS-REPLAY, also unrun. No document may claim the gate is guarded against false approval (ADR-0101 clause 5).",
+    "Unwired lifecycle features mean the advisory sink has no disposition path in a real run (SM-089).",
+    "All checkpoint passes are over fixtures and fakes; the first real-model evidence (S-BIN 8i, B1 just complete) is in flight, and the Step 8 exit is the first end-to-end test of the gate chain.",
+    "No workspace lint forbids unwrap/expect/panic (Cargo.toml [workspace.lints] has unsafe_code deny and an enumerated clippy subset only); the clean gate code is by convention.",
+    "Comment and provenance noise is heavy (about 33% comment lines crate-wide, a roughly 300-line change-log header in lib.rs), and lint/boundary scanners that read the crate's own source with std::fs ship as public modules of the production kernel library.",
+    "Minor, from reasoning rather than measurement: the human-gate token digest omits the item id (fsm.rs:354-359); harmless while the fold is per-item."
+   ],
+   "key_facts": [
+    "Checkpoint 7b-ii passed 164e212 (M3, 'the three gates exist and fail closed'), re-run whole and passed at d24d15a (runbook/PROGRESS.md:32; runbook/INDEX.md:98); the kernel is unchanged since d24d15a.",
+    "S-SUBTLE-CB is UNRUN: spikes/DECISIONS-2026-09-21.md:235 and :1461; crates/rk-kernel/src/review.rs:29; the framing fixtures in crates/rk-adapter-claude/tests/fixtures/framing/README.md are authored and undispatched.",
+    "The stage claims 122 ids (40 each for human-gate, review-gate and verify-gate, plus AC-455 and AC-239's list-is-data half). Seven are human-gated and not machine-decidable (AC-273 human half, 275, 276, 309, 311, 357, 358). AC-255 and AC-297 are cut (runbook/phase-1/s7b-ii-gates.md:813 onward).",
+    "87 distinct gate-range ids have a 'fn ac<N>_' test somewhere in the workspace (grep census by this auditor).",
+    "Gate-side source is about 3,970 lines (review 1,222, verify 1,372, gate+question 975); gate-side integration tests are about 7,860 lines.",
+    "Gate modules have 2 non-test escape-hatch lines: gate.rs:225 #[expect(too_many_arguments)] and advisory.rs:284 lock-poison expect. The whole-crate census (58 unwrap/expect, 8 panic) is mostly outside the gate area, not qualified here.",
+    "Comment share: review 358 of 1,222 lines, verify 385 of 1,372, whole crate 15,339 of 47,005 (33%).",
+    "Checkpoint 8g passed 4777941, re-run green at d5bfc4f and again at d24d15a; Step 8i B1 completed 2026-10-05 with $5.561026 spent (ee44bf1)."
+   ],
+   "unverified": [
+    "I did not run cargo, any checkpoint block, the --features corpus golden-log replay tests, or mutation testing. Pass counts come from the orchestrator's separate test log, not from my own run.",
+    "I did not read every test body in gates.rs, review.rs, verify.rs, or the rk-cli review_pass/verify_pass tests. Spot-checked only ac313_replay_k10 and the Block privacy and lint structure.",
+    "I did not recompute the per-AC discharged/armed status of the 122 claimed ids. The counts are the stage file's, plus my grep census.",
+    "ADR statuses (0123-0125, 0162, 0177, 0186, 0190-0196) are taken from PROGRESS and stage text, not from the ADR files.",
+    "Whether the S-BIN probe or capture sessions exercised review::confirm, or only a standalone reviewer prompt, is not determined from this tree.",
+    "No real-model-driven end-to-end review or verify run is recorded in what I read; the '0 of 102 shipped activities complete a committing walk' figure dates from 2026-09-21 and was not re-measured."
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-kernel-gates.md"
+  },
+  {
+   "key": "code-kernel-runtime",
+   "summary": "The runtime side of rk-kernel is well engineered and heavily tested. The step executor, reference resolver, step-grain commits, git-first tier-1 writer, landing, stage advance and per-item envelope are built. They are proven with fakes, real git and real kill-and-resume process tests: 12 unit and 417 integration tests pass, and both shipped lanes walk end to end over the real pack with scripted fakes. The gaps are no live run (no real `claude -p` dispatch has gone through this kernel, and Step 8j is not started), a policy layer that is only library code (budget exhaustion and the wall-clock mark, degradation and inner-retry accounting have no live caller), and heavy comment rot. Roughly 35% of the source lines are commentary, with stale \"proposed/OWED/not built\" claims and 67 of 78 clippy warnings about over-long doc paragraphs. Grade B, about 80% complete against what Phase 1 asks of this area. Cost/throttle, run worktrees and cards/models/run-env mostly live in other crates and are only touched here from the kernel side.",
+   "completeness_pct": 80,
+   "quality_grade": "B",
+   "works_today": [
+    "Five step kinds execute via Runtime::run_activity_steps (step.rs:1538); `check` is a free function with no port access (step.rs:1084); unrouted verbs refuse by name (step.rs:733-775)",
+    "Both shipped lanes walk end to end under scripted FakeHarness/Toolchain over the on-disk .redkiln pack, with real git: tests/it/lane_walk.rs; records say fix 14/14 and story 13/13; both tests pass in the 417 (log)",
+    "Complete reference resolver (ADR-0173): runtime/reference.rs; unresolvable refs are named RefError, never a value; reference_resolver.rs (17 tests)",
+    "Step-grain commits, loops, replayed decisions and re-entry; real process boundary proven by re-exec of the test binary (cross_process.rs:191-208; kill_and_resume_n_step :1274; breaker refusal survives process death :523)",
+    "Tier-1 git-first writer: commit_act commits, re-reads HEAD/tree, then appends sha-anchored rows; failed commit leaves zero rows; heal re-derives rows from trailer marks; replay does zero git writes (tier_one.rs; tests/it/tier_one.rs 18 tests on a real repo)",
+    "Landing arms, refusal gate, drift gate, seal and close acts (tier_one.rs: land_act :947, seal_act :1651, close_act :1260) with step_landing.rs tests",
+    "Stage entry/advance/lane_end per stage in replay::resume_routed (replay.rs:1932), held while a pass-sourced write is owed; lane_order.rs 12 tests",
+    "Per-item dispatch cap and token appetite enforced live from the store before every dispatch (activity.rs:636-638; envelope.rs:476); pack must declare both (replay.rs:2051)",
+    "Outer retry, retry_at mark on RateLimited, per-family breaker are wired into the activity loop (activity.rs:1061-1067, runtime.rs:424)",
+    "Determinism fences hold: no clock in kernel (JournaledNow), workflow lint-denied with committed positive controls, one Arc<Mutex<dyn EventStore>>; fmt, build and clippy rc=0 on the snapshot (audit/build.txt)"
+   ],
+   "stubbed_fake_or_missing": [
+    "No real claude -p dispatch has run through the kernel lane: Step 8j (fixture proof, CI, run preparation) is 'PLANNED, Not started' (PROGRESS.md:50); Step 8 re-opened, M5 not reached (PROGRESS.md:51); Step 8i in progress (PROGRESS.md:49)",
+    "AC-024 wall-clock expiry mark writer wall_clock_expiry_mark has no non-test caller (workflow/budget.rs:1050; recorded at s8h-cards-and-run-environment.md:372)",
+    "AC-025 exhaustion gate evaluate_gate, read_budget_extension_marks and BudgetLedger fold have no non-test caller (workflow/budget.rs:873,1006,417): BudgetExhausted cannot occur on a live run",
+    "attempts_total per-pass charge and inner-attempt charging not wired (budget.rs:523,553,577; retry.rs:548 decide_after_inner_retries, :815 schedule_for): rule pinned by tests, wiring OWED/ARMED",
+    "Degradation policy (AC-036..038) library-only: degrade::substitute/degraded_event/gate_closes (degrade.rs:285,320,388) have zero callers in runtime, replay or rk-cli",
+    "Mid-walk `deviate` route refuses by name (step.rs:2214,2242); ADR-0197 (cards/models/run env) still proposed pending s8j probes",
+    "Dead pub items with no references anywhere: is_bound (runtime.rs:477), execute_step_output (step.rs:2695), question_ids (workflow/question.rs:222); 47 pub fns in runtime/workflow/replay have no non-test caller",
+    "lane_walk.rs Verdict::Refuses variant never constructed (lane_walk.rs:125), so the walk table can no longer detect an expected refusal"
+   ],
+   "risks": [
+    "Highest: first live run will exercise untested interactions (adapter output shapes, real token usage into the envelope, real rate-limit rows) because everything is proven only under fakes",
+    "Real runs are bounded only by dispatch cap, token appetite, breaker, per-dispatch wall timeout and outer retry; design section 3.6/7.5 exhaustion-gate, durable mark, and degradation rows are not wired",
+    "Envelope admit reads the journal then appends/dispatches in separate steps (activity.rs:636-640): a concurrent second process on one item could pass the cap (lane lock effect unverified)",
+    "Fail-open token charge: a dispatch_completed row whose usage fails to deserialize charges 0 tokens (envelope.rs:448-450)",
+    "Documentation rot: 35% of non-blank src lines are comments; 264 inline dated notes, 64 struck-through passages, 207 'proposed' mentions vs 193/200 ADRs accepted; headers contradict code (runtime.rs says no pub trait but six exist in runtime/; step.rs:41,106 say per-step specs and step-output resolution OWED but s8d built them); 67 of 78 clippy warnings are over-long doc paragraphs",
+    "Only one committed golden log (8 events, toy incident pack) backs replay determinism; unit tests in src number only 12",
+    "Workspace lints do not deny unwrap/expect/panic (Cargo.toml:96-113); escape-hatch discipline is convention (real sites: 16 expect(LOCK_HALTS), 4 invariant expect, 1 panic! in public builder select/item.rs:240, 11 reasoned #[expect], 0 allow, 0 unsafe)",
+    "Large functions (65 over 60 code lines; run_tool_step 254, fsm::apply 239, land_act 219) and a public-everything crate (24 pub mods) make review and refactor costly; source-grep lints in tests are brittle",
+    "Six kernel-local pub traits (GitRoute, StoreRoute, ReviewRoutes, ArtifactReadSeam/WriteSeam, RunBranch) sit outside the five-ports-no-sixth check, which parses rk-ports only",
+    "Several upstream checkpoints (8a, 8c, 8d, 8d-ii, 8e, 8f, 7c) are recorded provisional, re-run pending s8j"
+   ],
+   "key_facts": [
+    "rk-kernel src 47,005 lines (28,815 code, 13,260 doc, 2,000 line comments); tests 55,479 lines; runtime/ + runtime.rs 10,332 lines; replay.rs 3,081",
+    "Test log on snapshot: rk-kernel lib 12 passed; integration 'it' 417 passed, 0 failed, 5 ignored (child entrypoints, fixture writer); 15 trybuild cases; 1 golden log of 8 events (audit/log-test.txt)",
+    "fmt, build, clippy (workspace, all-targets) rc=0 (audit/build.txt); rk-kernel lib has 78 distinct clippy warnings, 67 'first doc comment paragraph is too long'",
+    "Fixture lane walks: fix 14/14, story 13/13 per records (s8d, s8g stage files); asserted in lane_walk.rs:1580-1586 with selection_refusals empty (:1485, :1574)",
+    "Non-test escape hatches: 16 expect(LOCK_HALTS), 4 invariant expect, 1 unreachable!, 1 panic! (select/item.rs:240), 11 #[expect] with reasons, 0 #[allow], 0 unsafe, 0 TODO",
+    "Step census over shipped pack at s7g open: 574 steps (185 agent, 113 tool, 94 check, 80 gate, 102 emit) per step.rs header",
+    "ADRs: 193 accepted, 1 proposed (0197), 4 superseded; 207 'proposed' mentions in kernel src comments",
+    "47 pub fns in runtime/workflow/replay with zero non-test callers, including wall_clock_expiry_mark, evaluate_gate, degrade::substitute",
+    "Cross-crate: rk-cli --test it had 63 failures in the audit log, 55 of them 'ANTHROPIC_BASE_URL refused' (environment), rk-adapter-toolchain-node 14 (missing pnpm install)"
+   ],
+   "unverified": [
+    "I did not run cargo; pass/fail evidence is from sibling build logs for the same snapshot",
+    "Cause of rk-cli (63) and toolchain-node (14) test failures believed environmental (ANTHROPIC_BASE_URL, pnpm) but not confirmed",
+    "Whether the lane lock prevents concurrent envelope-cap races",
+    "Whether design section 3.6 budget-exhaustion and degradation rows are required for Phase-1 exit; records say ARMED without a dated exit decision I found",
+    "Checkpoint pass claims in PROGRESS.md (e.g. 1404 tests at d24d15a) were not re-run",
+    "Fixture lane counts (14/14, 13/13) are from records plus the test files' empty refusal lists; I did not read the LANE_WALK lines myself",
+    "Design sections 3-10 not read in full; cited via section 3.6/7.5 tables and stage-file quotes of 4.5",
+    "Function-size counts from a brace-matching script may over-count where '{' char literals appear",
+    "Run worktrees (8d-ii), cost/throttle (7i), cards/models/run-env (8h) are mostly outside rk-kernel (rk-git, rk-adapter-claude, rk-cli) and were not graded here"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-kernel-runtime.md"
+  },
+  {
+   "key": "code-claude-adapter",
+   "summary": "The Claude adapter and containment crates are fully built to the Phase-1 design and are well engineered and heavily tested. All tests pass on the snapshot (149 adapter, 6 containment), and the unsafe code is confined to one commented module with 25 SAFETY notes. The main weakness is realism rather than quality. Every stream fixture is authored, and the real adapter last dispatched against the real CLI on 2026-09-21 at version 2.1.278. The CLI is now frozen at 2.1.289, and the adapter's pin and permission-mode table do not cover that version. The pin move, s8h's three live confinement probes and the AC-215 disallowed-tool test are all unrun, and the POSIX containment arm and CI have never run. Grade B: a solid core whose least-privilege confinement and cross-OS behaviour remain unproven live.",
+   "completeness_pct": 80,
+   "quality_grade": "B",
+   "works_today": [
+    "Full dispatch path (pre-spawn refusals, spawn through containment, stream drain, init adoption, classification onto the closed eleven StepErrors, dispatch_completed and rate_limit_reading rows) is implemented and passes 149 tests against a spawned fixture child (audit/log-test.txt:516)",
+    "rk-containment Windows arm: Job Object created before spawn, suspend/assign/resume, kill via job, orphan and breakaway tests; 6 tests pass (audit/log-test.txt:1757-1764)",
+    "Golden argv in one builder with per-profile delivery, argv cap, unconditional --permission-prompts none / --strict-mcp-config / --setting-sources empty; insta, proptest and trybuild coverage (command.rs:678-776)",
+    "Subscription-only enforcement: committed env denylist refused at Config::new, apiKeySource must equal none at init (env_denylist.rs; init.rs:169,309)",
+    "Integer-tick headroom scanner and guard with no f64 (headroom.rs:395-445; throttle.rs:98-150)",
+    "Real-CLI evidence at 2.1.277 and 2.1.278: checkpoint 7c's live_dispatch_probe passed on 2026-09-18 and again on 2026-09-21 (PROGRESS.md:613), R-18 closed, apiKeySource none read live",
+    "Live-test guard lint ensures every #[ignore] paid test is launch-record guarded (tests/it/live_guard.rs)",
+    "fmt, build and clippy rc=0 on the snapshot; containment has 0 clippy warnings, adapter 4 doc-paragraph nursery warnings"
+   ],
+   "stubbed_fake_or_missing": [
+    "All in-tree stream fixtures are scripted or synthetic; no raw real claude stream is checked in (tests/fixtures/streams/README.md:3)",
+    "Permission-denied event shape is drafted from binary literals and unmeasured as a live frame",
+    "live_disallowed_tool_terminates (AC-215 integration half) authored, never run (s7d:1970)",
+    "s8h probes 0/1/2 (denial channel, confinement and denial, init equality) authored, never run; scheduled in s8j (s8h:2032, s8j:1111-1146)",
+    "POSIX containment arm (process_group + killpg, /proc enumeration) ARMED to a CI run that has never executed (s7c:3118; PROGRESS.md:559)",
+    "TESTED_CLI_VERSION is 2.1.278 and PERMISSION_MODE_ARGV has no 2.1.289 row, so a real dispatch at the installed CLI is refused until s8j's pin move (config.rs:124; command.rs:159-176)",
+    "Throttle Guard is process-local and not seeded from stored readings (lib.rs:205; throttle.rs:91-96)",
+    "S-TTL1 subagent bucket unobserved, S-RETRY exhaustion arm not measurable, AC-214 lint half and AC-499 CI-matrix instrument ARMED",
+    "ADR-0197 (permission modes, settings file, pin-keyed argv) is still proposed"
+   ],
+   "risks": [
+    "Stale pin (2.1.278) versus installed CLI 2.1.289: first dispatch after the s8j pin move is effectively a fresh integration against an init/permission surface that has changed twice",
+    "s8h confinement (--settings file, outside-read denial channel) has never been exercised live and rests on a proposed ADR",
+    "Parser exhaustiveness rests on authored fixtures; real-frame drift is unobserved",
+    "POSIX arm and CI never run; killpg misses setsid escapes and /proc-only enumeration would fail on macOS",
+    "Rate-limit guard resets every process, so the first dispatch of each run is unguarded",
+    "Mutex-poison .expect calls at lib.rs:538 and 764-791 sit outside the panic catch, contradicting the module doc's no-unwind-without-a-row claim (low probability)",
+    "About 36% of adapter source lines are comments, mostly dated process history, which hurts readability and will rot",
+    "Per-dispatch settings files are never deleted"
+   ],
+   "key_facts": [
+    "rk-adapter-claude: 6,528 src lines, 12,535 test lines, 149 tests passed 0 failed (audit/log-test.txt:516); rk-containment: 1,549 src lines, 6 tests passed (log-test.txt:1764)",
+    "Production escape hatches qualified: 11 mutex-poison expects under ADR-0118 plus 2 serialisation expects in the adapter; 25 unsafe sites each with a SAFETY comment and 3 typestate expects in containment (ffi.rs); no unwrap_used/expect_used clippy lint enabled in workspace lints",
+    "Live probes proven by records: 2026-09-18 five stopped runs then a pass (fixes RT-27, R-18 closed), spike drivers S-TTL1/S-RETRY partially measured, 2026-09-21 second paid haiku dispatch green at 2.1.278 (PROGRESS.md:613)",
+    "s8i B1's $5.56 of probes and captures ran through the old corpus runner and /ue-verify, not rk-adapter-claude (s8i:248-264,1806)",
+    "Pin 2.1.278 vs CLI frozen at 2.1.289 (config.rs:124; s8i:2017); pin move scheduled s8j step 1 (s8j:955-978)",
+    "Unrun live tests: live_disallowed_tool_terminates, live_denial_channel_preprobe, live_confinement_and_denial_probe, live_init_equality_probe (live.rs:455,1000,1145,1434)",
+    "Comment lines are 2,363 of 6,528 in the adapter (36%) and 630 of 1,549 in containment (41%)"
+   ],
+   "unverified": [
+    "Whether ci.yml has run on GitHub for any commit (remote status not visible)",
+    "Contents of the external redkiln-corpus raw frames (commit f39b2f8e47a4); only the records' statements were read",
+    "Whether a pre-batch headroom check outside this area covers the process-local throttle guard",
+    "Whether macOS or other POSIX is an intended target",
+    "Mutation-test strength of the suite (tests were not run by this auditor)",
+    "Failures in other crates in the audit test log (node toolchain 14 failed, rk-cli 63 failed) were not diagnosed; none are in this area"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-claude-adapter.md"
+  },
+  {
+   "key": "code-toolchain-sqlite",
+   "summary": "The SQLite, Rust toolchain and Node toolchain adapters are real, wired into the composition root, and heavily tested against real processes. They have no unwrap, expect, panic or unsafe in production code; the census hits are doc-comment prose. The Rust adapter is the strongest: pinned test parsers, a build-stream reader, affected selection, the Text arm of change_summary, and four verbs run against real cargo-audit, cargo-deny and pnpm. The Node adapter is deliberately thin: no affected selection, no verbs, no change_summary, and it cannot detect a shrunken filtered run. The SQLite adapter is a small, clean shell over rk-store, with ByRun inert by accepted decision and R-23 (identity branch-dependence) still open. The main debts are duplicated registry and run plumbing across four adapters, a 28-49% comment ratio dominated by dated amendment and strikethrough history, and a 200-line sca_scan function. The Binary arm of change_summary waits on s8i, and whole re-runs of Checkpoints 8c and 7c wait on s8j. Grade B overall, about 85% complete.",
+   "completeness_pct": 85,
+   "quality_grade": "B",
+   "works_today": [
+    "Rust adapter: real cargo build (json stream, compile error is Ok(failing)), test via cargo test or nextest chosen by probe, clippy lint, min(step, construction) bound naming the firing bound (crates/rk-adapter-toolchain-rust/src/lib.rs:605-690, :348)",
+    "Rust adapter: strict version-pinned libtest and nextest parsers over 6 goldens including this repository's own 1,053-line stdout; unpinned versions refused by name (tests/it/libtest_lines.rs, nextest_lines.rs)",
+    "Rust adapter: change_summary Text arm via rk_git range_diff; Binary and LFS paths refused through the dated registry row (lib.rs:728-837; tests/it/change_summary.rs, 5 tests)",
+    "Rust adapter: affected selection (reverse-dependency closure over cargo metadata) and verbs smoke, sca_scan, package, setup, run against real cargo-audit, cargo-deny and pnpm with fixture databases; in-tree CVSS v3 scorer pinned against cvss::v3 over 92 real vectors (src/verbs.rs; tests/it/verbs.rs, 18 tests)",
+    "Node adapter: real tsc --noEmit build with exit mapping, vitest run with JSON-reporter counts, prettier lint, S-CANCEL-WIN vitest arm, AC-325 argv wrapper, conformance row (crates/rk-adapter-toolchain-node/src/lib.rs, tests/it/)",
+    "SQLite adapter: five-method EventStore (append, append_tier1, query, snapshot, rebuild), one store per common dir, append-only correction, identity-mismatch refusal, WAL and busy-timeout checks, gate replay over the real store, conformance including the tier-one arm (crates/rk-adapter-sqlite/src/lib.rs, tests/it/)",
+    "All three adapters are constructed in the composition root (crates/rk-cli/src/verbs/run.rs:390, :5535, :5564); CI installs cargo-audit 0.22.2, cargo-deny 0.20.2 and nextest 0.9.146 and runs an ubuntu and windows matrix (.github/workflows/ci.yml:28,67-79)",
+    "Registry design is fail-closed: a row claiming a probe for an unimplemented method, or a missing row, is a decode failure and never defaults to Unsupported"
+   ],
+   "stubbed_fake_or_missing": [
+    "Binary arm of change_summary sealed until S-BIN (s8i); Rust registry row is probe:none with reason ADR-0165 (rust registry.rs:160-162); Node refuses change_summary from its registry",
+    "Node adapter: affected selection refused (probe S-SEL-NODE owed), Selection::Named refused, run_verb refuses every verb including setup (node lib.rs; tests/it/verbs.rs)",
+    "Node total_test_count is the run's own executed count (OwnExecutedCount), so a filtered run cannot be detected by the adapter; AC-326 selection_ineffective is left to the kernel (node report.rs doc lines 26-36)",
+    "AC-334 Rust half ARMED: no Rust ordering-inversion fixture; corpus feature declared empty (rust Cargo.toml); Node half runs only under --features corpus",
+    "SQLite ByRun is inert and returns every row (lib.rs:383, ADR-0182 d5 accepted); callers use it as the whole-store read (rk-cli status.rs:131, cost.rs:186, doctor/mod.rs:529)",
+    "R-23 OPEN: identity compares root commit and schema version only, takes the first max-parents=0 line (branch-dependent), no moved-repository policy, no harness-version column (PROGRESS.md:179; sqlite identity.rs)",
+    "Whole re-runs of Checkpoints 8c and 7c are owed by s8j (PROGRESS.md:33, :42)"
+   ],
+   "risks": [
+    "Parsers are pinned to a single libtest (1.98.1) and nextest (0.9.146) version; any toolchain bump fails closed until goldens are re-measured, a recurring chore and a self-hosting-run hazard if the run box drifts",
+    "The S-BIN finding will need a new Binary arm, registry row and probably new goldens in these adapters; shape is unproven until s8i reports",
+    "Node is a second port implementation, not a second usable lane: no affected selection, verbs or setup, and no filtered-run shrink detection",
+    "Maintenance drift: the Capability/Probe/Row/refusal registry module is copied across four adapter crates, run.rs and env.rs near-duplicated between Rust and Node (about 31 differing lines of about 150), kept in sync by comment discipline only",
+    "Comment noise: 28% (Rust), 37% (Node), 49% (SQLite) of src lines are comments, mostly dated amendments and struck-through history that bury present-tense behaviour; some drift remains (Node report.rs doc line 37 still says a red suite is Err(NonZero), reversed by record T)",
+    "SQLite flattens every rk-store error to TransportKind::Io via to_string (lib.rs:341-386), hiding contention, corruption and decode classes from the kernel",
+    "Test suite is environment-heavy (cargo-audit, cargo-deny, nextest, pnpm, vitest install) with no cfg(test) unit tests in src; a bare dev box cannot run it, though CI provisions the tools",
+    "Checkpoints 8c and 7c are provisional until s8j; green rests on 4ab7c67 and e8e4f68 plus later per-slice suites; the Rust crate was touched again at 5d590c3 (2026-09-29)"
+   ],
+   "key_facts": [
+    "src/test lines: rust 4,483/5,757; node 1,637/1,989; sqlite 856/1,806 (wc over crates/*/src and tests/it)",
+    "Test function counts: rust 72 #[test] (census 81), node 19, sqlite about 16 (tests/it/*.rs)",
+    "Real production escape hatches: 0 unwrap/expect/panic/todo/unsafe in all three src trees; 6 #[expect(..., reason)] sites, all with stated reasons (rust run.rs:172,:180,:209; node run.rs:160,:168,:196); sqlite 0; workspace denies unsafe_code (Cargo.toml:97)",
+    "Comment lines in src: rust 1,241 of 4,483 (28%), node 599 of 1,637 (37%), sqlite 418 of 856 (49%); rust lib.rs 327 of 840",
+    "Checkpoint 8c passed 4ab7c67, re-run green after flip e8e4f68, companion suite 877 passed/0 failed/9 ignored over 44 (record claim), provisional pending s8j (runbook/PROGRESS.md:42)",
+    "ADRs 0094, 0127, 0165, 0181, 0182 are status accepted; records T/V/B = ADR-0169/0170/0171 accepted via D21-69/70/71",
+    "19 commits touch the three crates, from a52c0af (sqlite slice 3) and 729a8ab (toolchains slice 6) to 5d590c3 (2026-09-29)",
+    "The Rust Toolchain port has seven methods including run_verb; Rust handlers answer smoke, sca_scan, package, setup and refuse every other verb by bare name (verbs.rs:101)"
+   ],
+   "unverified": [
+    "No test was executed (cargo forbidden); current-head greenness of all three crates is unverified",
+    "877/0/9 companion-suite figure and the M1-M54 mutant-kill claims are record claims only",
+    "Whether pnpm and the Node project fixture install are present on the target run box",
+    "Behaviour of cargo-audit and cargo-deny at versions other than 0.22.2 and 0.20.2",
+    "Cross-process SQLite contention coverage, which lives in rk-store and rk-kernel tests that were not read"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-toolchain-sqlite.md"
+  },
+  {
+   "key": "code-cli-migrate",
+   "summary": "All nine redkiln verbs (run, answer, status, explain, cost, doctor/--rebuild, catalog search, init, lint) and redkiln-migrate v0 exist as real implementations with heavy test coverage, but no real claude lane has ever been driven end to end through the CLI. Every lane test uses a FakeHarness or the fixture child process, and a real run is only reachable via the tools/live-run.sh launcher from a plain Git Bash terminal. Engineering discipline is strong: a closed exit table, #[expect] with reasons instead of #[allow], no unsafe or unwrap in production code, and 43 doctor rules each with a rejecting fixture. Notable debt remains: a 6,481-line run.rs, many doc headers that describe stubs which no longer exist, an OS-signal token that main.rs drops so the shipped binary's Ctrl-C handler is inert, `status` computing one global stage for all items, and a test suite that is not hermetic against ambient ANTHROPIC_* env (61 of 329 tests red in the audit shell). The migrator is small, clean and 25/25 green but proven only on a 24-file hand-authored fixture, with the real-corpus differential deferred to Phase 2 by design.",
+   "completeness_pct": 80,
+   "quality_grade": "B",
+   "works_today": [
+    "All 9 clap verbs dispatch to real bodies (verbs/mod.rs dispatch; no todo!/unimplemented!/FIXME in src)",
+    "init: idempotent scaffold of .redkiln/config.toml plus store identity plus info/exclude block (verbs/init.rs; tests/it/init.rs 7 tests)",
+    "doctor: 43 rules (doctor/rules.rs:75) with 43 rejecting fixture dirs, zero-dispatch by construction; doctor --rebuild with re-opened store identity",
+    "run: steps 1-10 in code, run-owned worktree, gate-open exits 0, expiry pass, verify/review/landing passes, closed-lane no-op; exercised in-process via FakeHarness (lane_e2e.rs) and across a process boundary over the fixture child",
+    "answer: CLI-resolved token, option validated against the question registry, attachments admitted/refused, void-after-commit, the single gate::answer call site",
+    "explain (record-only, no selection), cost (ADR-0110 batch delta), catalog search (keywords only), lint wrapper",
+    "Closed Exit table with exhaustive From<&StepError> and a 70/130 halt path; insta snapshot pins the table",
+    "redkiln-migrate v0: dirty-target refusal, one commit plus report, idempotent second run, kill-idempotence, deterministic output; 25/25 tests passed in the background log",
+    "Pre-existing background build: fmt rc=0, build rc=0, clippy rc=0 (nursery warnings only)"
+   ],
+   "stubbed_fake_or_missing": [
+    "No real claude -p lane has been run end to end through redkiln run; lane_proof (s8j) module does not exist; 8j PLANNED and not started",
+    "A real run/answer needs the REDKILN_LAUNCH_RECORD written only by tools/live-run.sh (POSIX sh, plain Git Bash) - verbs/mod.rs:225",
+    "release is not a CLI verb (release_tag is a git-route handler, release_tag.rs); doctor --probe and --fix absent (not Phase 1)",
+    "No item-creation verb: items are hand-written TOML under .redkiln/items/",
+    "OS-signal delivery ARMED not run; and the main.rs token is dropped (main.rs:34-37) while run builds its own CancelToken (run.rs:398)",
+    "AC-366, AC-398, AC-278 and POSIX signal arms ARMED per records",
+    "AC-436 promised a property test; the test is a single example test and the proptest dev-dependency is unused",
+    "Composite two-toolchain adapter not built (Rust adapter fills Ports.toolchain)",
+    "Migrate real-corpus differential (ac463_) is #[ignore]/feature-gated; only a hand-authored 24-file fixture is exercised"
+   ],
+   "risks": [
+    "First live lane may expose gaps that only fakes have exercised (real ClaudeHarness plus run loop plus launcher never run together)",
+    "F1: Ctrl-C handler is installed (overrides default) but cancels an orphan token, so an operator interrupt is inert or races the child's console death",
+    "F2: status derives one global stage from the last StageTransition (status.rs:183-197; payload has no item) and applies it to every item; likely wrong with fix+story items in one store; only 2 thin status tests; write errors swallowed",
+    "F3: test suite not hermetic - 63 of 329 rk-cli tests failed in the audit shell, 61 due to inherited ANTHROPIC_BASE_URL hitting the product's own denylist; tests scrub only REDKILN_LAUNCH_RECORD",
+    "F4/F5: 6,481-line verbs/run.rs and stale doc headers (lib.rs, doctor/mod.rs, answer.rs, run.rs) that call implemented code a skeleton/stub; 31.6% of src lines are comments with struck-through history",
+    "Windows/Git-Bash-only live path; POSIX arms unrun",
+    "Migrate fidelity to real old-Redkiln corpora unproven before Phase 2"
+   ],
+   "key_facts": [
+    "rk-cli src 17,917 lines (5,667 comment); tests/it 35,999 lines; 329 tests in `it`; 10 trycmd files; 5 insta snapshots (crates/rk-cli/tests/it/snapshots)",
+    "redkiln-migrate src 1,605 lines; tests 2,404 lines; 25 tests, 25 passed in log-test.txt",
+    "Doctor RULES = 43 ids = 43 fixture dirs (rules.rs:75; tests/fixtures/doctor/RK-D-*)",
+    "Escape hatches in non-test code: unsafe 0 (census 1 is a doc word, run.rs:4801), unwrap 0, expect 2 (config.rs:201, migrate run_contract.rs:210), panic 3 deliberate (no_dispatch.rs:78, cost.rs:148, store.rs:78), #[expect] 16 each with reason, #[allow] 0, std::process::exit 2 sites in rk-cli main.rs (52,68)",
+    "Audit-shell test log: rk-cli it 266 passed / 63 failed; 61 of 63 show ANTHROPIC_BASE_URL denylist refusal",
+    "Clippy rc=0; rk-cli 29 lib / 55 test warnings, nearly all nursery",
+    "Records: PROGRESS row 7d 're-run WHOLE and passed at d24d15a' (2026-10-02); row 8 RE-OPENED, Checkpoint 8 not passed; 8i IN PROGRESS; 8j PLANNED (runbook/PROGRESS.md rows 34, 49-51)",
+    "Real-run entry gate: verbs/mod.rs:225 launch_check; tools/live-run.sh (370 lines)"
+   ],
+   "unverified": [
+    "status global-stage conflation not executed (code read only)",
+    "Ctrl-C inertness in the shipped binary not executed (code read only)",
+    "Cause of the 2 non-ANTHROPIC_BASE_URL failures among the 63 (checklist_bridge rust-smoke toolchain detection)",
+    "Whether rk-cli tests are green in a clean plain terminal at 36dd8ac (records claim green at d24d15a; log is from the audit shell)",
+    "doctor AC-415 join and SM-122 wall-clock not run",
+    "ARMED rows (AC-366, AC-398, AC-278, POSIX signal) not re-verified",
+    "Deep correctness of redkiln-migrate beyond tests and a skim"
+   ],
+   "report_path": "<scratchpad>/audit/w1-code-cli-migrate.md"
+  },
+  {
+   "key": "w1-pack-ci-tools",
+   "summary": "The shipped `.redkiln/` pack is real and loads: 102 catalog activities plus 1 extended, 2 lane packs, 78 artifact kinds, and 8 cards. It is heavily tested over the real files, but only against a scripted fake harness. Under fakes the fix lane walks 14 of 14 selected activities and the story lane 13 of 13. No recorded run exists of either lane against a real `claude -p` with the shipped cards, which are one-sentence v0 prompts, and the real exit items are not yet created (Step 8j is not started). `ci.yml` is thorough on paper (3 jobs, 2 OS legs) but has never run on any pushed branch, lacks a known-needed pnpm step, and its POSIX arms have never compiled. There is no recorded green run, and the last recorded local whole-suite pass is `d24d15a`, 40 commits before the snapshot. 42 of 102 activities are tagged only for Phase-2-deferred lanes, 57 of 102 are unreachable from the two installed packs, and 26 reference tool verbs with no registry row. All of that is by design under ADR-0011. Overall grade B: careful, test-pinned artefacts, but live-agent behaviour and cross-OS CI are unproven and both are exit conditions.",
+   "completeness_pct": 65,
+   "quality_grade": "B",
+   "works_today": [
+    "Shipped pack loads from the real `.redkiln/` through the kernel lattice tests: packs=2, catalog=102, 0 rank ties, 0 hard cycles, AC-104 family totality passes (crates/rk-kernel/tests/it/lattice.rs:523-626)",
+    "Fake-harness lane walks over the shipped files: fix walked=14 refused=0, story walked=13 refused=0 (crates/rk-kernel/tests/it/lane_walk.rs:1395-1399; runbook/phase-1/s8g-verify-and-restored-demands.md:386)",
+    "Every gate question reached by the 17 lane activities is defined in .redkiln/processes/questions.toml; all agent outputs in the lane activities have exported schemas (crates/rk-types/src/registry.rs:21-60)",
+    "Policy gates are real and shown able to fail: clippy.toml bans backed by the rk-clock-read fixture, deny.toml bans backed by the rk-banned-dep fixture, plus the AC-484 edge fixture (tests/fixtures/*)",
+    "tools/live-run.sh is a coherent 9-step launch gate with a no-spend --check mode; bash -n is clean (tools/live-run.sh:1-26)",
+    "Local gates (fmt, clippy, test, audit, deny via Checkpoint 5) were recorded passing at d24d15a on 2026-10-02, with 1404 passed, 0 failed, 9 ignored over 44 binaries (runbook/PROGRESS.md rows 5 and 8h)"
+   ],
+   "stubbed_fake_or_missing": [
+    "No real-agent run of either lane with the shipped cards; the lane walks use FakeHarness and a scripted Toolchain and state 'not a real run' (lane_walk.rs module doc). Record A (cards/models/run environment, ADR-0197) awaits Step 8j probes (PROGRESS.md row 8h)",
+    "The 8 cards are one-sentence v0 prompts, each described as 'Step 7e's v0 card' (.redkiln/cards/*.json)",
+    "The real fix item and the real story item (rk-story-harden-spike-pack) do not exist yet; Step 8j is 'Not started' (PROGRESS.md row 8j; s8j-run-preparation.md:328, 411-443)",
+    "The committed story item rk-story-codex-adapter sets external_dep=true, which makes story design selection refuse a CyclicDag (s8g-verify-and-restored-demands.md:766); it is slated for retirement (s8j...md:398)",
+    "ci.yml has never run on a pushed branch (PROGRESS.md:559; s8j...md:1177-1180); no recorded run id or URL exists; three ARMED NOT DISCHARGED banners remain (ci.yml:183, 304, 530)",
+    "ci.yml has no pnpm install step, so about 10 rk-adapter-toolchain-node tests will fail at preflight; the fix is drafted in s8j section 8j.7 but not applied",
+    "57 of 102 activities are unreachable from the two installed packs and 26 reference tool verbs with no registry.toml row; 39 agent steps in 30 activities have no exported schema (all outside the walked lanes)",
+    "Triage has zero catalog activities and bug-standard has no [stage.triage] block (ADR-0156 title); covered only by the kernel unknown_facet gate",
+    "Smoke checklist has 12 version/help rows only; init/status rows are owed to a ruling (.redkiln/checklists/smoke.toml:9-20)",
+    "Estimation KB records no estimates (.redkiln/kb/estimation-history.md); Node toolchain timeout values are 'unmeasured' (.redkiln/registry.toml:166-171)",
+    "deny.toml has no [sources] table; 'MIT-0' is listed twice in its allow list"
+   ],
+   "risks": [
+    "High: the exit criterion needs a real fix-lane run and a real story-lane run, and the shipped cards plus schema conformance have never been exercised live. Fakes cannot reveal prompt or schema failures.",
+    "High: D21-42 14a makes CI green on both OS legs a Checkpoint 8 condition. The workflow has never executed, a known step is missing, and the POSIX code arms (rk-containment, toolchain env.rs, libc) have never compiled, since all work and checkpoints ran on Windows. Expect at least one red first run.",
+    "Medium: the last recorded local whole-suite pass is d24d15a, 40 commits before snapshot 36dd8ac; green at HEAD is unrecorded.",
+    "Medium: the catalog carries about 42 Phase-2-only activities and 26 with unmapped verbs, so each pack edit has to re-pin lattice constants (SHIPPED_DEAD went 56 to 57 by dated edit).",
+    "Medium: Windows and Git Bash assumptions in CORPUS_PIN (D:/ paths), tools/live-run.sh, and some synthetic D:/ strings in tests that are unchecked on Linux.",
+    "Low: in-file comments (registry.toml and others) still call records 'proposed' that the ledger says were accepted; the packs and registry are 20-45% comment lines.",
+    "Low: the fix-lane fixture item's premise has drifted (doctor.rs prose says thirty-eight; 47 #[test] attributes now)."
+   ],
+   "key_facts": [
+    "102 shipped activities (.redkiln/catalog) + 1 extended tag-release (.redkiln/catalog-extended); 571 steps: 185 agent, 93 check, 102 emit, 80 gate, 111 tool",
+    "60 of 102 tagged kind:bug and/or kind:story (13 bug-only, 14 story-only, 33 both); 42 tagged for neither are Phase-2-deferred under ADR-0011 (references/adr/0011*.md)",
+    "Lattice over installed pair: pairs=279936 unsat=1296 (0.46%) dead=57/102 (55.9%) ties=0 hard_cycles=0 (crates/rk-kernel/tests/it/lattice.rs:45-47); the kill line is applied over the 8 pre-registered packs at 14/102 (spikes/DECISIONS-2026-09-21.md:2563-2568)",
+    "Lane walks under fakes: fix 14 activities walked, refused 0; story 13 walked, refused 0 (lane_walk.rs:1395-1399)",
+    "CI: 3 jobs (gates on ubuntu+windows, no-egress, structural), 539 lines, 16 commits; recorded status 'authored and has never run' (runbook/PROGRESS.md:559, runbook/phase-1/s8j-run-preparation.md:1177-1180)",
+    "Top-level tests/ holds 3 must-fail fixture crates only; about 1,450 #[test] fns live in crates/*/tests (rk-kernel 448, rk-cli 331), counted by grep",
+    "Pack content: 78 artifact kinds, 21 facets, 13 verb rows, 8 cards, 7 checklists, 4 KB atoms, 11 question definitions (45 referenced in the catalog); 146 of 185 agent steps have exported schemas",
+    "Pinned: Rust 1.98.1, cargo-audit 0.22.2, cargo-deny 0.20.2, cargo-nextest 0.9.146; CORPUS_SHA 61f590e5, predecessor 47faec9f (CORPUS_PIN)"
+   ],
+   "unverified": [
+    "Whether the full suite and local gates are green at 36dd8ac (last recorded pass d24d15a, 2026-10-02)",
+    "Whether ci.yml parses and runs on GitHub, and whether the ubuntu leg compiles the POSIX arms",
+    "Behaviour of the shipped cards under a real claude -p across a full lane",
+    "Test counts are grep-derived (#[test] attributes), not from a cargo test run",
+    "That model ids in the pack (claude-haiku-4-5-20251001, claude-sonnet-5, claude-opus-5-5) are adopted by the CLI; the RT-27 check was not run here",
+    "Whether synthetic D:/ strings in Rust tests behave on Linux",
+    "Checkpoint block outputs (7e, 8b, 8h) were read from the records, not re-executed"
+   ],
+   "report_path": "<scratchpad>/audit/w1-pack-ci-tools.md"
+  },
+  {
+   "key": "w1-records",
+   "summary": "The records are unusually complete and cross-referenced: 198 ADRs (193 accepted, 1 proposed, 4 fully superseded, about 61 superseded in part), 184 id-labelled decisions, and a 110-row audit ledger with nothing open. The weakness is record decay and volume rather than missing decisions. At least five tracker rows (L2, L3, D17-4, D21-143, O-12..O-16) still read open for work that later closed, and about 20 AFK-provisional rulings (D21-106..128, D21-137) have no recorded operator confirmation even though some accepted ADRs depend on non-objection. Few decisions remain open for Phase-1 exit (R-64, Record A / ADR-0197's flip, the unconfirmed provisionals), but the operator-action backlog is large. That backlog is S-BIN B2/B3/B4 go-aheads, all of 8j (not started, including paid probes, a fix-item pick and the first-ever CI push), and then Step 8's two real lane runs. Recorded paid spend is about US$660 API-equivalent, a floor because several early spikes have no figure; S-BIN has used $5.56 of its $90 cap.",
+   "completeness_pct": 86,
+   "quality_grade": "B",
+   "works_today": [
+    "ADR set is internally consistent by frontmatter: 198 records, every one with a status; 193 accepted, 1 proposed (0197), 4 superseded (0004, 0041, 0079, 0088), none withdrawn (references/adr/*.md frontmatter; README.md:3)",
+    "ERRATA discipline holds: 745 lines, 41 sections, 51 dated E-entries that keep corrections out of accepted Decision text (references/adr/ERRATA.md:3-12)",
+    "PIA ledger 110/110 dispositioned (60 recorded, 50 done, 0 open) (runbook/PROGRESS.md section 4 scan)",
+    "Decision ledgers are dated, id-keyed and cited: 151 D21 + 19 D18 + 9 D17 + 4 D15 + 1 D20 headings (spikes/DECISIONS-2026-09-*.md)",
+    "S-BIN spend is mechanically governed: driver caps (18 Opus, 3 haiku, $90 summed) and a go-ahead ledger with B0 and B1 signed (spikes/DECISIONS-2026-09-21.md:6575-6577; s8i-s-bin.md section 8i.5)",
+    "Human labelling closed: M-06 47/47 labelled, 0 disagreements; D-FIXCONSUMER countersigned 2026-09-13",
+    "Prior ADR-0118 violation (rk-store conn.rs poison recovery) was repaired in code at s8e (crates/rk-store/src/conn.rs:136-140; da5dff8)"
+   ],
+   "stubbed_fake_or_missing": [
+    "Step 8j not started (tracker row 8j: PLANNED, not started); Step 8 / Checkpoint 8 not passed, M5 not reached",
+    "Step 8i still in progress: B2, B3, retries and conditional B4 unrun; driver change for D21-149, new dry run and re-signed B1 owed before B2",
+    "ADR-0197 (Record A) still proposed; flips only after 8j live probes and operator signature",
+    "ci.yml has never run and the branch has never been pushed (s8j-run-preparation.md section 8j.7)",
+    "About 20 AFK-provisional rulings (D21-106..128, D21-137) lack recorded operator confirmation",
+    "R-64 (doctor --rebuild tag re-derivation) UNMEASURED; R-23 and RT-27 record/register amendments owed; R-24 subagent-bucket dispatch never run",
+    "Never-run audit follow-ups: M-03, M-04, M-05/M-14, M-07, M-08, M-09, M-10, C-02, C-03, C-07, C-08/M-13",
+    "UNRUN spikes: S-SUBTLE-CB (AC-312 provisional), S-SPF, S-CLASS-REPLAY, P1 arm-L labels (deferred), P8 65-min/24-h arms; S-CODEX is Phase 4"
+   ],
+   "risks": [
+    "Tracker staleness: rows L2, L3, D17-4, D21-143, O-12..O-16 and the 8i stage row read open or outdated; a reader of PROGRESS.md section 2 would misjudge status",
+    "Ratification debt: accepted ADRs (e.g. 0191, 0194, 0196) were flipped on 'operator has not objected' while the provisionals they rest on carry no recorded confirmation",
+    "Documentation volume (about 130k lines of markdown; one decision file is 6,865 lines; tracker rows are multi-kilobyte) makes status hard to read and increases drift risk",
+    "Instrument-defence drift: D21-141..151 are all S-BIN harness hygiene; harness cost and delay may be crowding product work",
+    "Records written ahead of code needed ERRATA on contact (0132-0168 corrections)",
+    "Phase-1 exit depends on many operator-run steps from a non-Claude shell; AFK progress past 8i is not possible",
+    "S-BIN budget: the 8i table itself says B3, retries and B4 may not fit at planning bounds; $84.44 headroom remains"
+   ],
+   "key_facts": [
+    "ADRs: 198 records = 193 accepted + 1 proposed (0197) + 4 superseded; 61 accepted carry a superseded_by edge (partial supersession); dated 2026-09-05 to 2026-10-02; next free id 0199 (references/adr/README.md:3,73)",
+    "ERRATA.md: 745 lines, 84,642 bytes, 41 sections, 51 E-entries (references/adr/ERRATA.md)",
+    "Decision files: 9 files, 8,805 lines; D21 file 6,865 lines with 151 decisions (D21-1..D21-151), 2026-09-09 to 2026-10-05 (spikes/DECISIONS-2026-09-21.md)",
+    "Latest decisions D21-137..151 are s8h close and s8i S-BIN instrument/fixture rulings (headings at DECISIONS-2026-09-21.md:6031-6854)",
+    "S-BIN spend: $5.561026 of $90 cap (probe $0.021026 + six capture sessions $5.54) (s8i-s-bin.md section 8i.5; commit ee44bf1); B0 and B1 go-aheads signed (DECISIONS-2026-09-21.md:6575-6577)",
+    "Recorded paid spend about US$660 API-equivalent: E3 153.86, S-VAR 176.96, S-TYPED 112.25, P7 131.62, E3-H 36.18, P1 arm L 21.37, H1/H4 18.85, S-BIN 5.56, P8 3.01, others under 1 (FINDINGS.md:1208,1550,1771; F29/F30/F31/F36/F38 drafts; HANDOFF.md:229)",
+    "Open provisional AFK rulings without recorded confirmation: 20 tracker rows (D21-106,108-115,119-128,137)",
+    "Phase-1 exit chain remaining: 8i (B2/B3/B4, close) -> 8j (not started) -> Step 8 (six exit checks, not passed); INDEX.md milestone M5 not reached",
+    "PIA ledger: 110 rows, 60 recorded, 50 done, 0 open (PROGRESS.md section 4)",
+    "CORPUS_PIN = 61f590e51cbb00301c310e46aab615563a7787b8 (CORPUS_PIN)"
+   ],
+   "unverified": [
+    "Per-record split of the 61 superseded-in-part edges (in-part versus extends/elaborates)",
+    "Whether census_adr.py and the other census validators still pass at 36dd8ac (execution not permitted)",
+    "Whether RT-27's register amendment and R-24's one-dispatch subagent probe ever landed",
+    "Dollar cost of S0.1/S0.2/E0/E1/E2/H2/H3, the Step 7c live probes and P6/P9 authoring (no figure found)",
+    "Whether the ~20 provisional rulings were confirmed verbally outside the ledger",
+    "Live-branch uncommitted edits (PROGRESS.md, s8i-s-bin.md, DECISIONS-2026-09-21.md, METHOD-S.md) are not in this snapshot and may already fix some staleness",
+    "O-12..O-16 current status (row says OPEN; D18-19/O-16 shows taken 2026-09-19)"
+   ],
+   "report_path": "<scratchpad>/audit/w1-records.md"
+  },
+  {
+   "key": "traceability",
+   "summary": "The register holds 526 unique ACs (480 binding, 20 provisional, 20 human-gated, 6 conditional); about 475 are in force for Phase 1 once the Phase-2/3/4, conditional and human-gated ids are removed. Roughly three quarters of those Phase-1 ACs are backed by a real, discriminating test: 11 of 15 sampled ACs were fully evidenced, 2 partial, 1 missing and 1 owed (S-BIN, the in-progress step). The estimate is about 73%. Tests carry positive controls, trybuild compile-fail cases and architecture lints, which is above normal quality. The structural gap is that nothing mechanically reconciles the AC register to tests. The AC evidence ledger is a kernel feature proven on fixtures, not a populated record of this repo's own ACs. 87 Phase-1 ids are never cited in any Rust file, and the record itself lists orphaned or owner-owed ACs (AC-291/292, Step 8 has no acceptance set). The pack/catalog slot-binding area (AC-080..118) is the weakest, and the success-measure register (135 SMs) is almost entirely un-instrumented, with only 14 ids referenced in code.",
+   "completeness_pct": 73,
+   "quality_grade": "B",
+   "works_today": [
+    "Per-AC discriminating tests exist for about 73% of Phase-1 ACs; 231 ids have fn acNNN_ tests, 373 are cited in test files (an upper bound)",
+    "Kernel, selection, git tier-1, adapter error-classification, review policy and schema-lint ACs sampled FULL, e.g. ac012_late_duplicate_is_discarded (rk-kernel tests/it/runtime.rs:1025), ac285_class_drift_event (review.rs:426), ac218_is_error_is_platform_regardless_of_exit (rk-adapter-claude classify.rs:122)",
+    "Trybuild compile-fail cases back type-level claims (crates/rk-kernel/tests/ui/ac050_rigor_is_not_arithmetic.rs and others), with architecture lints that have positive-control fixtures (module_boundary.rs:725, :798)",
+    "AC evidence ledger mechanism is built: crates/rk-kernel/src/verify/ledger.rs, rk-types artifact/ledger.rs, rk-store artifacts/ledger.rs, with tests and 7 fixture files"
+   ],
+   "stubbed_fake_or_missing": [
+    "No AC-to-test coverage matrix or CI reconciliation gate for the programme's own 526 ACs (runbook/tools and ci.yml contain none)",
+    "No ledger data file records this repo's own ACs; the AC evidence ledger is exercised only on fixtures",
+    "AC-084 (multi-pack slot filler ordering) has no test and no citation; explain.rs:545 prints 'fillers: not recorded'; AC-081-086 and 089-091 are uncited in code",
+    "AC-389 event half not built (budget.rs:85-91; residual R-1, DECISIONS-2026-09-15.md:191)",
+    "AC-154 / S-BIN-dependent criteria (AC-154, 356, 497, 475) owed to the in-progress 8i",
+    "AC-291/292 orphaned with no owning stage (s7b-ii-gates.md:978-990); AC-292 clone-shape alternates/remote assertions absent",
+    "Step 8 has no acceptance set (s7b-ii-gates.md:992-995)",
+    "Success-measure register: only 14 of 135 SM ids referenced in code; 58 have no baseline and 48 are non-discriminating by the register's own count"
+   ],
+   "risks": [
+    "Counting 'binding' ACs as covered overstates progress: about a quarter of the Phase-1 universe has no found asserting test, and the packs/catalog area (25 ids not cited in any test file) is weakest",
+    "Orphaned and owner-owed ACs (291, 292, 262/351, 189/196-198, 228/388, 361/367/387) can fall through Phase-1 exit because Step 8 has no acceptance set",
+    "Register stays 'binding' for partial or unbuilt halves (AC-389, AC-154), so a green checkpoint could be read as full discharge",
+    "Sample is small (n=15, 95% interval about 45-92%); the 73% is a point estimate",
+    "Test pass/fail is inherited from PROGRESS.md checkpoints and was not re-run here"
+   ],
+   "key_facts": [
+    "526 unique ACs (527 heading lines, AC-428 duplicated): 480 binding / 20 provisional / 20 human-gated / 6 conditional (acceptance-criteria.md:26-43)",
+    "Human-gated = 20, matching runbook/INDEX.md:119; only 19 positively identified by id in this audit",
+    "Phase-1 universe derived at about 475 (526 minus about 20 human-gated, 6 conditional, 14 corpus-bound, 6 plugin-gen, 3 GitHub/mdBook, AC-496)",
+    "Of about 475: 231 have fn acNNN_ tests (49%); 388 are cited in .rs (82%); 373 cited in test files (79%); 87 never cited",
+    "Sample of 15 (seed 20261005): 11 FULL, 2 PARTIAL (AC-292, AC-389), 1 MISS (AC-084), 1 OWED (AC-154); strict 73%, lenient 80%",
+    "Uncited-in-tests by area: packs 25, git 15, artifacts 13, events 12, human gate 9, harness 8, verify 7, review 4, selection 4, CLI 2, migrate 2, kernel 0",
+    "SM register: 135 ids, 77 with a baseline and 58 without, 48 non-discriminating (success-measures.md:1420-1422); 14 SM ids appear in Rust code"
+   ],
+   "unverified": [
+    "Exact list of the 20 human-gated ids (register gives the count only)",
+    "Phase-1 universe size (about 475 +/-5) is derived; no record states it",
+    "Whether the 87 uncited ids are covered by tests citing neither the id nor an acNNN_ name; confirmed to happen for several sampled ids",
+    "Whether the tests currently pass (no cargo run; status inherited from PROGRESS.md)",
+    "ACs discharged only by shell checkpoints (e.g. Checkpoint 7e doctor rows AC-092-099/118) were not individually traced",
+    "Whether AC-084's slot-binding behaviour is truly absent or lives under unrelated names"
+   ],
+   "report_path": "<scratchpad>/audit/w1-traceability.md"
+  },
+  {
+   "key": "w1-velocity",
+   "summary": "The programme is moving fast and records its own failures candidly, but scope has more than doubled (14 runbook rows planned on 09-11, 30 now) and the thing Phase 1 exists to prove has not happened yet. No real fix-lane or story-lane run has ever landed against the shipped pack. 27 of the 30 rows are closed. The 3 left are the slowest, most operator-gated and most likely to turn up surprises. Output peaked in W4 (09-22..28) and is falling: commits went 141 to 92, Rust added 81.6k to 37.6k lines, and D21 rulings 101 to 42. The s8i stage has produced zero Rust in its 3 days. The stage list has been stable for 11 days, but every earlier expansion followed first contact with a real run, so convergence is not yet proven. Projection for Checkpoint 8 from 2026-10-05: earliest credible 10-13, central 10-19 to 10-26 (P50 about 10-21), pessimistic early-to-mid November if another insertion round is needed.",
+   "completeness_pct": 70,
+   "quality_grade": "B",
+   "works_today": [
+    "517 commits since 2026-09-01: W1 76, W2 75, W3 133, W4 141, W5 92 (git log)",
+    "27 of 30 INDEX rows closed with dated tracker commits, e.g. 7b-ii 09-17 17:00 (6152219), 7d 09-21 15:07 (c46c80b), 8h 10-02 17:56 (8db752c)",
+    "Self-correction works: Checkpoint 8 'passed' on 09-21 (d6160ff) and was formally un-passed on 09-24 (D21-40, spikes/DECISIONS-2026-09-21.md:1561)",
+    "Test counts grew 740 (09-24) to 784 (8b) to 1034 (8d-ii) to 1119 (8e) per close-commit messages",
+    "Rust standing size 7.3k (09-07) to 238k lines (HEAD) with about 58-70% of added Rust in tests/ paths",
+    "Close-to-close time for stages 7g..8h: median 17.1 h, mean 21.5 h, min 8.6 h, max 62.5 h (8g)"
+   ],
+   "stubbed_fake_or_missing": [
+    "No complete real fix-lane or story-lane run has been executed against the shipped pack: s8 criteria (1), (1b), (3)-operational and (7) are open; M5 not reached",
+    "s8i is not closed: B2 and B3 (10 Opus review passes), finding, Binary variant record and close are outstanding",
+    "s8j (fixture proofs, first CI run, probes, staged first run) and Step 8 are not started",
+    "38 decisions are 'TAKEN PROVISIONALLY' under the D21-105 AFK rule and still await operator confirmation",
+    "ci.yml has never run per records (s8j-run-preparation.md:1175-1180); whether it is green on origin/build/phase-0-to-1 is unknown"
+   ],
+   "risks": [
+    "Scope expansion: 14 to 30 rows in 24 days (+114%); 3 insertion events (09-13 one stage, 09-21 four, 09-24 eleven) and 3 entry-gate re-pointings, all triggered by first contact with real runs; the final real runs are still ahead, so a fourth insertion is plausible (about 25% in my scenario weighting)",
+    "Process weight: runbook grew from 3,576 to 50,208 markdown lines (14x); the eleven s8 stage files total 32,400 lines (2.2k-3.6k each) against 523 for the original single s8; each checkpoint re-runs earlier ones whole",
+    "Throughput decay: the docs/decision-only commit share rose 42% to 51% to 70% across W3/W4/W5 while Rust-touching commits fell 72 to 65 to 27",
+    "Operator-gating: D21-105 allows AFK paid spend only for s8i S-BIN (US$30 cap); 8j probes and paid runs and Step 8 real runs need the operator sitting, so AFK velocity cannot carry the last rows",
+    "416 commits on build/phase-0-to-1 are not on main (main last moved 09-11); the branch is a very large unlanded change",
+    "Repeated Halt 2 instrument churn (Claude CLI 2.1.275 to 2.1.289 in 4 weeks) forces pin-move re-validation cycles of 2-12 h each",
+    "s8i is the slowest stage (74 h and counting) because it depends on paid, memory-hungry UE capture runs that can stall (D21-150)"
+   ],
+   "key_facts": [
+    "Baseline plan INDEX at 0e34384 (09-11): 14 rows; HEAD: 30 rows (runbook/INDEX.md:88); +16 stages from insertions at INDEX.md:47 (7b-ii), D21-3 (spikes/DECISIONS-2026-09-21.md:200; 7f-7i, commit 8634de8) and D21-40 (:1561; 8a-8j)",
+    "Stages closed per week: W2 10, W3 6, W4 9, W5 3",
+    "Lines added md:rs by week: 1.78, 0.98, 0.25, 0.67, 0.33; standing md 130,756 vs rs 238,046 at HEAD",
+    "Markdown-only commits: 256 of 517 (49.5%); by week 25/39/56/72/64 of 76/75/133/141/92",
+    "D21 rulings: 151 total; W3 8, W4 101, W5 42; last 3 days 3. ADR files 198 at HEAD (W2 122, W3 11, W4 57, W5 8)",
+    "s8i since stage open 10-02 21:24: 35 commits, +3,667 md lines, 0 Rust lines; B1 complete 10-05 20:20 ($5.561026, ee44bf1)",
+    "Projection assumptions: operator available about daily for go-aheads, W5 pace holds, CI fixable within 1 day, no new insertion before first real run; scenario weights 30% clean (7-11 d), 45% in-stage repairs (12-20 d), 25% new insertion (21-35 d)"
+   ],
+   "unverified": [
+    "Whether CI ran green on origin/build/phase-0-to-1 (remote tip 7860e66, 10-03); the s8j records say the branch was never pushed, which is now stale, and CI results are not in git",
+    "Uncommitted work in the live checkout (4 modified files at session start) was deliberately not read; all numbers are as of 36dd8ac",
+    "Calendar time lost to operator waiting cannot be separated from commit timestamps; stage elapsed times are close-to-close and include idle time",
+    "Total spend against the US$30 / US$90 caps was not audited beyond B1's $5.561026",
+    "Test count after s8e (1,119) is a floor from commit messages; later tracker rows were not re-read",
+    "Effort attribution for Step R through Step 5 (closed in an 18-hour burst on 09-11/12) was not attempted"
+   ],
+   "report_path": "<scratchpad>/audit/w1-velocity.md"
+  },
+  {
+   "key": "w1-landing",
+   "summary": "The branch is mechanically easy to land but not ready to. Main has not moved (it equals the merge-base 353ea01), there are no conflicts, no secrets and no run noise, and the tracked tree actually shrinks from 46.2 MB to 33.5 MB because raw spike data moves to the corpus repo. The runbook never schedules a landing, so the implied plan is one --no-ff merge after Checkpoint 8 (M5), which is also what the 189 cited commit hashes in PROGRESS.md require. The real problem is a divergence the records do not know about: origin/build/phase-0-to-1 (7860e66) holds 15 commits that local HEAD lacks, with no file overlap. They are the first Linux/Windows CI fixes (including an rk-containment POSIX kill change) plus a temper lint-ratchet adoption. Local HEAD would fail its own AC-465 structural CI step on 39 fixture files, CP8h's pass at d24d15a predates those code changes, and the runbook still says ci.yml has never run. Recommended path: reconcile with the remote by merge, re-run the checkpoints, get CI green on the integrated head, then do a single --no-ff merge at M5.",
+   "completeness_pct": 45,
+   "quality_grade": "B",
+   "works_today": [
+    "Fast-forward-able landing: main == merge-base 353ea01, 0 commits on main since (git rev-list --count HEAD..main = 0)",
+    "No secrets: grep hits only deliberately fake test strings (crates/rk-adapter-claude/tests/it/config.rs:37, crates/rk-store/tests/it/store.rs:519-521)",
+    "Tracked size shrinks main 46,245,713 B / 582 files -> HEAD 33,502,477 B / 2,172 files; 97 spikes/results + 19 spikes/runner files removed to the corpus repo (.gitignore diff, CORPUS_PIN)",
+    "No new blob over 1 MB; telemetry and worktree dirs ignored and untracked",
+    "Single ci.yml with gates (ubuntu+windows), no-egress and structural jobs exists, plus the remote's temper rust.yml",
+    "Branch and remote have zero file overlap since d24d15a, so reconciling them should be a clean merge"
+   ],
+   "stubbed_fake_or_missing": [
+    "No landing step anywhere in the runbook or Checkpoint 8: s0 0.4 says only 'nothing runs on main' and s9 treats the branch as keep-or-delete",
+    "Local HEAD lacks 15 remote commits (CI fixes, rk-containment POSIX kill, temper adoption); none are recorded in runbook, ADRs or decisions",
+    "Local ci.yml lacks the Windows 8.3 temp step, the pnpm fixture step and AC-465 allowlist (e)-(h); its structural step would flag 39 .jsonl fixture paths",
+    "Checkpoint 8 not passed, M5 not reached (PROGRESS.md:51); 8i in progress, 8j not started (PROGRESS.md:50); no record of a green hosted CI run",
+    "Four tracked-but-ignored spikes/*.log files (33 KB) still tracked",
+    "The S-BIN driver and results live in the corpus repo and do not land with this branch"
+   ],
+   "risks": [
+    "Divergence from the branch's own remote: merge-base d24d15a, local +40 commits (docs only), remote +15 commits (64 files)",
+    "Product code changed after CP8h passed at d24d15a (rk-containment/src/posix.rs, rk-adapter-claude, rk-cli, rk-git, rk-adapter-toolchain-rust), so the checkpoint evidence does not cover the integrated tree",
+    "Squash or rebase would orphan 189 cited branch commit hashes in PROGRESS.md; only a merge commit or fast-forward preserves the evidence chain",
+    "History carries 357 MB of uncompressed new blobs, mostly repeated rewrites of PROGRESS.md (231 revisions, 96.7 MB) and DECISIONS-2026-09-21.md (123 revisions, 43.8 MB); a clone-size footnote, not a blocker",
+    "Two remote fixes are race fixes (git auto-maintenance, whole-second clock), which points to cross-OS flake risk",
+    "The temper baseline accepts 6,606 lint findings as debt beside ADR-0102's gate",
+    "CORPUS_PIN hardcodes D:/repos/redkiln-corpus; the corpus-bound suite (89 feature=corpus sites) is local-only and unrunnable from a fresh clone",
+    "Another session has uncommitted edits to 4 files in the live tree; two sessions or sources are already moving the branch"
+   ],
+   "key_facts": [
+    "416 commits, 2026-09-11 to 2026-10-05; 1,890 files; +363,228/-37,874 (git diff --shortstat main...HEAD)",
+    "Rust at HEAD: 238,046 lines; 248 src files, 336 test files; 12 crates",
+    "By category added lines: crate tests 136,892; crate src+manifests 101,717; runbook 47,837; fixtures 23,160; ADRs 20,236; spikes other 14,586; .redkiln 9,979",
+    "ADR files: 115 on main -> 200 at HEAD",
+    "origin/build/phase-0-to-1 = 7860e66: 15 remote-only commits, 64 files, +8,709/-19, 0 overlap with local changes since d24d15a",
+    "Local HEAD's AC-465 structural pipeline yields 39 offending paths",
+    "Precedent merge: 66d0ced --no-ff (runbook/PROGRESS.md:20); D21-42 14a makes green CI a Checkpoint 8 condition (spikes/DECISIONS-2026-09-21.md:1688)",
+    "PROGRESS.md cites 223 backticked commit ids; 189 of the 7-hex ones are branch-only"
+   ],
+   "unverified": [
+    "Whether the real origin/main has moved (only the local remote-tracking ref was read)",
+    "Whether CI is green on 7860e66 or f571243 (no hosted run data)",
+    "Compressed pack size of the 416-commit delta",
+    "Whether D:/repos/redkiln-corpus has a durable remote",
+    "Whether core.hooksPath=.githooks is set (temper pre-commit would run node and clippy per commit)",
+    "Contents of the 4 uncommitted files in the live tree",
+    "Whether the integrated tree compiles and passes the full suite (cargo not run)",
+    "The sibling audit/ build logs were deliberately not read"
+   ],
+   "report_path": "<scratchpad>/audit/w1-landing.md"
+  }
+ ],
+ "dropped": []
+}
