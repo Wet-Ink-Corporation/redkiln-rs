@@ -1,0 +1,904 @@
+{
+ "verified": [
+  {
+   "id": 1,
+   "claim": "Of the 30 runbook stages, 27 have a recorded passed checkpoint; 5 of those passes (7c, 7f, 8a, 8c, 8d) are provisional with a re-run owed; 8i is in progress, 8j not started, Step 8 (Phase-1 exit) re-opened and not passed; milestone M5 not reached.",
+   "status": "confirmed",
+   "votes": [
+    {
+     "corrected_statement": "Confirmed as stated. At the snapshot (36dd8ac), the runbook has 30 numbered stages (runbook/INDEX.md rows 1-30, plus the unnumbered Step 9 rollback). The tracker (runbook/PROGRESS.md section 1, lines 21-51) records a passed checkpoint for 27 of them. Five of those passes still carry an open re-run mark with no later whole re-run clearing it: 7c (passed 2791f1d, re-run pending; also marked PROVISIONAL by s8c), 7f (re-run pending s8g .redkiln), and 8a, 8c and 8d (each provisional, re-run pending s8j). 8i is IN PROGRESS, 8j is PLANNED and not started, and Step 8 is RE-OPENED (D21-40): only its mechanical block passed, at d6160ff, and Checkpoint 8 itself has not passed. M5 ('Checkpoint 8 passed') is not reached.",
+     "evidence": [
+      "runbook/INDEX.md:45 execution order lists 0,1,3,4,4a,2,5,6,7a,7b,7b-ii,7c,7d,7e,7f,7g,7h,7i,8a,8b,8c,8d,8d-ii,8e,8f,8g,8h,8i,8j,8 (30 stages). INDEX.md:52 says the s8 rows are numbered 19-29 and Step 8 is row 30. The table numbers rows 1-30, and Step 9 is 'any', not numbered.",
+      "runbook/PROGRESS.md:21-26: Steps 0, 1, 3, 4, 4a and 2 each show 'checkpoint passed' with a hash (bf5086a, 66276bf, 9b2c848, b39581a, db6b55c, bbdaf35).",
+      "runbook/PROGRESS.md:28,29,30,31,32,34,37,38,39,41,44,45,46: the latest entry (leftmost in the cell) for 5, 6, 7a, 7b, 7b-ii, 7d, 7g, 7h, 7i, 8b, 8d-ii, 8e and 8f is 're-run WHOLE and passed at <hash> ... clears the ... re-run pending mark'. Their earlier pending marks are therefore cleared.",
+      "runbook/PROGRESS.md:35: 7e reads 'CLOSED — checkpoint passed `dddcdbd`', with no pending mark. :47: 8g reads 'checkpoint passed 4777941 ... closed', with a later whole re-run at d24d15a. :48: 8h reads 'checkpoint passed d24d15a; closed', re-run green at b2ab1dc. Its held items are records (Record A/B), not a checkpoint re-run.",
+      "runbook/PROGRESS.md:33: 7c reads 'passed `2791f1d`, re-run pending', and s8j's whole re-run clears it. The same cell also carries 'PROVISIONAL (dated 2026-09-26, s8c build)'. No 're-run WHOLE and passed' clearance appears anywhere in the cell.",
+      "runbook/PROGRESS.md:36: 7f's leftmost (latest) entry is 're-run pending s8g .redkiln' (dated 2026-09-30, D21-121). The cell says 'the next unnested replay ... re-runs it whole and clears this mark'. The 2026-09-28 clearance appears after this mark in the cell, so it predates it.",
+      "runbook/PROGRESS.md:40,42,43: 8a, 8c and 8d each lead with 'provisional, re-run pending `s8j`' (dated 2026-10-02, s8h R1FIX-8h). For 8a, the 2026-10-03 R2FIX-8i note adds that Checkpoint 8i (11) re-runs the block, and 8i has not passed.",
+      "runbook/PROGRESS.md:49: 8i reads '**IN PROGRESS**' (s8i build, R1FIX..R4FIX-8i interims).",
+      "runbook/PROGRESS.md:50: 8j reads 'PLANNED 2026-09-24 ... Not started.'",
+      "runbook/PROGRESS.md:51: Step 8 reads 'RE-OPENED 2026-09-24 (D21-40). Corrected 2026-09-24: Checkpoint 8 has NOT passed, and M5 is not reached.' Its Result column reads 'mechanical block passed `d6160ff`' and repeats that Checkpoint 8 has NOT passed.",
+      "runbook/INDEX.md:100: M5 is reached when 'Checkpoint 8 passed', and the row carries no REACHED marker. Compare M3 at INDEX.md:98, which is marked 'REACHED 2026-09-17'.",
+      "Count: 30 stages minus 3 unpassed (8i, 8j, 8) gives 27 passed. A scan for 'pending/provisional' against a later 're-run WHOLE and passed' clearance in each cell (rows 21-51) leaves exactly 7c, 7f, 8a, 8c and 8d with an open mark."
+     ],
+     "partially_true": false,
+     "refuted": false
+    },
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "The records at 36dd8ac support the claim. runbook/INDEX.md numbers 30 stages (rows 1-30 at INDEX.md:59-88). Step 9 Rollback is order \"any\" (INDEX.md:89) and is \"n/a\" in PROGRESS.md:52, so it is not counted. In the stage table in runbook/PROGRESS.md (lines 21-51), 27 of the 30 stages carry a recorded checkpoint pass. Five of those passes are provisional with a re-run still owed: 7c \"passed 2791f1d, re-run pending\" (by s8j); 7f \"re-run pending s8g .redkiln\"; 8a, 8c and 8d \"provisional, re-run pending s8j\". 8i is IN PROGRESS, 8j is \"Not started\", and Step 8 was RE-OPENED 2026-09-24 (D21-40): \"Checkpoint 8 has NOT passed, and M5 is not reached\". INDEX.md:100 defines M5 as \"Checkpoint 8 passed\". One forward-looking note: s8i-s-bin.md:29 says s8i's edits will make Checkpoints 8a and 5 provisional. Those edits have not landed (no commit after s8h's interims touches crates/), so the PROGRESS row for 5 still correctly reads re-run passed at d24d15a.",
+     "evidence": [
+      "runbook/INDEX.md:59-88 numbers the stages 1..30 (Step 0 through Step 8). INDEX.md:89 gives Step 9 Rollback as order 'any', so 30 runbook stages is correct. The files are 6 in runbook/phase-0 and 24 in runbook/phase-1.",
+      "runbook/PROGRESS.md:21-26 record passes for stages 0, 1, 3, 4, 4a and 2: bf5086a, 66276bf (re-run at b39581a), 9b2c848, b39581a, db6b55c and bbdaf35.",
+      "runbook/PROGRESS.md:28-32 and 34 record whole re-runs that passed for stages 5, 6, 7a, 7b, 7b-ii and 7d, at d24d15a, 4777941/d5bfc4f or abeb578. PROGRESS.md:35 has 7e 'CLOSED — checkpoint passed dddcdbd'. PROGRESS.md:37-39 record re-runs that passed for 7g, 7h and 7i.",
+      "runbook/PROGRESS.md:41 and 44-48 record passes or whole re-runs that passed for 8b, 8d-ii, 8e, 8f, 8g and 8h. 8h reads 'checkpoint passed d24d15a; closed', with a re-run green at b2ab1dc.",
+      "runbook/PROGRESS.md:33 (7c): 'passed 2791f1d, re-run pending ... s8j's whole re-run (§8j.6 step 2) runs over the amended line and clears this mark'.",
+      "runbook/PROGRESS.md:36 (7f): its newest status is 're-run pending s8g .redkiln (dated 2026-09-30 ...) the next unnested replay ... re-runs it whole and clears this mark'. Earlier passes are recorded: 79e0ef4, bf12a1c, 497266b/be32cda and 492e516/abeb578.",
+      "runbook/PROGRESS.md:40 (8a), :42 (8c) and :43 (8d) each begin 'provisional, re-run pending s8j' (dated 2026-10-02, R1FIX-8h). Their earlier passes are bf12a1c, 4ab7c67/e8e4f68 and b183eb9/0b470ee/d5bfc4f.",
+      "runbook/PROGRESS.md:49 has 8i as '**IN PROGRESS**', with interims through 2026-10-04.",
+      "runbook/PROGRESS.md:50 has 8j as 'PLANNED 2026-09-24 ... Not started.'",
+      "runbook/PROGRESS.md:51 has 8 as 'RE-OPENED 2026-09-24 (D21-40). Corrected 2026-09-24: Checkpoint 8 has NOT passed, and M5 is not reached.' Commit 3db4f5a is 'Step 8 re-opens under D21-40 — Checkpoint 8 had NOT passed'.",
+      "runbook/INDEX.md:100 defines 'M5 — Phase 1 exits' as reached when 'Checkpoint 8 passed'. Since Checkpoint 8 has not passed, M5 is not reached.",
+      "Count: 18 stages pass through 7i and 9 more from 8a to 8h, giving 27 passed. 8i, 8j and 8 are not passed, for 30 in total. The tracker marks no other stage row as currently re-run pending: the newest segments of rows 5, 6, 7a, 7b, 7b-ii, 7d, 7g, 7h, 7i, 8b, 8d-ii, 8e, 8f and 8g all clear their marks.",
+      "Caveat checked: runbook/phase-1/s8i-s-bin.md:29 says s8i's edits will make 8a and 5 provisional, and s8j-run-preparation.md:446-447 plans 7h/7i 're-run pending (s8j re-point)'. Neither change has landed. `git log -- crates/` shows nothing after s8h interim 6 (e538f09), and PROGRESS rows 38-39 do not contain 's8j re-point'. The count of five provisional passes therefore holds at 36dd8ac."
+     ]
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "claim": "No real `claude -p` dispatch has ever been driven through the rk-kernel/rk-cli lane end to end: every lane walk (fix and story) is proven only with a FakeHarness or a fixture child; no recorded real fix-lane or story-lane run exists under Redkiln-RS.",
+   "status": "confirmed-with-corrections",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "The claim holds at snapshot 36dd8ac. No real `claude -p` dispatch has ever been driven end to end through rk-cli `redkiln run` and the rk-kernel lane. Both lane walks, fix and story, are proven only with a scripted FakeHarness: in process in crates/rk-kernel/tests/it/lane_walk.rs and crates/rk-cli/tests/it/lane_e2e.rs, plus the `rk-fixture-child-claude` binary for the process-boundary tests. The real fix-lane and story-lane runs are planned for s8, through `tools/live-run.sh run`. They are gated behind s8j, which the tracker says is \"Not started\", and s8i is still in progress. Real `claude -p` calls have happened in the repo, but always outside the lane: the rk-adapter-claude `live::` probes and S-BIN's B1 probe and capture sessions under `live-run.sh wrap`. The only real `redkiln run` attempts on record, at Checkpoint 8, were refused before any dispatch (at `requires_cycle_lint`, then at `RankTie`). One qualifier: some lane-walk rows are measured refusals rather than completions, so \"walk\" here means a fake-driven walk, not a completed one.",
+     "evidence": [
+      "crates/rk-cli/tests/it/lane_e2e.rs:5-12: the first end-to-end tests of `verbs::run::run` use a `ScriptedFactory` that hands each stage a `rk_ports::fakes::FakeHarness::scripted` harness; the doc comment says no test builds `ClaudeHarness` and none can reach a real `claude`. The process arms drive the real `redkiln` binary over the fixture child `rk-fixture-child-claude`.",
+      "crates/rk-kernel/tests/it/lane_walk.rs:1-30 and :1491-1495: the kernel walk table for both lanes, including `const STORY: Lane` ('§8d.9's story lane, as measured'), is driven by 'one scripted FakeHarness PER STEP'.",
+      "crates/rk-cli/src/verbs/mod.rs:162-200: the real `ClaudeHarnessFactory` (`rk_adapter_claude::ClaudeHarness::new`) is the product-path implementor; tests swap it out through the HarnessFactory seam.",
+      "crates/rk-adapter-claude/Cargo.toml:79-82: `rk-fixture-child-claude` is a test fixture binary standing in for `claude`.",
+      "crates/rk-adapter-claude/tests/it/live.rs:325-326, :1000, :1145, :1434: the PAID `live::` tests are adapter-level probes (`tools/live-run.sh probe live::<name>`) of ClaudeHarness, not lane runs.",
+      "runbook/PROGRESS.md:51 (row 8): '(1) NOT SATISFIED … no `redkiln run` had ever been attempted against it. The first real run refused at `requires_cycle_lint`'; the next refused at `RankTie`; '(7) NOT RUN … there are zero `dispatch_completed` events because no run completes'.",
+      "runbook/PROGRESS.md:50: '8j — Fixture proof of both lanes, CI green, and the run preparation … PLANNED 2026-09-24 … Not started.' runbook/PROGRESS.md:49: 8i is 'IN PROGRESS'.",
+      "runbook/phase-1/s8j-run-preparation.md:1374 and :1460: the fix-lane and story-lane real runs (`tools/live-run.sh run \"$FIX_ITEM\" --lane fix` / `--lane story`) are planned blocks for s8, not executed records.",
+      "spikes/DECISIONS-2026-09-21.md:1575 (D21-40): 'Spend: the real runs are authorised, gated on fixture proof.'",
+      "Commit ee44bf1 (runbook/phase-1/s8i-s-bin.md:1808): S-BIN B1's real spend ($5.561026) was one probe plus capture sessions run through `wrap`, and the commit says 'capture sessions are not dispatches'. They were not rk-cli lane runs.",
+      "git -C <wt> grep for `live-run.sh run` finds only planned or spec sites (tools/live-run.sh:7,114-117; s8h:1394,2387; s8j:39,676,1244,1274,1374,1460,1574,1607). No launch record or s8j-evidence file for a `run`-mode launch is tracked (`git ls-files` returns nothing matching `s8j-evidence` or `launches/`)."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "Right in substance. At 36dd8ac no real `claude -p` dispatch has gone through rk-kernel/rk-cli's `redkiln run` lane, and no fix-lane or story-lane run that dispatched to a model is recorded. The real runs are gated behind s8j's fixture proofs, and s8j is \"PLANNED, Not started\". Three details in the claim are wrong. (1) Not every lane walk is fake. A real-binary `redkiln run rk-fix-doctor-test-count --lane fix` with no FakeHarness ran in s7h (59be987) and crossed triage -> analysis. It minted the first real `Story:` trailer, but it dispatched nothing: triage has 0 of the 102 activities, and the run then stopped before any dispatch on cards that lack `permission_mode`. The item is still recorded as \"the undispatched fixture item\". (2) No story lane has been walked even with fakes. The end-to-end tests in `lane_e2e.rs` walk a fixture lane (`pack-min`'s Lane variant) using `FakeHarness::scripted` and the fixture child `rk-fixture-child-claude`. s8j's planned `lane_proof` proofs of both lanes do not exist yet. (3) Real `claude -p` dispatches have happened outside the lane: the one probe dispatch at Checkpoint 7c plus three haiku spike dispatches, all through the ClaudeHarness adapter (2791f1d), and s8i's haiku flag probe and five capture items (six sessions, counting one retry) through `sbin-probe`/`wrap` (ee44bf1). The s8i record says these are explicitly \"no lane, no kernel, no harness adapter\".",
+     "evidence": [
+      "runbook/PROGRESS.md:50 - s8j 'Fixture proof of both lanes, CI green, and the run preparation': 'PLANNED 2026-09-24 ... Not started.'",
+      "runbook/phase-1/s8j-run-preparation.md:264-267 - D21-40 decision 2 authorises the real runs 'once the sub-stages' fixture proofs pass, and not before'; s8j writes 'each lane, from triage to its landing, through verbs::run::run'",
+      "runbook/phase-1/s8j-run-preparation.md:283-287 - 'No block in this file dispatches to a real account'; the first real fix-lane invocation is still a future gated act (line 300, D21-42 19b)",
+      "runbook/phase-1/s8j-run-preparation.md:461-462 and spikes/DECISIONS-2026-09-21.md:1806 - rk-fix-doctor-test-count 'is the undispatched fixture item'; DECISIONS-2026-09-21.md:1695,1697 (D21-42 18/19b) reserve a fresh item for the first real fix-lane run, which has not happened",
+      "crates/rk-cli/tests/it/lane_e2e.rs:5-16 - every end-to-end test uses FakeHarness::scripted ('no test builds ClaudeHarness and none can dispatch to a real claude'), or the fixture child rk-fixture-child-claude, over pack-min's fixture lane, not the shipped story lane",
+      "git ls-files at 36dd8ac: no lane_proof file exists (s8j's both-lane proofs are unwritten)",
+      "commit 59be987 (s7h.1): real binary `./target/debug/redkiln run rk-fix-doctor-test-count --lane fix` -> 'advanced triage -> analysis', and the run then stops on '8 of 8 shipped cards carrying no permission_mode'; runbook/PROGRESS.md:38 says triage 'carries 0 of the 102 shipped activities ... the plan is empty' (zero dispatches). This is a real-binary lane walk with no fake, which contradicts 'only with a FakeHarness or a fixture child'",
+      "runbook/PROGRESS.md:39 (7i close, 2026-09-24): 'the shipped store still holds zero dispatch_completed rows'; the dispatched case for cost is 'proved over a fixture corpus' with a synthetic transcript",
+      "runbook/PROGRESS.md:51 (Step 8 row): criterion (1) not satisfied; criterion (7) 'NOT RUN ... zero dispatch_completed events because no run completes'; 'Then the real runs, each on its own go-ahead' is still listed as future",
+      "commit 2791f1d (7c close): one real dispatch under CLI 2.1.277 via the real ClaudeHarness adapter/conformance probe, plus three haiku spike dispatches. These are adapter-level, not a kernel/cli lane walk",
+      "runbook/phase-1/s8i-s-bin.md:377-382 - 'S-BIN does not dispatch through redkiln: no lane, no kernel, no harness adapter'; s8i-s-bin.md:1806-1808 and commit ee44bf1 - the $5.561026 spent was a haiku probe (sbin-probe, s8i-s-bin.md:2271) plus capture sessions via `wrap`; 'capture sessions are not dispatches'"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "claim": "The remote-tracking ref origin/build/phase-0-to-1 (as recorded in this worktree's refs; do NOT fetch) contains about 15 commits that local HEAD 36dd8ac lacks — including CI fixes and an rk-containment POSIX change — while the runbook/PROGRESS still states CI (ci.yml) has never run on a remote. (Another auditor claimed instead that the branch has never been pushed.)",
+   "status": "confirmed",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "The claim holds. In this worktree's recorded refs (no fetch), origin/build/phase-0-to-1 is at 7860e66 (\"Merge pull request #3 ... temper-charters-confirm\"). `git rev-list --left-right --count HEAD...origin/build/phase-0-to-1` gives 40 15. So the remote ref has exactly 15 commits that HEAD 36dd8ac lacks: 12 ordinary commits and 3 PR merges. HEAD in turn has 40 commits the remote lacks. The two diverge at merge-base d24d15a (2026-10-02). The 15 include CI fixes from the first Linux/node runs (d4da70a, ef747da), the rk-containment POSIX kill/zombie change (9959b2f), rk-cli and toolchain fixes (cb4ddd4, aab766c, f433854), and the temper adoption commits (1520a2f..d1437e0, merged as PRs #1-#3). The branch was therefore pushed, at least up to d24d15a. The other auditor's claim that it was never pushed is wrong. Meanwhile runbook/PROGRESS.md at HEAD still says ci.yml has never run and nothing is pushed. So do several stage runbooks.",
+     "evidence": [
+      "git branch -r -v: origin/build/phase-0-to-1 -> 7860e66 'Merge pull request #3 from Wet-Ink-Corporation/temper-charters-confirm' (2026-10-03 20:30 -0700)",
+      "git rev-list --left-right --count HEAD...origin/build/phase-0-to-1 => '40 15' (HEAD 36dd8ac has 40 commits the remote lacks; the remote has 15 that HEAD lacks)",
+      "git merge-base HEAD origin/build/phase-0-to-1 => d24d15a ('s8h: refuting round 3 dry...', Ryan Britton 2026-10-02). It is in local history and on the remote, so the branch was pushed, which refutes 'never pushed'",
+      "git log HEAD..origin/build/phase-0-to-1 lists 15 commits, oldest first: d4da70a, cb4ddd4, ef747da, 9959b2f, aab766c, f433854, a06af34 (merge PR #1), 1520a2f, 5e366b0, d874b03, 9bc338c, 3c9d905, 2bad7f3 (merge PR #2), d1437e0, 7860e66 (merge PR #3)",
+      "d4da70a 'CI: the first Linux and node runs — POSIX-honest dispatch tests, the pnpm fixture step, AC-465's synthetic rk-cli rows' (2026-10-03, edits ci.yml); ef747da 'CI: Windows 8.3 temp paths (CI and temp_repo), rk-git fixture identity and auto-maintenance'",
+      "9959b2f 'rk-containment POSIX: kill waits for its members, and an exited (zombie) process reads dead'. Its body cites 'The first ubuntu-latest runs measured the POSIX arm's kill', which is direct evidence that CI ran on the remote",
+      "HEAD:runbook/PROGRESS.md:559 '`ci.yml` is AUTHORED and has never run. Nothing is pushed; the branch is 26 commits ahead of `origin/main`'",
+      "HEAD:runbook/PROGRESS.md:28 '`ci.yml` is authored and never run — nothing is pushed'; HEAD:runbook/PROGRESS.md:621 '`ci.yml` has still never executed: nothing is pushed'",
+      "Stage runbooks at HEAD repeat it: runbook/phase-1/s7c-adapters.md:968,1508,3118,3120,3133 and runbook/phase-1/s7d-cli-and-migrate.md:1962,1974,2698,3580,3697,3708 ('ci.yml has never run')",
+      "git grep in HEAD for d4da70a|ef747da|9959b2f|7860e66 finds no hit in any record, so the HEAD records never acknowledge the remote CI runs or the divergent remote commits"
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "The claim holds, and I found no detail that needs correcting. In this worktree's refs (nothing was fetched), origin/build/phase-0-to-1 points at 7860e66. It has exactly 15 commits that HEAD 36dd8ac does not have: 12 ordinary commits plus 3 merges of PRs #1 to #3. Those 15 include the CI commits d4da70a (\"CI: the first Linux and node runs\", which edits .github/workflows/ci.yml) and ef747da (CI on Windows 8.3 temp paths), and the rk-containment POSIX commit 9959b2f (crates/rk-containment/src/posix.rs). The branches have diverged: their merge-base is d24d15a (2026-10-02), and local HEAD is 40 commits ahead of the remote. The records at 36dd8ac still say ci.yml has never run and that nothing is pushed. That is out of date, because the branch was pushed at least up to d24d15a. The other auditor's statement that the branch has never been pushed is therefore wrong.",
+     "evidence": [
+      "git rev-parse HEAD = 36dd8ac357dd3740e9e29bf1143c9dd6e844e0b9; git branch -r -v: origin/build/phase-0-to-1 -> 7860e66 'Merge pull request #3 from Wet-Ink-Corporation/temper-charters-confirm'",
+      "git rev-list --count HEAD..origin/build/phase-0-to-1 = 15 (of which --merges = 3: 7860e66, 2bad7f3, a06af34); git rev-list --count origin/build/phase-0-to-1..HEAD = 40",
+      "git merge-base HEAD origin/build/phase-0-to-1 = d24d15a (2026-10-02, 's8h: refuting round 3 dry...'): local history up to d24d15a is on the remote, so the claim that the branch was never pushed is refuted",
+      "The remote-only commits include d4da70a 'CI: the first Linux and node runs ...' (touches .github/workflows/ci.yml +37), cb4ddd4 (rk-adapter-toolchain-rust POSIX PATH), ef747da 'CI: Windows 8.3 temp paths ...' (ci.yml +14), 9959b2f 'rk-containment POSIX: kill waits for its members, and an exited (zombie) process reads dead' (crates/rk-containment/src/posix.rs, 66+/9-), aab766c, f433854, and the temper adoption commits 1520a2f..d1437e0, all committer-dated 2026-10-03",
+      "36dd8ac:runbook/PROGRESS.md:28: '`ci.yml` is authored and **never run** — nothing is pushed'",
+      "36dd8ac:runbook/PROGRESS.md:559: '**`ci.yml` is AUTHORED and has never run.** Nothing is pushed; the branch is 26 commits ahead of `origin/main`'",
+      "36dd8ac:runbook/PROGRESS.md:621: '`ci.yml` has **still never executed**: nothing is pushed'",
+      "36dd8ac:runbook/PROGRESS.md:108: 'Runner conformance is NOT verified (`ci.yml` unexecuted) and is owed at the first push'",
+      "The stage files repeat the same statement: runbook/phase-1/s7c-adapters.md:968,1508,3118,3120,3133 and runbook/phase-1/s7d-cli-and-migrate.md:1962,1974,2698,3580,3697,3708 ('ci.yml has never run')"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "claim": "On the real run path the verify harness hard-codes assertion_flipped=None and the CLI passes an empty assertion map to the AC evidence ledger, so an acceptance criterion can only be closed by a human \"discriminates\" answer, never by a mutation pin.",
+   "status": "confirmed",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "I couldn't refute this; the claim holds at 36dd8ac. On the real verify run path, `verify_pass::mutate` always builds its `MutationRun` with `assertion_flipped: None` (crates/rk-cli/src/verify_pass.rs:667 and :707). So `flip_predicate` returns only MutationSurvived or Unverifiable, never Pinned (crates/rk-kernel/src/verify/flip.rs:64-68). Separately, `verify_step_six` passes `&BTreeMap::new()` as the assertions map to `compute_ledger` (crates/rk-cli/src/verbs/run.rs:4228-4234). `ac_status` gives Pinned or MutationSurvived only when an assertion locator is present (crates/rk-kernel/src/verify/ledger.rs:82-92). Each of the two blocks is enough by itself to stop a pin. Every declared-mutation criterion therefore lands as `unpinned` (not even `mutation_survived`). `stage_exit` accepts only Pinned or HumanAnswered (crates/rk-types/src/artifact/ledger.rs:54-56; crates/rk-kernel/src/verify/exit.rs:44). `ac_gate::answers` counts only non-voided gate answers whose verdict is DISCRIMINATES and that name an answerer (crates/rk-kernel/src/verify/ac_gate.rs:169-209). So a criterion can be closed only by a human \"discriminates\" answer, never by a mutation pin. One caveat outside the claim: an item with no Spec criteria exits with no human answer, because the ledger is empty (run.rs:4089-4091).",
+     "evidence": [
+      "Worktree HEAD confirmed 36dd8ac via git log -1.",
+      "crates/rk-cli/src/verify_pass.rs:573-576 doc comment: the port reports counts, not which assertion failed, so `assertion_flipped` is `None`; `pinned` is not reachable through this harness until a port reports the named assertion (AC-334 stays ARMED).",
+      "crates/rk-cli/src/verify_pass.rs:664-669 (patch did not apply) and :704-709 (normal path) both build MutationRun { assertion_flipped: None, ... }; there is no other construction in rk-cli/src.",
+      "crates/rk-kernel/src/verify/flip.rs:64-68: only (Some(true), _) gives Pinned, so with None the result is MutationSurvived (green) or Unverifiable(RedElsewhere) (red).",
+      "crates/rk-cli/src/verbs/run.rs:4228-4234: compute_ledger(&criteria, &runs, &BTreeMap::new(), &feasibility, &answers), so the assertions map is empty. This is the only non-test caller of compute_ledger/stage_exit (grep over crates excluding tests).",
+      "crates/rk-kernel/src/verify/ledger.rs:82-92: Pinned and MutationSurvived both need `assertion.is_some()`; otherwise a Declared mutation falls to LedgerStatus::Unpinned. With the empty map, even a measured flip could not pin.",
+      "crates/rk-kernel/src/verify/ledger.rs:68-72: a human answer for the AC returns HumanAnswered before any mutation evidence is read.",
+      "crates/rk-types/src/artifact/ledger.rs:54-56: permits_exit() is matches!(self, Self::Pinned | Self::HumanAnswered { .. }); NotFeasible and MutationSurvived refuse.",
+      "crates/rk-kernel/src/verify/exit.rs:43-48: stage_exit refuses when any row does not permit exit.",
+      "crates/rk-kernel/src/verify/ac_gate.rs:164-209: answers() returns only non-voided GateAnswered rows with verdict == DISCRIMINATES and a non-empty answerer.",
+      "Caveat: crates/rk-cli/src/verbs/run.rs:4089-4091 returns Ok when criteria is empty (no Spec sidecar, verify_pass.rs:741-755), so criterion-less items exit without a human. This does not contradict the claim, which is about closing an AC.",
+      "Measured assertion_flipped exists only in a test (crates/rk-adapter-toolchain-node/tests/it/ac334.rs:317-319), not on the run path."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "Confirmed as stated, at snapshot 36dd8ac. On the real run path, `verify_pass::mutate` hard-codes `assertion_flipped: None` (crates/rk-cli/src/verify_pass.rs:667 and :707). `verbs::run::verify_step_six` then calls `compute_ledger` with `&BTreeMap::new()` as the assertions map (crates/rk-cli/src/verbs/run.rs:4228-4234). `compute_ledger` is called from nowhere else in src.\n\nSo `pinned` cannot be produced, for two separate reasons:\n- `flip_predicate` returns `Pinned` only when `assertion_flipped` is `Some(true)` (flip.rs:64-65).\n- Even with a `Pinned` flip, `ac_status` gives `Pinned` (and `MutationSurvived`) only when an assertion locator is present (ledger.rs:82-92). Without one, every declared-mutation criterion becomes `Unpinned`.\n\n`stage_exit` permits exit only for `Pinned` or `HumanAnswered` (rk-types/src/artifact/ledger.rs:54-55; exit.rs:44-50), and `NotFeasible` refuses. So a criterion can be closed only by a non-voided `gate_answered` with verdict `discriminates` and a non-empty answerer (ac_gate.rs:169-219).\n\nTwo qualifications:\n- An item with no `Spec` sidecar, or no criteria, has an empty ledger and exits without any answer (run.rs:4089-4091; verify_pass.rs:741-742).\n- This is a recorded, deliberate build choice, not a hidden defect: s8g-verify-and-restored-demands.md:778 and DECISIONS-2026-09-21.md:5761-5762 both say `pinned` is unreachable and AC-334 stays ARMED.",
+     "evidence": [
+      "crates/rk-cli/src/verify_pass.rs:573-576 doc: \"the port reports counts, not which assertion failed, so `assertion_flipped` is `None` ... `pinned` is not reachable through this harness ... (AC-334 stays ARMED)\"",
+      "crates/rk-cli/src/verify_pass.rs:667 and :707 set `assertion_flipped: None` in both MutationRun constructions (patch-did-not-apply branch and the post-suite branch)",
+      "crates/rk-kernel/src/verify/flip.rs:64-67: Pinned only on `(Some(true), _)`; None with a green suite is MutationSurvived, None with a red suite is Unverifiable(RedElsewhere)",
+      "crates/rk-cli/src/verbs/run.rs:4228-4234: `compute_ledger(&criteria, &runs, &BTreeMap::new(), &feasibility, &answers)`, so the assertions map is always empty",
+      "git grep: compute_ledger has one non-test call site, run.rs:4228",
+      "crates/rk-kernel/src/verify/ledger.rs:82-92: Pinned and MutationSurvived both require `assertion.is_some()`; otherwise a Declared mutation is Unpinned. With the empty map, even a Pinned flip would be downgraded",
+      "crates/rk-types/src/artifact/ledger.rs:54-55: `permits_exit` is `matches!(self, Self::Pinned | Self::HumanAnswered { .. })`; NotFeasible does not permit exit",
+      "crates/rk-kernel/src/verify/exit.rs:44-53: stage_exit refuses for any row where `!permits_exit()`",
+      "crates/rk-kernel/src/verify/ac_gate.rs:169-219: `answers` yields a HumanAnswer only for a non-voided ac-gate whose last gate_answered has verdict DISCRIMINATES and a non-empty answerer",
+      "Caveat: run.rs:4089-4091 returns Ok when criteria are empty, and verify_pass.rs:741-742 says an absent Spec sidecar means no criteria, so the exit is permitted with no ACs to close",
+      "Records: runbook/phase-1/s8g-verify-and-restored-demands.md:778 ('the harness observes the declared suite's counts, so `assertion_flipped` is `None` and `pinned` is unreachable through it (AC-334 stays ARMED)') and spikes/DECISIONS-2026-09-21.md:5761-5762 record this as a deliberate build choice"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "claim": "In rk-cli, main.rs installs a Ctrl-C/OS-signal handler but the cancellation token it signals is not the one the run uses (it is dropped/orphaned), so operator interrupt is inert.",
+   "status": "confirmed",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "Confirmed at 36dd8ac. In rk-cli, main.rs:34-37 calls rk_cli::signal::install(), which creates a CancelToken and gives a clone to the ctrlc handler (signal.rs:46-50). main then drops its own copy (`Ok(token) => drop(token)`, main.rs:35). verbs::dispatch(cli, env) (verbs/mod.rs:284) takes no token. run::run makes its own new token (`let token = CancelToken::new();`, verbs/run.rs:398) and passes it to the harness factory (run.rs:1001) and to the step-boundary checks (run.rs:1324, 1336, 2761). CancelToken is an Arc<AtomicBool> (rk-ports/src/cancel.rs:23), so the two tokens share no state. A Ctrl-C or SIGTERM sets only the flag that the handler holds, and no reader ever checks it. Neither the adapter's polling of the cancel flag (rk-adapter-claude/src/lib.rs:632, runner.rs:571) nor the root's boundary checks (exits 13 and 130) can be reached from an operator signal. A comment at main.rs:29-33 admits the drop and calls it deferred work for \"Slice 3\". Run.rs shows that later slices made a fresh token rather than wiring this one through. One more detail: because the handler is installed, Ctrl-C no longer kills the redkiln process by default, so the parent keeps running. Whether a child process still gets the console or process-group interrupt was not checked.",
+     "evidence": [
+      "crates/rk-cli/src/main.rs:34-37: `match rk_cli::signal::install() { Ok(token) => drop(token), Err(e) => eprintln!(...) }`. The root's token is dropped and never passed on.",
+      "crates/rk-cli/src/main.rs:29-33: a comment says the root's copy is dropped and that its readers, the adapter and the step-boundary 130 check, 'are Slice 3's'.",
+      "crates/rk-cli/src/signal.rs:46-50: install() makes CancelToken::new(), moves a clone into the ctrlc::set_handler closure (on_signal -> token.cancel()) and returns the original.",
+      "crates/rk-ports/src/cancel.rs:22-29: `pub struct CancelToken(Arc<AtomicBool>)`, and new() = Default. Each new() is an independent flag.",
+      "crates/rk-cli/src/main.rs:64 and crates/rk-cli/src/verbs/mod.rs:284-295: `dispatch(cli: &Cli, env: &Env)` carries no token. Startup::real() (mod.rs:250-273) has no token field either.",
+      "crates/rk-cli/src/verbs/run.rs:398: `let token = CancelToken::new();` is a fresh token unrelated to the one in the signal handler.",
+      "crates/rk-cli/src/verbs/run.rs:1001: `harness_factory.build(binder.into_config(), token.clone())` gives the adapter the run's own token. Boundary checks at run.rs:1324, 1336 and 2761 read that same token.",
+      "crates/rk-adapter-claude/src/lib.rs:632 and runner.rs:571 poll the token the adapter received, which a signal never sets.",
+      "Workspace grep: the only CancelToken::new() sites outside tests are signal.rs:47, run.rs:398 and rk-ports/src/fakes.rs:197. No code connects the signal token to the run.",
+      "git log of main.rs: last touched at 249a155 (Step 7d Slice 3, cycle 4). The drop from slice 2 (7221a18) is still there at 36dd8ac."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "Confirmed at 36dd8ac. In crates/rk-cli/src/main.rs:34-37, main calls rk_cli::signal::install(). That function registers a ctrlc handler (with the `termination` feature, so SIGTERM/SIGHUP also reach it on POSIX) that fires a fresh CancelToken (signal.rs:46-50). main then explicitly throws away the root's copy with `Ok(token) => drop(token)`. Nothing passes that token into rk_cli::verbs::dispatch(&cli, &env) (main.rs:64). Separately, `run` creates its own, unrelated token, `let token = CancelToken::new();`, at crates/rk-cli/src/verbs/run.rs:398. That second token is the one that reaches the harness (run.rs:1001, `harness_factory.build(..., token.clone())`) and the step-boundary `is_cancelled()` checks that return exit 130 (run.rs:1324, 1336, 2761). CancelToken is an `Arc<AtomicBool>` (rk-ports/src/cancel.rs:23), so the two tokens share no state. The only production `.cancel()` call in the workspace is in the signal handler (signal.rs:34). So the run's token is never fired by a signal. The adapter's Cancelled{by: Signal} → exit 13 path and the root's exit-130 path cannot be reached by an operator interrupt, even though signal.rs:15-18 and the main.rs comment say they can. Because ctrlc replaces the default SIGINT/SIGTERM/console-Ctrl-C termination, redkiln itself does not stop when interrupted; only a hard kill stops it. The main.rs:29-33 comment says this was deliberate for Slice 2 and that wiring the token to its readers was \"Slice 3's\". Slice 3 then added a separate token in run.rs, and main.rs was never revisited (main.rs history: b2f2842, 7221a18, 249a155 only). One caveat, which I did not check by running anything: on Windows the dispatched child is spawned with CREATE_SUSPENDED only, not CREATE_NEW_PROCESS_GROUP (rk-containment/src/ffi.rs:260-277). It may therefore receive the console Ctrl-C itself and exit. On POSIX it is spawned with process_group(0) (ffi.rs:618-628) and is shielded from the terminal's SIGINT. Either way, redkiln's own cancellation path is inert.",
+     "evidence": [
+      "crates/rk-cli/src/main.rs:34-37: `match rk_cli::signal::install() { Ok(token) => drop(token), Err(e) => eprintln!(...) }`. The root's token is explicitly dropped.",
+      "crates/rk-cli/src/main.rs:29-33: comment says the token's readers (the adapter and the step-boundary 130 check) 'are Slice 3's'.",
+      "crates/rk-cli/src/main.rs:64: `rk_cli::verbs::dispatch(&cli, &env)` takes no token.",
+      "crates/rk-cli/src/signal.rs:46-50: install() creates CancelToken::new(), moves a clone into ctrlc::set_handler, and returns the original.",
+      "crates/rk-cli/src/verbs/run.rs:398: `let token = CancelToken::new();` is a separate token minted inside run.",
+      "crates/rk-cli/src/verbs/run.rs:1001: the harness is built with run's own `token.clone()`; run.rs:1324/1336/2761 check that token for exit 130 (SignalOutsideDispatch).",
+      "crates/rk-ports/src/cancel.rs:22-40: CancelToken(Arc<AtomicBool>), so independently created tokens share no state.",
+      "git grep '\\.cancel()' over crates/*/src: the only production call is crates/rk-cli/src/signal.rs:34 (inside the handler).",
+      "git log -- crates/rk-cli/src/main.rs: last touched 249a155 (Slice 3 cycle 4). The run token at run.rs:398 came in Slice 3 cycles 4-6 (249a155, d4ede3b, 1c76715), and main.rs's drop was never replaced.",
+      "Cargo.toml:90: ctrlc with the `termination` feature, so the handler also takes over SIGTERM/SIGHUP and redkiln does not die on them.",
+      "runbook/PROGRESS.md:183 (D18-2) and :627 (Slice 2 at 7221a18) record the handler as installed. No record I found says the signal token reaches run's harness."
+     ]
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "claim": "The `redkiln status` verb derives one global stage from the last StageTransition event (whose payload has no item) and applies it to every item (crates/rk-cli status.rs ~183-197).",
+   "status": "confirmed-with-corrections",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "Correct in substance; only the location is off. The code is in crates/rk-cli/src/verbs/status.rs, not a top-level status.rs. There, `recorded_stage` (lines 179-192) scans the whole journal backwards for the last `EventKind::StageTransition` and takes its payload `to` as one global stage. `roll_up` (lines 196-218) computes that stage once and passes it to `fsm::stage_action(&item, &stage, &slice)` for every item. Rows whose payload has no `item` are handed to every item: `item_of` (lines 172-177) reads only `payload[\"item\"]`, and stage_transition payloads are `{from, to}`. So item-less rows include every stage_transition, gate_opened and dag_assembled row. Since s8e, the producers attach an interim `item` key to many rows, stage-transition rows included. That key sits outside the payload (`Event::item()`), and status.rs ignores it, so even keyed transitions are treated as global. The module header (lines 30-42) admits this as an open, unresolved issue: a store holding several items over-reports transitions and gates.",
+     "evidence": [
+      "crates/rk-cli/src/verbs/status.rs:179-192 -- `recorded_stage`: `events.iter().rev().find(|e| e.kind == EventKind::StageTransition).and_then(|e| e.payload.get(\"to\"))...` -- one stage from the last transition in the whole journal",
+      "crates/rk-cli/src/verbs/status.rs:196-218 -- `roll_up` computes `let stage = recorded_stage(events);` once and calls `fsm::stage_action(&item, &stage, &slice)` for every item in `per_item`",
+      "crates/rk-cli/src/verbs/status.rs:172-177 -- `item_of` reads only `event.payload.get(\"item\")`, never `Event::item()`",
+      "crates/rk-cli/src/verbs/status.rs:207-213 -- item-less rows (`shared`) are cloned into every item's slice",
+      "crates/rk-cli/src/verbs/status.rs:30-42 -- the module's own RAISED note: `stage_transition` is `{from, to}`, it carries no item, and 'This module hands them to every item ... a multi-item store therefore over-reports its transitions and gates'",
+      "crates/rk-kernel/src/runtime.rs:819-824 -- `stage_transition_event` payload is `{\"from\", \"to\"}` only",
+      "crates/rk-kernel/src/runtime/tier_one.rs:2230-2238, 2247-2260 -- stage_transition payloads built with only `to`/`from` keys",
+      "crates/rk-types/src/event.rs:61-101 -- the interim `item` key rides beside the payload ('never inside them'), is read via `Event::item()`, and is stored in `t2_event.item`; status.rs does not use it",
+      "crates/rk-cli/src/doctor/rebuild.rs:245-246 -- a StageTransition event is built `.with_item(&item)`, so some transition rows do carry an item key that status ignores",
+      "Path correction: the file is crates/rk-cli/src/verbs/status.rs; the claim's lines ~183-197 fall inside recorded_stage/roll_up (179-218)"
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "The claim is right in substance but wrong in two details. In crates/rk-cli/src/verbs/status.rs at 36dd8ac, `recorded_stage` (lines 179-192) takes the `to` of the last `StageTransition` in the whole journal as one global stage. `roll_up` (196-218) then passes that same stage string to `fsm::stage_action(&item, &stage, &slice)` for every item (line 214). That stage only seeds `RunState::initial` (doc at 181-182). Every row whose payload has no `item` goes to every item as well (208-213), and that includes every stage_transition and gate row. So transitions and gates from all items are folded into each item's result, not just the stage seed.\n\nDetail 1: the stage_transition payload does carry no `item`. Its payload is `{from?, to}` (rk-kernel runtime.rs:820-824; runtime/tier_one.rs:2230-2238). But since s8e (da5dff8, ADR-0182) the event does carry an interim `item` key next to the payload. It is set by `Event::with_item` (rk-types event.rs:89-101), stored in t2_event.item, and returned by the store read (rk-store events.rs:58, 93). rk-store tier_one.rs:191-197 refuses a stage_transition row without it. status.rs's `item_of` (172-177) reads only `payload[\"item\"]` and ignores `Event::item()`. The module header's RAISED note (30-42) says the query ignores its selector and that no record names an owner; that note is stale.\n\nDetail 2: the cited range ~183-197 only partly covers it. The global stage is computed at 183-192, and it is applied to every item at 196-218.",
+     "evidence": [
+      "crates/rk-cli/src/verbs/status.rs:179-192: `recorded_stage` = events.iter().rev().find(kind == StageTransition).payload[\"to\"]; doc: 'The stage every item is folded against: the `to` of the LAST recorded `stage_transition`'",
+      "crates/rk-cli/src/verbs/status.rs:196-218: `roll_up` computes `let stage = recorded_stage(events)` once and calls `fsm::stage_action(&item, &stage, &slice)` for every item in the BTreeMap (line 214)",
+      "crates/rk-cli/src/verbs/status.rs:207-213: item-less rows (incl. all stage_transition and gate_opened rows) are cloned into every item's slice ('handed to every item')",
+      "crates/rk-cli/src/verbs/status.rs:172-177: `item_of` reads only `event.payload.get(\"item\")`, never `Event::item()`",
+      "crates/rk-cli/src/verbs/status.rs:30-42: header RAISED note admits the per-item partition is decided by no record and 'a multi-item store therefore over-reports its transitions and gates'",
+      "crates/rk-kernel/src/runtime.rs:820-824 and crates/rk-kernel/src/runtime/tier_one.rs:2230-2238: stage_transition payload is {from?, to}, with no item in the payload",
+      "crates/rk-types/src/event.rs:62-101: since s8e (ADR-0182) the interim `item` key rides beside the payload ('never inside them'); accessor `Event::item()`",
+      "crates/rk-store/src/events.rs:58,93: store read selects the `item` column and restores it with `event.with_item(item)`; crates/rk-store/src/tier_one.rs:191-197 refuses a stage_transition boundary without an interim item key",
+      "crates/rk-kernel/src/workflow/fsm.rs:1916-1927: `stage_action(item, stage, events)` folds with `stage` as the seed",
+      "runbook/phase-1/s7d-cli-and-migrate.md:3794-3798 and :990-994: per-item partition RAISED at 7d (fixtures single-item by construction)",
+      "git log for status.rs: last touched 7168908 (s8f), after da5dff8 (s8e) introduced the interim item key, yet status.rs never adopted it"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "claim": "The Claude adapter is pinned/validated for CLI version 2.1.278 (last real dispatch 2026-09-21) while the records say the installed CLI is 2.1.289; the s8h live confinement probes and the AC-215 disallowed-tool live test have never been run.",
+   "status": "confirmed",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "The claim holds at 36dd8ac. The adapter's pin is still `TESTED_CLI_VERSION = \"2.1.278\"`, and the only live-warranted version is 2.1.278 (`LIVE_WARRANTED = [\"2.1.278\"]`). That warrant comes from the `live_dispatch_probe` / Checkpoint 7c re-run on 2026-09-21. The records say the installed CLI is now frozen at 2.1.289 (DISABLE_AUTOUPDATER, 2026-10-05), so Halt 2 is live and the pin move waits for s8j. Three s8h live probes have never been run: probe 0 `live_denial_channel_preprobe`, probe 1 `live_confinement_and_denial_probe` and probe 2 `live_init_equality_probe`. Nor has the AC-215 integration test `live_disallowed_tool_terminates`. All four are `#[ignore]`, authored and not run, and are scheduled for s8j, which has not started. Three qualifications. First, \"last real dispatch 2026-09-21\" is true only for rk-adapter-claude. Real `claude` CLI sessions at 2.1.289 did happen on 2026-10-05 and 06: S-BIN B1's haiku probe and its capture sessions, $5.56. They ran through the S-BIN runner under `tools/live-run.sh wrap`, not through the adapter, and `wrap` never compares against the pin. Second, besides the live-warranted 2.1.278 row, the permission-mode table also has a dormant row for 2.1.287, warranted only by a captured `--help` output. Third, s8h moved AC-215's integration half onto probe 1 (`live_confinement_and_denial_probe`), which has also not been run.",
+     "evidence": [
+      "crates/rk-adapter-claude/src/config.rs:124 `pub const TESTED_CLI_VERSION: &str = \"2.1.278\";` (moved 2.1.277->2.1.278 on 2026-09-21 per config.rs:114)",
+      "crates/rk-adapter-claude/src/command.rs:133-139 PERMISSION_MODE_ARGV rows (\"2.1.278\",\"default\"), (\"2.1.287\",\"manual\"); `LIVE_WARRANTED: &[&str] = &[\"2.1.278\"]`; comment at :126 says 2.1.278 is warranted by the 2026-09-21 live acceptance",
+      "spikes/results/instrument-checks/RUNBOOK-instrument.txt contains `2.1.278 (Claude Code)`",
+      "crates/rk-adapter-claude/src/init.rs:94-97 re-measured 2026-09-21 at CLI 2.1.278 via live_dispatch_probe; runbook/PROGRESS.md:613 Checkpoint 7c re-run whole and green 2026-09-21",
+      "runbook/PROGRESS.md:33 row 7c 'passed 2791f1d, re-run pending' (the whole re-run belongs to s8j); no later live_dispatch_probe run found in the s8* records",
+      "runbook/phase-1/s8i-s-bin.md:2017 (dated 2026-10-05): 'the CLI is frozen at 2.1.289 ... 2.1.289 is the set's version ... recorded under Halt 2 ... s8j pins it'; spikes/DECISIONS-2026-09-21.md:6571 same",
+      "runbook/phase-1/s8i-s-bin.md:201 and :306 Halt 2: pin 2.1.278, 2.1.281 on 2026-09-24, 2.1.288 at stage open",
+      "crates/rk-adapter-claude/tests/it/live.rs:49-52 and :455 `#[ignore = \"AC-215's integration half: AUTHORED, NOT RUN at 7c (ARMED)...\"] fn live_disallowed_tool_terminates`; runbook/phase-1/s7d-cli-and-migrate.md:1970 and :3701 'ARMED on to Step 8'",
+      "crates/rk-adapter-claude/tests/it/live.rs:67-69 'Three probes are added below (§8h.11), authored and NOT RUN here'; :1000, :1145, :1434 #[ignore] on live_denial_channel_preprobe, live_confinement_and_denial_probe (AC-215 integration half, :1137), live_init_equality_probe",
+      "runbook/phase-1/s8h-cards-and-run-environment.md:2032-2033 'Live (authored, compiled, listed, never run here)'; runbook/PROGRESS.md:48 8h closed 'Record A awaits s8j's probes'; runbook/PROGRESS.md:50 8j 'PLANNED 2026-09-24 ... Not started'; runbook/phase-1/s8j-run-preparation.md:1111-1146 schedules the probes",
+      "Qualification: runbook/phase-1/s8i-s-bin.md:1806-1808 shows real CLI 2.1.289 sessions on 2026-10-05/06 (haiku probe $0.021026, launch record ...-wrap.txt; capture sessions $5.54) via the S-BIN runner under `wrap`, not the adapter; tools/live-run.sh:256-264 compares the pin only for run/probe/answer, and wrap never compares it"
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "The claim holds at snapshot 36dd8ac. rk-adapter-claude's pin, TESTED_CLI_VERSION, is still \"2.1.278\", and LIVE_WARRANTED is [\"2.1.278\"]. The adapter's last real (paid) dispatches were on 2026-09-21: the pin-discharge live_dispatch_probe and Checkpoint 7c's re-run probe. The records say the installed CLI moved to 2.1.281 on 2026-09-24, then to 2.1.288 on 2026-10-02, then to 2.1.289. The operator froze it at 2.1.289 with DISABLE_AUTOUPDATER on 2026-10-05, and the pin move to 2.1.289 is handed to s8j. Two sets of live tests have never been run. The first is the s8h §8h.11 live probes: probe 0 live_denial_channel_preprobe, probe 1 live_confinement_and_denial_probe, and probe 2 live_init_equality_probe. They were authored at s8h for s8j, and s8j is \"PLANNED ... Not started\". The second is AC-215's integration-half test, live_disallowed_tool_terminates. It is still #[ignore] \"AUTHORED, NOT RUN\" and was carried ARMED to Step 8. (Probe 1 is also labelled AC-215's integration half, and it has not run either.) One nuance: real Claude CLI sessions did run at 2.1.289 on 2026-10-05/06. These were s8i's S-BIN B1 probe and five capture sessions. They do not go through rk-adapter-claude, so they do not validate the adapter at 2.1.289.",
+     "evidence": [
+      "crates/rk-adapter-claude/src/config.rs:124 `pub const TESTED_CLI_VERSION: &str = \"2.1.278\";` (moved 2.1.277 -> 2.1.278 on 2026-09-21, config.rs:114)",
+      "crates/rk-adapter-claude/src/command.rs:133,139 PERMISSION_MODE_ARGV row (\"2.1.278\",\"default\") and `LIVE_WARRANTED: &[&str] = &[\"2.1.278\"]`; command.rs:129 says the row stays until s8j's pin move",
+      "runbook/PROGRESS.md:364 (Step 7d Slice 4, 2026-09-21): the operator ran live_dispatch_probe at 2.1.278 and it PASSED; PROGRESS.md:33 and :613: Checkpoint 7c re-run GREEN 2026-09-21 with its own live_dispatch_probe (a second paid haiku dispatch that day)",
+      "spikes/DECISIONS-2026-09-17.md:337: S-TTL1 ran by 2026-09-18, earlier than 09-21; no later adapter live:: run is recorded",
+      "runbook/PROGRESS.md:49: Halt 2 at s8i stage open, 'the pin file reads 2.1.278, the CLI read 2.1.281 on 2026-09-24 and 2.1.288 on 2026-10-02'",
+      "runbook/phase-1/s8i-s-bin.md:2017 (2026-10-05): `claude --version` read `2.1.289 (Claude Code)`, CLI frozen via DISABLE_AUTOUPDATER, '2.1.289 is the set's version ... s8j pins it'",
+      "runbook/phase-1/s8i-s-bin.md:2005-2006: 'TESTED_CLI_VERSION is rk-adapter-claude's pin, and S-BIN does not dispatch through that adapter'. So the 2026-10-05/06 S-BIN dispatches at 2.1.289 (s8i-s-bin.md:1806,1808) are not adapter dispatches",
+      "runbook/phase-1/s8h-cards-and-run-environment.md:222 'The two live probes of D21-41 (g) are authored here (§8h.11) and run at s8j'; §8h.11 heading at :1625; probe 1 = live_confinement_and_denial_probe, 'AC-215's integration half' (:1664)",
+      "runbook/PROGRESS.md:50: s8j row 'PLANNED 2026-09-24 ... Not started.'; PROGRESS.md:305 (D21-138): ADR-0197 stays proposed 'until both §8h.11 probes pass at s8j'; references/adr/README.md:409 says the same",
+      "crates/rk-adapter-claude/tests/it/live.rs:455 `#[ignore = \"AC-215's integration half: AUTHORED, NOT RUN at 7c (ARMED); ...\"]` on live_disallowed_tool_terminates (:456); probes at live.rs:1000-1001, 1145-1146, 1434-1435 are all #[ignore] PAID",
+      "runbook/phase-1/s7d-cli-and-migrate.md:1970 and :3701: AC-215 integration half 'ARMED on to Step 8'; no record in runbook/ or spikes/ shows live_disallowed_tool_terminates was ever run (git grep finds only authoring/ARMED mentions)"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "claim": "The plan grew from 14 runbook rows (2026-09-11 baseline) to 30, via insertions on 09-13 (7b-ii), 09-21 (7f-7i) and 09-24 (eleven s8 sub-stages); in the most recent week docs/decision-only commits are ~70% of commits and stage s8i has added zero Rust lines.",
+   "status": "confirmed",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "I could not refute any number in the claim. runbook/INDEX.md had 14 numbered stage rows at 0e34384 (2026-09-11), plus the unnumbered 'any' row for Step 9. It went to 15 at 80a40da (2026-09-13, 7b-ii), 19 at 8634de8 (2026-09-21, 7f-7i) and 30 at b8e7aa9 (2026-09-24, eleven s8 sub-stages, rows 19-29). Step 8 moved to row 30. In the 7 days before the snapshot HEAD 36dd8ac (2026-10-05), 68 of 98 commits (69%) changed only .md files. None of those 98 commits is a merge. Counting from 2026-09-29 00:00 instead gives 64 of 92 (70%). s8i added zero lines of Rust to redkiln-rs, measured from Checkpoint 8h's re-run 09018dd, from its stage-open commit 285b659 or from the s8h close 8db752c. Its changes are 6 markdown files, +3667/-62 lines. One caveat: s8i did write Rust, but in private copies of the separate redkiln-corpus repo (runner/src/sbin.rs, built as patches). So \"zero Rust lines\" holds for this repository only, not for the stage's whole engineering output.",
+     "evidence": [
+      "Row counts come from `git show <c>:runbook/INDEX.md | grep -E '^\\| ([0-9]+|any) \\|'`. The numbered rows are 14 at 0e34384 (2026-09-11 11:52), 15 at 80a40da (2026-09-13 18:09, adds row 11 'Step 7b-ii'), 19 at 8634de8 (2026-09-21 20:59, adds rows 15-18 for 7f-7i) and 30 at b8e7aa9 (2026-09-24 22:48, adds rows 19-29 for 8a-8j plus 8d-ii). Each count excludes the 'any | Step 9' row.",
+      "runbook/INDEX.md:48-54 (worktree at 36dd8ac) states 'Step 7b-ii became its own stage file on 2026-09-13' and 'The eleven `s8` sub-stages were inserted on 2026-09-24 (D21-40 ... on the D21-3 precedent that inserted `7f`–`7i`)'. It also says 'The rows are numbered 19–29, and Step 8 moves from row 19 to row 30'. The table rows are at INDEX.md:59-89.",
+      "Subject of 8634de8: 'Phase 1 completion plan: four new stages before Step 8'. Subject of b8e7aa9: 'Tracker: insert the eleven s8 sub-stages (INDEX rows 19-29, Step 8 -> row 30)'.",
+      "Last week = `git rev-list --since=2026-09-28T20:21:38-07:00 HEAD`, which returns 98 commits, 0 of them merges. 68 of the 98 change only *.md files (69.4%). Using --since=2026-09-29 instead, 64 of 92 commits have no code or config file extension (69.6%).",
+      "Checkpoint 8h was re-run green at 09018dd (2026-10-02 21:00, 'PROGRESS: Checkpoint 8h re-run green ... s8i's entry gate met'). s8i opened at 285b659 (2026-10-02 21:24, 's8i (interim 1): stage open').",
+      "`git diff --shortstat 09018dd HEAD -- '*.rs'` is empty, and so is the same diff from 285b659~1 and from 8db752c. `git log 09018dd..HEAD -- '*.rs'` lists no commits.",
+      "`git diff --stat 09018dd HEAD`: 6 files changed, 3667 insertions(+), 62 deletions(-), all markdown. They are runbook/PROGRESS.md, runbook/phase-1/s8a-records-and-red-checkpoints.md, runbook/phase-1/s8i-s-bin.md (+1796 lines), spikes/DECISIONS-2026-09-21.md, spikes/FINDINGS.md and spikes/METHOD-S.md.",
+      "The caveat comes from runbook/phase-1/s8i-s-bin.md:200 and :577-590. s8i's build runs through 'D21-140 item 2's private copy and patch' of the corpus repo, in which 'runner/src/sbin.rs holds 13 of the table's 25 tests'. Further private copies are described at :600, :770, :910, :950 and :1004. So s8i's Rust exists outside redkiln-rs."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "The claim holds against the primary evidence. The runbook's numbered stage table went from 14 rows at the 2026-09-11 split (0e34384, still 14 at the merge 353ea01) to 30 at 36dd8ac. The rows were inserted in three batches: Step 7b-ii on 2026-09-13 (80a40da), the four stages 7f-7i on 2026-09-21 local time (8634de8, which is 09-22 UTC), and the eleven s8 sub-stages (8a, 8b, 8c, 8d, 8d-ii, 8e, 8f, 8g, 8h, 8i, 8j) on 2026-09-24. On that day ten files were drafted in a1d35ac, s8d-ii was split out of s8e in c9e7b6e, and INDEX rows 19-29 were added in b8e7aa9, moving Step 8 to row 30. In the 7 days ending at 36dd8ac (2026-09-28 20:21 to 2026-10-05) there are 98 commits, and 69 of them (70.4%) change no .rs file. The 69 touch only .md files, plus 3 .toml files in a single commit. That commit, e538f09, changed rk-cli test fixtures, so a strict docs-only count is 68/98 (69.4%). Stage s8i, from its entry commit 09018dd to 36dd8ac, changed only 6 .md files and zero Rust lines. Its driver and audit tooling was built outside the repo, in private corpus copies (5736b64).",
+     "evidence": [
+      "git show 0e34384:runbook/INDEX.md and 353ea01:runbook/INDEX.md (2026-09-11): numbered rows 1-14 (Step 0 ... Step 8 = row 14), plus non-numbered preamble/halts/any rows",
+      "runbook/INDEX.md at 36dd8ac: rows 1-30, Step 8 = row 30; the execution-order line lists 30 stages; INDEX.md text says 'Step 7b-ii became its own stage file on 2026-09-13' and 'The eleven s8 sub-stages were inserted on 2026-09-24 ... numbered 19-29, and Step 8 moves from row 19 to row 30'",
+      "80a40da 2026-09-13 18:09 -0700 'Step 7b Slices 0-2: four records, the gates split out' adds runbook/phase-1/s7b-ii-gates.md",
+      "8634de8 2026-09-21 20:59 -0700 'Phase 1 completion plan: four new stages before Step 8' adds s7f/s7g/s7h/s7i and edits INDEX.md",
+      "a1d35ac 2026-09-24 'Ten s8 sub-stage files drafted (s8a...s8j)'; c9e7b6e 2026-09-24 adds s8d-ii (split from s8e); b8e7aa9 2026-09-24 'Tracker: insert the eleven s8 sub-stages (INDEX rows 19-29, Step 8 -> row 30)'",
+      "git rev-list --since=2026-09-28T20:21:38-07:00 HEAD gives 98 commits; 69 touch no .rs file (70.4%); the file types in those 69 are 193 .md and 3 .toml, the .toml files all in e538f09 (crates/rk-cli/tests/fixtures/*.toml), so strict docs-only is 68/98 = 69.4%",
+      "git diff --name-only 09018dd 36dd8ac (s8i entry gate met, then stage open at 285b659): only runbook/PROGRESS.md, runbook/phase-1/s8a-records-and-red-checkpoints.md, runbook/phase-1/s8i-s-bin.md, spikes/DECISIONS-2026-09-21.md, spikes/FINDINGS.md and spikes/METHOD-S.md change; git diff --stat -- '*.rs' over that range is empty",
+      "5736b64 's8i (interim 2): driver and audit built in private corpus copies': s8i tooling lives outside this repo"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "claim": "The selection kernel's load-time rank-tie and rigor-monotonicity sweeps hard-code a toolchain domain that omits `rust` (the toolchain of Redkiln-RS's own self-hosting lane).",
+   "status": "confirmed-with-corrections",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "The rank-tie sweep and the rigor-monotonicity sweep both hard-code the same four toolchain instances from spikes/p9 lattice.py: node/{text}, unreal/{binary}, node+unreal/{text,binary} and dotnet/{text}. Neither includes `rust`. That part of the claim is correct. One detail is wrong: only the rank-tie sweep runs at load time. `rank_lint` is called from `load_lints`, which runs before step 1 of select. `rigor_monotonicity_rule` has no caller in production source; it runs only from tests (tests/it/rigor.rs, over .redkiln/catalog). The gap is limited to these two copies: the separate P9 lattice module adds a `rust` row in `Axes::shipped()`.",
+     "evidence": [
+      "crates/rk-kernel/src/select/step4.rs:594-600: `const TOOLCHAIN_INSTANCES: [(&str, &[&str]); 4] = [(\"node\",[\"text\"]),(\"unreal\",[\"binary\"]),(\"dotnet\",[\"text\"]),(\"node+unreal\",[\"text\",\"binary\"])]`. There is no rust entry.",
+      "crates/rk-kernel/src/select/step4.rs:620-644: `enumerate_contexts` builds the toolchain/change sweep only from TOOLCHAIN_INSTANCES. step4.rs:507-509 says this is lattice.py's own four instances.",
+      "crates/rk-kernel/src/select/step4.rs:533-592: `rank_lint` (AC-047) uses `enumerate_contexts`. step4.rs:562 also falls back to the key \"node\" for keyed kinds.",
+      "crates/rk-kernel/src/select/lints.rs:14 and :362: `load_lints` calls `super::step4::rank_lint`. lints.rs:30-32 says select_amended runs the lints before step 1, so the rank-tie sweep is load-time.",
+      "crates/rk-kernel/src/rigor.rs:561-569: a second hard-coded `TOOLCHAIN_INSTANCES` with node, unreal, node+unreal and dotnet; no rust. rigor.rs:571-585: `axes_for` uses only this list for the toolchain/change axis. rigor.rs:63-64 documents the same four instances.",
+      "crates/rk-kernel/src/rigor.rs:300: `rigor_monotonicity_rule` is defined here. A grep of every crates/**/src/**/*.rs file found no production caller (only the in-file tests at rigor.rs:891 and :905). It is exercised by crates/rk-kernel/tests/it/rigor.rs:103+ over SHIPPED_CATALOG \".redkiln/catalog\" (:62). So 'load-time' is wrong for this sweep.",
+      "crates/rk-kernel/src/lattice.rs:180-189 and :303-305: the lattice module's `P6_TOOLCHAINS` also has no rust row, but `Axes::shipped()` pushes `RUST_TOOLCHAIN` (\"rust\", {rust}, {text}) for the .redkiln/ reading (D21-43 N26, mutant M23). The rust omission is therefore specific to step4.rs and rigor.rs.",
+      ".redkiln/config.toml:7 resolves toolchains = [\"rk-adapter-toolchain-node\", \"rk-adapter-toolchain-rust\"]. .redkiln/facets.toml:62 lists toolchain values including \"rust\". .redkiln/registry.toml:120 has [toolchain.rust]. Shipped catalog activities carry `toolchain:rust` tags (.redkiln/catalog/mutation-testing.toml:8, property-based-testing.toml:12). This shows rust is the self-hosting lane's toolchain and that the sweeps never cover a toolchain the shipped catalog actually reads."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "Both selection-kernel sweeps hard-code a four-instance toolchain/change domain taken from spikes/p9/lattice.py: {node/{text}, unreal/{binary}, dotnet/{text}, node+unreal/{text,binary}}. Neither includes `rust`, the toolchain of the repo's own self-hosting lane. `python` is also left out, even though it is in the registered facet domain. The claim is wrong to call both sweeps \"load-time\". Only the AC-047 rank-tie lint (step4::rank_lint) runs at load: select_amended calls it through lints::load_lints before step 1. The rigor-monotonicity sweep (rigor::rigor_monotonicity_rule, and confirm_step_monotonicity_rule, which shares its lattice) has no production caller. It runs only from tests in crates/rk-kernel/tests/it/{rigor,review}.rs, and its own header calls it a Rust-test \"Phase-1 stand-in\". Shipped activities do tag `toolchain:rust` (mutation-testing, property-based-testing), so neither sweep ever builds a rust-only context. A rust-specific rank tie or monotonicity break would go undetected. For a keyed kind with no toolchain, rank_lint also falls back to `node`.",
+     "evidence": [
+      "crates/rk-kernel/src/select/step4.rs:594-600: const TOOLCHAIN_INSTANCES = [(\"node\",[text]),(\"unreal\",[binary]),(\"dotnet\",[text]),(\"node+unreal\",[text,binary])]. No rust.",
+      "crates/rk-kernel/src/select/step4.rs:620-644: enumerate_contexts sweeps toolchain/change over TOOLCHAIN_INSTANCES only, and the facet-registry loop never reaches the toolchain axis (it is removed at :621). step4.rs:562 falls back to the key \"node\".",
+      "crates/rk-kernel/src/select/step4.rs:507-509 doc: 'toolchain and change are enumerated together, over spikes/p9/lattice.py's own four instances'.",
+      "crates/rk-kernel/src/rigor.rs:561-569: const TOOLCHAIN_INSTANCES = [node],[unreal],[node,unreal],[dotnet]. No rust. axes_for at :571-589 uses only this list for toolchain/change. rigor.rs:63-65 doc says the same.",
+      "Load-time status of rank_lint: crates/rk-kernel/src/select.rs:536-544 calls lints::load_lints, and crates/rk-kernel/src/select/lints.rs:362 calls step4::rank_lint.",
+      "rigor_monotonicity_rule is not load-time. Its only callers are in rigor.rs's own unit tests (:891, :905), crates/rk-kernel/tests/it/rigor.rs (:127, :219, :262, :356, :391, :432, :473) and tests/it/review.rs (:1188-1386). rigor.rs:22-26 says the monotonicity check is in 'a Rust test' as 'clause 2's Phase-1 stand-in'.",
+      "rust is the self-hosting lane's toolchain: .redkiln/config.toml:7 sets toolchains = [\"rk-adapter-toolchain-node\", \"rk-adapter-toolchain-rust\"], and .redkiln/registry.toml:120-154 defines [toolchain.rust], whose claims (Cargo.toml, **/*.rs) cover the repo's own sources.",
+      ".redkiln/facets.toml:62: the registered toolchain domain is [\"node\",\"dotnet\",\"python\",\"rust\",\"unreal\"], so the sweeps leave out both rust and python. spikes/p9/lattice.py:51 CHANGE_OF also lists rust:{text}.",
+      "Shipped activities read toolchain:rust: .redkiln/catalog/mutation-testing.toml:8 and .redkiln/catalog/property-based-testing.toml:12 both tag \"toolchain:rust\". A rust-only context is never swept for them."
+     ]
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "claim": "The tier-1 orphaned-anchor / rewrite-event subsystem (AC-167, AC-169, AC-170, AC-171, AC-190) has no producer in code and no runbook stage scheduled to build it before Phase-1 exit.",
+   "status": "confirmed-with-corrections",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "At 36dd8ac, nothing in the code produces orphaned anchors or rewrite events. The vocabulary exists: rk-types has a Drift::OrphanedAnchor variant, and rk-git has a GitOp::PatchId name. But no code path ever constructs OrphanedAnchor. No rewrite(old_sha -> new_sha, mechanism) event kind exists, and nothing calls PatchId. rk-git's reconcile() emits only trailer and slice drift. No test is named for AC-167, AC-169, AC-170, AC-171 or AC-190. The detail that is wrong is \"no runbook stage scheduled\". Step 6 (s6-store-and-git) claims the whole range \"AC-160–AC-199\" in its acceptance set, so these five criteria are formally allocated to Step 6. Step 6 is recorded as passed and re-run several times without this subsystem being built. No later stage (s7*, s8*, including the s8 exit criterion and s8e tier-one) names these ACs or plans orphan detection or rewrite events. Corrected claim: the subsystem has no producer in code, and its only scheduling is a blanket range claim in the already-closed Step 6, which passed without building it. No open stage before Phase-1 exit is scheduled to build it.",
+     "evidence": [
+      "crates/rk-types/src/drift.rs:90-92 defines Drift::OrphanedAnchor { anchor, rows } with the doc text '(AC-167)'; drift.rs:115 and :137 handle it in kind() and blocks(). This is vocabulary only.",
+      "Grepping 'Drift::<Variant> {' across crates/ outside drift.rs finds constructions only of Advisory, DuplicateStoryTrailer, LegacyGateTrailer, SliceLeftRejected, StructuredSection, Template, UnparsableTrailer and UnqualifiedSliceVerdict. OrphanedAnchor is never constructed. A grep for 'OrphanedAnchor|orphaned_anchor' finds it only in drift.rs.",
+      "crates/rk-git/src/reconcile.rs:156,236,260,264,270 are the only Drift values reconcile() pushes (duplicate story, slice left rejected, legacy gate, unqualified slice verdict, unparsable trailer). It does no anchor-reachability or orphan detection.",
+      "crates/rk-git/src/git_exec.rs:42,135,175,212: GitOp::PatchId exists only as an enum member and name. No other reference to PatchId exists in crates/, so the AC-169 patch-id mechanism is never invoked.",
+      "There is no rewrite event kind: grepping crates/*/src for '\"rewrite|Rewrite\\b' finds no event kind. The hits are unrelated (diff.rs:384 gix's Rewrite arm, reference.rs:1294 an expression rewriter).",
+      "No test names: a grep for ac167/ac169/ac170/ac171/ac190 (any spelling) outside references/ matches only the drift.rs doc comment (and a Cargo.lock checksum).",
+      "Grepping crates/rk-cli/src/doctor/rebuild.rs and crates/rk-cli/tests/it/doctor.rs:2895-2910 shows the only handling of unreachable anchors: the AC-184 rebuild projection excludes them. It does not report orphans or re-anchor rows.",
+      "Detail refuted: runbook/phase-1/s6-store-and-git.md:478 puts the whole range in Step 6's acceptance set, quote: 'Then git-as-truth **AC-160–AC-199**'. That range includes AC-167/169/170/171/190. s6:146-147 also places orphan rows and rewrite events outside the rebuild differential (ADR-0105 clause 9).",
+      "runbook/PROGRESS.md:29 records Step 6 'passed at 4777941 and again at d5bfc4f', so the stage that holds these ACs is closed without them being built.",
+      "No other runbook stage schedules them. Grepping RUNBOOK.md and runbook/ for AC-167/169/170/171/190 returns no hits. 'AC-166' appears only in s8e (t1_gate keys, s8e:518, :2306). The only 'orphan' hits in s8* are unrelated or absent, and s6:109 means a doctor worktree-orphans row, not anchor orphans.",
+      "references/2026-09-08-acceptance-criteria.md:3217-3257 and :3515-3522 give the AC texts: reconcile() reports orphans with anchor SHAs, emits rewrite events per mechanism, keeps orphans without a mechanism, opens a human gate (AC-171, human-gated per :3103), and covers destroyed-worktree resume (AC-190). The architecture design rows are at references/2026-09-08-architecture-design.md:751-754 and :1242.",
+      "Prior audit records agree that this is Step 6 work: references/audit/2026-09-10/INTERNAL-MERGED.json:8497 says 'Reconcile (AC-167..170) is Step 6 code'.",
+      "Caveat on AC-190: worktree re-entry and re-creation code exists (crates/rk-cli/src/verbs/run.rs:4380-4523, 4780; runbook/phase-1/s8d-ii-run-worktrees.md:1609). AC-190's own behaviour (zero new orphans after rm -rf plus prune, then a successful resume) has no named test, and no orphan producer exists to measure it against."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "The claim holds on the code. It is wrong on scheduling. Step 6 did schedule this subsystem: its acceptance set names the range \"git-as-truth AC-160–AC-199\" (runbook/phase-1/s6-store-and-git.md:478), and that range contains AC-167, AC-169, AC-170, AC-171 and AC-190. Step 6 then closed with its checkpoint passed (runbook/PROGRESS.md:29) without building or claiming any of the five. No later stage (s7a through s8j, or s8) names them, and none of s8's six Phase-1 exit checks needs them. The accurate statement is therefore: the orphaned-anchor / rewrite-event subsystem has no producer in code. A drift variant (`Drift::OrphanedAnchor`) and an event kind (`EventKind::Rewrite`) are declared, but nothing ever creates either. The five criteria were scheduled only as part of Step 6's range, Step 6 closed without building them, and nothing has rescheduled them before Phase-1 exit. Two details: AC-171 is a human gate where only the gate opening can be checked by a machine. AC-190 is a property that nothing gets orphaned when a worktree is destroyed, not a producer, and no test names it.",
+     "evidence": [
+      "No producer in code: crates/rk-types/src/drift.rs:90-93 declares `OrphanedAnchor { anchor, rows }` (its doc cites AC-167). The only other references to it are the `kind()` arm (drift.rs:115) and the `blocks()` arm (drift.rs:136). A `git grep OrphanedAnchor|orphaned_anchor` over the whole tree finds no place that creates one.",
+      "crates/rk-git/src/reconcile.rs creates only five drift kinds: DuplicateStoryTrailer (:156), SliceLeftRejected (:236), LegacyGateTrailer (:260), UnqualifiedSliceVerdict (:264) and UnparsableTrailer (:270). It never creates OrphanedAnchor. Its caller passes in commits only: crates/rk-cli/src/doctor/rebuild.rs:338 `rk_git::reconcile::reconcile(&commits)`, so no store rows reach it to be found orphaned.",
+      "`EventKind::Rewrite` is declared at crates/rk-types/src/event_kind.rs:142 as tier 2 (tests/it/event_kinds.rs:264). Its only uses are exhaustive match arms (rk-kernel/src/workflow/breaker.rs:635, fsm.rs:1730, memo.rs:753) and the tier assertion in rk-kernel/tests/it/projection.rs:189-198. Nothing ever emits a rewrite event, and no code computes patch-id, ORIG_HEAD or reflog successors.",
+      "No test is named after these criteria: `git grep ac16[79]|ac17[01]|ac190` finds nothing under crates. AC-167 appears in code only in the drift.rs doc comment. The only orphan code is unrelated: process-tree orphans in rk-adapter-claude, and the worktree-registration doctor row RK-D-WORKTREE-ORPHAN (crates/rk-cli/src/doctor/rules.rs:229, 1273). Neither is about anchor orphans.",
+      "Scheduling, which contradicts the claim: runbook/phase-1/s6-store-and-git.md:474-479 makes Step 6's acceptance set 'git-as-truth AC-160–AC-199', which covers all five ids. s6:146-147 also places orphan rows and rewrite events outside the rebuild differential (ADR-0105 clause 9; references/adr/0105-rk-git-and-rk-store-contracts-as-rules.md:93 calls them 'tier-2-derived').",
+      "Step 6 is closed: runbook/PROGRESS.md:29 records Step 6 're-run WHOLE and passed at 4777941 and again at d5bfc4f'. A `git grep` for AC-167/169/170/171/190 under runbook/ and spikes/ finds nothing, so no stage file or tracker row claims, arms, routes or reschedules any of them.",
+      "Phase-1 exit is 'six runnable checks' (runbook/phase-1/s8-exit-criterion.md:18-27). Check (2) is the rebuild differential over the tier-1 projection, and none of the six reads orphan or rewrite behaviour.",
+      "The register text confirms the scope: references/2026-09-08-acceptance-criteria.md:3217-3256. AC-167 and AC-169/170 are rk-git reconcile behaviours. AC-171 is a human gate: 'not machine-decidable', and only the opening of the gate is checked. AC-190 at :3515-3522 says a destroyed worktree orphans no row and the item resumes. The 2026-09-10 audit already flagged that orphan rows and rewrite events were never tiered (references/2026-09-10-pre-implementation-audit.md:3706)."
+     ]
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "claim": "About 73% of the ~475 Phase-1 acceptance criteria are evidenced by a real discriminating test; ~87 Phase-1 AC ids are never cited in any Rust file; nothing mechanically reconciles the AC register to tests.",
+   "status": "confirmed-with-corrections",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "At 36dd8ac the AC register holds 526 criteria in force: 480 binding, 20 provisional, 20 human-gated and 6 conditional. The ~475 Phase-1 figure is a derived scope; the register does not state it. How many AC ids no Rust file cites depends on how ids are matched. Literal AC-NNN/acNNN/ac_NNN tokens leave 118 of 526 uncited. Expanding the cited ranges leaves 92. Removing conditional, human-gated and Phase-2/4 ids leaves roughly 80 to 105 Phase-1 ids, so ~87 is plausible but depends on the method. No in-tree record gives the ~73% discriminating figure, and checking it would take a judgment on each AC. It is consistent with the upper bound: 394 of 526 ids are cited in test-bearing files, and 239 ids have a test fn named acNNN_*. Being cited does not make a test discriminating. 'Nothing mechanically reconciles the AC register to tests' is overstated. No register-wide check reads the register and verifies that every AC has a test, either as a tool or in CI. But stage checkpoints assert by script that named per-AC tests exist and pass. Per-stage scripted grep scans place each stage's AC ranges into DISCHARGED, ARMED, Excluded or the ledger. And CI asserts some per-AC tests by name. So the reconciliation is partial, scoped to a stage and run once per checkpoint; it is not register-wide or standing.",
+     "evidence": [
+      "references/2026-09-08-acceptance-criteria.md:41,43 give the total: 526 criteria in force, 480 binding, 20 provisional, 20 human-gated, 6 conditional. No '475 Phase-1' count exists in the tree (git grep for 475 finds only AC-475 citations).",
+      "Computed over the 584 tracked .rs files with the loose match 'ac[-_]?[0-9]{3}': 526 ids are defined, 118 are never cited. Examples: AC-056, AC-081..AC-096, AC-130, AC-154, AC-197, AC-451..AC-462, AC-496, AC-503..AC-505, AC-512..AC-519, AC-521.",
+      "Expanding the AC ranges cited in Rust, such as 'AC-080–AC-118' in crates/rk-kernel/src/workflow/breaker.rs:69, leaves 92 uncited: 76 binding, 8 provisional, 6 conditional, 2 human-detected. That puts the Phase-1 uncited count at about 80 to 105 depending on method, consistent with the claim's ~87.",
+      "394 of 526 AC ids are cited in test-bearing files (files under tests/ or containing #[test] or #[cfg(test)]). 239 ids have a function named 'fn acNNN...'. That sets an upper bound of about 78% on 'has a test' for non-conditional, non-human ids. The 73% 'real discriminating' share is plausible, but no record holds it (git grep for '73 ?%' finds nothing).",
+      "No Rust or script source reads references/2026-09-08-acceptance-criteria.md to reconcile AC ids to tests. The only scripts that parse register AC ids are the one-off audit census tools in references/audit/2026-09-10/scripts/census_ids.py:25,147, and they check documents, not tests.",
+      "Counter-evidence to 'nothing': runbook/phase-1/s7b-kernel.md:1639-1669 (Checkpoint 7b, §7b.14) loops over named per-AC tests (ac110_executed_ledger_first_and_last, ac527_empty_set_terminal_condition, ac525_drift_advisory_once, ac484_adapter_edge_fixture, ac487_kernel_denylist, breaker_ac033_ac035, exhaustion_ac024_ac025 and others) and fails if one is absent or failing.",
+      "Counter-evidence: runbook/phase-1/s7c-adapters.md:3305-3318 and runbook/phase-1/s7d-cli-and-migrate.md:3955-3966 re-derive each stage's AC-range partition (DISCHARGED/ARMED/Excluded/ledger) by script with grep -o 'AC-[0-9]{3}' at the stage-open and close commits. This is a mechanical AC-id reconciliation, but to placements, not to test existence.",
+      "Counter-evidence: .github/workflows/ci.yml:97 (AC-499, which asserts that port_conformance_fake_rows ran and passed) and :114 (AC-103/AC-104 lattice tests asserted with --exact). CI ties these specific ACs to named tests, but covers only a few ACs."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "The substance holds, but the claim's precision needs qualifying. The AC register (references/2026-09-08-acceptance-criteria.md at 36dd8ac) has 526 criteria in force. The register's own notes put 32 of them outside Phase 1, which leaves about 494 Phase-1 ids, or about 474 once the 20 human-gated rows are also excluded. That matches '~475'. A literal ID scan finds 118 of the 526 ids in no tracked .rs file. About 94 of those are Phase-1 ids, or about 92 when narrow citations such as 'AC-196–AC-198' count. Excluding the human-gated rows brings it to roughly 87-91, so '~87' fits only under the narrowest scope. The '~73% evidenced by a real discriminating test' figure appears in no repository record; it is the auditor's own judgement. The nearest mechanical bound I could compute is that 377 of 494 (76%) Phase-1 ids are cited in a test file or an acNNN_ test function name. That is consistent with 73% but does not verify it. No tool, CI step or script reconciles the whole register against the tests. The nearest things are partial per-stage lists of named tests, maintained by hand inside checkpoint blocks. The measure that would do the reconciliation (SM-100, per-AC pinning coverage) is recorded as owed to a first measurement from the running product.",
+     "evidence": [
+      "references/2026-09-08-acceptance-criteria.md:44-48 (section 0.1 table): 526 criteria in force: 480 binding, 20 provisional, 20 human-gated, 6 conditional.",
+      "references/2026-09-08-acceptance-criteria.md:7144: corpus-bound AC-444, AC-451-454, AC-456-462, AC-464, AC-467, AC-469 are a Phase-2 acceptance set. :7779: AC-501-506 are Phase 2, AC-507/508/510 Phase 3, AC-512/514-517/519 CONDITIONAL, AC-496 Phase 2. :7504: AC-463 is the Phase 2 exit. That is 32 ids out of phase, so 526-32=494, and 494-20 human-gated=~474.",
+      "Mechanical scan at 36dd8ac: extracting '^**AC-NNN**' headings from the register gives 526 unique ids; 'git ls-files *.rs | grep -o AC-NNN' gives 424 unique ids; 118 register ids are cited in no .rs file. 94 of those 118 are outside the 32-id out-of-phase set. Expanding only narrow cited ranges (AC-196–AC-198 and AC-129..AC-133) rescues AC-197 and AC-130, leaving 92. A broad area range, 'AC-080–AC-118', is the only citation for about 24 more.",
+      "Uncited Phase-1 ids include the human-gated AC-076, AC-115 and AC-358. Excluding the human-gated rows gives roughly 87-91, so the claim's '~87' is within that range.",
+      "No record contains the 73% figure: 'git grep 73 ?%' over runbook/, spikes/ and the register finds nothing relevant. A proxy I computed: 377 of 494 Phase-1 ids (76.3%) are cited in a tests/ file or an 'fn acNNN' test name. That is an upper bound on 'real discriminating test' coverage, consistent with ~73% but not a verification of it.",
+      "No reconciliation tooling: the only scripts are runbook/tools/check-refs.py (section-reference resolution), check-checkpoints.py (lints checkpoint shapes), check-adr-options.py and check-bash-syntax.py. .github/workflows/ci.yml runs fmt, clippy, test, audit and deny plus named AC-499/AC-103/AC-104/AC-498 steps, and no register-to-test step. No .py, .sh or .rs file parses the register for coverage. The .rs references to 'acceptance-criteria' (kernel_denylist.rs:13, cross_process.rs:57) are comment citations.",
+      "Per-stage checks are partial and hand-maintained: runbook/00-preamble.md:255 and :304 require each stage's acceptance set to have discriminating tests. runbook/phase-1/s7b-ii-gates.md:946-950 records that ids 'reached only by the crate-wide cargo test floor' had no named test until named tests were added to the checkpoint block by hand. s7b-ii-gates.md:992-1009 records 'Step 8 keeps no acceptance set' and orphaned rows (AC-455, AC-530) owed an amendment, which is evidence that the reconciliation is manual.",
+      "references/2026-09-08-architecture-design.md:1989: per-AC pinning coverage (SM-100) is listed as resolving to 'a first measurement from the running product', meaning no instrument exists yet. AC-333's evidence ledger (s7b-ii-gates.md:331-337; crates/rk-types/src/artifact/ledger.rs:1) is a product feature for managed specs, not a reconciliation of this repo's own register."
+     ]
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "claim": "Total recorded paid (API-equivalent) spend across spikes and probes is about US$660, and S-BIN has spent $5.56 of a $90 cap.",
+   "status": "confirmed",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "Mostly confirmed, with one caveat. No record in the snapshot (36dd8ac) states \"$660\". The figure is a sum of separately recorded per-spike and per-probe totals: E3 $153.86, E3-H $36.18, H1/H4 $18.85, S-VAR $176.96, S-TYPED $112.25, the AFK session $156.00 (P1-L $21.37 + P7 $131.62 + P8 $3.01), S-WT $0.19, the S-PORTS-era probes $0.123 + $0.0068, and S-BIN $5.561026. Those add up to about $659.98, so \"about US$660\" holds. These are API-equivalent total_cost_usd figures; the runs were on a subscription. E0's 33 Opus repeat dispatches (F27) carry no recorded cost, so true spend is somewhat higher than $660. S-BIN has spent exactly $5.561026 (probe $0.021026 plus six capture-session lines totalling $5.54), against a US$90.00 cap. D21-140 raised that cap from the US$30 set in D21-105.",
+     "evidence": [
+      "runbook/phase-1/s8i-s-bin.md:1808: '(dated 2026-10-06) B1 is complete. Spent so far, from the cost records: $5.561026 (the probe $0.021026; the procedure log's six lines, $5.54)'; commit ee44bf1 (ancestor of 36dd8ac) subject: 's8i B1 complete: 1 probe and 6 capture sessions, $5.561026 spent'",
+      "runbook/phase-1/s8i-s-bin.md:202 and :1791: S-BIN cap is US$90.00 total (D21-140 item 1, amending D21-105 item 2's US$30); runbook/PROGRESS.md:307 (D21-140, cap raised from US$30 to US$90); spikes/METHOD-S.md:1356: 'USD 90.00 API-equivalent, summed over every S-BIN record's total_cost_usd and every probe's'",
+      "spikes/DECISIONS-2026-09-21.md:6807 shows an earlier interim 'Spent so far: $1.90', which :1808 above supersedes",
+      "spikes/FINDINGS.md:1208 (F23 E3): 'Total spend $153.86' (includes F21's arm-b $56.47 at :1029)",
+      "spikes/FINDINGS.md:1550 (F26 E3-H): 'Spend $36.18'; spikes/FINDINGS.md:1771 (F28 H1/H4): 'Spend: $18.85'",
+      "spikes/F29-DRAFT.md:8 (S-VAR): '$176.96'; spikes/F31-DRAFT.md:9 (S-TYPED): '$112.25'",
+      "spikes/HANDOFF.md:229 (AFK 2026-09-08/09): P1 arm-L $21.37, P7 $131.62, P8 $3.01, 'Total $156.00 of the $300 cap'; also spikes/p9/COMMIT-2026-09-09.sh:65-84; F36's $10.71 v2 correction is already inside the $21.37 (spikes/F36-DRAFT.md:130)",
+      "spikes/F30-DRAFT.md:16 (S-WT smoke): 'Spend: $0.19'; spikes/DECISIONS-2026-09-21.md:1795 probe 'Total spend: $0.123'; spikes/DECISIONS-2026-09-21.md:2324 Jev blind pass 'US$0.0068'",
+      "Sum: 153.86+36.18+18.85+176.96+112.25+156.00+0.19+0.123+0.0068+5.561 = 659.98, which is about $660; a git grep of the snapshot finds no single recorded '$660' total",
+      "spikes/FINDINGS.md:1656-1766 (F27 E0 variance, 33 Opus repeat dispatches) has no dollar figure, so the recorded sum understates actual spend",
+      "spikes/FINDINGS.md:118: total_cost_usd is populated on a subscription run, so these figures are API-equivalent, not billed",
+      "Code: crates/rk-cli/src/verbs/cost.rs:365,460 sums total_cost_usd as decimals; no product code holds the historical spend ledger, which lives only in the spike and runbook records above"
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "Both parts of the claim hold, with one caveat: the records never state a single programme-wide total, so \"about US$660\" is a sum I computed from the per-campaign figures. The spike programme's per-campaign spends add to $654.10: E3 $153.86, E3-H $36.18, F28 $18.85, S-VAR $176.96, S-TYPED $112.25, P1 arm L $21.37, P7 $131.62 and P8 $3.01. The AFK session's $156.00 is the sum of P1 arm L, P7 and P8, so it is not counted again. The $64.61 prose comparator was not re-run, so it is not new spend either. Small later probes add a few cents (the s8e worktree probe at $0.123, another probe at $0.0068, and haiku dispatches at about $0.03 each). S-BIN adds $5.561026. The total comes to about $659.8, which rounds to about $660. S-BIN has spent $5.561026 (the probe $0.021026 plus six procedure-log lines totalling $5.54) against a US$90.00 cap. The operator raised that cap from US$30 in D21-140.",
+     "evidence": [
+      "references/2026-09-08-evidence-brief.md:189-191 (section D): 'Spend: E3 $153.86 total (a $97.39 / b $56.47) · E3-H $36.18 · F28 $18.85 · S-VAR $176.96 · S-TYPED $112.25 (prose comparator $64.61) · P1 arm L $21.37 · P7 $131.62 of a $200 cap · P8 $3.01 of a $40 cap · AFK session $156.00 of $300'. Adding up the eight campaigns gives $654.10.",
+      "references/2026-09-08-architecture-design.md:1269 repeats the same per-campaign figures for the 'Whole spike programme'.",
+      "spikes/HANDOFF.md:229: the AFK session total ($156.00) is made of P1 arm L $21.37 + P7 $131.62 + P8 $3.01, so it is not extra spend.",
+      "spikes/F31-DRAFT.md:8-9: 'Comparators not re-run: E3 b-s-silent/b-clean, E3-H b-s-subtle. $112.25'. The $64.61 prose comparator is not new spend.",
+      "spikes/DECISIONS-2026-09-21.md:1787-1795 and runbook/PROGRESS.md:211: worktree probe 'Total spend: $0.123'; spikes/DECISIONS-2026-09-21.md:2324: another probe at US$0.0068; runbook/phase-1/s7c-adapters.md:1586: a haiku dispatch at about $0.03.",
+      "runbook/phase-1/s8i-s-bin.md:1808 (dated 2026-10-06): 'B1 is complete. Spent so far, from the cost records: $5.561026 (the probe $0.021026; the procedure log's six lines, $5.54)... (90.00 - 5.56) = 84.44.'",
+      "spikes/DECISIONS-2026-09-21.md:6850: 'B1 is complete at $5.561026 spent.' Commit ee44bf1's message: 'B1 complete: 1 probe and 6 capture sessions, $5.561026 spent'.",
+      "runbook/PROGRESS.md:307 (D21-140): 'S-BIN's cap raised from US$30 to US$90'; runbook/phase-1/s8i-s-bin.md:202: 'S-BIN's cap is US$90.00 total (D21-140 item 1...)'; spikes/DECISIONS-2026-09-21.md:6333-6343.",
+      "Combined total: $654.10 + about $0.16 in small probes + $5.56 for S-BIN, about $659.8, consistent with 'about US$660'. No record states a single programme-wide total, so this sum is my own."
+     ]
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "claim": "The RFC priced Bet 1 (invert control) at roughly 10k LOC of new work and an Experiment-4 fix lane at 1-2 weeks; the tree is now ~238k lines of Rust plus ~130k lines of markdown after five weeks.",
+   "status": "confirmed-with-corrections",
+   "votes": [
+    {
+     "refuted": false,
+     "partially_true": false,
+     "corrected_statement": "Accurate as stated, with caveats on how the numbers are built. The RFC's effort table (references/2026-08-31-rust-inversion-RFC.md:263-274) lists three Bet 1 workstreams: about 500 LOC for the step runner, about 9k LOC of orchestrator logic ported to Rust, and about 800 LOC for the run record and resume. That adds up to roughly 10.3k LOC. The RFC never gives a single total, and it describes the 9k as a port rather than new code. It prices Experiment 4 (the fix lane end to end) at '1-2 weeks' (:323). At snapshot 36dd8ac (2026-10-05), 34 days after the initial commit cc5a258 (2026-09-01), git tracks 584 .rs files totalling 238,046 raw lines and 434 .md files totalling 130,759 lines. Caveats: these are raw line counts with tests and comments included, and about 137k of the Rust lines are in test files. The tree also contains engine-side crates (rk-store, rk-git, rk-adapter-sqlite and others) that fall under Bet 2 scope, so comparing it against the Bet 1 price alone is not like for like.",
+     "evidence": [
+      "references/2026-08-31-rust-inversion-RFC.md:267 lists 'Step runner + prompt corpus extraction' at '~500 LOC new'.",
+      "references/2026-08-31-rust-inversion-RFC.md:268 lists 'Orchestrator port' at '~9k LOC of logic -> Rust'.",
+      "references/2026-08-31-rust-inversion-RFC.md:269 lists 'Run record + deterministic resume' at '~800 LOC'. Together with :267-268 that is about 10.3k LOC for Bet 1. Line :274 calls Bet 1 alone 'a substantial but bounded project'.",
+      "references/2026-08-31-rust-inversion-RFC.md:323 has the heading 'Experiment 4 - The fix lane, end to end. (1-2 weeks.)'.",
+      "references/2026-09-02-rfc-amendment.md:146 has a section titled 'Repriced - smaller than claimed', but it reprices cache effects, not LOC. Lines :293-295 say Bet 2 is UNTOUCHED. Nothing in the amendment revises the LOC or weeks estimates.",
+      "At 36dd8ac, git ls-files '*.rs' returns 584 files, and cat | wc -l on them gives 238,046 lines.",
+      "At 36dd8ac, git ls-files '*.md' returns 434 files totalling 130,759 lines. By top-level directory: references 55,115, runbook 50,209, spikes 22,738, crates 2,325.",
+      "The Rust lines by crate: crates/rk-kernel 102,484, rk-cli 54,488, rk-adapter-claude 19,063, rk-git 15,690, rk-store 10,648, rk-adapter-toolchain-rust 10,240, rk-types 7,888, and smaller crates after that. About 137,036 of the Rust lines are in tests/ or *_test files.",
+      "Initial commit cc5a258 is dated 2026-09-01 09:34. Snapshot 36dd8ac is dated 2026-10-05 20:21. That is about 34 days, roughly five weeks."
+     ]
+    },
+    {
+     "refuted": false,
+     "partially_true": true,
+     "corrected_statement": "The 2026-08-31 RFC (references/2026-08-31-rust-inversion-RFC.md §6) never gives Bet 1 a single total. It lists three items: about 500 LOC of new step-runner code, about 9k LOC of orchestrator logic ported from TS (it calls only the 500 \"genuinely new\"), and about 800 LOC for the run record and resume. That adds up to roughly 10k LOC. The test rewrite and the distribution work are listed separately and not counted in that figure. The RFC prices Experiment 4 (the fix lane, end to end) at 1-2 weeks. At 36dd8ac (2026-10-05), about five weeks after the first commit (2026-09-01), the tree tracks 238,046 raw lines of Rust in 584 files and 130,759 raw lines of markdown in 434 files. Two caveats limit the comparison. First, about 137k of the Rust lines are in tests/ directories. Second, the project later took D2, a clean break from old redkiln. So the Rust tree includes a kernel/engine rewrite (rk-kernel alone is about 102k lines) that Bet 1's estimate assumed the existing TS CLI would cover through a subprocess call.",
+     "evidence": [
+      "references/2026-08-31-rust-inversion-RFC.md:267-269: Bet 1 rows are 'Step runner ... ~500 LOC new', 'Orchestrator port ... ~9k LOC of logic → Rust', and 'Run record + deterministic resume ~800 LOC'. The sum is ~10.3k. Line 267 calls only the 500 'genuinely new code'. Line 274: 'Bet 1 alone is a substantial but bounded project'.",
+      "references/2026-08-31-rust-inversion-RFC.md:270-272: the Engine port (Bet 2, 40k LOC), the Test rewrite (~47k rewritten) and Distribution are separate rows, so they are not part of the ~10k figure.",
+      "references/2026-08-31-rust-inversion-RFC.md:323: 'Experiment 4 — The `fix` lane, end to end. (1–2 weeks.)'",
+      "references/2026-08-31-rust-inversion-RFC.md:19,45,58: under Bet 1 the TS engine stays in place and is called as a subprocess.",
+      "git log at 36dd8ac: HEAD is dated 2026-10-05 20:21 -0700 and the first commit cc5a258 is dated 2026-09-01 09:34. That is about 5 weeks and 517 commits.",
+      "git ls-files '*.rs' | xargs cat | wc -l gives 238046 lines across 584 files. git ls-files '*.md' | xargs cat | wc -l gives 130759 lines across 434 files. These are raw line counts that include blank lines and comments.",
+      "Rust by crate: rk-kernel 102,484, rk-cli 54,488, rk-adapter-claude 19,063, rk-git 15,690, and others. Rust files under tests/ directories: 339 files, 137,087 lines.",
+      "Markdown by top-level directory: references 55,115, runbook 50,209, spikes 22,738.",
+      "references/2026-09-05-architecture-proposal.md:393: D2 is 'Clean break; `redkiln-migrate` as a separate tool'. This goes beyond the RFC's Bet 1 scope, which reused the TS engine. references/adr/0001-inversion-architecture-bet.md:33 states that D2, not ADR-0001, settles the old engine's fate."
+     ]
+    }
+   ]
+  }
+ ],
+ "critic": [
+  {
+   "gap": "CI and cross-OS status is reported inconsistently, and the actual CI result was never established. w1-code-claude-adapter says \"the POSIX containment arm and CI have never run\". w1-pack-ci-tools says ci.yml \"has never executed\" and its \"POSIX arms have never compiled\". w1-plan-status says the branch \"has never been pushed\". The bodies of the 15 commits that exist only on origin/build/phase-0-to-1 contradict all three. They record real GitHub Actions runs on ubuntu-latest and windows-latest on 2026-10-03, and those runs found product defects as well as test defects:\n- d4da70a: ubuntu reds in the rk-adapter-claude dispatch tests and the rk-git fixtures.\n- cb4ddd4: on POSIX the rk-adapter-toolchain-rust nextest-absent PATH has no /usr/bin, so linking fails with \"linker cc not found\". This is a product fix.\n- ef747da: 7 rk-cli failures on Windows from 8.3 temp paths.\n- 9959b2f: rk-containment's POSIX Group::kill returns before group members die and reads a zombie as alive. This is a product fix and a containment correctness bug.\n- aab766c and f433854: flaky rk-cli tests.\nThe snapshot carries exactly the code those first runs went red on. `git diff --stat d24d15a 36dd8ac -- crates .github` is empty, and the merge-base is d24d15a. So HEAD is known red on both CI legs, and the fixes exist only on the remote. Nobody established whether CI is green at the remote head (7860e66, or f571243 on origin/chore/temper-1.3.0). That fact decides whether the summary can say \"cross-OS unproven\", \"cross-OS known defective locally, fixed remotely\" or \"CI green\". It also decides how much of s8j §8j.7 (\"CI green on the pushed branch\") is already done.",
+   "brief": "Use the pinned audit-wt with read-only git only.\n\n(1) For d4da70a, cb4ddd4, ef747da, 9959b2f, aab766c and f433854, run `git show --stat` and read the full diff. Classify every hunk as product src, test, fixture or CI config. For each product hunk, name the defect and confirm that HEAD 36dd8ac still has the unfixed form. Examples: crates/rk-containment/src/posix.rs Group::kill and is_alive; the nextest_absent_env PATH map in rk-adapter-toolchain-rust.\n\n(2) Re-confirm two facts: `git merge-base HEAD origin/build/phase-0-to-1` returns d24d15a, and `git diff --stat d24d15a 36dd8ac -- crates .github` is empty.\n\n(3) Diff `git show 7860e66:.github/workflows/ci.yml` against HEAD's ci.yml, and list the jobs and OS legs on each side. Also read `7860e66:.github/workflows/rust.yml` (the temper ratchet job) and f571243.\n\n(4) Verify w1-landing's claim that HEAD fails the AC-465 structural step on 39 files. Re-run that step's allowlist logic with `git ls-files`/`git grep`, once at HEAD and once at 7860e66.\n\n(5) CI conclusions are not stored in git. Only with the operator's explicit permission for a read-only network call, run `gh run list --branch build/phase-0-to-1 --limit 30 --json databaseId,headSha,name,event,conclusion,createdAt`, then `gh run view <id> --json jobs` for the runs on 7860e66 and f571243. Without that permission, ask the operator for the Actions summary.\n\nDeliverables:\n- A table of run, sha, job/OS and conclusion.\n- The product defects that only CI found, with each one's crate.\n- Corrected wording for the three reports' \"never ran / never compiled / never pushed\" statements.\n- A one-line verdict on whether any sha has all jobs green on both legs."
+  },
+  {
+   "gap": "No report says what Phase-1 exit (M5) will actually certify about the acceptance register. w1-traceability estimates about 73% \"real discriminating test\" coverage from a sample of only 15 ACs, which is the auditor's own judgement (C11). No report consolidates the recorded dispositions across stage files. Every per-area report lists some ARMED or OWED items, among them AC-215 integration, AC-224 POSIX, AC-295/307/354 corpus replay, AC-334 pinned-unreachable, AC-366, AC-398, AC-278, AC-495/494 unwired, AC-500 route-around, AC-045 and AC-499. But nobody counted how many binding Phase-1 ACs are still ARMED, OWED or PROVISIONAL with no later discharge. Nobody checked whether anything before M5 discharges or waives them either. A rough census at 36dd8ac: 207 distinct AC ids appear on runbook lines containing \"ARMED\", and 62 of them never appear on any line containing \"DISCHARGED\". s8-exit-criterion.md has no check that requires the register to be discharged, and w1-traceability notes that Step 8 has no acceptance set. So M5 can probably be declared with dozens of binding criteria only armed. That would change how the summary describes \"Phase 1 complete\" and the quality headline.",
+   "brief": "Work read-only in audit-wt.\n\n(1) From references/2026-09-08-acceptance-criteria.md, list the 526 ACs in force with their register state (binding, provisional, human-gated or conditional). Drop the about 32 that the register notes put outside Phase 1.\n\n(2) For each remaining id, run `git grep -n -E 'AC-NNN|ac_?NNN' -- runbook`. Keep every line that has a disposition token: DISCHARGED, ARMED, OWED, Excluded, PROVISIONAL, ledger, or \"carried to Step 8\". Order the lines by stage execution order (runbook/INDEX.md:45) and the dated amendments, and take the latest disposition per id. Calibrate against the rough census: `git grep -h -E '\\bARMED\\b' -- runbook | grep -oE 'AC-[0-9]{3}' | sort -u` gives 207 ids, and 62 of those are absent from the DISCHARGED lines.\n\n(3) For each id still ARMED or OWED, check whether s8j-run-preparation.md §8j.9 (line 1979), §8j.10 (line 2010), or the s8-exit-criterion.md checkpoint block names it. Record any recorded waiver.\n\n(4) Draw a stratified sample of 40 more Phase-1 ACs across the register's areas: select 001-099, pack 080-118, git 160-199, adapters 200-259, gates/verify 260-359, cli 360-459, exit/infra 460-529. Apply w1-traceability.md's rubric to each, so the 11/15 (73%) figure gets a confidence interval.\n\nDeliverables:\n- Counts of discharged, ARMED/OWED-scheduled-before-M5, ARMED/OWED-unscheduled, provisional and human-gated, each with citations.\n- The unscheduled ids, grouped by category: live or paid probes, POSIX/CI arms, corpus replay, unwired library code, register amendments owed.\n- A revised evidenced percentage with its interval.\n- A one-sentence statement of what M5 will and will not certify."
+  },
+  {
+   "gap": "The remaining-effort projection is top-down only and was never checked against the unbuilt work and the confirmed defects. w1-velocity §10 gives s8j 2-4 days and Step 8 2-5 days \"if clean\", for a P50 of about 2026-10-21. Its scenario weights (30/45/25) are judgement. s8j (2,816 lines) is not only run preparation. It specifies new product code and new items that do not exist at 36dd8ac:\n- crates/rk-cli/tests/it/lane_proof.rs is absent. It is meant to hold ten `redkiln run` proofs over the shipped bug-standard and story packs (s8j:789-800). Today the shipped lanes are walked only at activity level in rk-kernel lane_walk.rs. lane_e2e.rs drives `redkiln run` only over the pack-min fixture lane.\n- The item-level `hold_before` gate (§8j.3) has no hit in crates or .redkiln.\n- The human-root pack question and its [[gate_expiry]] rows (§8j.2) are not built.\n- The replacement story item rk-story-harden-spike-pack is absent. The committed rk-story-codex-adapter refuses with CyclicDag (s8g:766).\n- Also owed: the pin move to 2.1.289, three never-run live probes (§8j.6), and about 740 lines of instrument amendments (§8j.8).\nNone of the confirmed defects is scheduled. C5 (Ctrl-C is inert) has no line in s8j, s8 or tools/live-run.sh, so a paid real run can be stopped only by a hard kill. C6 (`status` conflates items) will matter once a fix item and a story item share one store. C9 (the rank-tie sweep omits rust) affects the toolchain the real fix lane uses. C4 means every Spec AC in the real verify stage needs a human \"discriminates\" answer. No report counted the operator actions on the path to M5, though the projection assumes \"one operator sitting per day\". The summary's remaining-effort figure and date rest on this.",
+   "brief": "Work read-only in audit-wt.\n\n(1) Go through s8j §8j.1-§8j.10 (runbook/phase-1/s8j-run-preparation.md, sections starting at lines 326, 539, 658, 727, 849, 931, 1175, 1240, 1979 and 2010). For each section, list every deliverable that needs new src, tests, items, records or paid runs. Check whether each exists at 36dd8ac with `git ls-files`/`git grep`. Starting points: lane_proof.rs, hold_before, hold:specification, the human-root question, rk-story-harden-spike-pack, TESTED_CLI_VERSION, and the permission-mode table rows.\n\n(2) Size each missing deliverable from a git analogue. For example, use `git log --format='%h %ad' --stat -- crates/rk-cli/tests/it/lane_e2e.rs` to get the size and elapsed build time of the s8e end-to-end tests, and use the s8e/s8f gate-lifecycle commits for the hold mechanism.\n\n(3) Classify each confirmed defect as exit-blocking against s8-exit-criterion.md checks (1)(1b)(2)(3)(4)(6)(7), as a risk to the paid runs, or as post-M5 debt. Note where it is scheduled, or record it as unscheduled. The defects and locations:\n- C4: crates/rk-cli/src/verify_pass.rs:667,707 and verbs/run.rs:4228-4234.\n- C5: crates/rk-cli/src/main.rs:34-37 and verbs/run.rs:398.\n- C6: verbs/status.rs:179-218.\n- C9: rk-kernel select step4 rank_lint and rigor.rs.\n- C10: Drift::OrphanedAnchor and EventKind::Rewrite.\n- The remote-only POSIX fixes from the first gap.\n\n(4) Count the operator actions to M5 and give each a citation:\n- signed go-aheads for S-BIN B2 and B3;\n- the fix-item pick (§8j.5);\n- the hold answer (§8j.3);\n- one per-AC \"discriminates\" answer per Spec AC from C4, times the expected number of Spec ACs on each lane;\n- per-push CI confirmations (D21-42 14a);\n- paid-probe go-aheads;\n- about 20 unconfirmed provisional rulings (D21-106..128, D21-137).\n\n(5) Recompute the Checkpoint-8 date range from these items, and set it beside w1-velocity §10 with the deltas explained."
+  },
+  {
+   "gap": "No report asks whether S-BIN (8i) needs to be on the Phase-1 critical path at all. 8j's entry gate is Checkpoint 8i (INDEX.md:87; s8j:5), and w1-velocity serialises 3-5 more days of 8i before 8j starts. 8i is an experiment on reviewing Unreal binary changes. Its captures are operator-attended /ue-verify sessions in the UE editor on BrittonGames, and B2 and B3 still need 10 Opus sessions, each with a signed go-ahead (s8i-s-bin.md:1-40). Its result finalises only ChangeSummary's sealed Binary arm (ADR-0165; w1-vision.md:146). The Phase-1 exit criterion is the Rust self-hosting fix lane and story lane, which use the Text arm. A first look at s8j's couplings to 8i finds them mostly procedural:\n- the test-count floor chain and the entry-chain re-run (s8j:51-108);\n- the rule \"TESTED_CLI_VERSION equals S-BIN's pinned cli_version\" (s8j:978-980, 2318-2325), which comes from the D21-43 N22 CLI freeze.\nThese do not look like consumption of an 8i result. If most of 8j can proceed alongside 8i (human roots, hold, lane_proof under FakeHarness, CI reconciliation), then both the critical path and the summary's main recommendation change.",
+   "brief": "Work read-only in audit-wt.\n\n(1) Find the record that made 8j depend on Checkpoint 8i and quote its stated reason. Look at INDEX.md:87, the commits a1d35ac and b8e7aa9, and DECISIONS-2026-09-21.md D21-40, D21-43 (N19-N22) and D21-46. Use `git log -S 'Checkpoint 8i' -- runbook/INDEX.md runbook/phase-1/s8j-run-preparation.md`.\n\n(2) List every place where s8j references s8i, Checkpoint 8i or S-BIN (`grep -n -i 'checkpoint 8i\\|s8i\\|S-BIN' runbook/phase-1/s8j-run-preparation.md`). Classify each reference as substantive or bookkeeping. Substantive means it consumes an 8i output: the Binary variant record, the F41/F42 rows, AC-475's lift criterion, or S-BIN's pinned cli_version. Bookkeeping means floor counts or re-run ordering.\n\n(3) Establish whether either Phase-1 lane can produce or consume ChangeSummary::Binary. Run `git grep -n 'Binary' -- crates/rk-ports/src crates/rk-kernel/src crates/rk-cli/src crates/rk-adapter-toolchain-rust/src .redkiln/packs`, and read the sealed-arm refusal in rk-ports/src/fakes.rs around lines 403-566 and event_store.rs:61.\n\n(4) Check whether any golden constraint or halt forbids running s8j §8j.2-§8j.4 and §8j.7 before Checkpoint 8i: runbook/00-preamble.md, runbook/halts.md, and the CLI-freeze rule N22.\n\nDeliverables:\n- A dependency table of 8j deliverable, whether it needs an 8i output (yes or no), and the citation.\n- The critical-path saving, in days against w1-velocity §10, if 8j's work that does not depend on 8i runs in parallel.\n- A draft recommendation for the operator, phrased as a decision the operator must take, not as a change made."
+  }
+ ],
+ "followups": [
+  "**Follow-up report: CI and cross-OS status of redkiln-rs (snapshot 36dd8ac vs remote 7860e66 and f571243)**\n\nItem 5 is not done. I did not run `gh run list` or `gh run view` because I have no operator permission for a network call. I did not run cargo. Every conclusion below comes from git objects in the pinned `audit-wt`. Run results quoted from commit bodies are the commit author's account, not read from the Actions API.\n\n## (2) Re-confirmed facts\n\n- `git merge-base HEAD origin/build/phase-0-to-1` returns `d24d15a` (2026-10-02).\n- `git diff --quiet d24d15a 36dd8ac -- crates .github` returns rc=0, so the two trees are identical for `crates` and `.github`. HEAD is 40 commits ahead of d24d15a and the remote is 15 ahead.\n- `7860e66` and `f571243` are identical in `crates` and `.github`. f571243 sits on 7860e66 and changes only the vendored `.claude/temper/temper.mjs` and `VERSION`.\n- The remote branch was pushed. The reflog of `origin/build/phase-0-to-1` records `d24d15a … update by push` on 2026-10-02 16:39 -0700. The local repo then fetched 7860e66 on 2026-10-04 20:53 -0700 and f571243 on 2026-10-04 21:38 -0700. Nothing was merged into the local line.\n\n## (1) The six commits, classified\n\n| Commit | CI config | Test or fixture | Product src |\n|---|---|---|---|\n| d4da70a | `ci.yml`: pnpm fixture step, AC-465 allowlist (e)-(h) | `rk-adapter-claude` `dispatch.rs` (cfg-split ac225 exit-code expectation, `wait_dead` polling, POSIX breakaway turned into a measurement) and `support.rs::wait_dead`; `rk-git` `diff.rs` and `landing.rs` (chmod 0755) | none |\n| cb4ddd4 | none | `rk-adapter-toolchain-rust/tests/it/support.rs::nextest_absent_env` appends `:/usr/bin:/bin` on unix | **none** |\n| ef747da | `ci.yml`: Windows step setting TMP/TEMP to `RUNNER_TEMP` | `rk-cli/tests/it/main.rs` (`temp_repo`, `long_temp_base`); `rk-git/tests/it/support/mod.rs` (repo-local identity, `maintenance.auto=false`, `gc.auto=0`) | none |\n| 9959b2f | none | none | **`crates/rk-containment/src/posix.rs` only** |\n| aab766c | none | `rk-cli/tests/it/answer.rs` ac248 waits for the recorded deadline | none |\n| f433854 | none | `rk-cli/tests/it/main.rs` `temp_repo`, no auto-maintenance | none |\n\nThe brief's premise is wrong for cb4ddd4. The \"linker `cc` not found\" failure sits in a test helper, `tests/it/support.rs`, not in product code. The commit message says the same. 9959b2f is the only product change in the six commits.\n\nDefects in the 9959b2f hunks, each confirmed unfixed at HEAD:\n\n- **`Group::kill`** (HEAD `posix.rs:55-58`) was `killpg(SIGKILL)` followed by an immediate `Ok`. The Windows arm waits for every member to die, and `bounded.rs:137` assumes it does (\"The kill waited for every member\"). `run_bounded` returned `TimedOut` while orphans were still alive. Callers are `bounded.rs:128-142` and `rk-adapter-claude/src/runner.rs:465`.\n- **`Group::pids`** (HEAD `posix.rs:72-92`, \"A zombie is listed until reaped\") still lists zombies. The group never reads as empty while a zombie persists. The commit says PID 1 in a non-reaping container never reaps an orphan.\n- **`is_alive`** (HEAD `posix.rs:162`, `sys::is_alive(pid)` only) still reads a zombie as alive. Its production caller is `rk-cli/src/verbs/run.rs:4846` (`process_probe`), where it is combined with `process_start_time`.\n\nThe other fixes are unfixed at HEAD too:\n\n- **cb4ddd4:** `nextest_absent_env` at HEAD has no `/usr/bin` (grep returns nothing).\n- **ef747da and f433854:** HEAD has no `long_temp_base`, no `maintenance.auto`, no `gc.auto`, no `RUNNER_TEMP`, and still uses `tempfile::tempdir()` at `rk-cli/tests/it/main.rs:314`.\n- **aab766c:** the fixed 1500 ms sleep is still at `answer.rs:381`.\n- **d4da70a:** HEAD still has the unconditional `CANCEL_EXIT_CODE` expectation at `dispatch.rs:568`, bare `is_alive` at `:661`, `:731` and `:1275`, no `wait_dead` in the adapter-claude `support.rs`, and no chmod hunks in `rk-git` `diff.rs` or `landing.rs`.\n\nTwo observations beyond the brief:\n\n- **Residual after 9959b2f:** `Group::is_empty` (`ffi.rs:652-665`, `kill(-pgid, 0)`) still counts zombies. The fixed `kill` loop uses `pids()` instead, and `is_empty` has no production caller in the files I grepped. It is now inconsistent with `pids()` and `is_alive`.\n- **POSIX breakaway:** d4da70a records that a `process_group(0)` holder escapes `killpg` and asserts this as a measurement. It is a documented limitation, not a fix.\n\n## (3) Workflows\n\n| | HEAD `ci.yml` | 7860e66 `ci.yml` |\n|---|---|---|\n| Jobs | `gates` (ubuntu-latest and windows-latest, `fail-fast: false`); `no-egress` (ubuntu); `structural` (ubuntu) | same three jobs |\n| `gates` steps | fmt, clippy, install audit tooling, nextest, `cargo test --workspace`, rk-ports conformance, P6 lattice, audit, deny | adds the Windows long-temp step and the pnpm frozen-lockfile step before nextest |\n| Other differences | AC-465 allowlist (a)-(d) | allowlist (a)-(h) |\n\n- The full `ci.yml` diff between HEAD and 7860e66 is exactly the three hunks above, nothing else.\n- 7860e66 also adds `.github/workflows/rust.yml`, a job named `temper` on ubuntu only (plus `report-comment` on PRs). It runs the vendored `temper.mjs baseline --check --locked`, a ratchet against `.claude/temper-baseline.json`.\n- The temper commits change root `Cargo.toml` (lints at warn), `clippy.toml` (allow-in-tests keys) and add `rustfmt.toml`. The commit says the lints are warn-level so the clippy step, which has no `-D warnings`, keeps passing. `.gitattributes` (`* text=auto eol=lf`) means `newline_style = \"Unix\"` should not break the Windows `fmt`.\n- f571243's message claims `cargo fmt --check` is clean and `baseline --check` passes at 6606 findings. That is a local run by the author.\n- f571243 has the same two workflows as 7860e66.\n\n## (4) AC-465 structural step, re-run\n\n- **HEAD:** I ran HEAD's exact `git ls-files … | grep -v…` chain and got **39 files**, so w1-landing's claim is confirmed. They are:\n  - `cost/` 24 (23 `rows.jsonl` plus `run-frames.jsonl`)\n  - `doctor/*/events.jsonl` 10\n  - `unread/` 3\n  - `pack-min/lane/implement-frames.jsonl` 1\n  - `slice/approved/frames.jsonl` 1\n- **7860e66:** I ran 7860e66's filter over `git ls-tree` of 7860e66, using a pathspec equivalent I checked at HEAD (64 entries both ways). The result is **0 files**, so d4da70a's (e)-(h) allowlist clears all 39.\n- **Instrument record:** `spikes/results/instrument-checks/RUNBOOK-instrument.txt` is tracked at both commits.\n- **Scope:** I did not re-run the other structural steps (AC-362, anyhow, migrator, legacy, git wrapper, AC-529, rk-ports inventory), or any other `gates` step.\n\n## Run table\n\nRows come only from commit bodies. Shas marked \"(inferred)\" are not named in the message. Nothing else is stored in git.\n\n| Run | sha | Job / OS | Conclusion |\n|---|---|---|---|\n| first runs | d24d15a (inferred, pushed 10-02 16:39 PDT) | structural (ubuntu) | red at AC-465: \"CI's first run of this job flagged them\" (d4da70a). I reproduce the same 39 files at HEAD. |\n| first runs | d24d15a (inferred) | gates (ubuntu) | red: dispatch tests, no pnpm step, `rk-git` `diff.rs` and `landing.rs` (d4da70a) |\n| next run | d4da70a (inferred) | gates (ubuntu) | red in `rk-adapter-toolchain-rust` `report::nextest_fallback_recorded_on_report`, exit 101 (cb4ddd4) |\n| next run | cb4ddd4 (inferred) | gates (windows) | red: 7 `rk-cli` failures from 8.3 temp paths (ef747da) |\n| next run | cb4ddd4 (inferred) | gates (ubuntu) | red: 2 `rk-git` fixture failures (ef747da) |\n| ubuntu run | ef747da | gates (ubuntu) | red: `rk-containment` `run_bounded_kills_tree_at_timeout`; the previous run was dead on the same read (9959b2f) |\n| push run | 9959b2f | gates (ubuntu) | red: `answer::ac248…` expired arm, exit 0 (aab766c) |\n| pull_request run | 9959b2f | gates (ubuntu) | red: `doctor::ac414_…`; the push run of the same commit passed it (f433854) |\n| after f433854 | f433854 / a06af34 / 7860e66 / f571243 | all jobs, `temper` | **no result recorded in git** |\n| local, not CI | f571243 | fmt, temper baseline | clean, per the commit message |\n\nThe merge commit a06af34 (PR #1, titled \"CI: get build/phase-0-to-1 green…\") was merged by the owner at 2026-10-03 10:56 -0700. That is suggestive only. It is not a CI conclusion, and I do not know whether branch protection applied.\n\nWindows has no recorded result after ef747da. No `no-egress` or `temper` result is recorded anywhere in git. Because `cargo test --workspace` has no `--no-fail-fast`, a red test binary stops the step, and later steps and crates never run. The reds in the table are therefore a lower bound.\n\n## Product defects found only by CI\n\n| Defect | Crate | Commit |\n|---|---|---|\n| `Group::kill` returns before members die (contract mismatch with Windows and `bounded.rs`) | `rk-containment` (`posix.rs`) | 9959b2f |\n| `Group::pids` and `is_alive` read a zombie as a live member | `rk-containment` (`posix.rs`) | 9959b2f |\n\nThe other CI findings were defects in tests, fixtures or CI config, not in the product: `rk-adapter-claude` dispatch tests, `rk-adapter-toolchain-rust` `nextest_absent_env`, `rk-git` fixtures, `rk-cli` `temp_repo` and the ac248 timing, the missing pnpm step, and the AC-465 allowlist. ef747da calls the Windows 8.3 failure \"a correct product\". One open point on its `rk-git` identity failure: the product `GitExec` relies on ambient git identity. I can't tell whether that is intended.\n\n## Corrected wording for the three reports\n\n- **w1-code-claude-adapter** (lines 57, 92, 99):\n  - Replace \"the POSIX arm and CI never run\" and \"Never recorded: a POSIX CI run\" with: \"The POSIX containment arm and `ci.yml` have run on GitHub Actions ubuntu-latest and windows-latest since 2026-10-02/03, per the bodies of d4da70a..f433854. Those runs found a product defect in `rk-containment`'s POSIX `Group::kill`, `pids` and `is_alive`, fixed in 9959b2f. That fix exists only on origin/build/phase-0-to-1, not on the local branch.\"\n  - Keep \"no recorded all-green run\".\n- **w1-pack-ci-tools** (lines 153, 162, 185, 195):\n  - Replace \"ci.yml has never executed; POSIX arms never compiled\" with: \"`ci.yml` executed from 2026-10-02/03 and produced a series of recorded reds on ubuntu and windows (commit bodies d4da70a..f433854). The POSIX arms compiled and ran, and exposed one product bug. The local branch lacks every fix. Whether CI is green at 7860e66 or f571243 is unknown.\"\n  - Quote line 153 as stale, since it is the s8j:1177-1180 text that predates the push.\n- **w1-plan-status** (lines 21, 55, 76):\n  - Replace \"never been pushed\" with: \"The branch was pushed at d24d15a on 2026-10-02 (the remote-ref reflog shows 'update by push'). `origin/build/phase-0-to-1` is at 7860e66, with 15 commits the local line has not merged. s8j:1178 and PROGRESS:559 are stale.\"\n  - Replace \"ci.yml authored, never run\" and \"never executed on a runner\" with \"executed; red at the first runs; later results not in git\".\n  - §8j.7 (\"CI green on the pushed branch\") is not done. The workflow edits for the pnpm step and the AC-465 allowlist are done on the remote only, and green is not demonstrated.\n\nThe stale statements also live in the repo itself at HEAD, which is probably where the reports got them: `rk-containment/src/lib.rs:38`, `posix.rs:6-8`, `ADR-0127:178` and `s8j:1177-1180`.\n\n## Verdict\n\nNo sha is shown to have all jobs green on both legs: git holds no green result for any sha, and every recorded run is red. My honest framing is \"cross-OS known defective locally, fixed remotely, remote green not established\".\n\nHEAD 36dd8ac has the d24d15a `crates` and `.github` trees. Its `structural` job fails AC-465 on 39 files (verified), and `gates` lacks the pnpm step on both legs.\n\nI could not determine:\n\n- the Actions conclusion for any run on 7860e66, f571243 or any other sha;\n- the Windows result after ef747da;\n- whether `no-egress`, `temper`, `audit` or `deny` ever ran green;\n- whether any test beyond the last recorded red passes.\n\nPlease send the Actions summary for 7860e66 and f571243 (all `gates` legs, `no-egress`, `structural`, `temper`), or give explicit permission for the read-only `gh run list` and `gh run view` calls.\n\nPinned worktree used: `<scratchpad>/audit-wt`",
+  "**Redkiln-RS Phase-1 acceptance census, read at 36dd8ac**\n\n**Method and limits.** Everything below was read from audit-wt, read-only. The census over the whole runbook was built from the stage acceptance sets and their ARMED/OWED tables, not from a per-id grep timeline for all 493 ids. I did not produce a full per-id \"latest disposition\" ordering across all stage files and dated amendments. That ordering is what step (2) of the brief asked for, so it remains undone.\n\n**Universe**\n- The register has 526 ids in force (acceptance-criteria.md:43). I dropped 33 as outside Phase 1. They are:\n  - the corpus-bound migration ids, AC-444, 451–454, 456–462, 467, 469 (:7144);\n  - AC-463 and AC-464;\n  - AC-501–508 and AC-510 (:7779);\n  - the 6 conditional ids, AC-512, 514–517 and 519;\n  - AC-496 and AC-482.\n- AC-464 is claimed by s6:480, so the conservative count is 494.\n- The register's State lines give the labels. The 493 in scope are 455 binding, 19 provisional and 19 human-gated.\n- Provisional ids in scope: 13, 68, 113, 154, 187, 211, 228, 239, 266, 267, 271, 284, 308, 312, 356, 378, 475, 497, 524.\n- Human-gated ids in scope: 39, 76, 114, 115, 139, 155, 156, 171, 213, 273, 275, 276, 309, 311, 357, 358, 396, 435, 476.\n\n**Calibration**\n- The rough census reproduces: 207 ids on ARMED lines, and 62 or 63 of them absent from DISCHARGED lines once \"NOT DISCHARGED\" is not counted as a discharge.\n- That line-level method is crude. It confirms only 30 of the 63 as live residuals and misses 52 other live ids.\n- 33 of the 63 are false positives or not binding.\n\n**Counts (binding 455, plus provisional and human-gated)**\n\n| Bucket | Ids |\n| --- | --- |\n| Discharged or claimed, no live ARMED/OWED residual recorded | 373 |\n| ARMED/OWED, scheduled before M5 | 15 |\n| Half or threshold waived or narrowed by a recorded decision | 17 |\n| ARMED/OWED, unscheduled | 50 |\n| Provisional | 19 |\n| Human-gated | 19 |\n\n- The 373 includes ids claimed by flat range sweeps. s7b-ii:911–940, s7c:3173 and s7d:3754 list some of them as \"claimed, not individually pinned (not a discharge)\".\n- The 15 scheduled before M5:\n  - 12 are named by id in §8j.9 (s8j-run-preparation.md:1979–2008) or in s8:\n    - the ci.yml jobs marked \"ARMED, NOT DISCHARGED\": 498, 465, 362, 441, 442, 466, 481, 483, 528, 529. ci.yml has never run (ci.yml:183, 304, 530);\n    - 473 and 521, which are read-and-judged, not asserted (s8:28–66).\n  - AC-215 and AC-224 are scheduled by mechanism, not named by id. AC-215's integration half is probe 1 in 8j.6 step 3 (s8j:1124–1146). AC-224's POSIX arm runs on ci.yml's ubuntu leg, which 8j.10 requires green.\n  - AC-265 appears only as a comment in s8 (:122).\n- The 17 waived ids:\n  - 241, 251, 256, 260, 268, 277, 280, 300, 327, 330 and 337, whose CLI/doctor halves are \"not re-asserted\" (s7d:3745);\n  - 128 and 153 (s8f:1904–1905);\n  - 137's render half, 341's CI-green half and 347's residual (s8g:2322–2329);\n  - 326 (s8c:2577).\n- Provisional ids:\n  - 4 are scheduled at 8i, where S-BIN is in progress: 154, 356, 475, 497.\n  - AC-013's kernel half is asserted at s8 (3) (s8:97–106), but the label stays.\n  - 14 have no scheduled spike: 68, 113, 187, 211, 228, 239, 266, 267, 271, 284, 308, 312, 378, 524.\n- Human-gated ids are discharged by nothing, by design.\n\n**The 50 unscheduled binding ids, by category**\n\nNone of the 50 is named by id in §8j.9, §8j.10 or the s8 checkpoint block.\n\n1. **Register amendments and owner records owed (28)**\n   - AC-043, 044, 045 and 056 sit in the \"amendment OWED\" table (s7b-kernel.md:2035–2039). Their register blocks carry no post-09-12 amendment, and nothing mentions them after 7b.\n   - AC-066 (s7b:826) and AC-072's `anchor` clause (unbuilt).\n   - AC-164's doctor half is \"claimed nowhere\" (PROGRESS.md:31).\n   - AC-254 (s7b-ii:929).\n   - AC-262 and 351 (s7c:3163), AC-228's sibling 388, and AC-189 and 198 (s7c:3161–3165), all raised for re-routing and never claimed.\n   - AC-291 and 292 are orphaned (s7b-ii:978–990; s7c:3168).\n   - AC-323 is wholly ARMED with no later mention (s7d:1968, 3748).\n   - AC-361 and 387 (owner record OWED), AC-398 and AC-399 (carrier undecided) (s7c:3113–3115; s7d:3699).\n   - AC-368's warning half, 376 and 416's binder half.\n   - AC-490 and 491, routed to 7d (s7a:1168–1169) but never claimed. `doctor --probe` is not built (rk-cli cli.rs:17).\n   - AC-431, 433 and 485, whose carriers are raised or owed (s7d:3651–3657).\n2. **Corpus replay (6)**\n   - AC-295, AC-307's replay half and AC-354 are \"ARMED to Step 8\". s7b-ii:992–995 says nothing at Step 8 records their discharge, and s8 still names none of them.\n   - AC-427's fidelity half. s8 (2) asserts only the `doctor --rebuild` exit (s8:85–88).\n   - AC-443's negative half and AC-445's hash half, which are ARMED-local (s7d:3705).\n3. **Live runs and spikes (4)**\n   - AC-278: the gate-path GIVEN needs a real dispatch (s7d:3698).\n   - AC-317 (s8g:1001, 2326).\n   - AC-289: the corpus half is gated on S0.1-SCOPE, and the mutate half is excluded (s8c:2579).\n   - AC-301's lift, gated on S-CASCADE.\n4. **POSIX and CI arms (3)**\n   - AC-366: no job exists, and ci.yml names no AC-366.\n   - AC-499's matrix rows. ci.yml names only the fake half (:88, 97).\n   - AC-121's cross-OS half is named but explicitly not claimed (§8j.9).\n5. **Unwired library code or owed fixtures (9)**\n   - AC-334: `pinned` is unreachable (verify_pass.rs:667, 707 per the area report; s8g:2357).\n   - AC-350 (R-8), AC-500's route-around (s7b:2015), AC-214's lint half.\n   - AC-391: the inner-attempt charge is never called (s8d:719–721).\n   - AC-349's plan-time binding.\n   - AC-223 and AC-384 (7e pack lints that 7e never claims).\n   - AC-328's stale half (s8c:2578).\n\nThe code audit adds a separate finding. Several ids are discharged at kernel level but have no production caller: AC-304, 306 and 307 (quarantine), AC-530's retirement half, 314, 300, 301, 239 and 282, 494 and 495, 024, 025 and 036–038. This is in w1-code-kernel-gates.md §5, w1-code-kernel-runtime.md §3.2 and w1-code-kernel-select.md §4. I did not count these as ARMED.\n\n**Evidence rate**\n\nI drew 40 more ids, proportionally allocated over 8 strata, seed 20261006. I added a store stratum, 120–159, which the brief omitted. I excluded human-gated ids and the 15 ids the earlier audit already sampled. I graded each by reading the test body.\n\n- The 40 graded 26 FULL, 9 PARTIAL, 3 MISS and 2 OWED.\n  - MISS: AC-291, 387 and 446.\n  - OWED: AC-317 and 473.\n  - PARTIAL: 116, 122, 168, 232, 239, 280, 363, 471, 497.\n- The earlier 11/15 FULL has a Wilson 95% interval of 48–89%.\n- Pooled with the earlier 15, strict FULL is 37/55 = 67%, with a 95% interval of 54–78%.\n- Stratified estimate: 65%, interval 54–77%.\n- Counting partials at half: 77%, interval 68–87%.\n- So the evidenced share is about 320 of 474 machine-testable ids (256–371), or about 63–65% of all 493.\n- This is below the earlier 73%. The two intervals overlap heavily, so the earlier figure is not rejected.\n- 7 of the 55 ids have a gap that no ARMED/OWED line admits: AC-084, 116, 122, 168, 363, 446 and 471. That is 13%, interval 6–24%, roughly 30–110 of the 455 binding ids.\n\n**What M5 certifies**\n\nCheckpoint 8 passing means six runnable or read-and-judged exit checks pass and the 8j entry chain re-runs green. Checkpoint 8's text names only 28 register ids. Together with §8j.9–8j.10, 47 of 493 ids are named. s8-exit-criterion.md has no acceptance set.\n\nM5 will not certify register-level discharge: about 50 binding ids stay ARMED/OWED, 14 provisional ids have no scheduled spike, and the sample suggests one in three binding ids lacks a full discriminating test.\n\n**Could not determine**\n- Whether ci.yml will in fact run green before M5; it has never run.\n- Whether each FULL-graded test discriminates beyond its stated controls.\n- Whether ids outside the ARMED tables are all genuinely discharged; the sample is the only check, and it finds silent gaps.\n\nWorking files are in the scratchpad `cens` directory: `ledger.py` (id lists), `sample.json` (the 40 sampled ids), `state2.json` (register state per id) and `univ.json` (the 493 in-scope ids).",
+  "**Scope.** I read only audit-wt at 36dd8ac. I did not run cargo. Two later commits exist in the live repo (ebaf4ca and 524aadd, per the session's git status); I did not read them. Two label sets collide. \"C4..C10\" below are the audit defects. s8j §8j.5's own candidate list also uses C1..C6 (a different list; its C5 is `schema::lint::walk`), and I always say \"s8j-C\" for those.\n\n## Headline findings (not in w1-velocity §10)\n\n1. **The human-root arm is mandatory, not conditional.**\n   - s8j §8j.2 item 5 (:597) builds the resolver and reader root arm only \"if a lane reads a root's bytes through an `artifact:` input\". Both lanes do.\n   - `minimal-repro.toml:23` and `exploitability-analysis.toml:32` read `artifact:BugReport`. `bdd-scenarios.toml:26,45` read `artifact:IntakeRecord`. All are mandatory.\n   - At 36dd8ac, `read_artifact_input` (`rk-kernel/src/runtime/reference.rs:1128-1160`) resolves only from a committed `emit` binding. A root is never emitted, so the first activity of each real lane refuses by name.\n   - `lane_walk.rs:665-666` hides this by seeding fake `ActivityCommitted` rows for BugReport and IntakeRecord.\n   - This also needs the conditional record that supersedes ADR-0173 in part (s8j :46-52).\n2. **`hold_before` would fail open today.** `ItemRecord` (`verbs/run.rs:150-182`) has no `deny_unknown_fields`. An item carrying `hold_before` loads and the hold is silently ignored until the mechanism exists. `M-hold-ignored` is the only guard.\n3. **The s8 launches multiply because of C4.**\n   - `ac_gate` asks about one AC at a time (\"the gate asks about one at a time\", `ac_gate.rs:6-9`).\n   - s8j A1 (:1311-1314) says every further gate is answered and `(1) launch` runs again \"each with its own go-ahead\".\n   - So each Spec AC costs one answer plus one go-ahead launch, not one answer.\n4. **There is no documented recovery after a failed first real run.**\n   - Checkpoint 8j is one-shot and (3) refuses an existing `rk-run/<fix item>` (s8j :2073, :2095, :2191).\n   - A1's `prespend` refuses any change since the frozen sha under crates, tools, .github and .redkiln.\n   - I found no text on re-minting the item or re-freezing. Each repair therefore costs a full re-freeze: push, CI, mutants, proofs, new go-aheads.\n5. **Checkpoint 8j (10) re-runs 20 checkpoints whole.** s8j :2067-2069 budgets \"a working day or more\". A stage-open dry run of the same chain is also required (:2078-2084), and 7d failed four times at its first whole run. All of this needs a plain terminal, not an agent shell.\n\n## (1)+(2) Deliverables, existence at 36dd8ac, and sizing\n\nAll sizes come from `git log --numstat` analogues.\n\n| Section | Deliverable | Exists? | Analogue | Estimate |\n|---|---|---|---|---|\n| 8j.1 | Story item, `rk-cost-empty-case`, trial lines, ledger rows, 7h/7i re-points, intake md, worktree move | No. `.redkiln/items` holds only the two old items. `.redkiln/intake` and `s8j-evidence.txt` are absent. The `[trial]` field exists (`run.rs:177-191`) | doc and TOML edits | 0.5 d, plus 1 operator command (`git worktree move`) |\n| 8j.1(e) | AC-114 lint and promotion | No (post-Checkpoint 8, A9) | n/a | post-M5 |\n| 8j.2 | Two questions, `bind`, 3 `processes::` tests, `M-attach-dropped`, 2 `[[gate_expiry]]` rows in both packs, `MINTED_CLASSES` edits | No. `human_root` has zero hits in `.redkiln` or `crates`; `questions.toml` has none | s8d loader: `processes.rs` +279 and tests +348 in one commit (d647e88) | 2-4 h |\n| 8j.2 item 5 | Resolver and reader root arm, ADR-0173 partial supersede | No (see headline 1) | s8f D21-113/114: c4e0078 +733/11 files, b0e288a +870/10 files, then rounds 6-7 +418 and +404 | 800-1,600 lines, 0.5-1.5 d |\n| 8j.3 | `hold_before`, `hold:specification` row, gate cause, load refusal, 1 `run::` test, 3 mutants | No (zero hits in crates and `.redkiln`) | s8e D21-94 3a0c5ee +502/7 files; D21-92 ea62c62 +519/14; `Gate:` kind/reach/state inside da5dff8 | 600-1,000 lines incl. tests, 0.5-1 d |\n| 8j.4 | `lane_proof.rs` (10 tests), lane fixture crate, per-dispatch-script extension of the fixture child, 10-mutant Python driver | No. `lane_e2e.rs` has 20 tests over the pack-min fixture lane. The child replays one frames file (`lane_e2e.rs:1024-1100`) | `lane_e2e.rs` 2,012 lines at da5dff8 (09-28 14:15), 2,489 final. s8e closed 12.7 h after s8d-ii | 2,000-3,000 lines plus child and driver, 1.5-3 d; first-contact risk is high |\n| 8j.5 | Shortlist of 4 candidates, red repros in a throwaway tree, reservation, minted item, repro pair, BugReport | No | n/a | 0.25-0.5 d plus the operator pick |\n| 8j.6 | Pin move (`TESTED_CLI_VERSION` is \"2.1.278\", `config.rs:124`), argv table cut to one row (it has two rows plus `LIVE_WARRANTED`, `command.rs:132-139`), new 2.1.289 `--help` capture (only 2.1.287's exists), goldens, 7c split, 4 paid go-aheads | No. 62 files and 326 hits carry 2.1.278. The three probes are authored (`live.rs:1000,1145,1434`) but never run | cee6587 (2.1.275 to .277): 20 files, +62/-27. 7c re-run closed 3 d later (97424cc) | 0.5-1 d code, 0.5 d probe sitting |\n| 8j.7 | CI green on both OS legs | Partly. `origin/build/phase-0-to-1` has 15 commits (64 files, +8,709/-19) with the pnpm step, 8.3-path step and a POSIX `posix.rs` fix. Local lacks them | remote went red to fixed in about 10 h (d4da70a 06:04 to f433854 16:17, 10-03) | merge 0.5 d; loop 0.5-1 d; each push needs a go-ahead |\n| 8j.8 | A0-A12, about 739 lines (:1240-1978). `s8-exit-criterion.md` is untouched: no `prespend`, still `$FIX_ITEM` | No | s8a: 31.6 h, 11 interims | 1-2 d |\n| 8j.10 | Checkpoint 8j block (about 800 lines), dry run, 20-checkpoint chain | No | 8h (13) re-ran twice in 2 h 03 m | about 2 d operator-run |\n\nThe remote delta touches production code only in `rk-containment/src/posix.rs` (+75), but also `Cargo.toml` lints (+64), `clippy.toml` and `ci.yml`. All of these sit on A1's frozen-path list and under (7)'s anchors, so a merge must precede the freeze.\n\n## (3) Defect classification\n\n| Audit defect | Class | Exit checks | Scheduled? |\n|---|---|---|---|\n| C4: no AC can be `pinned` (`verify_pass.rs:667,707` sets `assertion_flipped: None`; `run.rs:4228-4234` passes an empty map) | Operator-cost on the exit path. Does not fail any check; fail-closed | (1), (1b); also (3) via the fix-run continuation | Not scheduled. Records call it ARMED/unreachable (kernel-gates report). The lanes carry `verification_required = [\"verify\"]` (bug-standard.toml:28) |\n| C5: Ctrl-C inert (`main.rs:34-37` drops the token; `run.rs:398` builds its own) | Risk to paid runs. Not exit-blocking: (3) uses `taskkill /T /F` (`s8-exit-criterion.md:113`) | none | Unscheduled. Zero hits for ctrl-c/sigint in s8j, s8, s8h or `live-run.sh`. Bounded only by per-dispatch timeouts and the s8h envelope |\n| C6: `status` conflates items (`status.rs:179-218`) | Post-M5 debt. No s8 block calls `status` | none | Unscheduled. A valid §8j.5 shortlist candidate (not on the run path) |\n| C9: `rank_lint` and `rigor.rs` sweeps omit rust | Post-M5, low risk. `lane_walk.rs:26,325` walks both lanes with `toolchain=[\"rust\"]`. s8b N26 adds rust to the lattice sweep (s8b:22,299) | none | Unscheduled |\n| C10: `Drift::OrphanedAnchor` and `EventKind::Rewrite` never emitted | Post-M5 debt. AC-167/169/170 are unmet. No rebase occurs in the runs | none | Unscheduled. Zero hits outside `drift.rs` and the register |\n| Remote-only POSIX/CI fixes | Exit-blocking through the Checkpoint 8 CI condition (D21-42 14a, DECISIONS:1688) and (7)'s anchors | the CI condition; (1) via `prespend` | Not planned. s8j:1175 still says \"never pushed\", which is stale |\n\n## (4) Operator actions to M5\n\nN_f and N_s are the Spec AC counts. Nothing in the catalog bounds them (`fix-spec.toml:51` requires only `> 0`), so I use central N_f=3 and N_s=5, range 2-6 and 3-10.\n\n| Action | Count | Citation |\n|---|---|---|\n| S-BIN B2 and B3 go-aheads (B4 only if METHOD-S branch 2 fires), plus before-B2 snapshot and close steps 11/12 | 2 (3) | s8i:1773-1775, :2286-2330 |\n| Operator B0 re-run of the 34-test driver | 1 | D21-151 note in the live repo; outside the snapshot |\n| Fix-item pick; `git worktree move`; signature of three new gate-class rows | 1 + 1 + 3 | s8j:900-901, :458-470, :594-595 |\n| Pushes, each with its own go-ahead (merge, CI loop, frozen evidence) | 2-5 | s8j:1175-1215; D21-42 14a |\n| Paid go-aheads: 7c live, probes 0, 1, 2 (6 dispatches) | 4 | s8j:1052-1130 |\n| (g) flip | 1 | s8j:1131-1136 |\n| Stage-open chain run, then Checkpoint 8j one-shot (plain terminal) | 2 runs | s8j:2073-2084 |\n| Fix lane: launches, central | 5+N_f+c = 8+ | A1, s8j:1311-1314 |\n| Fix lane: answers (triage `facet.change`, BugReport attach, hold, N_f discriminates), central | 6+ | s8j:658-690 |\n| Story lane: launches | 3+N_s+c = 8+ | |\n| Story lane: answers | 2+N_s+c = 7+ | |\n| Kill and resume launches (counted in the fix lane's launches) | 2 | s8-exit-criterion.md:107-122 |\n| Conditional lane gates (`repro.cannot-reproduce`, `root-cause.*`, `closure.signoff`, `review.blocking`), unmeasured | c = 0-4 each lane | questions.toml |\n| Unconfirmed provisional rulings: D21-106..128 except 107, 116-118, and D21-137 | 20 | PROGRESS.md D21 table |\n\nc is the number of conditional gates in each lane.\n\nThe provisional rulings are not mechanically gating by my reading; I found no checkpoint that asserts zero. That is unverified. The gate deadline is 864,000 s (bug-standard.toml:7), so waiting overnight does not expire a gate.\n\nCentral total: about 14-20 paid launch go-aheads, 13-20 answers, 8-12 push, probe and signature acts, and 20 rulings. That is 11-13 distinct operator sittings:\n- s8i: 3-4.\n- s8j: about 5.\n- s8: 3-4.\n\nAt the stated one sitting per day, the floor is about 11-13 calendar days.\n\n## (5) Recomputed Checkpoint 8 date\n\nStart is 2026-10-06; calendar days, as w1-velocity assumes.\n\n| Leg | w1-velocity §10 | Recompute (central, range) |\n|---|---|---|\n| s8i remainder | 3-5 d | 4 d (3-5); unchanged |\n| s8j | 2-4 d | 7.5 d (5-11) |\n| Step 8, clean | 2-5 d | 3 d (2.5-4) |\n| Clean total | 7-14 d, so 10-12 to 10-19 | 14.5 d, so 10-20 (10-16 to 10-26) |\n| P50 | about 10-21 | about 10-23/24 |\n| P90 | about 11-08 | about 11-03 |\n\nRe-weighting: I kept w1-velocity's 25 / 45 / 30 split with these repair costs: clean 0, one repair-and-re-freeze cycle +2-4 d, structural insertion +5-12 d.\n\n**Why s8j grows by about 4.5 d at the central estimate** (about 5.5 d gross, less about 1 d overlap):\n- Root arm: +1 d.\n- Remote merge and CI reconcile: +0.5-1 d.\n- Two whole 20-checkpoint chain runs: +1.5-2 d.\n- Hold, `lane_proof` and mutant driver: +2-3 d.\n- Pin move over 62 files, plus the 2.1.289 capture: +0.5 d.\n- A0-A12 and the Checkpoint 8j block: +1 d.\n\n**Why the median barely moves.** Velocity's scenario weights already padded for repairs. The clean case, which was the headline number, is understated by about 8 d. Its \"earliest credible\" 10-13 becomes about 10-16/17. The P90 is driven by structural insertion rather than known work, so it shifts little.\n\n**Sensitivity.** If s8j runs operator-attended, as s8i has since 10-03 with zero Rust commits, rather than at W4/W5 AFK pace, add 3-5 d.\n\n## Not determined\n\n- The real Spec AC counts (N_f, N_s) and the number of conditional gates in a live run.\n- `lane_proof` wall time per test; each test builds a cold crate.\n- Whether the CI-fix commits on the remote are green; `gh` was not available.\n- A re-freeze path after a failed first launch.\n- Whether any later commit (ebaf4ca, 524aadd) changed the picture.\n- Whether any s8j-C candidate (s8j's own C1, C3, C4, C5) was touched by s8f-s8h after ca8f387; the s8j text itself says C4 must be re-verified against s8f's file.\n\nFiles cited are all under `<scratchpad>/audit-wt` (commit 36dd8ac). The main ones are `runbook/phase-1/s8j-run-preparation.md`, `runbook/phase-1/s8-exit-criterion.md`, `crates/rk-cli/src/verbs/run.rs`, `crates/rk-cli/src/verify_pass.rs`, `crates/rk-cli/src/main.rs`, `crates/rk-cli/src/verbs/status.rs`, `crates/rk-kernel/src/runtime/reference.rs`, `crates/rk-kernel/tests/it/lane_walk.rs` and `crates/rk-cli/tests/it/lane_e2e.rs`.",
+  "**Verdict:** the 8i → 8j entry gate is a positional sequencing choice that no record justifies. Most of 8j (§8j.1–§8j.5, §8j.7's CI shake-out, §8j.8) can overlap 8i. The final freeze cannot, because 8i's Rust package edits the code 8j freezes. My estimate of the saving is 1–2 days, not a collapse of the critical path.\n\nAll evidence is from audit-wt at 36dd8ac. I did not run cargo or `gh`.\n\n## (1) What made 8j depend on Checkpoint 8i\n\n- **The entry gate** first appears in the s8j draft header in a1d35ac, with no reason given. b8e7aa9 then wrote INDEX.md rows 28–29 as a linear chain (8h → 8i → 8j → 8). Rows 28 and 29 are at `runbook/INDEX.md:86-87`.\n- **No ledger entry orders 8i before 8j.**\n  - D21-40 says only that the real runs gate on fixture proofs (`DECISIONS-2026-09-21.md:1561-1611`).\n  - D21-42 row 2 (`:1660`) says S-BIN \"runs as a Phase-1 sub-stage before Checkpoint 8\", which is before Step 8, not before 8j.\n  - D21-43 N19–N22 (`:1753-1756`) gate S-BIN on Checkpoint 8h plus its dry run and freeze the CLI \"from S-BIN on\". They do not gate 8j on S-BIN.\n  - D21-46 (`:1870-1915`) contains no ordering reason.\n- **The only statement of the order** is a plain assertion: \"The stage plan puts S-BIN before `s8j`'s lane proofs\" (`s8i-s-bin.md:377`).\n- **The same paragraph says** S-BIN \"does not dispatch through `redkiln`: no lane, no kernel, no harness adapter\". S-BIN therefore needs nothing from 8j, so the dependency is one-way.\n- **The nearest rationale** is the N22 CLI freeze: S-BIN fixes one CLI version and the adapter pin follows it (`s8i:1999-2008`).\n- **That freeze is already in force.** The ledger line at `DECISIONS-2026-09-21.md:6571` records \"B0 is complete, and the CLI is frozen\" at 2.1.289 on 2026-10-05, and `s8i:2017` repeats it. The pin value 8j needs is therefore already known.\n- **ADR-0165 contradicts the gate.** It says ADR-0093 decision 4's scope rule \"stand[s] unchanged\" (`0165-*.md:253-259`): S-BIN \"does not block Phase-1 commits, `rk-types`, `rk-store`, `rk-git`, the kernel or the adapters\". Decision 4's forbids bullet (`0093-*.md:135`) also bars citing S-BIN as a block on Phase-1 commits outside the type design. The 8i-to-8j gate sits in tension with both.\n\n## (2) s8j references to s8i, Checkpoint 8i and S-BIN\n\ns8j has no reference to F41, F42, AC-475, the Binary variant record or `rule_outcome`. The only \"Binary\" hits in the file are executable \"binary\" uses and a floor-comment variable (`s8j:800`, `:2731`).\n\n| Class | Lines in s8j | What it consumes |\n| --- | --- | --- |\n| Substantive | 101, 978–980, 2030, 2318–2325 | S-BIN's pinned `cli_version`. Checkpoint 8j (6) reads exactly one S-BIN finding draft and its `s-bin-pins` block. The value is already known (2.1.289). |\n| Bookkeeping | 5 | The header entry gate. |\n| Bookkeeping | 51, 53, 62, 68 | The entry-chain re-run. |\n| Bookkeeping | 83–85, 108, 205, 259, 2728–2747 | The floor chain, read from the `PROGRESS.md` row 8i count. |\n| Bookkeeping | 264, 867 | The fix-item shortlist excludes files that `s8a`…`s8i` schedule. 8i's file list is already in the s8i stage file. |\n| Bookkeeping | 2047, 2677 | The re-run chain and the \"made provisional\" list. |\n\n## (3) Can either lane produce or consume `ChangeSummary::Binary`?\n\n- **Producers:** only the Rust adapter and the fake, and both refuse a Binary path by name.\n  - Rust adapter: `rk-adapter-toolchain-rust/src/lib.rs:796-808`.\n  - Fake: `rk-ports/src/fakes.rs:596-600`.\n- **Serialising:** `BinaryChangeSummary` also refuses to serialise (`rk-ports/src/toolchain.rs:155-158`).\n- **Kernel:** `rk-kernel/src` and `rk-cli/src` name `ChangeSummary` only as string literals (`lattice.rs:2036`, `memo.rs:908`) or as the return type in `verbs/run.rs:5167` and `:5324`. No `Binary` hit in any non-ports `src` or in `.redkiln/packs`.\n- **Lane inputs:** the lane proofs run on a one-crate Cargo fixture (`s8j:727-760`). The story item changes only `spikes/p9/packs/spike.toml`. I found no binary-extension file tracked in the repo (`git ls-files`), and `.gitattributes` contains no LFS rule. Both lanes use only the `Text` arm.\n- **The Binary arm** sits behind `event_store.rs:61` only as a doc note; nothing executes it.\n\n## (4) Do any constraints or halts forbid §8j.2–§8j.4 and §8j.7 before Checkpoint 8i?\n\n- **No golden constraint or halt** (`00-preamble.md:151+`, `halts.md`) mentions ordering or S-BIN.\n- **Halt 2 and golden constraint 8** (instrument version) bite only on real dispatch. §8j.2–§8j.4 use the FakeHarness and the fixture child, and §8j.7 is CI.\n- **N22's freeze** constrains §8j.6, not these sections. 8j.6 must pin to S-BIN's version.\n- **ADR-0093 decision 4** is no obstacle. It points the other way (see section 1).\n\n## Three facts the survey did not have\n\n1. **8i is not Rust-free.**\n   - Its post-dispatch Rust package edits `rk-ports` (the Binary constructor), `rk-store` (render), and `rk-cli` (`review_input`, hooked into `verbs/run.rs`) (`s8i:2561-2600`).\n   - On the human-gate route it also edits `rk-kernel` (`gate_request`).\n   - These paths sit inside s8j's `CODE_PATHS` (`s8j:1294-1299`), where any change after the frozen sha invalidates the fixture-proof line and the paid-run checks (`s8j:1232-1237`).\n   - The hard ordering constraint is therefore that 8i's Rust lands before §8j.6 step 1b, which re-records the proofs after the pin move (`s8j:986-989`). It does not have to land before §8j.4.\n2. **The §8j.7 premise is stale.** `s8j:1177` says the branch was never pushed and CI never ran, but `origin/build/phase-0-to-1` exists at 7860e66. It carries CI-driven fixes such as d4da70a (first Linux and node runs), including 33 changed `crates/` files, that HEAD lacks. The first CI run has therefore partly happened; the work is to reconcile origin, then confirm green.\n3. **The CLI pin is not a blocker.** The adapter pin target, 2.1.289, is known now.\n\n## Dependency table\n\n| 8j deliverable | Needs an 8i output? | Citation |\n| --- | --- | --- |\n| §8j.1 items | No | `s8j:326-538`, no s8i hit |\n| §8j.2 human roots | No | `s8j:539-657`, no s8i hit |\n| §8j.3 hold | No | `s8j:658-726`, no s8i hit |\n| §8j.4 `lane_proof` and mutants | No for content. The final recording must follow 8i's Rust (ordering only). | `s8j:727-848`; `s8j:986-989` |\n| §8j.5 fix item shortlist and pick | No. It reads 8i's file list, which already exists. | `s8j:867` |\n| §8j.6 pin move, 7c split, probes | Yes. The pin must equal S-BIN's `cli_version` (2.1.289, already known). Step 1b must follow 8i's Rust. | `s8j:978-980`, `:986-989` |\n| §8j.7 CI green | No for a shake-out and reconcile. The frozen green run comes after 8j.6, so after 8i's Rust. | `s8j:1232-1237` |\n| §8j.8 amendments to s8 | No | `s8j:1240-1978`, no s8i hit |\n| Checkpoint 8j | Yes. It needs the 8i count for the floor, the chain re-run, and the S-BIN finding's pin block. It runs last anyway. | `s8j:2318-2325`, `:2677`, `:2728-2747` |\n\n## Critical-path saving against w1-velocity §10\n\n- **Serial baseline (method B):** 8i tail 3–5 d, then s8j 2–4 d, then Step 8 2–5 d, for 7–14 d in total.\n- **Overlapped:** s8j's build and proof half (§8j.1–.5, §8j.8, the CI reconcile) fits inside the 8i B2/B3 window. The serial residue after 8i is roughly one day or more: 8i's Rust package, then the re-recorded proofs, pin move, probes, final CI and Checkpoint 8j.\n- **Saving:** about 1–2 days, central about 1.5. Plausible range 0.5–3, because I derived this from §10's ranges rather than measuring it. The Checkpoint 8 P50 would move from about 10-21 to about 10-19/20.\n- **Bigger saving would need a rule change.** Deferring 8i's Rust until after the frozen sha would violate the `CODE_PATHS` rule at `s8j:1232-1237`, so I do not claim it.\n- **The main recommendation changes in shape, not in kind.** 8i stays on the path to Checkpoint 8 (D21-42 row 2) and 8i's tail is still the long pole. It is just no longer additive with s8j's build half.\n\n## Draft decision for the operator\n\nThe operator should decide whether to re-point s8j's entry gate from Checkpoint 8i to Checkpoint 8h and let §8j.1–§8j.5, the §8j.7 CI reconcile and §8j.8 proceed alongside S-BIN B2/B3. Four conditions would apply:\n\n- Checkpoint 8j still re-runs 8i as a link in its entry chain.\n- §8j.6 step 1b and every paid step stay behind Checkpoint 8i and 8i's Rust package.\n- Pushes keep their per-push go-ahead (D21-42 14a).\n- The pin target is 2.1.289.\n\nThe change would be an edit to `INDEX.md:87`, the s8j header and a dated note, recorded in a ledger entry. Step 8's gate stays Checkpoint 8j, so nothing weakens.\n\nThe operator should also decide whether to record the reading that ADR-0093 decision 4 and ADR-0165 already say S-BIN does not gate this work.\n\n## What I could not determine\n\n- Whether CI on origin is currently green. I cannot run `gh`, and the record is silent.\n- Whether the 8i route is `reviewer` or `human gate`. That decides whether `rk-kernel` is touched, but not the ordering.\n- Whether a second builder in the same tree, with shared appends to the ledger and `PROGRESS.md`, would collide. The D21 id collisions already seen in s8i suggest risk. A separate worktree or branch would be needed. Disk contention is also possible: the S-BIN copy needs 34.2 GB (D21-151) and 8j's cargo builds add to it.\n- Whether the operator's \"one sitting per day\" limit shrinks the saving. That is a velocity assumption, not a record.\n- Why the s8j entry gate was set, beyond the lack of any stated reason. The authors may have had an unrecorded reason.\n\nKey files, all under `<scratchpad>/audit-wt`:\n- `runbook/INDEX.md`\n- `runbook/phase-1/s8j-run-preparation.md`\n- `runbook/phase-1/s8i-s-bin.md`\n- `spikes/DECISIONS-2026-09-21.md`\n- `references/adr/0093-kernel-and-declared-facet-source-classes.md`\n- `references/adr/0165-changesummary-splits-into-a-finalised-text-arm-and-a-sealed-binary-slot.md`"
+ ],
+ "synthesis": {
+  "headline": "Phase 1 is about two-thirds done: the Rust engine is built and well tested against a simulated model. It has never driven a real Claude run through a lane, CI is red on the local branch while the fixes sit only on the remote, and exit (M5) is most likely around 23 October, with a real chance of slipping into November.",
+  "phase1_progress_pct": 65,
+  "full_vision_progress_pct": 30,
+  "works_today": [
+   "Builds cleanly on Windows: format, compile, lint and docs all pass. 1,326 tests pass; all 78 failures in the audit traced to the audit environment, not the product.",
+   "Chooses which activities a bug fix or a story needs from the 102-activity catalog, the same way every time, and refuses bad pack data when it loads.",
+   "Walks every step of both shipped lanes end to end against a scripted fake model (fix 14 of 14 activities, story 13 of 13), using real git and real process boundaries.",
+   "Records progress as git commits with trailers plus an append-only SQLite log, rebuilds state from git, and resumes after the process is killed mid-run.",
+   "Opens human approval gates as durable marks and exits; answers arrive later through `redkiln answer`, and answers that no longer match the code are voided.",
+   "Runs Rust build, test, lint, security audit and packaging through its Rust toolchain adapter. Node build/test/lint work, but the Node adapter is thin.",
+   "Launches `claude -p` with locked-down arguments and environment, and on Windows contains and kills the whole process tree. One live dispatch passed on 2026-09-21, at CLI 2.1.278.",
+   "Operator commands all exist: init, run, answer, status, explain, cost, doctor (43 health rules), rebuild-from-git, catalog search, lint. A one-shot migrator for old content works on a hand-built fixture."
+  ],
+  "not_yet": [
+   "Has never run a real Claude-driven fix lane or story lane through `redkiln run`; both are proven only against a fake model.",
+   "Cannot drive the installed Claude CLI: the adapter is pinned to 2.1.278, the installed version is 2.1.289, and the least-privilege confinement has never been tested live.",
+   "CI is not green: the local branch fails on Linux and on a structural check. The fixes, including a Linux process-kill bug, exist only on the remote branch, and no green run is recorded anywhere.",
+   "Cannot start a real lane from a human-provided bug report or intake, because the first activity refuses. It also cannot hold a run before specification, and has no `redkiln run` proofs of the shipped lanes (all of this is planned in s8j and not built).",
+   "Cannot close an acceptance criterion from mutation evidence. Each one needs a human 'discriminates' answer and then a relaunch.",
+   "Ctrl-C does nothing during a run; only a hard kill stops it.",
+   "`status` shows wrong per-item stages when the fix item and the story item share one store.",
+   "The S-BIN experiment, which makes the system review binary (Unreal) changes, is still in progress, and the Binary change-summary arm stays sealed until it finishes.",
+   "Does not detect rewritten history or orphaned anchors, and does not stop with a durable mark when a budget runs out."
+  ],
+  "areas": [
+   {
+    "name": "Typed core and ports",
+    "pct": 93,
+    "grade": "B",
+    "note": "Clean typed artifacts and five ports with fakes and shared conformance. Binary arm sealed pending S-BIN; tracker and docs ports are fake-only by design; digest deserialisation bypasses validation."
+   },
+   {
+    "name": "Durable state and git",
+    "pct": 85,
+    "grade": "B",
+    "note": "Git-first store, trailers, reconcile, landing and run worktrees are real and well tested. Rewrite and orphan detection was never built; git errors print as raw bytes; the gix read path is only partly built."
+   },
+   {
+    "name": "Kernel selection",
+    "pct": 85,
+    "grade": "B",
+    "note": "Selection is pure, deterministic and differential-tested. The load-time rank-tie check never looks at Rust contexts; deviation and pack-routing have no production caller; a wrong-winner bug lived 14 days."
+   },
+   {
+    "name": "Gates (human, review, verify)",
+    "pct": 72,
+    "grade": "B-",
+    "note": "All three gates exist and fail closed. Verify can never pin an acceptance criterion, so every one needs a human answer. The review gate is uncalibrated against false approval, and quarantine and retirement are unwired."
+   },
+   {
+    "name": "Runtime and lane execution",
+    "pct": 72,
+    "grade": "B-",
+    "note": "Five step kinds, resume across a kill, and the git-first writer all work under fakes. There is no way to read a human-provided root input, so each real lane's first step would refuse; hold-before is absent; budget exhaustion is library-only."
+   },
+   {
+    "name": "Claude adapter and containment",
+    "pct": 75,
+    "grade": "B",
+    "note": "Deeply tested against a fake CLI. Pinned to 2.1.278 while 2.1.289 is installed; the three confinement probes have never run; the Linux kill/zombie bug is fixed only on the remote."
+   },
+   {
+    "name": "Toolchain adapters",
+    "pct": 85,
+    "grade": "B",
+    "note": "The Rust adapter is strong: real cargo, pinned parsers, audit, deny and package. Node is a thin second implementation, and its plumbing is copied across four crates."
+   },
+   {
+    "name": "CLI and migrator",
+    "pct": 75,
+    "grade": "B-",
+    "note": "All verbs are real. Ctrl-C is inert and status conflates items; run.rs is a 6,500-line module; tests go red on machines with Anthropic env vars set; the migrator is proven on a fixture only."
+   },
+   {
+    "name": "Pack and catalog",
+    "pct": 70,
+    "grade": "B",
+    "note": "Loads cleanly and both lanes walk under fakes. Cards are untested one-line prompts, the real fix and story items are not created, and the human-root questions and gate-expiry rows are owed."
+   },
+   {
+    "name": "CI, landing and operations",
+    "pct": 35,
+    "grade": "C",
+    "note": "CI ran on the remote on 10-03 and was red. Fixes are not merged locally and no green run is recorded. 416 commits are not yet on main, and the runbook has no landing step."
+   }
+  ],
+  "milestones": [
+   {
+    "id": "M0",
+    "name": "Phase 0 closed",
+    "status": "reached (record)",
+    "when": "2026-09-12"
+   },
+   {
+    "id": "M1",
+    "name": "Foundation builds",
+    "status": "reached locally; CI not green",
+    "when": "2026-09-12"
+   },
+   {
+    "id": "M2",
+    "name": "State is durable",
+    "status": "reached (record)",
+    "when": "2026-09-13"
+   },
+   {
+    "id": "M3",
+    "name": "Kernel decides",
+    "status": "reached, stamped",
+    "when": "2026-09-17"
+   },
+   {
+    "id": "M4",
+    "name": "System runs (adapters, CLI, packs)",
+    "status": "conditions met, never stamped; 7c provisional",
+    "when": "2026-09-21"
+   },
+   {
+    "id": "CP8i",
+    "name": "S-BIN binary-review experiment closed",
+    "status": "in progress (B0, B1 done; B2, B3 owed)",
+    "when": "forecast ~2026-10-09 to 10-11"
+   },
+   {
+    "id": "CP8j",
+    "name": "Fixture proof of both lanes, CI green, run prep",
+    "status": "not started",
+    "when": "forecast ~2026-10-15 to 10-19"
+   },
+   {
+    "id": "M5",
+    "name": "Phase 1 exit: real fix lane and story lane self-hosted",
+    "status": "not reached; Step 8 re-opened",
+    "when": "forecast P50 ~2026-10-23 (80% band 10-19 to 11-03)"
+   }
+  ],
+  "remaining": [
+   {
+    "item": "Finish S-BIN (8i): driver fix and dry run, two paid review batches of 5 Opus sessions each, analysis, Binary record, Rust package, checkpoint",
+    "effort": "3-5 days",
+    "gate": "Operator: a signed go-ahead per batch and attended Unreal editor sessions; $84 of the $90 cap left"
+   },
+   {
+    "item": "Merge the 15 remote-only commits, get CI green on Linux and Windows, record the run ids",
+    "effort": "1-2 days",
+    "gate": "Operator: go-ahead for each push; one session only"
+   },
+   {
+    "item": "Build the missing run-path pieces: reading human root inputs, hold-before-specification, gate questions and expiry rows",
+    "effort": "1.5-3 days",
+    "gate": "Agent; operator signs three gate rows and one record"
+   },
+   {
+    "item": "Lane proofs: ten `redkiln run` proofs over both shipped lanes with a fixture model, plus a mutant driver",
+    "effort": "1.5-3 days",
+    "gate": "Agent; high risk of surprises on first contact"
+   },
+   {
+    "item": "Pick the real fix item and create the replacement story item",
+    "effort": "0.5 day",
+    "gate": "Operator picks from a shortlist of 3 or more"
+   },
+   {
+    "item": "Move the adapter pin to 2.1.289 and run the three paid confinement probes plus the 7c re-run",
+    "effort": "1-1.5 days",
+    "gate": "Operator: 4 paid go-aheads in a plain terminal"
+   },
+   {
+    "item": "Exit-check amendments (~740 lines), Checkpoint 8j block, and whole re-run of a 20-checkpoint chain",
+    "effort": "2-3 days",
+    "gate": "Operator runs the chain (a working day or more)"
+   },
+   {
+    "item": "Step 8: real fix-lane and story-lane runs, kill and resume, replay, cost; Checkpoint 8",
+    "effort": "2.5-4 days if clean",
+    "gate": "Operator present for every launch: ~16 or more launches and 13-20 gate answers"
+   },
+   {
+    "item": "Fix Ctrl-C, status item keying, the Rust gap in the tie check, and test env hygiene (not yet scheduled)",
+    "effort": "0.5-1 day",
+    "gate": "Agent; needs adding to s8j"
+   },
+   {
+    "item": "Ratify 20 provisional rulings; sign Record A (cards/models/run environment)",
+    "effort": "0.5 day",
+    "gate": "Operator"
+   }
+  ],
+  "roadmap_after": [
+   {
+    "phase": "Post-M5 hardening",
+    "delivers": "Fix confirmed defects and debt, dispose of ~50 armed criteria, sweep stale docs, merge once to main",
+    "effort": "1-2 weeks"
+   },
+   {
+    "phase": "Phase 2: packs and parallelism",
+    "delivers": "Incident, spike, initiative and project packs; parallel worktrees plus merge queue; .NET, Python and Unreal adapters; plugin generator; old-corpus migration",
+    "effort": "6-10 weeks (low confidence; Phase 1's plan doubled on contact)"
+   },
+   {
+    "phase": "Phase 3: surfaces",
+    "delivers": "GitHub and mdBook adapters, gates answerable from a phone, web status view, DORA metrics",
+    "effort": "4-8 weeks after Phase 2 is stable on one initiative"
+   },
+   {
+    "phase": "Phase 4: reach",
+    "delivers": "Codex adapter (after S-CODEX passes), Linear and Astro adapters",
+    "effort": "3-6 weeks of build; cannot start until Phase 3 has been stable for a quarter"
+   }
+  ],
+  "forecast": {
+   "optimistic": "2026-10-18 to 10-20: a clean run with 8j built in parallel with S-BIN. Operator sittings (11-13) set this floor.",
+   "likely": "About 2026-10-23 (P50): one repair-and-re-freeze cycle after first real contact.",
+   "pessimistic": "2026-11-03 to 11-10 (P90): the first real run forces another round of inserted stages, as it did on 09-21 and 09-24.",
+   "assumptions": [
+    "Calendar days from 2026-10-06 at the week-5 pace (~13 commits/day). Paid steps cannot run unattended (D21-105).",
+    "About one operator sitting per day, with 11-13 needed. Every acceptance criterion in a real verify stage needs a human answer and a relaunch.",
+    "Bottom-up legs: S-BIN remainder 4 days, 8j 7.5 days (5-11), Step 8 3 days.",
+    "CI turns green within 1-2 push cycles once the remote fixes are merged.",
+    "The CLI stays frozen at 2.1.289, so no new pin-move cycle.",
+    "Overlapping 8j build work with S-BIN, if approved, saves ~2 days (1-3).",
+    "Scenario weights of 30% clean, 45% one repair, 25% structural insertion are judgement. Add 3-5 days if 8j is built operator-attended rather than at the earlier unattended pace."
+   ]
+  },
+  "risks": [
+   {
+    "risk": "The first real lane run exposes more structural gaps and triggers another round of inserted stages; both earlier rounds came from first contact.",
+    "severity": "high",
+    "action": "Do one real dispatch through `redkiln run` early in 8j, right after the pin move, and time-box the repairs."
+   },
+   {
+    "risk": "CI is red locally; the fixes, including the Linux process-kill bug, exist only on the remote; there is no recorded green run.",
+    "severity": "high",
+    "action": "Merge the remote now, iterate to green on both OS legs, and record the run ids."
+   },
+   {
+    "risk": "The adapter has never run at CLI 2.1.289 or under its new least-privilege confinement; the governing record (ADR-0197) is still only proposed.",
+    "severity": "high",
+    "action": "Make the three paid confinement probes the first paid step of 8j."
+   },
+   {
+    "risk": "Operator bandwidth: 11-13 sittings and roughly 30-40 approvals and answers stand between now and exit.",
+    "severity": "medium",
+    "action": "Run 8j alongside S-BIN, batch sittings, and keep the number of acceptance criteria small on the chosen items."
+   },
+   {
+    "risk": "Ctrl-C does nothing during paid runs; only a hard kill stops one.",
+    "severity": "medium",
+    "action": "Wire the signal token into run (about half a day) before any paid lane run."
+   },
+   {
+    "risk": "M5 could be read as 'Phase 1 complete' while ~50 binding criteria are unscheduled and the review gate is uncalibrated.",
+    "severity": "medium",
+    "action": "Publish a criterion disposition table and a scope statement with the M5 record."
+   },
+   {
+    "risk": "40 commits exist only on one machine, and the evidence repo on D: has an unverified remote.",
+    "severity": "medium",
+    "action": "Push the integrated branch and confirm the corpus repo has a durable remote."
+   },
+   {
+    "risk": "Process weight and stale docs (70% of last week's commits were docs-only) slow delivery and mislead future agents.",
+    "severity": "medium",
+    "action": "After M5, sweep stale headers and cap stage-file size before Phase 2."
+   }
+  ],
+  "decisions_owed": [
+   "Allow 8j build work to start now, alongside S-BIN, by moving 8j's entry gate from Checkpoint 8i to 8h. All paid steps and the pin move stay behind 8i.",
+   "Merge the 15 remote-only commits, and decide whether to accept the 'temper' lint baseline (6,606 findings recorded as debt).",
+   "Confirm or reverse 20 provisional rulings taken while you were away (D21-106 to D21-128, D21-137). Several accepted ADRs currently rest on silence.",
+   "Sign Record A (cards, models, run environment) after the confinement probes pass.",
+   "Decide what M5 certifies: either every binding Phase-1 criterion gets a recorded disposition, or M5 explicitly certifies the six exit checks only.",
+   "Accept that acceptance criteria close only by human answer in the exit runs, or fund wiring the automatic mutation pin.",
+   "Add the Ctrl-C and status fixes to 8j before any paid lane run.",
+   "Pick the real fix item from the 8j shortlist.",
+   "Define how to recover from a failed first real run; today each repair means a full re-freeze.",
+   "Add a landing step: one --no-ff merge to main at M5, which keeps the cited commit hashes."
+  ],
+  "quality_verdict": "Engineering quality is good to strong where code exists:\n- closed typed errors and fail-closed refusals;\n- almost no production escape hatches (zero unwrap, unsafe only in the containment FFI, each site justified);\n- about 1,450 tests that use positive controls.\n\nBuild, format, lint and docs pass. All 78 test failures in the audit trace to the audit environment.\n\nThe weaknesses are:\n- 25-50% of source lines are dated history comments, and some stale headers contradict the code;\n- a few god modules (run.rs at 6,500 lines);\n- several built-but-unwired policy features (budget exhaustion, quarantine, mutation pinning);\n- confirmed defects on operator paths: Ctrl-C is inert, status conflates items, and the Linux kill bug is fixed only on the remote.\n\nEverything is proven against fakes and Windows only.",
+  "process_verdict": "The process is honest and self-correcting but heavy:\n- It records its own false passes and runs adversarial review rounds that do find real defects.\n- 198 ADRs, 184 decisions and a 50k-line runbook keep the chain of evidence intact.\n- The plan grew from 14 to 30 stages in 24 days. Each expansion was triggered by first contact with a real run, which is the right reason, but nothing caps it.\n- About 70% of last week's commits changed docs only, and the current stage has added no Rust to this repo.\n- The records have drifted: the remote CI campaign of 10-03 never entered them, and several tracker rows are stale.\n\nThe operator is now the bottleneck: paid steps cannot run unattended, and 20 rulings await ratification.",
+  "recommendations": [
+   "Today: merge the remote branch locally, push with a go-ahead, iterate until CI is green on Linux and Windows, record the run ids, and correct every 'never pushed / never run' statement.",
+   "Start 8j's build work (human roots, hold, lane proofs, fix-item shortlist, exit-check amendments) now, in parallel with S-BIN's paid batches. Keep the pin move and paid probes behind Checkpoint 8i. Expected saving is about 1-3 days.",
+   "Before any paid lane run, fix Ctrl-C, make status per-item, add Rust to the tie check, and stop the tests reading Anthropic env vars. This is about a day of agent work.",
+   "Move the biggest unknown forward: run the pin move and three confinement probes first, then one real `redkiln run` dispatch on the fixture item before the 20-checkpoint freeze, and write the recovery procedure for a failed first run.",
+   "Define M5 precisely: publish a disposition table for the ~50 unscheduled criteria, and state that verify-stage criteria close by human answer and that the review gate is uncalibrated.",
+   "Clear the ratification backlog in one sitting: 20 provisional rulings, Record A, the temper baseline, and where the Codex adapter belongs.",
+   "After M5, run a 1-2 week hardening and doc-diet pass and cap stage-file size before starting Phase 2."
+  ],
+  "key_numbers": [
+   {
+    "label": "Runbook stages with a recorded pass",
+    "value": "27 of 30 (5 provisional)"
+   },
+   {
+    "label": "Real Claude runs through a lane",
+    "value": "0"
+   },
+   {
+    "label": "Rust in tree",
+    "value": "238k lines (about 137k are tests), 12 crates"
+   },
+   {
+    "label": "Tests (audit run, Windows)",
+    "value": "1,326 pass / 78 fail, all from the audit environment / 9 ignored"
+   },
+   {
+    "label": "Plan growth since 09-11",
+    "value": "14 to 30 stages"
+   },
+   {
+    "label": "Branch vs remote / vs main",
+    "value": "40 ahead, 15 behind remote; 416 commits not on main"
+   },
+   {
+    "label": "Binding Phase-1 criteria armed and unscheduled",
+    "value": "about 50 of 455"
+   },
+   {
+    "label": "Paid spend to date (API-equivalent)",
+    "value": "about US$660; S-BIN $5.56 of $90"
+   },
+   {
+    "label": "Operator sittings to exit",
+    "value": "about 11-13"
+   },
+   {
+    "label": "Unratified provisional rulings",
+    "value": "20"
+   },
+   {
+    "label": "Exit (M5) forecast",
+    "value": "P50 about 2026-10-23; P90 early to mid November"
+   },
+   {
+    "label": "Technical appendix",
+    "value": "<scratchpad>/audit/appendix.md"
+   }
+  ]
+ }
+}

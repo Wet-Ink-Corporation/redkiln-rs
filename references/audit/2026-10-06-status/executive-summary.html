@@ -1,0 +1,273 @@
+<title>Redkiln-RS Status Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow status column. The summary goes first (meters and forecast), then the evidence (areas, remaining work, risks), then the asks (your decisions). The accent is kiln ember on a cool slate ground. */
+:root{
+  --bg:#f3f4f6; --panel:#ffffff; --ink:#16191f; --muted:#5b6270; --line:#dfe2e8;
+  --ember:#c2410c; --ember-soft:#fde5d6; --track:#e7e9ee;
+  --good:#1f7a4d; --good-soft:#dcf1e5; --warn:#a15c00; --warn-soft:#fbeccf; --bad:#b42318; --bad-soft:#fbe0dd;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111318; --panel:#191c23; --ink:#e8eaef; --muted:#9aa1ae; --line:#2b303a;
+  --ember:#fb8a4c; --ember-soft:#3a2216; --track:#262a33;
+  --good:#5cc98f; --good-soft:#163024; --warn:#f0b452; --warn-soft:#352812; --bad:#f2786c; --bad-soft:#3a1a17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111318; --panel:#191c23; --ink:#e8eaef; --muted:#9aa1ae; --line:#2b303a;
+  --ember:#fb8a4c; --ember-soft:#3a2216; --track:#262a33;
+  --good:#5cc98f; --good-soft:#163024; --warn:#f0b452; --warn-soft:#352812; --bad:#f2786c; --bad-soft:#3a1a17; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:980px;margin:0 auto;display:grid;gap:22px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4.2vw,38px);line-height:1.1;font-weight:700;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:600}
+.eyebrow{font:500 11.5px/1 var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:.92em}
+p{margin:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:grid;gap:14px;min-width:0}
+.head{display:grid;gap:10px}
+.lede{font-size:17px;max-width:70ch;color:var(--ink)}
+.meta{color:var(--muted);font-size:13px}
+.meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.meter{display:grid;gap:8px}
+.meter .big{font:700 40px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.meter .big small{font-size:18px;color:var(--muted);font-weight:500}
+.bar{height:8px;background:var(--track);border-radius:4px;overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--ember);border-radius:4px}
+.meter.alt .bar > i{background:var(--muted)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+ul.list{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+ul.list li{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start}
+ul.list li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:7px;background:var(--good)}
+ul.list.no li::before{background:var(--bad);border-radius:1px}
+/* milestone track */
+.track{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+@media (max-width:760px){.track{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ms{border-top:4px solid var(--track);padding-top:8px;display:grid;gap:3px;min-width:0}
+.ms b{font:600 13px var(--f-mono)}
+.ms span{font-size:12.5px;color:var(--muted);line-height:1.35}
+.ms.done{border-color:var(--good)} .ms.part{border-color:var(--warn)} .ms.now{border-color:var(--ember)}
+.ms em{font-style:normal;font-size:12px;font-family:var(--f-mono)}
+.ms.done em{color:var(--good)} .ms.part em{color:var(--warn)} .ms.now em{color:var(--ember)} .ms.todo em{color:var(--muted)}
+/* key numbers */
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.num{background:var(--panel);padding:12px 14px;display:grid;gap:4px}
+.num .v{font:600 17px var(--f-display);font-variant-numeric:tabular-nums}
+.num .l{font-size:12.5px;color:var(--muted)}
+/* areas */
+.areas{display:grid;gap:10px}
+.area{display:grid;grid-template-columns:minmax(150px,210px) 1fr 44px 36px;gap:12px;align-items:center}
+.area .n{font-weight:600;font-size:14px}
+.area .p{font:500 13px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.grade{font:600 12px var(--f-mono);text-align:center;border-radius:4px;padding:2px 0;background:var(--good-soft);color:var(--good)}
+.grade.c{background:var(--warn-soft);color:var(--warn)}
+.area .note{grid-column:1/-1;font-size:13px;color:var(--muted);margin-top:-4px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.area:last-child .note{border-bottom:0}
+@media (max-width:560px){.area{grid-template-columns:1fr 44px 36px}.area .bar{grid-column:1/-1;grid-row:2}}
+/* tables */
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font:500 11.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 10px 8px 0;border-bottom:1px solid var(--line)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.eff{font:500 13px var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+td.gate{color:var(--muted);font-size:13px}
+.chip{display:inline-block;font:600 11px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px}
+.chip.high{background:var(--bad-soft);color:var(--bad)} .chip.medium{background:var(--warn-soft);color:var(--warn)}
+.chip.ok{background:var(--good-soft);color:var(--good)} .chip.fix{background:var(--warn-soft);color:var(--warn)}
+/* forecast */
+svg text{fill:var(--muted);font:11px var(--f-mono)}
+svg .lbl{fill:var(--ink);font:500 12px var(--f-body)}
+ol.asks{margin:0;padding-left:22px;display:grid;gap:8px}
+ol.asks li::marker{font:600 13px var(--f-mono);color:var(--ember)}
+.foot{font-size:13px;color:var(--muted);display:grid;gap:6px}
+a{color:var(--ember)}
+a:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <span class="eyebrow">Redkiln-RS · status audit · snapshot 36dd8ac · 6 Oct 2026</span>
+  <h1>The engine is built. It has not yet run a real lane.</h1>
+  <p class="lede">Phase 1 is about two-thirds done. The Rust kernel, store, gates, adapters and CLI exist and are well tested against a simulated model. No real Claude-driven fix or story lane has run through <span class="mono">redkiln run</span>. The local branch has drifted from its remote: CI went green on the remote head on 5 Oct, but those fixes (17 commits) aren't merged locally. Phase-1 exit (M5) is most likely around <b>23 October</b>, with a real chance of slipping into November.</p>
+</header>
+
+<section class="panel">
+  <div class="meters">
+    <div class="meter"><span class="eyebrow">Phase 1 (self-hosting)</span><div class="big">65<small>%</small></div><div class="bar"><i style="width:65%"></i></div><span class="meta">27 of 30 runbook stages passed; 5 of those are provisional</span></div>
+    <div class="meter alt"><span class="eyebrow">Full vision (Phases 1–4)</span><div class="big">30<small>%</small></div><div class="bar"><i style="width:30%"></i></div><span class="meta">Phases 2–4 specified, not started</span></div>
+    <div class="meter"><span class="eyebrow">M5 forecast</span><div class="big">~23 Oct</div><span class="meta">P50 · 80% band 19 Oct – 3 Nov · P90 early to mid Nov</span></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Milestones</h2>
+  <div class="track">
+    <div class="ms done"><b>M0</b><span>Phase 0 closed</span><em>12 Sep</em></div>
+    <div class="ms part"><b>M1</b><span>Foundation builds</span><em>CI green on remote only</em></div>
+    <div class="ms done"><b>M2</b><span>State is durable</span><em>13 Sep</em></div>
+    <div class="ms done"><b>M3</b><span>Kernel decides</span><em>17 Sep</em></div>
+    <div class="ms part"><b>M4</b><span>System runs</span><em>met, not stamped</em></div>
+    <div class="ms now"><b>8i</b><span>S-BIN binary review</span><em>in progress</em></div>
+    <div class="ms todo"><b>8j</b><span>Lane proofs, CI, run prep</span><em>not started</em></div>
+    <div class="ms todo"><b>M5</b><span>Real fix + story lane</span><em>~23 Oct</em></div>
+  </div>
+</section>
+
+<div class="nums">
+  <div class="num"><span class="v">0</span><span class="l">Real Claude runs through a lane</span></div>
+  <div class="num"><span class="v">238k lines · 12 crates</span><span class="l">Rust in tree (~137k is tests)</span></div>
+  <div class="num"><span class="v">1,326 pass · 0 product fails</span><span class="l">Audit test run; 78 env-caused fails, 9 paid tests skipped</span></div>
+  <div class="num"><span class="v">14 → 30 stages</span><span class="l">Plan growth since 11 Sep</span></div>
+  <div class="num"><span class="v">+40 / −15 vs remote</span><span class="l">416 commits not yet on main</span></div>
+  <div class="num"><span class="v">~US$660</span><span class="l">Paid spend to date (API-equivalent); S-BIN $5.56 of $90</span></div>
+  <div class="num"><span class="v">~11–13</span><span class="l">Operator sittings needed to reach exit</span></div>
+  <div class="num"><span class="v">~50 of 455</span><span class="l">Binding Phase-1 criteria armed but unscheduled</span></div>
+</div>
+
+<section class="panel cols">
+  <div style="display:grid;gap:12px;min-width:0">
+    <h2>Works today</h2>
+    <ul class="list">
+      <li>Builds clean on Windows: format, compile, lint and docs all pass.</li>
+      <li>Selects the activities a bug or story needs from a 102-activity catalog, deterministically, and refuses bad pack data at load.</li>
+      <li>Walks both shipped lanes end to end against a fake model (fix 14/14, story 13/13), on real git and real process boundaries.</li>
+      <li>Records state as git trailers plus an append-only log, rebuilds from git, and resumes after a kill.</li>
+      <li>Opens human gates as durable marks; answers arrive later and are voided if the code changed.</li>
+      <li>Rust toolchain adapter runs real cargo build/test/lint/audit/deny. The Node adapter is thin.</li>
+      <li>Launches <span class="mono">claude -p</span> locked down and kills the whole process tree on Windows. One live dispatch passed on 21 Sep.</li>
+      <li>All operator verbs exist (run, answer, status, explain, cost, doctor with 43 rules, init, lint).</li>
+    </ul>
+  </div>
+  <div style="display:grid;gap:12px;min-width:0">
+    <h2>Not yet</h2>
+    <ul class="list no">
+      <li>No real Claude-driven fix or story lane has run through <span class="mono">redkiln run</span>.</li>
+      <li>Adapter pinned to CLI 2.1.278, but 2.1.289 is installed. Least-privilege confinement never tested live.</li>
+      <li>The local branch lacks the remote's CI fixes (including a Linux process-kill bug). CI is green only on the remote head, and 40+ local commits are unpushed.</li>
+      <li>A real lane can't start from a human-written bug report: the first step refuses. Hold-before-spec and shipped-lane <span class="mono">run</span> proofs are unbuilt.</li>
+      <li>Acceptance criteria close only by a human "discriminates" answer, never by mutation evidence.</li>
+      <li>Ctrl-C does nothing during a run. <span class="mono">status</span> shows one stage for every item.</li>
+      <li>No detection of rewritten history or orphaned anchors. Budget exhaustion isn't wired to a durable stop.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>By area: completeness against Phase-1 needs</h2>
+  <div class="areas">
+    <div class="area"><span class="n">Typed core & ports</span><div class="bar"><i style="width:93%"></i></div><span class="p">93%</span><span class="grade">B</span><span class="note">Clean types, 5 ports with fakes and shared conformance. The Binary arm stays sealed until S-BIN finishes; tracker and docs ports are fake-only by design.</span></div>
+    <div class="area"><span class="n">Durable state & git</span><div class="bar"><i style="width:85%"></i></div><span class="p">85%</span><span class="grade">B</span><span class="note">Git-first store, reconcile, landing and run worktrees are solid. Rewrite/orphan detection was never built; git errors print as raw bytes.</span></div>
+    <div class="area"><span class="n">Kernel selection</span><div class="bar"><i style="width:85%"></i></div><span class="p">85%</span><span class="grade">B</span><span class="note">Pure and deterministic. The load-time tie check omits Rust contexts; some lints run only in CI, not in the product.</span></div>
+    <div class="area"><span class="n">Toolchain adapters</span><div class="bar"><i style="width:85%"></i></div><span class="p">85%</span><span class="grade">B</span><span class="note">Rust adapter is strong; Node is thin. Registry plumbing is copied across four crates.</span></div>
+    <div class="area"><span class="n">Claude adapter</span><div class="bar"><i style="width:75%"></i></div><span class="p">75%</span><span class="grade">B</span><span class="note">Deeply tested against a fake CLI. Stale pin, confinement probes never run, and the POSIX kill fix exists only on the remote.</span></div>
+    <div class="area"><span class="n">CLI & migrator</span><div class="bar"><i style="width:75%"></i></div><span class="p">75%</span><span class="grade c">B−</span><span class="note">Every verb is real. Ctrl-C is inert, status mixes items, run.rs is 6,500 lines, and the tests break when Anthropic env vars are set.</span></div>
+    <div class="area"><span class="n">Gates</span><div class="bar"><i style="width:72%"></i></div><span class="p">72%</span><span class="grade c">B−</span><span class="note">All three fail closed. Verify can't pin a criterion automatically; the review gate is uncalibrated against false approval.</span></div>
+    <div class="area"><span class="n">Runtime & lanes</span><div class="bar"><i style="width:72%"></i></div><span class="p">72%</span><span class="grade c">B−</span><span class="note">Works under fakes and survives a kill. Human root inputs and hold-before are missing; budget exhaustion is library-only.</span></div>
+    <div class="area"><span class="n">Pack & catalog</span><div class="bar"><i style="width:70%"></i></div><span class="p">70%</span><span class="grade">B</span><span class="note">Loads and walks under fakes. Cards are untested one-line prompts; the real exit items haven't been created.</span></div>
+    <div class="area"><span class="n">CI, landing & ops</span><div class="bar"><i style="width:45%"></i></div><span class="p">45%</span><span class="grade c">C</span><span class="note">Remote CI went red on 3 Oct and green on 5 Oct (62dd3b8). The fixes aren't merged locally, no record cites the runs, and the runbook has no landing step.</span></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>What remains to Phase-1 exit</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Work</th><th>Effort</th><th>Waits on</th></tr></thead>
+    <tbody>
+      <tr><td>Finish S-BIN (8i): two paid review batches, analysis, Binary record, checkpoint</td><td class="eff">3–5 d</td><td class="gate">You: go-ahead per batch, attended Unreal sessions</td></tr>
+      <tr><td>Merge the 17 remote-only commits; re-confirm CI green on the integrated head</td><td class="eff">0.5–1 d</td><td class="gate">You: push go-aheads</td></tr>
+      <tr><td>Build missing run-path pieces: human root inputs, hold-before, gate questions/expiry</td><td class="eff">1.5–3 d</td><td class="gate">Agent; you sign 3 gate rows</td></tr>
+      <tr><td>Ten <span class="mono">redkiln run</span> proofs over both shipped lanes with a fixture model</td><td class="eff">1.5–3 d</td><td class="gate">Agent; high risk of surprises</td></tr>
+      <tr><td>Fix Ctrl-C, per-item status, Rust in the tie check, test env hygiene <i>(unscheduled)</i></td><td class="eff">0.5–1 d</td><td class="gate">Agent; add to 8j</td></tr>
+      <tr><td>Pin move to 2.1.289, three paid confinement probes, 7c re-run</td><td class="eff">1–1.5 d</td><td class="gate">You: 4 paid go-aheads, plain terminal</td></tr>
+      <tr><td>Pick the real fix item; create the replacement story item</td><td class="eff">0.5 d</td><td class="gate">You: pick from shortlist</td></tr>
+      <tr><td>Exit-check amendments, Checkpoint 8j, whole re-run of the 20-checkpoint chain</td><td class="eff">2–3 d</td><td class="gate">You run the chain</td></tr>
+      <tr><td>Step 8: real fix and story lane runs, kill and resume, replay, cost</td><td class="eff">2.5–4 d</td><td class="gate">You at every launch: ~16 launches, 13–20 gate answers</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h2>Exit forecast</h2>
+  <svg viewBox="0 0 640 132" width="100%" role="img" aria-label="Forecast: optimistic 18 to 20 October, P50 23 October, 80 percent band 19 October to 3 November, pessimistic 3 to 10 November">
+    <g stroke="var(--line)" stroke-width="1">
+      <line x1="20" y1="20" x2="20" y2="104"/><line x1="127.7" y1="20" x2="127.7" y2="104"/><line x1="235.4" y1="20" x2="235.4" y2="104"/>
+      <line x1="343.1" y1="20" x2="343.1" y2="104"/><line x1="450.8" y1="20" x2="450.8" y2="104"/><line x1="558.5" y1="20" x2="558.5" y2="104"/>
+    </g>
+    <text x="20" y="122" text-anchor="middle">6 Oct</text><text x="127.7" y="122" text-anchor="middle">13 Oct</text><text x="235.4" y="122" text-anchor="middle">20 Oct</text>
+    <text x="343.1" y="122" text-anchor="middle">27 Oct</text><text x="450.8" y="122" text-anchor="middle">3 Nov</text><text x="558.5" y="122" text-anchor="middle">10 Nov</text>
+    <rect x="220" y="44" width="230.8" height="22" rx="4" fill="var(--ember-soft)"/>
+    <rect x="204.6" y="30" width="30.8" height="8" rx="3" fill="var(--good)"/>
+    <rect x="450.8" y="74" width="107.7" height="8" rx="3" fill="var(--bad)"/>
+    <line x1="281.5" y1="40" x2="281.5" y2="70" stroke="var(--ember)" stroke-width="3"/>
+    <circle cx="20" cy="55" r="4" fill="var(--ink)"/>
+    <text class="lbl" x="28" y="59">today</text>
+    <text class="lbl" x="242" y="37">clean run</text>
+    <text class="lbl" x="288" y="59">P50 ~23 Oct</text>
+    <text class="lbl" x="440" y="96" text-anchor="end">another stage-insertion round</text>
+  </svg>
+  <p class="meta">Assumes about one operator sitting a day, paid steps never unattended, the CLI frozen at 2.1.289, and CI staying green after the remote merge. Weighting: 30% clean, 45% one repair cycle, 25% structural insertion. Both earlier insertion rounds came from first contact with a real run.</p>
+</section>
+
+<section class="panel">
+  <h2>Top risks</h2>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Risk</th><th>Move</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip high">high</span></td><td>The first real lane run exposes structural gaps and triggers another round of inserted stages</td><td>Do one real dispatch through <span class="mono">run</span> early in 8j, then time-box repairs</td></tr>
+      <tr><td><span class="chip high">high</span></td><td>Local branch diverged from the green remote; its fixes (including a Linux kill bug) aren't merged locally and no record cites the runs</td><td>Merge the remote now; record the run ids (#23)</td></tr>
+      <tr><td><span class="chip high">high</span></td><td>Adapter never run at 2.1.289 or under new confinement; ADR-0197 still proposed</td><td>Make the confinement probes the first paid step of 8j</td></tr>
+      <tr><td><span class="chip medium">med</span></td><td>Operator bandwidth: 11–13 sittings and 30–40 approvals/answers</td><td>Run 8j alongside S-BIN; batch sittings; keep criteria on the exit items few</td></tr>
+      <tr><td><span class="chip medium">med</span></td><td>M5 could be read as "Phase 1 complete" while ~50 criteria are unscheduled</td><td>Publish a disposition table and a scope statement with M5</td></tr>
+      <tr><td><span class="chip medium">med</span></td><td>Process weight: 70% of last week's commits were docs-only; stale tracker rows</td><td>After M5, sweep stale docs and cap stage-file size</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h2>Decisions you owe</h2>
+  <ol class="asks">
+    <li>Let 8j build work start now, alongside S-BIN, by re-pointing its entry gate from 8i to 8h. Keep paid steps and the pin move behind 8i. Saves about 1–3 days.</li>
+    <li>Merge the 15 remote-only commits, and decide whether to accept the temper lint baseline (6,606 findings recorded as debt).</li>
+    <li>Ratify or reverse 20 AFK-provisional rulings (D21-106…128, D21-137). Several accepted ADRs rest on silence.</li>
+    <li>Add the Ctrl-C and per-item status fixes to 8j before any paid lane run.</li>
+    <li>Define what M5 certifies: the six exit checks only, or a disposition for every binding Phase-1 criterion.</li>
+    <li>Accept human-answer-only closure of criteria for the exit runs, or fund wiring the mutation pin.</li>
+    <li>Sign Record A (cards, models, run environment) once the probes pass. Pick the real fix item.</li>
+    <li>Add a landing step: one <span class="mono">--no-ff</span> merge to main at M5, which preserves the 189 cited hashes.</li>
+  </ol>
+</section>
+
+<section class="panel">
+  <h2>After Phase 1</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Phase</th><th>Delivers</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr><td>Hardening</td><td>Fix the confirmed defects, dispose of armed criteria, put the docs on a diet, merge to main</td><td class="eff">1–2 wk</td></tr>
+      <tr><td>Phase 2</td><td>Remaining packs, parallel worktrees + merge queue, .NET/Python/Unreal adapters, plugin generator, corpus migration</td><td class="eff">6–10 wk*</td></tr>
+      <tr><td>Phase 3</td><td>GitHub and mdBook adapters, gates answerable from a phone, web status view, DORA metrics</td><td class="eff">4–8 wk</td></tr>
+      <tr><td>Phase 4</td><td>Codex adapter (after S-CODEX), Linear, Astro. Gated on Phase 3 being stable for a quarter</td><td class="eff">3–6 wk</td></tr>
+    </tbody>
+  </table></div>
+  <p class="meta">*Low confidence: Phase 1's plan doubled on contact. For scale, the RFC priced the core bet at ~10k lines and the fix lane at 1–2 weeks; five weeks in, the tree holds 238k lines of Rust and 130k of markdown.</p>
+</section>
+
+<section class="panel">
+  <h2>Quality and process, in brief</h2>
+  <p><b>Code:</b> good to strong. Closed typed errors, fail-closed refusals, effectively no production unwrap or panic, unsafe confined to the containment layer, and ~1,400 tests with positive controls. The weak spots are 25–50% of source lines being dated history comments, a few god modules, policy features built but not wired in, and three confirmed operator-path defects. Everything is proven only against fakes and only on Windows.</p>
+  <p><b>Process:</b> honest and self-correcting, but heavy. It records its own false passes, and the adversarial rounds find real bugs. 198 ADRs, 184 decisions and a 50k-line runbook keep the evidence chain intact, but nothing caps scope growth. The records missed the 3–5 Oct remote CI campaign entirely. The operator is now the bottleneck.</p>
+</section>
+
+<footer class="foot">
+  <p><b>How this was checked.</b> I audited a pinned, read-only snapshot (36dd8ac) in a separate worktree, so the live 8i session was never touched. A full build and test ran in an isolated target dir. The 78 test failures all trace to the audit shell: it inherits <span class="mono">ANTHROPIC_BASE_URL</span>, which the product refuses by design (61 failures), and a Node fixture was not installed (16). A clean-env re-run went green. 17 survey agents covered vision, plan, 10 code areas, records, traceability, velocity and landing. Two independent skeptics then tried to refute each of 13 headline claims: 7 were <span class="chip ok">confirmed</span>, 6 <span class="chip fix">confirmed with corrections</span>, and none were refuted. A completeness critic added 4 follow-ups.</p>
+  <p>Percentages are auditor judgement against Phase-1 needs, not measurements. Full evidence with path:line citations is in the <a href="appendix.md">technical appendix</a>. <b>Correction (6 Oct):</b> the appendix says no green CI run exists; the remote head 62dd3b8 went green on 5 Oct (run 37310935003). The 29 untracked findings are filed as <a href="https://github.com/Wet-Ink-Corporation/redkiln-rs/issues?q=label%3Aaudit-2026-10-06">GitHub issues #5–#33</a>.</p>
+</footer>
+
+</div>
