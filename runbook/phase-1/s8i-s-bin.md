@@ -431,7 +431,11 @@ disclosed there:
    - `monolith_status()` must report the tree's own project before anything is captured. The editor is closed and
      no `UnrealEditor` process survives before the next tree (Halt 6).
    - The session's model and its cost are noted per session in `results/s-bin/captures/procedure-log.txt`, with the
-     operator's yes/no on whether the capture shows the item's subject.
+     operator's yes/no on whether the capture shows the item's subject. *(dated 2026-10-06, s8i build, R10FIX-8i; s8i
+     refuting round 10's minor)* D21-149 and D21-150 add two values, both with `sha256=none`: `n/a` for an item whose
+     every asset `capture_scene_preview` rejected (`captures: []`; items 2 and 3, so item 3 has no capture), and
+     `stalled` for a session stalled on the instrument, at most one per item, ahead of its binding line (item 5).
+     METHOD-S's D21149-8i-A extension, items 2 and 3; Checkpoint 8i (4)'s `caplog_ok` (§8i.4 step 5's dated notes).
 
    Only the capture file reaches the reviewer. The session's own report does not. A seeded tree's capture shows the
    seed, which is exactly what a real `Binary` summary would carry. §8i.0 item 11 is why the sessions run in B1
@@ -1606,9 +1610,23 @@ registered procedure). For items 1 to 5 in order:
    `item=<n> tree=<capture copy path> model=<id> cost_usd=<x.xx> sha256=<64 hex> shows_subject=<yes|no>
    utc=<YYYY-MM-DDTHH:MM:SSZ>`. `shows_subject` is the operator's judgement on framing, never on the defect.
    *(dated 2026-10-03, s8i build, R1FIX-8i)* The field above reads `sha256=<64 hex, one per capture file, comma-joined>`, as METHOD-S's
-   amendment registers it (item 2, step 5) and §8i.5's packet writes it. Item 3 has two captures, so its line carries
-   two hashes. Checkpoint 8i (4) splits the field on `,` and requires exactly the item's pinned capture hashes, each
-   once.
+   amendment registers it (item 2, step 5) and §8i.5's packet writes it. ~~Item 3 has two captures, so its line carries
+   two hashes.~~ ~~Checkpoint 8i (4) splits the field on `,` and requires exactly the item's pinned capture hashes, each
+   once.~~
+   *(dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's major)* The tie Checkpoint 8i makes, named. (4)'s
+   `caplog_ok` splits an item's binding `yes` line's field on `,` and requires exactly the item's `fixture.json` capture
+   hashes, each once. (4)'s `capfiles_ok` requires the pins block's `results/s-bin/captures/item-<n>/<name>` lines to be
+   exactly the item's `fixture.json` captures, sha256 and path basename, each once, and none for an item with
+   `captures: []`. (3) requires each pinned file to be its own blob at the pinned corpus commit. So the procedure log,
+   `fixture.json` and the committed capture bytes are one set. The struck sentence named "pinned" hashes, which (4)
+   did not read.
+   *(dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's minors)* D21-149 and D21-150 widen the line's
+   grammar. An item whose every asset `capture_scene_preview` rejected gets `sha256=none shows_subject=n/a` and
+   `captures: []` (items 2 and 3, so item 3 has no capture, and the struck "two captures" no longer holds). A session
+   that stalled on the instrument gets `sha256=none shows_subject=stalled`, at most one per item, ahead of the item's
+   binding line, which is its last (item 5). Every line carries its model and cost. Registered by METHOD-S's
+   D21149-8i-A extension, items 2 and 3; checked by Checkpoint 8i (4)'s `caplog_ok`. The log at corpus `cc7f222` holds
+   six lines in this form.
 6. Close the session and the editor. No `UnrealEditor` process survives (Halt 6). Delete the capture copy.
 
 When the five captures are taken, build each item's review repository (the table above) before any rendering is
@@ -1616,7 +1634,9 @@ hashed.
 
 A "no" on any tree is a stop (§8i.6), on a clean tree as much as a seeded one. N19 applies one procedure across
 the five, and a clean item without its subject would be reviewed on less than the seeded ones. It never falls back
-to empty captures.
+to empty captures. *(dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's minor)* Qualified by D21-149: an
+empty capture list that is the tool's own rejection of every asset is not a fallback (`n/a`, METHOD-S's D21149-8i-A
+extension, item 2), and "never falls back" stands for a framing failure.
 
 *(dated 2026-10-02, s8i build)* **The base repositories, built (package S8I-P7); seed 5 awaits R.** Zero spend, and
 read-only on `D:/repos/BrittonGames`. Its HEAD (`ee6e450`), the sha256 of `git --no-optional-locks status --porcelain`
@@ -1643,7 +1663,7 @@ over BrittonGames' blob).
 | 3 | `e83463288` | ~~`536eb55f3c3529bf5943b6c8ecf06da873824c8e`~~ *(dated 2026-10-03, s8i build, D21146-8i)* ~~`de3b4ca53758f014c321f1321ed9b6ce7c3997b9`~~ *(dated 2026-10-03, s8i build, D21147-8i)* `efcc24297540af65905c699cb41a25464dd69082` | ~~`81e0c570`~~ ~~`a2e25cc9`~~ `86bc1c51` | `BP_GamePlayerState` `f22e58e2`, `DA_Item_Sword` `2f9895f5` | ~~21,560,069,565~~ ~~21,560,066,805~~ 21,560,067,392 |
 | 4 | `a71265925` | ~~`fd692b75ac96c6d94bf1de084e64bb03c422aaba`~~ *(dated 2026-10-03, s8i build, D21146-8i)* ~~`1553eda41de0b0f5a25a38ed5cdbea9d6258af6c`~~ *(dated 2026-10-03, s8i build, D21147-8i)* `2878d79dda6ae72a1143a63937834ed3fb327eff` | ~~`59b90c86`~~ ~~`7f1018de`~~ `6782b95b` | `WBP_LoadoutScreen` `9415f098` (the seed) | ~~21,540,845,865~~ ~~21,540,843,759~~ 21,540,843,094 |
 | 5 | ~~**awaiting R**~~ | — | — | — | — |
-| 5 *(dated 2026-10-03, s8i build)* | `6a101bdcd` | ~~`292cabad7e073a977010e7e84261cd4ad204389e`~~ *(dated 2026-10-03, s8i build, D21146-8i)* ~~`5f90d80ef4fed42822f955b944b5804cabfc3da6`~~ *(dated 2026-10-03, s8i build, D21147-8i)* `e0620bfaac31a388fc2863a4f01f8b3f1c16a0a4` *(dated 2026-10-04, s8i build, D21148-8i-A)* rebuilt and verified at `D:/sb/base-d21148/item-5`, NOT yet swapped in: `c2f948ecb902d972f19c2b4b87491be22159f314` | ~~`143377a3`~~ ~~`370b48cd`~~ `f1c3d6cf` *(dated 2026-10-04, s8i build, D21148-8i-A)* `a8b469e1` | `WBP_GameVitals` `23c79a63` (the seed) | ~~10,604,498,965~~ ~~10,604,497,923~~ 10,604,498,743 *(dated 2026-10-04, s8i build, D21148-8i-A)* 10,604,502,675 |
+| 5 *(dated 2026-10-03, s8i build)* | `6a101bdcd` | ~~`292cabad7e073a977010e7e84261cd4ad204389e`~~ *(dated 2026-10-03, s8i build, D21146-8i)* ~~`5f90d80ef4fed42822f955b944b5804cabfc3da6`~~ *(dated 2026-10-03, s8i build, D21147-8i)* `e0620bfaac31a388fc2863a4f01f8b3f1c16a0a4` *(dated 2026-10-04, s8i build, D21148-8i-A)* rebuilt and verified at `D:/sb/base-d21148/item-5`, NOT yet swapped in: `c2f948ecb902d972f19c2b4b87491be22159f314` *(dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's minor)* swapped into `D:/sb/base/item-5` by the operator on 2026-10-04 (the operator's swap note below); re-read 2026-10-06: HEAD `c2f948ec`, tree `a8b469e1` | ~~`143377a3`~~ ~~`370b48cd`~~ `f1c3d6cf` *(dated 2026-10-04, s8i build, D21148-8i-A)* `a8b469e1` | `WBP_GameVitals` `23c79a63` (the seed) | ~~10,604,498,965~~ ~~10,604,497,923~~ 10,604,498,743 *(dated 2026-10-04, s8i build, D21148-8i-A)* 10,604,502,675 |
 
 - **Seed 4 is confirmed by blob oid.** `a71265925^:OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset` =
   `9415f0986275a66d01885cc74f58c33e1957e183` = base item 4's `HEAD:` blob. The fixed pointer blob `70e2a2e3…aa37c` is
@@ -2286,7 +2306,7 @@ bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
   2. step 3a, the B0 block, which is the binding 34-test reading;
   3. step 4a, the dry run and its results commit, then the dry run's review repository removed (about 21.5 GB);
   4. step 6a, D21-143's B1 line re-signed in place with the new dry run's sha256 (D21-149 item 3);
-  5. reading the five constructed pairs and accepting them or having them rebuilt (METHOD-S's D21149-8i-B extension: the seeded items' reports carry the commit message's own diagnosis), then step 6b below, owed item (e)'s corpus commit;
+  5. ~~reading the five constructed pairs and accepting them or having them rebuilt (METHOD-S's D21149-8i-B extension: the seeded items' reports carry the commit message's own diagnosis), then~~ *(dated 2026-10-06, s8i build, R10FIX-8i: D21-152)* the reading is done: the operator accepts the five pairs exactly as built (D21-152 (K), METHOD-S's D21-152 extension), so none is rebuilt and nothing is owed before step 6b but step 6a; then step 6b below, owed item (e)'s corpus commit;
   6. step 10, the BrittonGames snapshot before B2;
   7. steps 10a and 10b below: the B2 line, the pre-check and pass 1.
 - **Step 6b was run only against synthetic corpora** (`s8i_D21149-8i-D_test6b.py`, `D21149-8i-D-test6b.out`). On a repository in step 4a's state it commits 22 paths. It refuses a second run, a repository without step 4a's superseded dry run, an untracked file, and a staged file with one byte changed; in that last case it commits nothing.
@@ -2294,11 +2314,13 @@ bash D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_S8I-P8_dryrun.sh
 - **Disk.** D: read 129,415,987,200 bytes free on 2026-10-06, with the five review repositories (about 97 GB) and the dry run's (about 21.5 GB) in place. Each dispatch copy is checked against `SBIN_NEED_BYTES` before it is made (D21-151) and removed after its dispatch (`dispatch_one`).
 - **Spend.** $5.561026 after B1. B2's bound is 25.00, and (90.00 − 5.56) = 84.44.
 
+*(dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's minor)* **D21-152 recorded: the constructed-pair reading is closed.** The operator accepts the five constructed spec/report pairs exactly as built (D21-152 (K), 2026-10-06, before B2 and before any rendering is hashed; report sha256 `9ae0c522…`, `a916fa90…`, `00696b45…`, `f0a9f60f…`, `8848e41c…`, the specs as METHOD-S's D21149-8i-B extension tables them). No report byte moves, so step 5 of the list above and step 6b's precondition are met. F43's contract gains D21-152 item 2's disclosure and item 3's recorded-only evidence-source tag (§8i.7's dated note). METHOD-S's D21-152 extension registers both. Owed before B2 is unchanged otherwise: steps 2a, 3a, 4a, 6a, 6b, 10, 10a and 10b.
+
 ```bash
 # (dated 2026-10-06, s8i build, D21149-8i-D) PREPARED, NOT RUN. Owed item (e) into the corpus, then B2.
 # 6b. After step 6a, never before step 4a: the dry-run script refuses while results/s-bin/fixture.json exists.
 #     Only once the operator has read and accepted the five constructed spec/report pairs (METHOD-S's D21149-8i-B
-#     extension, proposed). It commits D21149-8i-B's staged fixture.json and pairs, S8I-P7's five greenness reports
+#     extension, proposed). (dated 2026-10-06, s8i build, R10FIX-8i) Met: D21-152 accepts them as registered (K). It commits D21149-8i-B's staged fixture.json and pairs, S8I-P7's five greenness reports
 #     (index.json and headless.log, §8i.4 step 3) and the pin's report (§8i.4 step 6), each checked by sha256 first.
 ( C=D:/repos/redkiln-corpus; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
   E=$S/S8I-D21149-stage/results/s-bin; G=$S/S8I-P7-results/results/s-bin
@@ -2463,6 +2485,11 @@ TREE=D:/sb/cap/item-$N
 #    item=<n> tree=D:/sb/cap/item-<n> model=<id> cost_usd=<x.xx> sha256=<64 hex,comma-joined> shows_subject=<yes|no> utc=<YYYY-MM-DDTHH:MM:SSZ>
 #    Close the session and the editor. No UnrealEditor process may survive (Halt 6). Delete D:/sb/cap/item-$N.
 #    A shows_subject=no on any tree is a stop (§8i.6).
+#    (dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's minor) As run, under D21-149 and D21-150: one line
+#    per SESSION. sha256=none shows_subject=n/a for an item whose every asset capture_scene_preview rejected (items 2
+#    and 3; captures []); sha256=none shows_subject=stalled for a session stalled on the instrument, at most one per
+#    item, ahead of its binding line, then one retry on a fresh copy (item 5). METHOD-S's D21149-8i-A extension items
+#    2 and 3; Checkpoint 8i (4)'s caplog_ok.
 # 10. Before B2: run §8i.5's BrittonGames snapshot block with
 WHEN=before-B2
 # 11. (dated 2026-10-03, s8i build, R1FIX-8i; s8i refuting round 1) At the close, after the last results commit
@@ -2580,7 +2607,13 @@ named fields, possibly empty); `results/s-bin/brittongames-snapshots.txt` (§8i.
 (dispatches, dates, arm, model, CLI version, corpus commit, cost), each pass's table with its detection, false
 positives and cited fields, METHOD-S §3.4 evaluated **per pass**, §3.5's prediction against the outcome, the voids
 named, and the limits (§3.6: *"n=5 is a type-design sample, not a rate"*; the entry's perceptual-seed selection;
-seed 5's replacement and why). It also carries a section headed `### AC-475's lift share`, with the measurement and
+seed 5's replacement and why). *(dated 2026-10-06, s8i build, R10FIX-8i: D21-152 and D21-149 item 2)* It also
+carries D21-152 item 2's disclosure: the seeded items' reports carry the commit's own diagnosis (the widget, the
+pre-fix value or state, and for item 5 the cold-verification method), so a §3.4 branch-1 result reads as *"sufficient
+given the report"*, not *"ChangeSummary alone sufficient"*, and branch 2's signal is less likely. Each blocking
+finding carries D21-152 item 3's recorded-only evidence-source tag (read from the asset, by an editor, Python or binary
+read or a capture, or only strings in the spec or report), never used in scoring. And beside the false-positive
+outcome it states D21-149 item 2's confound: capture presence follows asset type, and both seeds are widgets. It also carries a section headed `### AC-475's lift share`, with the measurement and
 its command (§8i.8), **and a pins block**, which Checkpoint 8i parses, of exactly this form:
 
 ```text
@@ -2602,7 +2635,8 @@ with one `file=` line per corpus file listed above, per raw transcript and per c
   (`S-PORTS`) and **F42** (`S-GRAMMAR`), missing since their drafts were written (§8i.0 item 10; assigned here by the
   2026-09-24 revision brief), and the S-BIN row. Each headline is condensed from the draft's own `## F<n> —` line.
   *(dated 2026-10-02, s8i build)* F41's and F42's rows are written at stage open, after F40's row and in its form. The S-BIN row waits for its
-  draft, at the reserved F43.
+  draft, at the reserved F43. *(dated 2026-10-06, s8i build, R10FIX-8i)* F43's draft carries D21-152's disclosure
+  and evidence-source tag and D21-149 item 2's confound (the contents above).
 - The ledger entry with every go-ahead.
 - The `Binary` record and the dated notes, AC-475's replacement among them (§8i.8).
 - The tracker rows.
@@ -2913,7 +2947,9 @@ asserts the note.
     `sha256=none shows_subject=n/a`. Every other item (1, 4 and 5) has its captures pinned and a binding `yes` line
     carrying exactly their hashes. At most one `shows_subject=stalled` line, with `sha256=none`, stands ahead of an
     item's binding line (item 5). Every line, a stalled one included, carries its model and cost, and every line's
-    cost is summed into the cap.)* The stripped set is one set across the five, and no registered leak token is left.
+    cost is summed into the cap.)* *(dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's major: each item's pinned
+    capture files are exactly its `fixture.json` captures, sha256 and path basename, each once, and an item with
+    `captures: []` pins none; (4)'s `capfiles_ok`, with its synthetic pins.)* The stripped set is one set across the five, and no registered leak token is left.
   - The go-ahead lines are one per batch, in order against the records. The B1 line names Checkpoint 8h's recorded
     pass, the pinned dry run and the amendment (D21-43 N19, N20, N22).
   - BrittonGames' snapshots are unchanged from before B2 through every batch.
@@ -3252,6 +3288,73 @@ if None not in capcosts(L({4:{"cost_usd":None}})):
 print("ok" if not bad else "BAD:"+",".join(bad))'
 clv=$(python -c "$cctl"); rc=$?
 [ "$rc" -eq 0 ] && [ "$clv" = "ok" ] || { echo "FAIL: the procedure-log check fails its synthetic logs (rc=$rc): $clv — a two-capture item, an n/a item with captures [] and one stalled line ahead of a binding line pass; a missing, extra, repeated or foreign hash, an n/a line with a hash or for a captured item, a second or trailing stalled line, a stalled line with a hash, and a line without its model or cost do not; every line's cost is summed (METHOD-S amendment item 2; D21-149; D21-150)"; exit 1; }
+# (dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's major) (3) checked each pinned file against its own
+# corpus blob, and caplog_ok checked the procedure log against fixture.json, but nothing tied the pinned capture files
+# to fixture.json's captures: a capture pinned with bytes X while fixture.json and the log both said Y, or one extra
+# pinned capture for a captured item, passed (3) and (4). capfiles_ok ties them, ONE snippet shared by the record probe
+# below and by its synthetic pins, as `capl` is. For every item 1-5, the pins block's
+# results/s-bin/captures/item-<n>/<name> lines, as (sha256, <name>) pairs, must equal fixture.json's captures as
+# (sha256, the basename of path) pairs, as a multiset: so the sorted pinned hashes equal caps(i) and the pinned
+# basenames equal the captures' path basenames. An item with captures [] pins no capture file; an item with no
+# captures list, a capture pinned twice, and a pinned capture path that is not item-<1..5>/<name> fail. With caplog_ok
+# (the log's binding line against caps(i)) and (3) (each pinned file against its own blob), the procedure log,
+# fixture.json and the committed capture bytes are one set.
+capf='
+CAPDIR="results/s-bin/captures/"
+def capfiles_ok(lines, it):
+    pinned={}
+    for l in lines:
+        p,sep,h=l.strip().partition(" sha256=")
+        if not p.startswith(CAPDIR+"item-"):
+            continue
+        parts=p[len(CAPDIR):].split("/")
+        if len(parts)!=2 or parts[0] not in ("item-1","item-2","item-3","item-4","item-5") or not parts[1] or not sep or not h:
+            return False
+        pinned.setdefault(int(parts[0][5:]),[]).append((h,parts[1]))
+    for i in (1,2,3,4,5):
+        cs=(it.get(i) or {}).get("captures")
+        if not isinstance(cs,list):
+            return False
+        want=sorted((str(c.get("sha256")),str(c.get("path","")).replace(chr(92),"/").split("/")[-1]) for c in cs)
+        if sorted(pinned.get(i,[]))!=want:
+            return False
+    return True
+'
+# The synthetic pins: the real shape (items 1, 4 and 5 one capture-1.png each, items 2 and 3 captures [], beside the
+# procedure log's and other files' pins) reads ok, in any line order, and so does a two-capture item. BAD: one pinned
+# hash differing from fixture.json; one extra pinned file for a captured item; a pinned file for a captures-[] item; a
+# captured item with no pinned file; the same capture pinned twice; a pinned basename differing from the captures'
+# path; two items' hashes swapped; a two-capture item with one pinned; an item-6 path; a nested path; an item with no
+# capture pinned whose captures list is absent (item 2), which only the list check catches.
+pctl='
+H={i:str(i)*64 for i in (1,2,3,4,5)}
+X="f"*64
+def cap(h,k=1): return {"asset_index":k,"path":"_s-bin/captures/capture-%d.png"%k,"sha256":h}
+def IT(over): return {i:{"captures":over.get(i,[cap(H[i])])} for i in (1,2,3,4,5)}
+it=IT({2:[],3:[]})
+two=IT({2:[],3:[cap(H[3],1),cap(X,2)]})
+nokey=dict(it); nokey[2]={}
+def F(i,name,h): return "results/s-bin/captures/item-%d/%s sha256=%s"%(i,name,h)
+OTHER=["results/s-bin/captures/procedure-log.txt sha256="+X,"results/s-bin.jsonl sha256="+X]
+real=OTHER+[F(i,"capture-1.png",H[i]) for i in (1,4,5)]
+cases=[("ok",real,it),("ok",[F(i,"capture-1.png",H[i]) for i in (5,4,1)]+OTHER,it),
+       ("ok",real+[F(3,"capture-2.png",X),F(3,"capture-1.png",H[3])],two),
+       ("BAD",[l.replace(H[4],X) for l in real],it),
+       ("BAD",real+[F(1,"capture-2.png",X)],it),
+       ("BAD",real+[F(2,"capture-1.png",H[2])],it),
+       ("BAD",[l for l in real if "/item-5/" not in l],it),
+       ("BAD",real+[F(1,"capture-1.png",H[1])],it),
+       ("BAD",[l.replace("item-4/capture-1.png","item-4/capture-2.png") for l in real],it),
+       ("BAD",OTHER+[F(1,"capture-1.png",H[4]),F(4,"capture-1.png",H[1]),F(5,"capture-1.png",H[5])],it),
+       ("BAD",real+[F(3,"capture-1.png",H[3])],two),
+       ("BAD",real+[F(6,"capture-1.png",X)],it),
+       ("BAD",real+["results/s-bin/captures/item-1/sub/capture-1.png sha256="+H[1]],it),
+       ("BAD",real,nokey)]
+'"$capf"'
+bad=[str(n)+":"+w for n,(w,pl,t) in enumerate(cases) if ("ok" if capfiles_ok(pl,t) else "BAD")!=w]
+print("ok" if not bad else "BAD:"+",".join(bad))'
+pcv=$(python -c "$pctl"); rc=$?
+[ "$rc" -eq 0 ] && [ "$pcv" = "ok" ] || { echo "FAIL: the pinned-capture check fails its synthetic pins (rc=$rc): $pcv — the real shape and a two-capture item pass; a pinned hash or name that differs from fixture.json, an extra, missing, repeated or swapped capture, a capture pinned for a captures-[] item, and a path outside item-<1..5>/<name> do not (R10FIX-8i; D21-149)"; exit 1; }
 # *(dated 2026-10-03, s8i build, R2FIX-8i)* s8i refuting round 2 (a major). The apiKeySource line read EVERY record, voids
 # included. A `no-init` or early-timeout void carries a null source, and the driver records and retries it by design
 # (§8i.3's void order; METHOD-S item 10), so one such void failed a paid, valid set for good. The line was
@@ -3348,10 +3451,17 @@ print("haiku", "ok" if len(probes)<=3 and all("haiku" in str(p.get("observed_mod
 print("cost", "ok" if total<=90.0 else "BAD")
 print("costsum", "%.2f" % total)
 print("caplog", "ok" if caplog_ok(plog, it) else "BAD")
+'"$capf"'
+pf=[l for l in open(sys.argv[8],encoding="utf-8").read().splitlines() if l.strip()]
+print("capfiles", "ok" if capfiles_ok(pf, it) else "BAD")
 mfm={(int(m["pass"]),int(m["item"])): (m.get("missing_fields") or []) for m in mf}
 '"$outc"'
 print("o1", outcome(1)); print("o2", outcome(2))'
-pv=$(python -c "$probe" "$T/s-bin.jsonl" "$T/s-bin_fixture.json" "$T/s-bin_probes.jsonl" "$T/s-bin_missing-fields.jsonl" "$T/s-bin_captures_procedure-log.txt" "$T/s-bin_dry-run.jsonl" "$T/s-bin_oot-shadow-rulings.jsonl"); rc=$?
+# (dated 2026-10-06, s8i build, R10FIX-8i) The pins block's file= lines, as (3) read them, are the probe's eighth argument,
+# for capfiles_ok. The probe took seven arguments, and never read the pinned capture lines.
+printf '%s\n' "$files" > "$T/s-bin_pinfiles" || { echo "FAIL: could not write the pins block's file= lines to $T"; exit 1; }
+[ -s "$T/s-bin_pinfiles" ] || { echo "FAIL: the pins block's file= lines are empty"; exit 1; }
+pv=$(python -c "$probe" "$T/s-bin.jsonl" "$T/s-bin_fixture.json" "$T/s-bin_probes.jsonl" "$T/s-bin_missing-fields.jsonl" "$T/s-bin_captures_procedure-log.txt" "$T/s-bin_dry-run.jsonl" "$T/s-bin_oot-shadow-rulings.jsonl" "$T/s-bin_pinfiles"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pv" ] || { echo "FAIL: the record probe did not run (rc=$rc)"; exit 1; }
 rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 [ "$(rv items)" = "1,2,3,4,5" ] || { echo "FAIL: fixture.json does not hold exactly items 1-5: '$(rv items)'"; exit 1; }
@@ -3386,6 +3496,8 @@ rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 # (dated 2026-10-06, s8i build, D21149-8i-A) The message names D21-149's n/a and D21-150's stalled lines. Was: "the
 # procedure log does not hold one 'yes' line per item with its model, cost and the pinned capture's sha256 (§8i.4)".
 [ "$(rv caplog)" = "ok" ] || { echo "FAIL: the procedure log does not end each item on its binding line — 'yes' with exactly the item's capture hashes, or 'n/a' with sha256=none for an item with captures [] — with its model and cost, behind at most one 'stalled' line (§8i.4; D21-149; D21-150)"; exit 1; }
+# (dated 2026-10-06, s8i build, R10FIX-8i; s8i refuting round 10's major) The pinned capture files are fixture.json's captures.
+[ "$(rv capfiles)" = "ok" ] || { echo "FAIL: the pinned capture files are not fixture.json's captures — for each item, the pins block's results/s-bin/captures/item-<n>/<name> lines must be exactly its captures, sha256 and path basename, each once, and an item with captures [] pins none (§8i.4 step 5; R10FIX-8i)"; exit 1; }
 # (dated 2026-10-03, s8i build, R6FIX-8i) The shadow and held lines that stood here moved above the pairs line (see there).
 # The runner that dispatched: one commit, on the pinned commit's history, with the same runner/ tree it pins.
 RUNNER_C=$(rv runner)
