@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-05 (D21-1 … D21-150), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-06 (D21-1 … D21-151), and what they license
+
+*(Title moved 2026-10-06 during `s8i`: it read **"2026-09-21 … 2026-10-05 (D21-1 … D21-150)"**; `D21-151` is appended with this move.)*
 
 *(Title moved 2026-10-05 during `s8i`: it read **"(D21-1 … D21-149)"**; `D21-150` is appended with this move.)*
 
@@ -6846,3 +6848,18 @@ registration provides no second session for an item.
    item ahead of that item's binding line, and sums every line's `cost_usd`.
 
 *(dated 2026-10-06, operator sitting)* **The stall's cause, measured on the retry.** It was not memory. `start_pie` opens UE's modal *"Blueprint Asset Compilation Error … BP_AnimNotify_FoleyEvent"* (the ALS-era notify that R's tree still carries, D21-148), and the modal blocks the game thread, so Monolith stops answering. On the retry the operator dismissed it with *Play in Editor*; PIE ran on `TestOpenWorld` and `stop_pie` returned `{"stopped":true}`. The retry (Opus 5.5, $1.00) captured `WBP_GameVitals` before PIE, `capture_scene_preview` type widget, `capture-1.png` `0de695357e86f170ed59f40432634988ecc8ba9ddd2071033d3bfc5f261bf026`, `shows_subject=yes` (the operator's judgement on framing). B1 is complete at $5.561026 spent.
+
+---
+
+## D21-151 · Owed item (f): the operator rules that the driver checks free space before every dispatch copy
+
+**Taken by the operator on 2026-10-06**, before B2. This is the operator's ruling, not a D21-105 provisional one.
+
+**The gap.** METHOD-S amendment item 4: *"Before each copy, the free space on the root's volume must be at least
+`SBIN_NEED_BYTES`"*. The driver does not check it (`s8i` §8i.3, *"Not built here"*), and §8i.5's pre-check reads free
+space once per batch. Owed item (f) left the choice with the operator: build it, or register that the batch pre-check
+carries it (METHOD-S's R2FIX-8i extension, item 5).
+
+**Ruled.** The driver checks it before every dispatch copy, retries and B4 re-runs included, against the registered
+`SBIN_NEED_BYTES` = 34,221,223,118 (METHOD-S's extension 3 of 2026-10-04), and refuses before the copy with a named
+test, red first. It is built in the same driver change as D21-149 item 3. The batch pre-check stays as a second layer.
