@@ -2478,3 +2478,137 @@ Any later change is disclosed here with the date and the records it post-dates.
   - **`SBIN_NEED_BYTES` (deferred extension 3).** The largest base (`.git` included) is 21,560,067,392 bytes (item 3);
     the largest growth one greenness run left behind is 9,550,135,442 bytes (item 3). Under item 4's rule,
     `SBIN_NEED_BYTES` = ceil((21,560,067,392 + 9,550,135,442) × 1.1) = **34221223118**.
+
+- **s8i pre-dispatch amendment, extension: item 2 step 5's captures follow the tool's own rejection, a stalled
+  capture session is logged and retried once, and item 4's per-copy free-space check is in the driver, under D21-149,
+  D21-150 and D21-151 — 2026-10-06, after B1 and before B2; no S-BIN record exists** (cites the *s8i pre-dispatch
+  amendment* above and its items 2, 4 and 6, the R2FIX-8i extension above, its item 5, and the extension of
+  2026-10-04 for the deferred extensions 2, 3 and 4, its `SBIN_NEED_BYTES`. It edits nothing in them or in the other
+  extensions above). Written in the AFK build, package D21149-8i-A, under `spikes/DECISIONS-2026-09-21.md` D21-149
+  and D21-150 (the operator's rulings of 2026-10-05, taken at B1's stops) and D21-151 (the operator's ruling of
+  2026-10-06). D21-149 item 2 reads *"Registered by an appended METHOD-S extension that amends item 2 step 5 and
+  discloses the confound"*.
+
+  **1. The capture step, as the tool decides (D21-149 item 1).** Every changed asset still gets the registered
+  `capture_scene_preview` call, unchanged: item 2's `$ARGUMENTS` and its capture step as registered. When the tool
+  rejects an asset's class, that asset carries no capture. Nothing is substituted, re-framed or chosen per tree. An item
+  whose every asset is rejected carries `captures: []` in `fixture.json`, and its review tree holds no capture. A
+  partly previewable item carries one capture for each accepted asset, at `_s-bin/captures/capture-<k>.png`, where
+  `<k>` is that asset's 1-based index in the item's asset list (git's order, as step 2 counts it). Each `captures[]`
+  entry in `fixture.json` names its asset by that explicit `asset_index`, never by its position among the captures.
+  The tool's rejection decides, so one procedure still runs on all five trees (N19).
+
+  **2. Item 2 step 5, amended.** An item whose every asset was rejected gets a procedure-log line
+  `sha256=none shows_subject=n/a`, with the session's model and `cost_usd`. A partly previewable item's line carries
+  one hash per capture file, comma-joined, as registered. Step 5's *"nothing falls back to empty captures"* stands
+  for a framing failure. A `no` on any tree is still a stop. An empty list is the tool's own rejection, not a
+  fallback. B1 measured it: items 2 (`FTEST_Inventory_Stash`, a World) and 3 (`BP_GamePlayerState`, a Blueprint
+  class; `DA_Item_Sword`, a data asset) are `n/a`. Items 1 (`WBP_StashRow`), 4 (`WBP_LoadoutScreen`) and 5
+  (`WBP_GameVitals`) are captured, `yes`. These lines are in `results/s-bin/captures/procedure-log.txt` at corpus
+  `cc7f222`.
+
+  **3. A stalled session (D21-150 items 1 and 2, the procedure-log rule).** A capture session that stalls on the
+  instrument (no capture written, no rejection, no framing judgement) gets its own line,
+  `sha256=none shows_subject=stalled`, with its model and `cost_usd`. The item then gets **one** retry on a **fresh**
+  capture copy under the unchanged step, and the retry's line binds. A second stall is a stop for a ruling. So an
+  item's procedure log is at most one `stalled` line, then its one binding line (`yes` or `n/a`), and the binding
+  line is the item's last. Every line's `cost_usd`, a stalled session's included, counts in the cap. Item 5's first
+  session stalled ($0.76). D21-150's dated paragraph measured the cause on the retry: a UE compile-error modal
+  blocking the game thread at `start_pie`. The retry captured ($1.00). Checkpoint 8i's `caplog_ok` reads it so, by
+  dated edit in `s8i` §8i.9.
+
+  **4. The driver (D21-149 item 3).** The driver accepts an empty capture list and renders it neutrally: the
+  ChangeSummary's `captures` is `[]`, and nothing else in the summary or the brief marks the absence. A capture entry's
+  note is its own asset's object path, by `asset_index`. The dry run no longer injects a synthetic capture. Its item 1
+  renders and records item 1's real B1 capture (`capture-1.png`, sha256
+  `9ba295de7b614c61b8e17585a5888ab30b654440d0b5e92de86d1a3f756a98d0`), committed in the dry run's review
+  repository. A record's `synthetic_capture` is always false. Item 6's `captures[]` shape (`path`, `viewport`,
+  `note`) is unchanged.
+
+  **5. Item 4's per-copy free-space check is in the driver (D21-151).** Item 4's *"Before each copy, the free space
+  on the root's volume must be at least `SBIN_NEED_BYTES`"* is now run by the driver before every dispatch copy,
+  retries and B4 re-runs included. It reads the review root's volume as the batch pre-check does
+  (`df -B1 --output=avail`). It compares that against the registered `SBIN_NEED_BYTES` = 34,221,223,118 (the extension
+  of 2026-10-04). It refuses before the copy on a smaller reading or an unreadable one. The R2FIX-8i extension's item 5
+  recorded the check as not in the driver and owed. D21-151 settles it: the check is built, and the batch pre-check
+  (`s8i` §8i.5) stays as a second layer. The check narrows nothing that was registered.
+
+  **6. The confound, disclosed (D21-149 item 2).** Capture presence follows asset type. Both seeds are widgets
+  (items 4 and 5), so both seeded items carry a capture. Of the three clean items, only item 1 (a widget) carries
+  one. Items 2 and 3 carry `captures: []`. Over the five items, P(seeded | capture) = 2/3, and P(seeded | no capture)
+  = 0. A reviewer could read a capture's presence as a signal. Two things temper that: each reviewer sees only its own
+  item, never the five-item distribution, and clean item 1 carries a capture. Item 1's tree is item 4's base tree,
+  which the R1FIX-8i note in `s8i` §8i.5 makes visible. F43 must state this confound beside the false-positive
+  outcome. Before B2, item 2's and item 3's constructed specs are checked for an acceptance criterion that names a
+  capture (D21-149 item 4). That check is `s8i`'s owed item (e)'s, not this extension's.
+
+  **7. Residuals, standing.** Every earlier extension's residuals stand. From this build:
+  - The driver's production free-space reader (`probe` wiring `df`) is not reached by a unit test, because `probe`
+    reads the cwd's corpus and `current_exe`. Its first real exercise is the re-run dry run. Its mutant is recorded
+    as unobservable.
+  - The AFK build read the driver's selection with its test scratch under the sweep root `d:/repos/redkiln-sev`, so
+    four audit tests read red there, and red the same way at `cc7f222`. The binding 34-test reading is the
+    operator's B0 block over the new runner commit (`s8i` §8i.5).
+  - Nothing here changes a seed, an item, a ceiling, the registered `$ARGUMENTS`, or any part of METHOD-S §3.
+
+- **s8i pre-dispatch amendment, extension: the five constructed `spec.md` and implementation reports, as the
+  2026-09-09 entry's transcription is built — 2026-10-06, after B1 and before B2; no S-BIN record exists** (cites the
+  2026-09-09 entry's *"Each item's `spec.md` is therefore **built from the story row plus the commit's own stated
+  claim**, and the implementation report is the commit message rendered into the fix lane's shape. That
+  transcription is part of the fixture and is registered here, not left to the builder"*, its three item-level
+  defects, the *s8i pre-dispatch amendment* above and its items 3 and 6, and the extension of 2026-10-03, item 1, for
+  R's clause. It edits nothing in them). Written in the AFK build, package D21149-8i-B, as `s8i` §8i.5's owed item
+  (e). **Proposed: the operator reads and accepts or rejects the five pairs before any rendering is hashed.** The
+  2026-09-09 entry registers what each spec is built from but not its words, so the builder's words are registered
+  here, as one rule over all five, and disclosed.
+
+  **1. The rule.** The shape is E3's fix-lane `spec.md` and `implementation-report.md` (§4.2's sections), built by
+  one script (`D:/repos/redkiln-sev/afk-tools/sp/s8i/s8i_D21149-8i-B_specs.py`) reading BrittonGames read-only.
+  - The story row is the backlog row **at the pin `041ead2c`** (the entry's *"ACs at the pin"*), its `title` and
+    `verify` transcribed verbatim and never its `notes`, which are the closing evidence. Item 2 closes no story
+    (defect 1), so it has none.
+  - The ACs are the row's `verify` clauses, then the commit's own stated claims, each in E3's
+    `AC-###: GIVEN … WHEN … THEN …` form with a `_Verification:_` line. Items 2 and 4 take their ACs from the
+    commit's claim only (defects 1 and 3). Item 5's AC-001 is R's registered clause, verbatim.
+  - The report's per-AC evidence cells quote the commit message, and each quote is asserted present in it. The
+    commit message (its body read by git, the `Co-Authored-By` trailer dropped) is reproduced in full under
+    *Notes*. The *Frozen PR boundary* and *Changes* tables name the change's assets only: every other path the
+    commit touched is in the registered strip set and is not in the review tree (amendment item 3; the entry's
+    `text_diff` scoping).
+  - Item 4's row is transcribed **without its bold diagnosis sentence** (defect 3: *"must not include the story row's
+    diagnosis"*), removed exactly once by an asserted anchor and without a marker in the text.
+  - The slug is the story id (or `chore`) and words from the commit's subject.
+
+  **2. The five pairs**, at `results/s-bin/spec-item-<n>.md` and `results/s-bin/report-item-<n>.md` (fixture.json's
+  `spec_path` and `report_path`), LF:
+
+  | item | slug | ACs | spec sha256 | report sha256 |
+  | --- | --- | --- | --- | --- |
+  | 1 | `8.5.5d-stash-row-face` | 6 | `11f11168…` | `9ae0c522…` |
+  | 2 | `chore-ftest-inventory-stash` | 5 | `66923901…` | `a916fa90…` |
+  | 3 | `8.3.9-install-routing-configuration` | 6 | `c08d409b…` | `00696b45…` |
+  | 4 | `8.5.5b-loadout-column-opaque` | 4 | `d4ebdb9e…` | `f0a9f60f…` |
+  | 5 | `2.8.5-vitals-styling-persists` | 4 | `25da68e7…` | `8848e41c…` |
+
+  `ac_ids` are each spec's own AC ids by the runner's parse rule (`corpus::ac_ids`), read back by the driver's control
+  copy. Each item has 3–6 ACs, as §3.2 registers.
+
+  **3. Disclosed, not decided here.**
+  - **The reports of the two seeded items carry the commit's own diagnosis, with registered leak tokens.** The
+    entry registers the report as *"the commit message rendered"*, and E3's reports describe the defect they fix. So
+    item 4's report quotes *"LoadoutFill's ColorAndOpacity alpha was 0.097 where 0.97 was intended"* (`LoadoutFill`
+    twice), and item 5's carries `white-on-white`, `VERIFIED COLD` and `entirely white` once each. Item 5's spec
+    carries `white-on-white` once, inside R's registered clause. The leak-token rule (amendment item 3) is about the
+    review tree, which holds none of them. A report that states the defect as **fixed** is the claim the reviewer is
+    asked not to take at face value; the story row's diagnosis, which states it as **open**, stays out of item 4's
+    spec. If the operator reads the entry otherwise, the reports are rebuilt from the same script with the diagnosis
+    sentences dropped, before any rendering is hashed.
+  - Item 5's row at R reads *"2.8.2/2.8.4"* where the pin's reads *"2.8.2"*; the pin's is used, as for every item.
+  - Item 1's and item 4's transcribed `verify` name captures *"tracked under `OurGame/Saved/Screenshots/`"*, which the
+    review tree does not hold (gitignored). They are the rows' own words.
+
+  **4. D21-149 item 4's check.** No acceptance criterion of item 2 or item 3 names a capture: the words `captur`,
+  `screenshot`, `ue-verify` and `png` occur nowhere in either item's spec or report. Item 1's AC-001 verification
+  names a `/ue-verify` PIE pass; items 1, 4 and 5 carry a capture.
+
+  Nothing here changes a seed, an item, a ceiling, `$ARGUMENTS`, the rendering's mappings, or any part of METHOD-S §3.
