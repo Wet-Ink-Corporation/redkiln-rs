@@ -2270,7 +2270,9 @@ safety cap of 8).** No patch moves: `DRV`, `AUD` and step 4's script are those t
   [ "$(sha256sum < "$C/runner/src/sbin.rs" | cut -c1-64)" = bcdf0364f5d2927ae48a940a0236abe1ee0ee022cceb1331d74415d448436bc1 ] || { echo "FAIL: sbin.rs is not the built bytes"; exit 1; }
   git -C "$C" add runner/src/sbin.rs || exit 1
   git -C "$C" commit -m "s8i: the S-BIN driver for D21-149 (captures by asset index, an empty list rendered, no synthetic capture) and D21-151 (free space before every dispatch copy)" || exit 1
-  [ -z "$(git -C "$C" status --porcelain -- runner)" ] || { echo "FAIL: runner/ not clean after the commit"; exit 1; } )
+  # (dated 2026-10-06, s8i, operator sitting) runner/target/ is excluded, as every other runner-clean check here excludes
+  # it: the operator's run committed 7cc8131 cleanly and then read this FAIL on `?? runner/target/` alone.
+  [ -z "$(git -C "$C" status --porcelain -- runner ':(exclude)runner/target/')" ] || { echo "FAIL: runner/ not clean after the commit"; exit 1; } )
 # 3a. Section 8i.3's B0 block, as written: 34 tests. It rewrites results/s-bin/driver-tests.txt.
 # 4a. B0's dry-run results moved aside, the empty leftover D:/sb/dry/d removed, the rebuilt review repository read,
 #     then the dry run.
