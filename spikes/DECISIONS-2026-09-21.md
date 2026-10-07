@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-06 (D21-1 … D21-152), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-07 (D21-1 … D21-153), and what they license
+
+*(Title moved 2026-10-07 during `s8i`: it read **"2026-09-21 … 2026-10-06 (D21-1 … D21-152)"**; `D21-153` is appended with this move.)*
 
 *(Title moved 2026-10-06 during `s8i`: it read **"(D21-1 … D21-151)"**; `D21-152` is appended with this move.)*
 
@@ -6917,3 +6919,42 @@ verification as the missing check. The review tree carries none of them (amendme
    appear in the spec or report. §3.4's decision rule is unchanged.
 4. Registered by an appended METHOD-S extension. The panel's fallback, a cut of all five reports at `## Notes`, is
    recorded as considered and not taken.
+
+---
+
+## D21-153 · S-BIN's pass-1 set is discarded at the §8i.6 stop; the fixture is fixed and re-registered, and B2 and B3 re-run under a new go-ahead
+
+**Taken by the operator on 2026-10-07**, at the §8i.6 stop recorded under D21-143 (*"The same item voids twice in one
+pass — a fixture defect, not noise"*), grounded by a read-only panel (two investigators, two lensed judges and a
+synthesiser). This is the operator's ruling, not a D21-105 provisional one.
+
+**The finding.** Both of item 1's voids are genuine reads of BrittonGames. The motive: item 1's acceptance criteria
+are runtime-only, and the trees carry no binaries and no base checkout. The destination: every review tree names the
+real project's absolute path, in `CLAUDE.md` and `AGENTS.md` (the Rider `rootFolder` line) and in further docs under
+`_workspace/` (`Rider_CoDev_Setup.md`, `UE58_MCP_Setup.md`, references and runbooks); the registered leak tokens cover
+the seeds only. Attempt 1 ran `git show cc0cf2d01` inside BrittonGames. Pass 1 can never be scored (`next_attempt`
+returns `VoidedTwice` for item 1), and every real fix changes an item or the rendering, which §8i.6 makes a discard.
+The audit also keeps an out-of-tree `cd` across later commands (`sbin.rs` `audit_reads`), where the CLI resets the
+shell's cwd; it inflated item 1's void lists (25 and 64 entries, about 5 and 3 real) and changed no record's status.
+
+**Ruled (1): discard, fix, re-register, re-run.**
+1. **The pass-1 set is discarded.** Corpus `07bd6a2`'s six records ($16.074148) stay committed and are moved aside as
+   superseded; they are not scored. Their spend counts against the cap.
+2. **(a) The path leak is removed.** By a registered mechanical rule applied identically to all five trees, every
+   absolute spelling of the BrittonGames path is removed from the trees' text files, and those spellings join the
+   registered leak tokens, so the pre-spawn leak check refuses a tree that still holds one. The rule is the build
+   package's to state and measure; a rule that would change a file the build or suite reads returns to the operator.
+3. **(b) The motive is answered in the rendering.** It states plainly that the review has no runtime, no PIE, no
+   built binaries and no base checkout, and that any read outside the review tree voids the record. The operator
+   accepts knowingly that this bears on what `reproduced` can mean for a runtime-only criterion, and F43 says so.
+4. **(c) No system isolation.** BrittonGames stays where it is; with (a) and (b), any read that still reaches it voids
+   as today. The snapshot procedure is unchanged.
+5. **(d) The audit's cwd model follows the CLI**, red first: a `cd` inside the copy (or into temp the session wrote)
+   is kept, and a `cd` outside it is audited as the read it is and then reset, so later relative words resolve in the
+   copy.
+6. **(e) A new arm or records file**, so that pass 1's `VoidedTwice` does not carry into the re-run.
+7. **(f) Rebuilt at zero spend:** the five bases and review trees, the fixture, a new runner commit, the B0 block,
+   a new dry run, and refuting rounds. Greenness is re-run if any changed file is one the build or the suite reads.
+8. **Caps.** The $90 cap and the 18-Opus dispatch cap stand, counting the discarded set. At the bounds a re-run of
+   B2 and B3 leaves too little for B4; that is accepted, and B4 runs only if (90 − spent) still exceeds its bound.
+9. A new go-ahead line is signed for each re-run batch under D21-143, after the dry run.
