@@ -131,6 +131,15 @@ fn range_diff_lists_every_changed_path_with_its_change_kind() {
     std::fs::remove_file(repo.join("dir/d.txt")).expect("rm");
     std::fs::write(repo.join("empty.txt"), b"").expect("write");
     std::fs::write(repo.join("run.sh"), b"#!/bin/sh\necho hi\n").expect("write");
+    // The working file carries the mode too where the filesystem has one: with `core.filemode`
+    // true (POSIX), an index-only `+x` leaves a 0644 file that reads as a local modification and
+    // the `checkout HEAD~1` below refuses it. Windows has no exec bit; the index flip is its mode.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(repo.join("run.sh"), std::fs::Permissions::from_mode(0o755))
+            .expect("chmod");
+    }
     std::fs::write(repo.join("a.txt"), b"three\nkeep\n").expect("write");
     fx.git(&repo, &["add", "-A"]);
     fx.git(&repo, &["update-index", "--chmod=+x", "run.sh"]);

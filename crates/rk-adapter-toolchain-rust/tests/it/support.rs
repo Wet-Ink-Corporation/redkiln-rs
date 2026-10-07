@@ -121,6 +121,11 @@ pub fn toolchain_cargo() -> PathBuf {
 /// A child map under which `cargo nextest` does not exist (record T decision 4's measured case):
 /// the minimal map's `SystemRoot`, `SystemDrive` and temp names, with `PATH` narrowed to the
 /// toolchain's own bin directory and the system directory, and `CARGO_HOME` an empty directory.
+/// The system directory is `%SystemRoot%\System32` on Windows and `/usr/bin:/bin` on POSIX, where
+/// there is no `SystemRoot` and the linker the fixture's build script needs (`cc`) is found only
+/// through `PATH`. Neither holds cargo-nextest: `cargo install` writes to `$CARGO_HOME/bin`, and
+/// that is the empty directory. *(Amended 2026-10-03: the first `ubuntu-latest` run failed the
+/// fallback test with `linker 'cc' not found`, since the narrowed `PATH` had no system directory.)*
 pub fn nextest_absent_env(empty_cargo_home: &Path) -> BTreeMap<String, String> {
     let mut env: BTreeMap<String, String> = minimal_env()
         .into_iter()
@@ -138,6 +143,9 @@ pub fn nextest_absent_env(empty_cargo_home: &Path) -> BTreeMap<String, String> {
     if let Some(system) = system {
         path.push(if cfg!(windows) { ';' } else { ':' });
         path.push_str(&system.to_string_lossy());
+    }
+    if cfg!(unix) {
+        path.push_str(":/usr/bin:/bin");
     }
     env.insert("PATH".to_owned(), path);
     env.insert(

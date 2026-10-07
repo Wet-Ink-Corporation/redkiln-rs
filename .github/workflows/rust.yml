@@ -1,0 +1,132 @@
+# temper's lint ratchet and compliance report (rust-craft), for every push to main and every PR.
+# Trimmed at adoption (2026-10-03): ci.yml already runs fmt, clippy, the tests, audit, deny and the
+# structural assertions on Linux and Windows, so this workflow runs only what ci.yml does not: the
+# baseline ratchet over clippy, rustdoc and temper's scanner, the report, and the PR comment.
+# Actions are pinned to full commit SHAs, bumped by hand (ADR-0100 decision 2).
+# Every cargo command that resolves dependencies passes --locked (PROC-13).
+name: temper
+on:
+  push:                # every branch, like ci.yml: the build lands on build/* branches
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_WARNINGS: deny   # Cargo 1.97+ build.warnings (MOD-13)
+
+jobs:
+  temper:
+    runs-on: ubuntu-latest
+    outputs:
+      report-url: ${{ steps.upload-report.outputs.artifact-url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0       # the lint ratchet diffs against the merge base
+          persist-credentials: false
+      # A committed baseline accepts the legacy warnings; Lint (temper) fails on new ones.
+      # Checks, tests and docs below must not deny the old ones (H-15).
+      - name: Baseline mode
+        if: hashFiles('.claude/temper-baseline.json') != ''
+        run: echo "CARGO_BUILD_WARNINGS=warn" >> "$GITHUB_ENV"
+      # What the ratchet compares with, computed once for Lint (temper) and the report.
+      - name: Ratchet base
+        id: base
+        if: hashFiles('.claude/temper/temper.mjs') != ''
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base=
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            # The previous tip; absent on a new branch, or unreachable after a force push.
+            if [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] \
+              && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+              base=$BEFORE
+            fi
+          elif git rev-parse --verify --quiet "origin/${GITHUB_BASE_REF:-main}^{commit}" >/dev/null; then
+            base=origin/${GITHUB_BASE_REF:-main}
+          fi
+          [ -n "$base" ] || echo "No base commit: a baseline is compared by its totals only."
+          echo "ref=$base" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master, 2026-09-28
+        with:
+          toolchain: "1.98.1"  # keep in sync with rust-toolchain.toml
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # One clippy, rustdoc and scanner run through the vendored temper CLI. Without a baseline it
+      # is strict: zero findings, like -D warnings. With .claude/temper-baseline.json (from
+      # `temper baseline --init`) legacy findings pass and only new ones fail: findings on lines
+      # changed since the base, or a (crate, lint) count above the baseline (H-15). Either way it
+      # writes the findings and its verdict for the report.
+      - name: Lint (temper)
+        if: hashFiles('.claude/temper/temper.mjs') != ''
+        shell: bash
+        env:
+          BASE: ${{ steps.base.outputs.ref }}
+        run: |
+          args=()
+          if [ -n "$BASE" ]; then args=(--base "$BASE"); fi
+          node .claude/temper/temper.mjs baseline --check --locked "${args[@]}" --findings-out target/temper/findings.json
+      # The compliance scorecard: per-crate status, top rules and files, new findings, and a
+      # raised baseline. It uses Lint (temper)'s findings and verdict as-is; only when that step
+      # did not get that far does it collect, and ratchet against the same base.
+      - name: Compliance report
+        if: ${{ !cancelled() && hashFiles('.claude/temper/temper.mjs') != '' }}
+        shell: bash
+        env:
+          BASE: ${{ steps.base.outputs.ref }}
+        run: |
+          args=(--out target/temper-report)
+          if [ -f target/temper/findings.json ]; then args+=(--findings target/temper/findings.json)
+          elif [ -n "$BASE" ]; then args+=(--base "$BASE"); fi
+          node .claude/temper/temper.mjs report --locked "${args[@]}"
+          cat target/temper-report/report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the compliance report
+        id: upload-report
+        if: ${{ !cancelled() && hashFiles('target/temper-report/report.html') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: temper-report
+          path: target/temper-report
+          retention-days: 30
+
+  # The report as a PR comment. This job runs no repository code, and it is the only job that
+  # can write to the PR; on fork PRs the token is read-only and the comment is skipped.
+  report-comment:
+    needs: temper
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download the compliance report
+        id: download
+        continue-on-error: true  # the gate stopped before the report was written
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: temper-report
+          path: temper-report
+      - name: Comment the report on the PR
+        if: steps.download.outcome == 'success'
+        continue-on-error: true  # a fork PR's token is read-only
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          REPORT_URL: ${{ needs.temper.outputs.report-url }}
+        run: |
+          body=temper-report/report.md
+          if [ -n "$REPORT_URL" ]; then printf '\n[Full HTML report](%s): the temper-report artifact.\n' "$REPORT_URL" >> "$body"; fi
+          # temper's previous comment, found by its marker (never another bot's comment): edit it, else post one.
+          id=$(gh api --paginate "repos/$GH_REPO/issues/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- temper-report -->"))) | .id' | tail -n 1)
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$GH_REPO/issues/comments/$id" -F "body=@$body" --silent
+          else
+            gh api --method POST "repos/$GH_REPO/issues/$PR/comments" -F "body=@$body" --silent
+          fi

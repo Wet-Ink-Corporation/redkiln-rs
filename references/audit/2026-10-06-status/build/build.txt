@@ -1,0 +1,22 @@
+=== fmt: cargo fmt --all --check
+=== fmt rc=0 secs=15
+=== build: cargo build --workspace --all-targets -j 8
+=== build rc=0 secs=90
+=== clippy: cargo clippy --workspace --all-targets -j 8
+=== clippy rc=0 secs=39
+=== test: cargo test --workspace --no-fail-fast -j 8
+=== test rc=101 secs=399
+=== conformance: cargo test -p rk-ports --features conformance -j 8
+=== conformance rc=0 secs=17
+=== doc: cargo doc --workspace --no-deps -j 8
+=== doc rc=0 secs=34
+DONE
+
+=== ANALYSIS (main session) ===
+First full run: 1326 passed / 78 failed / 9 ignored (ignored = PAID live probes + corpus-bound).
+Failure triage:
+ - 14 rk-adapter-toolchain-node: environmental — fixture node_modules not installed in a fresh worktree (preflight assert asks for `pnpm install`; not run because it needs a network download).
+ - 63 rk-cli + 1 toolchain-rust: 61 were environmental — this audit shell inherits ANTHROPIC_BASE_URL/CLAUDE_* from Claude Code, which the product deliberately refuses (ADR-0010). Re-run with those vars scrubbed (log-test-cleanenv.txt): rk-cli 328 pass / 1 fail; toolchain-rust 71 pass / 1 fail.
+ - Remaining 2 failures both node-fixture related (see log-test-cleanenv.txt).
+Net: no product-logic failures found once the environment matches the documented operator environment (non-Claude shell, node fixture installed).
+fmt OK, build OK, clippy exit 0 (315 warnings, mostly pedantic/nursery doc-length; CI gates on exit code), conformance OK, rustdoc OK.

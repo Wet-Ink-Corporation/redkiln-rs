@@ -1,0 +1,12 @@
+crates/redkiln-migrate src=1605 tests=2404 testfns=26 unwrap/expect=1 panics=0 allow/expect-attr=0 unsafe=0 todo=0
+crates/rk-adapter-claude src=6528 tests=12535 testfns=158 unwrap/expect=16 panics=0 allow/expect-attr=5 unsafe=0 todo=0
+crates/rk-adapter-sqlite src=856 tests=1806 testfns=16 unwrap/expect=0 panics=0 allow/expect-attr=1 unsafe=0 todo=0
+crates/rk-adapter-toolchain-node src=1637 tests=1989 testfns=19 unwrap/expect=0 panics=0 allow/expect-attr=5 unsafe=1 todo=0
+crates/rk-adapter-toolchain-rust src=4483 tests=5757 testfns=81 unwrap/expect=0 panics=0 allow/expect-attr=5 unsafe=1 todo=0
+crates/rk-cli src=17917 tests=36571 testfns=333 unwrap/expect=4 panics=11 allow/expect-attr=16 unsafe=1 todo=0
+crates/rk-containment src=1549 tests=1102 testfns=6 unwrap/expect=3 panics=0 allow/expect-attr=10 unsafe=38 todo=0
+crates/rk-git src=7614 tests=8076 testfns=159 unwrap/expect=0 panics=2 allow/expect-attr=1 unsafe=7 todo=0
+crates/rk-kernel src=47005 tests=55479 testfns=448 unwrap/expect=58 panics=8 allow/expect-attr=22 unsafe=0 todo=0
+crates/rk-ports src=2218 tests=1963 testfns=26 unwrap/expect=38 panics=4 allow/expect-attr=0 unsafe=0 todo=0
+crates/rk-store src=4745 tests=5903 testfns=98 unwrap/expect=1 panics=0 allow/expect-attr=1 unsafe=0 todo=0
+crates/rk-types src=4437 tests=3451 testfns=83 unwrap/expect=4 panics=0 allow/expect-attr=1 unsafe=0 todo=0
