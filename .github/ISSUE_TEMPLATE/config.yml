@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Backlog ledger conventions
+    url: https://github.com/Wet-Ink-Corporation/redkiln-rs/blob/main/docs/BACKLOG.md
+    about: Labels, hierarchy, the issue body contract and the AFK protocol.

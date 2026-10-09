@@ -1,0 +1,21 @@
+name: Epic
+description: Work spanning more than one PR. Children are sub-issues, ordered with blocked-by links.
+type: Epic
+labels: ["source/human", "needs/triage"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What is true when every child is closed.
+    validations:
+      required: true
+  - type: textarea
+    id: children
+    attributes:
+      label: Planned children
+      description: One line per PR-sized child; create them as sub-issues when the work is due.
+  - type: input
+    id: docs
+    attributes:
+      label: Doc links

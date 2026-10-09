@@ -1,0 +1,28 @@
+name: Decision
+description: A question only the operator can answer. The answer is recorded in the records (ADR or DECISIONS), and this issue links it.
+type: Task
+labels: ["source/human", "needs/decision"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options and recommendation
+      description: Each option with its consequence; mark the recommended one.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: "path:line at a commit SHA."
+  - type: input
+    id: record
+    attributes:
+      label: Where the answer is recorded
+      description: "e.g. a new D21-n entry in spikes/DECISIONS-2026-09-21.md, or ADR-0199."
