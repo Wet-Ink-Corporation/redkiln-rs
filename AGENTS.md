@@ -51,6 +51,10 @@ All Rust here follows rust-craft. The full text, with rule IDs, examples, the re
 
 Process: explore, frame, plan (`.temper/plans/`), red, green, refactor, self-review, gate, independent review, then report with a Status block (`DONE`, `WIP` or `BLOCKED`, plus the gate result, the review verdict, what changed, decisions needed and what was not verified).
 
+## Backlog ledger
+
+GitHub Issues are the backlog ledger for bugs, findings, audit items, post-M5 hardening and Phases 2-4. The runbook still owns s8i, s8j and Step 8 until M5. The conventions (hierarchy, labels, the issue body contract, the definition of ready, the AFK protocol) are in `docs/BACKLOG.md`. Unattended sessions use the `backlog-ledger` skill. Never create `rk:*` labels, because that namespace belongs to the product's tracker adapter (AC-507).
+
 ## Decisions log
 
 | Date | Decision | Rule | Decided by |
