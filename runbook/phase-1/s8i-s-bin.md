@@ -687,6 +687,10 @@ disclosed here:
   sixth sed of the cwd-rule line, to O's patch `9db4f55a…6cbd`. The rust-reviewer's O1 and O2 on O and `s8i`
   refuting round 19's o-correctness findings (package D21153-8i-P, proposed): §8i.3's D21153-8i-P note and
   METHOD-S's D21153-8i-P extension. No must-void case moves.
+  *(dated 2026-10-13, s8i build, D21153-8i-Q)* The operator wrote ruling (22) into D21-153 on 2026-10-12, accepting D21153-8i-P, and ran the
+  seventh sed of the cwd-rule line, to P's patch `61cfac85…39b9`. The operator's ruling (23), given in chat on 2026-10-13 and relayed
+  by the orchestrator: in perl's inline code every bare `..` is the copy's parent (package D21153-8i-Q, proposed): §8i.3's
+  D21153-8i-Q note and METHOD-S's D21153-8i-Q extension. No must-void case moves; seven honest perl rows move to void (H-12).
 *(dated 2026-10-03, s8i build, R5FIX-8i)* Assignment values are audited and `$VAR` is expanded in read positions. A
   recursive read (`grep -r`/`-R`, `rg`, `find`, `ls -R`, `tree`, `du`, `git grep --no-index` or `git -C <dir> grep`, a
   `Glob` or `Grep` tool path) of a registered root or an ancestor of one reads that root. Spellings fold (`/c/`,
@@ -1952,6 +1956,33 @@ The audit is unchanged, so `S8I-R5FIX-8i-audit-bin.patch` stands and `S8I-R5A-co
 - **The patch.** `S8I-D21153-8i-sbin-driver.patch` is now sha256 `61cfac85b16a5ad678c507814690fab08c599b7b88ace219f80e53648a8739b9` (471,326 bytes), superseding `9db4f55a…6cbd`, which is kept as `D21153-8i-P-patch-before-9db4f55a.patch`. It is against corpus `main` at `07bd6a2` (the archive tar checked against a fresh `git archive 07bd6a2` piped to `sha256sum`), touches `runner/src/sbin.rs` only, and gives sha256 `75d5b42c38be1f33c8cd3ce9fc7430b7bcb243b0aa4a4895e3a1023c1dacab33` (18,901 lines; `--diff-algorithm=minimal`, 9,159 lines added and 309 removed). `git apply --check` passes on a pristine extract of `07bd6a2`'s archive. The index line names 07bd6a2's blob and `git hash-object` of the final bytes. A copy with one context byte moved fails `apply --check` (`s8i_D21153-8i-P_patch.sh`; `D21153-8i-P-patch.out`).
 - **The residuals and the disclosed false voids** are in METHOD-S's D21153-8i-P extension (proposed), item 3, O3 included.
 - **Not done:** no temper:rust-reviewer review of P's diff; no refuting round over this patch (step 0r); the packet's rehearsal (§8i.5's D21153-8i-P note: drive D: was full).
+- *(dated 2026-10-13, s8i build, D21153-8i-Q)* Since this note: the operator wrote ruling (22) into D21-153 on 2026-10-12 (D21-153's paragraph *"The operator's ruling after refuting round 19"*), which reads: *"D21153-8i-P's fixes under rulings (17) and (21) are accepted"*, and ran the seventh sed of the cwd-rule line, so it names this package's patch `61cfac85…39b9` (step 2c's read-only guards accept the real ledger: `s8i` refuting round 20's packet-records finding). The rehearsal listed above as not done was run after the build-output cleanup; ruling (22) records *"61 cases, REHEARSE_OK"*. A temper:rust-reviewer review of P's diff did run after all (P1 to P3 minor, P4 a nit; no blocker or major on the code's merits, its fenced verdict `changes-requested` only because the redkiln-rs workspace gate was red on untouched origin Rust), and so did `s8i` refuting round 20 (`refute-r20-*`). Round 20's p-correctness finder measured that P's span reading pairs quotes otherwise than perl does and then clears a quoted parent that O voided: after an escaped quote inside a string (the lexer has already read the `\` as `/`, so `perl_spans`'s escape never runs on inline code), and after a quote that opens no perl string (in `s///`, `tr///` or a comment). Two refuters upheld it as major, one refuted it to minor. The operator settled it by ruling (23); package D21153-8i-Q, below, applies it.
+
+*(dated 2026-10-13, s8i build, D21153-8i-Q)* **The operator's ruling (23): every bare `..` in perl's inline code is the copy's parent (package D21153-8i-Q; proposed).** Sources: ruling (23), given by the operator in chat on 2026-10-13 and relayed by the orchestrator (the operator writes it into D21-153 afterwards): in perl's inline code every bare `..` is the copy's parent, fail-closed; the perl range and flip-flop exemption is removed entirely, so no perl `..` is ever cleared as an operator; perl ranges and flip-flops then void, and that is accepted, disclosed false-void surface, because pass 1's transcripts contain no perl. Also `s8i` refuting round 20's journal (`wf_b387a76b-0a5`; saved as `D21153-8i-Q-r20-journal.txt`) and the temper:rust-reviewer's report on D21153-8i-P, read from the reviewer's own transcript (`subagents/agent-ad576b5810515f262.jsonl`, its final handback; saved as `D21153-8i-Q-reviewerP.json` and `.txt`). Ruling (17) reads: *"not false-void honest in-copy work"*; ruling (23) accepts these perl false voids knowingly. Built in the L copy (`S8I-D21153L-corpus`; only `runner/src/sbin.rs` differs from `07bd6a2`), from D21153-8i-P's `sbin.rs` (`75d5b42c…ab33`, checked first), with its own `CARGO_TARGET_DIR` and TMP and TEMP under `sp/s8i`.
+- **What changed** (`D21153-8i-Q-sbin-final.rs`; 80 lines added, 24 removed against P).
+  - `code_out` no longer reads a bare `..` in perl's code as the range or flip-flop operator: the `operator` test and the `inside` span lookup that served only it are removed. In perl's code, as in every other, a token that is `..` (or holds a `..` segment) is resolved against the cwd, so a bare `..` is the copy's parent and voids. This settles round 20's p-correctness major and its stray-quote finding, and the rust-reviewer's P2 and P3: no span reading clears a `..` any more.
+  - Kept from P, because it only makes reads resolve: a span's closing delimiter still ends a token, so `q{..}` and `q[..]` hold a bare `..`. `perl_spans`'s doc now says this is its only use, and that its `\` escape is never reached from inline code (the lexer has read each `\` as `/`). The escape arm and its unit rows are kept as `perl_spans`'s own behaviour, on which no read depends.
+  - A `..` glued to what stands beside it is no bare `..`, as before: `1..10`, `0..$#ARGV` and `/A/../B/` hold no `..` token and stay clear (rows pl1 to pl5 and pl12, unchanged; measured). The relayed ruling's examples name `1..10` and `/A/../B/` among the ranges that now void. Under the rule's own words, *every bare `..`*, they do not; the draft ruling returned to the operator says so.
+- **The test.** No `#[test]` was added; the selection stays 36 tests. In round 17's table in `a_cd_outside_the_copy_is_audited_then_reset_as_the_cli_does`:
+  - **Expectations moved under H-12, for the operator.** Seven rows wanted 0 hits and now want 1, each an honest perl range or flip-flop that voids by ruling (23); each label now ends *"voids (ruling (23), disclosed false void)"*: pl6 `perl -ne 'print if /A/ .. /B/' OurGame/x.cpp`, pl7 `perl -e 'print for 1 .. 10'`, pl8 `perl -e 'print for "a".. "e"'`, pl9 `perl -e 'print for "a".."z"'`, pl10 `perl -le "print for 'a'..'e'"`, pl11 `perl -e '@x=("01".."12"); print "@x"'` and pl13 `perl -e 'print $"; print for 1 .. 3'`.
+  - Labels only, no expectation moved: pl12 (now *"perl's range glued to its numbers holds no bare .. (no climb)"*, still 0) and pwv1 (*"(only perl's .. is an operator)"* dropped, still 1).
+  - Eight cases added, each wanting 1: plv20 to plv22 (an escaped double quote, an escaped single quote, and an escaped quote before `system("ls ..")`: round 20's escaped-quote rows), plv23 to plv25 (a quote in `s///` and in `tr///`, an apostrophe in a comment: its stray-quote rows), plv26 (a regex quote pairing with a quoted parent's opener: the reviewer's P3) and plv27 (`q(..)` after `=>`: P2). One disclosed false void added: pl14 `perl -e 'print join(" .. ", 1..3)'`, wanting 1 (round 20's spaced-separator minor; it voided under P already).
+- **Red first.** The table over P's production bytes (`D21153-8i-Q-red1.out`) fails on exactly 15 rows, each at 0 hits wanting 1: the seven moved rows and plv20 to plv27. Green: `D21153-8i-Q-green1.out`.
+- **No must-void row moved to clear; real transcripts 0 false voids.** Each reading is row by row, hits and shadow flags as lists, against P's:
+  - The whole-set harness (`s8i_D21153-8i-L_harness.py Q`, over the final bytes, release; `s8i_D21153-8i-M_cmp.py P Q`; `D21153-8i-Q-cmp-PQ.txt`): 1,971 rows, **0 differ**; O's reading against Q's also reads 0, and the comparer's control, K's against Q's, reads 64. The real transcripts read the same 10 voids, each genuine: 0 false voids.
+  - Round 17's harness (`s8i_D21153-8i-Q_r17.py`, `s8i_D21153-8i-Q_cmp17.py`; `D21153-8i-Q-cmp17-PQ.txt`): 2,035 rows, 0 differ. Its control, M's reading against Q's, reads 29.
+  - Round 18's sets (635 rows; `s8i_D21153-8i-Q_xp.py`, `s8i_D21153-8i-Q_cmpx.py`, against P's recorded `D21153-8i-P-x-r18Pfinal.jsonl`; `D21153-8i-Q-cmpx-r18.txt`): 0 differ.
+  - Round 19's set (52 rows, against P's recorded reading; `D21153-8i-Q-cmpx-r19.txt`): 4 differ, each an honest perl range moving from clear to void by ruling (23): Q1 `"a".."e"`, Q2 `'a'..'e'`, Q3 `"a" .. "e"` and Q6 `("01".."12")`.
+  - Round 20's sets (106 rows: `refute-r20-pcorr/cases.jsonl` and `cases2.jsonl`, `refute-r20-ref1-esc/cases.jsonl` and `refute-r20-ref1-pcorr/cases.jsonl`, merged by `s8i_D21153-8i-Q_mkr20.py`; this package's probe reproduces the finders' own P readings, 106 of 106, `s8i_D21153-8i-Q_r20check.py`; `D21153-8i-Q-cmpx-r20.txt`): 18 differ, every one from clear to void. Sixteen are must-void reads now voiding: the escaped-quote rows V-pl-esc-in-str, V-esc1, V-esc3, V-esc4, V-esc-sq, E1-esc, E2-esc and E4-esc-sq, and the stray-quote rows V-pl-regexq, V-pl-regexq2, V-pl-comment, V-pl-comment-sq, A-regexq, B-trq, C-comment and D-comment-dq. Two are honest perl rows voiding by ruling (23): H-pl-flip `/^BEGIN/ .. /^END/` and H-pl-range `"a".."z"`. Seven rows read clear under O, P and Q alike: the six non-delimiter quote-likes (V-pl-qbang, V-pl-qhash, V-pl-qqtilde, V-pl-qslash, V-qbang and V-qq-hash: the reviewer's P1, disclosed) and V-pl-dollar-sq (`$"..$"`, a range of perl's list separator, no path).
+- **Bounded, measured.** 50,200 fuzz inputs on a 1 MiB stack (`s8i_D21153-8i-Q_mkr16.py`, `s8i_D21153-8i-Q_r16.sh`, debug): P's generator, with round 20's shapes added to its alphabet (an escaped quote in a string, `s/"//g`, `tr/"//`, an apostrophe in a comment, `=>q(`, `q!..!`, `q#`, `qq~`, a spaced ` .. ` separator, `/A/ .. /B/`, `1 .. 10`). 25 seeded chunks of 2,000 and a smoke run of 200, over the final bytes (`D21153-8i-Q-fuzz-s*.out`). No panic and no hang. The most work on one input was 3.07 M, and none reached the bound. Q removes the per-token span lookup.
+- **Mutants** (`s8i_D21153-8i-Q_mutants.py`, derived from P's by `s8i_D21153-8i-Q_mkmutants.py`; worker copies only, each anchor asserted once, each restore verified, the shipping copy's sha256 asserted unchanged; `D21153-8i-Q-mutants-all.out`). 32 rows, every one killed by the cwd test: `code_out`'s six (the operator reading restored; a bare `..` no parent in any code; the operator restored after a closing quote; perl's code without spans; a span's closer not ending a token; its opener ending one instead) and P's 26 over `perl_spans`, the names before a `q` and `quote_like`, re-run because their only use changed.
+- **Readings under `nd.sh`, TMP and TEMP under `sp/s8i`.**
+  - The selection: `running 36 tests`, 32 passed and 4 failed, the known four, with P's messages (`D21153-8i-Q-sel1.out`).
+  - The whole runner suite: 166 passed and 5 failed, the four and `p7::tests::the_driver_matches_the_committed_catalog`, as under P (`D21153-8i-Q-whole1.out`).
+  - clippy reports only `main.rs`'s two warnings (`D21153-8i-Q-clippy1.out`). `sbin.rs` is rustfmt-clean (edition 2024; `--check` read no diff, `D21153-8i-Q-fmt1.out`) and LF-only.
+- **The patch.** `S8I-D21153-8i-sbin-driver.patch` is now sha256 `59408f5858764cdf2faa4bc5b2d49edf232ad7e6895062074b980708aae50691` (474,779 bytes), superseding `61cfac85…39b9`, which is kept as `D21153-8i-Q-patch-before-61cfac85.patch`. It is against corpus `main` at `07bd6a2` (the archive tar checked against a fresh `git archive 07bd6a2` piped to `sha256sum`), touches `runner/src/sbin.rs` only, and gives sha256 `664fd3678ea88145b4dbd35378ebbaa22b3880ccb977da2162f1ea2e1ef39c5a` (18,957 lines; `--diff-algorithm=minimal`, 9,215 lines added and 309 removed). `git apply --check` passes on a pristine extract of `07bd6a2`'s archive. The index line names 07bd6a2's blob and `git hash-object` of the final bytes. A copy with one context byte moved fails `apply --check` (`s8i_D21153-8i-Q_patch.sh`; `D21153-8i-Q-patch.out`).
+- **The residuals and the disclosed false voids** are in METHOD-S's D21153-8i-Q extension (proposed), item 3, with round 20's other findings and the reviewer's P1 and P4 classified there.
+- **Not done:** no temper:rust-reviewer review of Q's diff; no refuting round over this patch (step 0r).
 
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
@@ -5969,7 +6000,11 @@ The sed is anchored on the line's start, so it changes exactly the one cwd-rule 
 - Read without the disk: the operator's sed exactly as printed above, extracted from this file and run by Git Bash on a scratch copy of the real ledger with these records in it, changes exactly the cwd-rule line (line 7205), CR 0, and a second run is a byte no-op (`s8i_D21153-8i-P_sedcheck.py`, `D21153-8i-P-sedcheck.out`). `s8i_D21153-8i-P_mkafter.py` read the same over its own copy (`D21153-8i-P-mkafter.out`).
 - Once there is space, the rehearsal runs as derived: case I1 is state-aware (the real ledger's line names the O patch, so I1 reads the sed to this packet's patch, and step 2c must accept it; I2, the real ledger as it stands, must be refused), then its in-memory mutants, then the after-sed branch, where I1's sed is a byte no-op and H1, I1 and I2 must be accepted.
 
-```bash
+*(dated 2026-10-13, s8i build, D21153-8i-Q)* The operator ran this sed (the seventh), so the ledger's cwd-rule line names this packet's patch `61cfac85…39b9`. It does not name the O patch, as the note above says, and step 2c would accept this packet: `s8i` refuting round 20's packet-records finder ran step 2c's read-only guards over the real ledger (one cwd-rule line, NAMES_OK, `git apply --check` OK on corpus 07bd6a2). The block's own step 0m note says the line names the O packet's patch; its bytes are kept as they are. The rehearsal the note above says is owed was run after the build-output cleanup: ruling (22) records *"61 cases, REHEARSE_OK"*, and round 20's finder re-ran it, reading 61 cases ok and *"MUTANTS 50/50 killed"*. The note's *"after its first 27 cases had read `ok`"* is wrong: the cited `D21153-8i-P-rehearse.out` holds 50 case lines reading `ok`, A_happy to RD_resum_null_cost, before G1 failed with *"No space left on device"* (round 20's second packet-records finding). The operator also wrote ruling (22) into D21-153 on 2026-10-12, accepting D21153-8i-P. The packet is now superseded by the D21153-8i-Q packet below, whose note carries the next sed.
+
+*(dated 2026-10-13, s8i build, D21153-8i-Q)* **Superseded: do not run the D21153-8i-P packet below.** It is kept for the record, and its fence is marked `text` so that it is never run as written (as D21153-8i-P did for O's). The D21153-8i-Q packet after it is the one the operator runs.
+
+```text
 # (dated 2026-10-12, s8i build, D21153-8i-P; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-O
 # packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for package D21153-8i-P
 # (the rust-reviewer's O1 and O2 on O, and s8i refuting round 19's o-correctness findings; no must-void case
@@ -6240,6 +6275,382 @@ print(v)
   L=D:/repos/redkiln-rs/spikes/DECISIONS-2026-09-21.md
   ps=$(sha256sum < "$P" | cut -c1-64)
   [ "$(git -C "$C" cat-file blob HEAD:runner/src/sbin.rs | sha256sum | cut -c1-64)" = 75d5b42c38be1f33c8cd3ce9fc7430b7bcb243b0aa4a4895e3a1023c1dacab33 ] || { echo "FAIL: HEAD's sbin.rs is not step 2c's runner"; exit 1; }
+  ent=$(awk '/^## D21-153 /{p=1;next} p&&/^## /{p=0} p' "$L"); [ -n "$ent" ] || { echo "FAIL: no D21-153 entry in $L"; exit 1; }
+  n=$(printf '%s\n' "$ent" | grep -c '^D21-153 refuting rounds: [1-9][0-9]*, patch [0-9a-f]\{64\}, verdict clean$')
+  [ "$n" -eq 1 ] || { echo "FAIL: D21-153 holds $n clean refuting-round lines, not 1; step 0r comes before the B2 line"; exit 1; }
+  printf '%s\n' "$ent" | grep -q "^D21-153 refuting rounds: [1-9][0-9]*, patch $ps, verdict clean\$" || { echo "FAIL: the recorded rounds did not cover this patch ($ps)"; exit 1; }
+  echo "ROUNDS OK" )
+# 10c. Re-sign D21-143's B2 line IN PLACE, under the operator's ruling (r2) of 2026-10-08 (D21-153): D21-153 item 9's
+#     "new go-ahead line" is satisfied by re-signing in place; there is no second line, and Checkpoint 8i (5) is
+#     unchanged. First re-sum the spend from the cost records at HEAD with the read-only subshell below (D21-143's sum:
+#     every record's total_cost_usd, pass 1's discarded records included by D21-153 item 8; every line of
+#     results/s-bin/probes.jsonl, step 5p's included; and the procedure log's cost_usd). A missing or non-numeric cost
+#     refuses, never read as zero, and so does a HEAD without step 5p's line. It refuses unless (90.00 - spent) > 25.00,
+#     and it prints the caps for the line and B4's bound. Opus used: 6 of 18 (D21-153 item 8 counts the discarded
+#     set). By ruling (r4), the re-run is the same set as pass 1 for Halt 2 and the model halt: it runs at CLI 2.1.289
+#     and pass 1's model.
+( C=${CORPUS:-D:/repos/redkiln-corpus}
+  out=$(cd "$C" && python -I -c '
+import json, re, subprocess, sys
+from decimal import Decimal, ROUND_HALF_UP
+def blob(p):
+    r = subprocess.run(["git", "cat-file", "blob", "HEAD:" + p], capture_output=True)
+    if r.returncode != 0:
+        sys.exit("FAIL: " + p + " is not at HEAD")
+    return r.stdout.decode("utf-8")
+def cost(v, where):
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        sys.exit("FAIL: " + where + " carries no numeric total_cost_usd (" + repr(v) + "); a missing cost is never read as zero")
+    return Decimal(str(v))
+names = subprocess.run(["git", "ls-tree", "-r", "--name-only", "HEAD", "results/"], capture_output=True, text=True, check=True).stdout.splitlines()
+recs = [p for p in names if p == "results/s-bin.jsonl" or re.fullmatch(r"results/s-bin/superseded/[^/]+/s-bin\.jsonl", p)]
+if "results/s-bin/superseded/pass1-d21153/s-bin.jsonl" not in recs:
+    sys.exit("FAIL: the discarded pass-1 set is not at HEAD; D21-153 item 8 counts it")
+total, nr = Decimal(0), 0
+for p in recs:
+    for i, ln in enumerate(blob(p).splitlines()):
+        if ln.strip():
+            total += cost(json.loads(ln).get("total_cost_usd"), p + " line " + str(i + 1))
+            nr += 1
+probes = [json.loads(ln) for ln in blob("results/s-bin/probes.jsonl").splitlines() if ln.strip()]
+if sum(1 for q in probes if q.get("kind") == "cwd" and q.get("probe") == 2) != 1:
+    sys.exit("FAIL: probes.jsonl does not hold the cwd probe line exactly once; step 5p comes first")
+for i, q in enumerate(probes):
+    total += cost(q.get("total_cost_usd"), "probes.jsonl line " + str(i + 1))
+nl = 0
+for i, ln in enumerate(blob("results/s-bin/captures/procedure-log.txt").splitlines()):
+    if ln.strip():
+        m = re.findall(r"(?:^| )cost_usd=([0-9]+(?:\.[0-9]+)?)(?= |$)", ln)
+        if len(m) != 1:
+            sys.exit("FAIL: procedure-log.txt line " + str(i + 1) + " carries no single cost_usd")
+        total += sum(Decimal(x) for x in m)
+        nl += 1
+six = Decimal("0.000001")
+caps = total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+room = Decimal("90.00") - total
+if not room > Decimal("25.00"):
+    sys.exit("FAIL: (90.00 - spent) = " + str(room.quantize(six)) + " is not above B2 bound 25.00")
+print("SPEND OK spent=" + str(total.quantize(six)) + " records=" + str(nr) + " probes=" + str(len(probes)) + " procedure_log=" + str(nl)
+      + "; caps used so far $" + str(caps) + "; (90.00 - spent) = " + str(room.quantize(six)) + " > 25.00"
+      + "; B4 only if B2, B3 and their retries together spend less than " + str((Decimal("70.00") - total).quantize(six)))
+' 2>&1); rc=$?
+  printf '%s\n' "$out"
+  [ "$rc" -eq 0 ] || { echo "FAIL: the spend was not re-summed from HEAD's cost records (rc=$rc); B2's line is not signed"; exit 1; } )
+#     Then write the line. Its caps are the `caps used so far $<x.xx>` the subshell printed, and its time is the UTC at
+#     which it is written, immediately before the batch:
+#     S-BIN go-ahead B2 <YYYY-MM-DDTHH:MM:SSZ> — pass 1 re-run under D21-153: items 1–5, five Opus dispatches from D:/sb/rev/item-1..5 through wrap, caps used so far $<x.xx from the re-sum above>
+#     Record the superseded signature (2026-10-07T03:54:52Z, caps $5.56) in a dated paragraph of D21-143, without the
+#     line's literal opening words, which Checkpoint 8i (5) would read as a second B2 line. Re-run step 6c's check: 3.
+# 10d. Section 8i.5's pre-check block, as written, with step 7's SBIN_ROOT and SBIN_NEED_BYTES exported in the same shell;
+#     then section 8i.5's runner launch block, as written, with B2's argv unchanged (the copies go under D:/sb/d2/):
+SBIN_ARGV=(sbin-probe --pass 1 --fixture results/s-bin/fixture.json --out results/s-bin.jsonl --model opus --effort xhigh --timeout-secs 4500)
+#     Then the snapshot with WHEN=after-B2, and B2's results commit. B3's line is added once, new, before B3, in the same
+#     form, after pass 1's audit has been read; its caps come from the same re-sum, run again at that HEAD. B4 runs only
+#     if B2, B3 and their retries together spend less than (90.00 - 20.00) - spent_before_B2, where spent_before_B2 is
+#     step 10c's re-sum (the bound it prints). For example, before step 0m's probe the records summed 21.635174, which
+#     gives 48.364826; the probe's cost lowers the bound by as much. The 18-dispatch cap leaves at most two further Opus
+#     dispatches after B2 and B3, retries and B4 together.
+```
+
+*(dated 2026-10-13, s8i build, D21153-8i-Q)* **The packet re-pinned for the operator's ruling (23), superseding the D21153-8i-P packet above (package D21153-8i-Q; prepared, NOT run; proposed).** The block is `D21153-8i-Q-block.sh`, sha256 `2c1563716b6139ab8e5acc660f5c6821dae1577c3a82f2cb8c933afc34be7de5`. It is the P block with these changes only (`s8i_D21153-8i-Q_block.py`):
+- the runner patch `59408f5858764cdf2faa4bc5b2d49edf232ad7e6895062074b980708aae50691` (step 2c);
+- `sbin.rs` `664fd3678ea88145b4dbd35378ebbaa22b3880ccb977da2162f1ea2e1ef39c5a` (steps 2c, 4c and 10r);
+- a dated header;
+- one dated note under step 0m.
+No `#[test]` is added, so the selection stays 36 tests. The B0 block, Checkpoint 8i (6) and the dry-run script keep their 36-test pins. The stage script, the fixtures, the dry run's inputs and the base verifier are the P (and I) packet's.
+
+**The operator's line.** The ledger's cwd-rule line names the P packet's patch `61cfac85…39b9` (the operator's seventh sed). Step 2c refuses until the line names this packet's patch. The operator replaces the sha in place, from `D:/repos/redkiln-rs`, with:
+
+`sed -i 's/^D21-153 cwd rule: CLI 2\.1\.289 measured temp RESET, OLDPWD and pushd stack SPAWN; patch 61cfac85b16a5ad678c507814690fab08c599b7b88ace219f80e53648a8739b9$/D21-153 cwd rule: CLI 2.1.289 measured temp RESET, OLDPWD and pushd stack SPAWN; patch 59408f5858764cdf2faa4bc5b2d49edf232ad7e6895062074b980708aae50691/' spikes/DECISIONS-2026-09-21.md`
+
+The sed is anchored on the line's start, so it changes exactly the one cwd-rule line. D21-143's P and Q paragraphs and the stage file name `61cfac85…` inside their lines, and none of those lines begins with the cwd-rule line's words. Run on a whole copy of the real ledger, these records included, the sed changes exactly one line, CR 0 (the rehearsal's case I1).
+
+**The checks.**
+- `s8i_D21153-8i-Q_pins.py` reads `PINS_OK`, and each of its 20 controls reads `PINS_FAIL` (`D21153-8i-Q-pins.out`, `-pins-ctl.out`). It is derived from P's by `s8i_D21153-8i-Q_mkderived.py` and runs P's checks with this package's values. It checks the Q block once as bash; the P, O, N, M, L, K, J, I and G blocks once each with their fences marked `text`; and one cwd-rule line naming the P packet's patch or this one.
+- `s8i_D21153-8i-Q_rehearse.py` (derived the same way) re-runs P's rehearsal over this block: 61 cases, REHEARSE_OK, and 50 of 50 in-memory mutants killed (`D21153-8i-Q-rehearse.out`, `-rehearse-mut.out`).
+- Its case I1 is state-aware. The real ledger's line names the P patch, so I1 reads the one-line branch of the sed to this packet's patch, and step 2c accepts it. I2, the real ledger as it stands, is refused.
+- The other branch was read over a scratch copy of the ledger with the sed already applied (`s8i_D21153-8i-Q_mkafter.py`, `s8i_D21153-8i-Q_rehearse_after.py`; the real ledger was only read). There I1's sed is a byte no-op, and H1, I1 and I2 are accepted (`D21153-8i-Q-rehearse-after.out`).
+- The operator's sed exactly as printed above, extracted from this file and run by Git Bash on a scratch copy of the real ledger with these records in it, changes exactly the cwd-rule line, CR 0, and a second run is a byte no-op (`s8i_D21153-8i-Q_sedcheck.py`, `D21153-8i-Q-sedcheck.out`).
+
+```bash
+# (dated 2026-10-13, s8i build, D21153-8i-Q; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-P
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for package D21153-8i-Q
+# (the operator's ruling (23): in perl's inline code every bare `..` is the copy's parent; no must-void case
+# moves): the runner patch and sbin.rs (steps 2c, 4c and 10r). The selection stays 36 tests. Every other byte
+# is the P packet's.
+# (dated 2026-10-12, s8i build, D21153-8i-P; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-O
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for package D21153-8i-P
+# (the rust-reviewer's O1 and O2 on O, and s8i refuting round 19's o-correctness findings; no must-void case
+# moves): the runner patch and sbin.rs (steps 2c, 4c and 10r). The selection stays 36 tests. Every other byte
+# is the O packet's.
+# (dated 2026-10-11, s8i build, D21153-8i-O; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-N
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for package D21153-8i-O
+# (the rust-reviewer's N1 to N3 on N, and s8i refuting round 18's code-classes finding 1; no must-void case
+# moves): the runner patch and sbin.rs (steps 2c, 4c and 10r). The selection stays 36 tests. Every other byte
+# is the N packet's.
+# (dated 2026-10-11, s8i build, D21153-8i-N; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-M
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for package D21153-8i-N
+# (s8i refuting round 17's three honest false-void classes, ruling (19)'s strict work ratio in the robustness
+# test, and the rust-reviewer's F1 to F3; no must-void case moves): the runner patch and sbin.rs (steps 2c, 4c
+# and 10r). The selection stays 36 tests. Every other byte is the M packet's.
+# (dated 2026-10-11, s8i build, D21153-8i-M; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-L
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for the audit's bounds
+# (package D21153-8i-M: s8i refuting round 16 and the rust-reviewer's re-read of L; no verdict moves on any
+# calibrated case): the runner patch and sbin.rs (steps 2c, 4c and 10r). The selection stays 36 tests. Every
+# other byte is the L packet's.
+# (dated 2026-10-10, s8i build, D21153-8i-L; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-K
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for round 15's fixes
+# under D21-153 rulings (12) and (17) (package D21153-8i-L: double-quoted `${...}` bodies audited again, the
+# quadratic paths made linear, reads rooted at `/`, revision ranges, interpreters and PowerShell, staged text,
+# and `read` feeds): the runner patch and sbin.rs (steps 2c, 4c and 10r). The selection stays 36 tests. Every
+# other byte is the K packet's.
+# (dated 2026-10-10, s8i build, D21153-8i-K; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-J
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for D21-153 ruling (17),
+# relayed (the audit's threat model is the honest, curious reviewer: its robustness bounds, the cheap fail-closed
+# closes, the rust-reviewer's N1 to N9 and the false-void fixes): the runner patch and sbin.rs (steps 2c, 4c and
+# 10r). The selection stays 36 tests. Every other byte is the J packet's.
+# (dated 2026-10-10, s8i build, D21153-8i-J; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-I
+# packet (kept above, its fence marked text). It is that packet re-pinned by dated edit for D21-153 rulings (12)
+# and (13), relayed (the fail-closed audit, and the rust-reviewer's F1 to F5): the runner patch and sbin.rs
+# (steps 2c, 4c and 10r). Every other byte is the I packet's.
+# (dated 2026-10-09, s8i build, D21153-8i-I; proposed) PREPARED, NOT RUN. This packet supersedes the D21153-8i-G
+# re-pin of the D21153-8i-F packet (kept above, its fence marked text). It is that packet re-pinned by dated edit
+# for D21-153 rulings (9) to (11): the runner patch and sbin.rs (steps 2c, 4c and 10r), the stage script (steps
+# 1c and 5c: D21153-8i-I's, whose fixture step commits the eight-token fixture), the dry run's fixture (step 4c),
+# the set's fixture (steps 5p and 10b), the base verifier (step 10b: the rebuilt review repositories'
+# headless.log) and step 2c's commit message. Every other byte is the G packet's.
+# (dated 2026-10-08, s8i build, D21153-8i-F) PREPARED, NOT RUN. D21-153's sequence before B2's re-run. It supersedes
+# the D21153-8i-E packet above by two changes only: step 5p, which commits step 0m's cwd probe's cost (approved by the
+# operator in chat on 2026-10-08), and the spend read from the cost records at HEAD instead of written as a figure
+# (steps 10c and 10d). Every other step is D21153-8i-E's, byte for byte, on E's basis: the s8i verify panel's findings
+# and the operator's rulings (r1) to (r7) of 2026-10-08 (D21-153), and the operator's rulings on the cwd probe.
+# Run it from a plain Git Bash outside Claude Code, each step in its own subshell, in this order.
+# Zero spend until step 10d, except step 0m's Haiku probe, which is the operator's (ruling (r6)). CORPUS defaults to
+# D:/repos/redkiln-corpus, as in the dry-run script and s8i_D21153-8i-I_stage.sh.
+# Two steps write under %TEMP% by registered design. Step 3c's cargo test runs with the default TMP and TEMP (D21-151:
+# the four audit tests are red under a sweep root). Step 10's snapshot block makes its scratch directory with
+# mktemp -d, and by ruling (r5) it removes that directory at its end.
+# 0c. /d/sb/rev-old-d21153 is the operator's to delete (ruling (r7)): rm -rf /d/sb/rev-old-d21153
+#     /d/sb/base-old-d21153 stays until step 12. Its files are the new bases' and the review repositories' hard-link
+#     partners: base, base-old and rev are one inode set, and none of them is ever edited in place.
+# 0m. OWED (ruling (r6)), before step 2c:
+#     - The operator measures the temp-cwd rule on the frozen CLI 2.1.289 with a Haiku probe: cwdprobe/README.md, behind
+#       its own signed line under D21-153 (S-BIN probe go-ahead cwd1 ...). Its cost is committed at step 5p.
+#     - The audit is built to the measured rule, red first, from D21153-8i-E-cwd-redcases.txt.
+#     - That gives a new runner patch, and every pin in this block is re-pinned by dated edit.
+#     - Then this line is written once under D21-153, in this form:
+#       D21-153 cwd rule: CLI 2.1.289 measured temp <KEEP|RESET>, OLDPWD and pushd stack <PERSIST|FRESH|SPAWN>; patch <sha256 of the runner patch>
+#     Step 2c refuses until that line names the patch it applies.
+#     (dated 2026-10-08, s8i build, D21153-8i-G; proposed) Measured: the probe of 2026-10-09T04:41Z read VALID
+#     yes. Temp is RESET, written or not, silently, to the cwd the call started in; a cwd outside the copy is reset
+#     to the copy. Nothing carries from one call to the next: the pushd stack starts empty, and OLDPWD starts at
+#     the value the child inherited (the launching shell's), so `cd -` left the copy. By the operator's ruling of
+#     2026-10-08 the driver now spawns the child with OLDPWD set to its copy, and the audit resolves `cd -`, `~-`,
+#     $OLDPWD and ${OLDPWD} to the OLDPWD its record carries, voiding one outside the copy. The form gains SPAWN
+#     for that: each call starts from the spawn's environment (FRESH said OLDPWD is the call's own cwd, which the
+#     probe did not read). The audit is built (section 8i.3's D21153-8i-G note), and this edit re-pins the
+#     patch and sbin.rs pins of steps 2c, 4c and 10r; every other byte of the block is D21153-8i-F's.
+#     (dated 2026-10-09, s8i build, D21153-8i-I; proposed) The operator wrote the line on 2026-10-09 naming the
+#     G patch. Rulings (9) and (10) (D21153-8i-H) and ruling (11) (D21153-8i-I) moved the patch, so before step 2c
+#     the operator replaces the line's sha in place with this packet's patch; the line's form does not change.
+#     (dated 2026-10-10, s8i build, D21153-8i-J; proposed) The operator's line names the I packet's patch.
+#     Rulings (12) and (13) moved the patch again, so before step 2c the operator replaces that sha in place with
+#     this packet's patch, anchored on the line's start; the line's form does not change.
+#     (dated 2026-10-10, s8i build, D21153-8i-K; proposed) The operator's line names the J packet's patch (the
+#     operator's sed of 2026-10-10). Ruling (17) moved the patch again, so before step 2c the operator replaces that
+#     sha in place with this packet's patch, anchored on the line's start; the line's form does not change.
+#     (dated 2026-10-10, s8i build, D21153-8i-L; proposed) The operator's line names the K packet's patch (the
+#     operator's second sed of 2026-10-10). Round 15's fixes moved the patch again, so before step 2c the operator
+#     replaces that sha in place with this packet's patch, anchored on the line's start; the form does not change.
+#     (dated 2026-10-11, s8i build, D21153-8i-M; proposed) The operator's line names the L packet's patch (the
+#     operator's third sed). The bounds moved the patch again, so before step 2c the operator replaces that sha
+#     in place with this packet's patch, anchored on the line's start; the form does not change.
+#     (dated 2026-10-11, s8i build, D21153-8i-N; proposed) The operator's line names the M packet's patch (the
+#     operator's fourth sed). Package N moved the patch again, so before step 2c the operator replaces that sha
+#     in place with this packet's patch, anchored on the line's start; the form does not change.
+#     (dated 2026-10-11, s8i build, D21153-8i-O; proposed) The operator's line names the N packet's patch (the
+#     operator's fifth sed). Package O moved the patch again, so before step 2c the operator replaces that sha
+#     in place with this packet's patch, anchored on the line's start; the form does not change.
+#     (dated 2026-10-12, s8i build, D21153-8i-P; proposed) The operator's line names the O packet's patch (the
+#     operator's sixth sed). Package P moved the patch again, so before step 2c the operator replaces that sha
+#     in place with this packet's patch, anchored on the line's start; the form does not change.
+#     (dated 2026-10-13, s8i build, D21153-8i-Q; proposed) The operator's line names the P packet's patch (the
+#     operator's seventh sed). Package Q moved the patch again, so before step 2c the operator replaces that
+#     sha in place with this packet's patch, anchored on the line's start; the form does not change.
+# 0r. The refuting round or rounds of D21-153 item 7, over the D21153 rule, trees, fixture and step 0m's patch. They run
+#     before step 1c, because a fix after 2c is another runner commit and a new packet. Their outcome is written once
+#     under D21-153, in this form, and step 10r reads it:
+#       D21-153 refuting rounds: <n>, patch <sha256 of the runner patch>, verdict clean
+# 1c. Pass 1's discarded set, its fixture a93044cf and the D21149 dry run ed280009 moved aside (D21-153 items 1 and 6).
+#     The stage script refuses unless HEAD is 07bd6a2 and clean. One commit, 29 renames. results/s-bin/brittongames-snapshots.txt
+#     stays in place on purpose: it is the append-only snapshot log (section 8i.4's D21153-8i-C note).
+( S=D:/repos/redkiln-sev/afk-tools/sp/s8i
+  [ "$(sha256sum < "$S/s8i_D21153-8i-I_stage.sh" | cut -c1-64)" = 6b2365b16f84b5c27ebc658d08a8057ddd9462aa207917a5fec13da9e977543b ] || { echo "FAIL: the stage script is not the registered one (D21153-8i-I's, derived from D21153-8i-C's)"; exit 1; }
+  out=$(bash "$S/s8i_D21153-8i-I_stage.sh" move 2>&1); rc=$?
+  printf '%s\n' "$out"
+  [ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -q '^MOVE OK [0-9a-f]\{40\}$' || { echo "FAIL: the move did not complete (rc=$rc)"; exit 1; } )
+# 2c. The D21153-8i runner commit (D21-153 items 2, 3, 5 and 6), over step 1c's commit. It changes runner/src/sbin.rs only.
+( C=${CORPUS:-D:/repos/redkiln-corpus}; S=D:/repos/redkiln-sev/afk-tools/sp/s8i; P=$S/S8I-D21153-8i-sbin-driver.patch
+  L=D:/repos/redkiln-rs/spikes/DECISIONS-2026-09-21.md
+  [ "$(git -C "$C" rev-parse --abbrev-ref HEAD)" = main ] || { echo "FAIL: the corpus is not on main"; exit 1; }
+  [ "$(git -C "$C" rev-parse HEAD^)" = "$(git -C "$C" rev-parse '07bd6a2^{commit}')" ] || { echo "FAIL: HEAD is not step 1c's move commit, the one child of 07bd6a2"; exit 1; }
+  git -C "$C" cat-file -e HEAD:results/s-bin/superseded/pass1-d21153/s-bin.jsonl || { echo "FAIL: step 1c's move is not HEAD's"; exit 1; }
+  st=$(git -C "$C" status --porcelain --untracked-files=all -- . ':(exclude)runner/target/'); rc=$?
+  [ "$rc" -eq 0 ] && [ -z "$st" ] || { echo "FAIL: the corpus is not clean (rc=$rc)"; printf '%s\n' "$st"; exit 1; }
+  ps=$(sha256sum < "$P" | cut -c1-64)
+  [ "$ps" = 59408f5858764cdf2faa4bc5b2d49edf232ad7e6895062074b980708aae50691 ] || { echo "FAIL: $P is not the registered patch"; exit 1; }
+  ent=$(awk '/^## D21-153 /{p=1;next} p&&/^## /{p=0} p' "$L"); [ -n "$ent" ] || { echo "FAIL: no D21-153 entry in $L"; exit 1; }
+  n=$(printf '%s\n' "$ent" | grep -c '^D21-153 cwd rule: CLI 2\.1\.289 measured temp \(KEEP\|RESET\), OLDPWD and pushd stack \(PERSIST\|FRESH\|SPAWN\); patch [0-9a-f]\{64\}$')
+  [ "$n" -eq 1 ] || { echo "FAIL: D21-153 holds $n cwd-rule lines, not 1; step 0m (ruling (r6)) comes before the runner commit"; exit 1; }
+  printf '%s\n' "$ent" | grep -q "^D21-153 cwd rule: .*; patch $ps\$" || { echo "FAIL: D21-153's cwd-rule line does not name this patch ($ps)"; exit 1; }
+  [ "$(git -C "$C" cat-file blob HEAD:runner/src/sbin.rs | sha256sum | cut -c1-64)" = bcdf0364f5d2927ae48a940a0236abe1ee0ee022cceb1331d74415d448436bc1 ] || { echo "FAIL: HEAD's sbin.rs is not the D21149-8i runner's"; exit 1; }
+  git -C "$C" -c core.autocrlf=false apply --check "$P" || { echo "FAIL: the patch does not apply"; exit 1; }
+  git -C "$C" -c core.autocrlf=false apply "$P" || exit 1
+  [ "$(sha256sum < "$C/runner/src/sbin.rs" | cut -c1-64)" = 664fd3678ea88145b4dbd35378ebbaa22b3880ccb977da2162f1ea2e1ef39c5a ] || { echo "FAIL: sbin.rs is not the built bytes"; exit 1; }
+  git -C "$C" add runner/src/sbin.rs || exit 1
+  git -C "$C" commit -q -m "s8i: the S-BIN driver for D21-153 (the path tokens in the precheck, the review's limits in the rendering, the audit's cwd following the CLI, drive-relative cd targets, pass 1's discarded set read at its registered bytes and counted in every cap check, copies under d2/, the greenness copy's path tokens)" || exit 1
+  [ "$(git -C "$C" diff-tree --no-commit-id --name-only -r HEAD)" = runner/src/sbin.rs ] || { echo "FAIL: the runner commit is not the one path"; exit 1; }
+  st=$(git -C "$C" status --porcelain --untracked-files=all -- . ':(exclude)runner/target/'); rc=$?
+  [ "$rc" -eq 0 ] && [ -z "$st" ] || { echo "FAIL: the corpus is not clean after the commit (rc=$rc)"; printf '%s\n' "$st"; exit 1; }
+  echo "RUNNER OK $(git -C "$C" rev-parse HEAD)" )
+# 3c. Section 8i.3's B0 block, as written: 36 tests, `test result: ok. 36 passed; 0 failed`, the binding reading
+#     (D21-151's operator line), run with the default TMP and TEMP (it writes under %TEMP%, by that design). It
+#     rewrites results/s-bin/driver-tests.txt.
+# 4c. The dry run's inputs read, then the dry run, then its results commit, then its 21.5 GB review repository removed.
+( C=${CORPUS:-D:/repos/redkiln-corpus}; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
+  ck() { [ "$(sha256sum < "$1" | cut -c1-64)" = "$2" ] || { echo "FAIL: $1 is not the registered bytes ($2)"; exit 1; }; }
+  [ "$(git -C "$C" cat-file blob HEAD:runner/src/sbin.rs | sha256sum | cut -c1-64)" = 664fd3678ea88145b4dbd35378ebbaa22b3880ccb977da2162f1ea2e1ef39c5a ] || { echo "FAIL: step 2c's runner commit is not HEAD's"; exit 1; }
+  git -C "$C" cat-file -e HEAD:results/s-bin/superseded/dry-run-ed280009/dry-run.jsonl || { echo "FAIL: step 1c's move is not in HEAD"; exit 1; }
+  grep -qE 'test result: ok\. 36 passed; 0 failed' "$C/results/s-bin/driver-tests.txt" || { echo "FAIL: driver-tests.txt is not step 3c's 36-test reading"; exit 1; }
+  ck "$S/s8i_S8I-P8_dryrun.sh" 59a43bcad66198cc705028670497525fb67ac5ea517fd06b1315e5291ea9e53d
+  ck "$S/S8I-P8-dryrun/results/s-bin/fixture.json" d9329924791e17751f141c09bf1f1003f72f7440bdb1545cf0932f05b97bbb43
+  ck "$S/S8I-P8-dryrun/results/s-bin/dry-run/fixture.json" d9329924791e17751f141c09bf1f1003f72f7440bdb1545cf0932f05b97bbb43
+  ck "$S/s8i_D21153-8i-C_review.py" cbc7d9c5a93d7f9215a8211050f8c3fef619a90f69defbb72993808554d2d2de
+  out=$(GIT_OPTIONAL_LOCKS=0 python "$S/s8i_D21153-8i-C_review.py" verify 2>&1); rc=$?
+  [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$out" | tail -1)" = "VERIFY OK" ] || { echo "FAIL: D:/sb/dry/rev/item-1 is not D21153-8i-C's dry review repository (rc=$rc)"; printf '%s\n' "$out" | tail -5; exit 1; }
+  [ "$(git -C D:/sb/dry/rev/item-1 rev-parse HEAD)" = 434286de80d847f710d8518c39f47f7a2c89cada ] || { echo "FAIL: the dry review repository moved"; exit 1; }
+  echo "DRY INPUTS OK" )
+#     The dry run runs INSIDE the guarded commit (the s8i verify panel's major finding): nothing is committed unless the
+#     dry-run script exits 0, its last `dry-run.jsonl sha256=` line is the working file's sha256, run.txt exists, and
+#     audit.txt ends in its two rule_outcome lines. A dry run that failed after writing its record is refused, and its
+#     partial files stay uncommitted for triage. Step 6c names the committed dry run's sha256.
+( C=${CORPUS:-D:/repos/redkiln-corpus}; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
+  out=$(bash "$S/s8i_S8I-P8_dryrun.sh" 2>&1); rc=$?
+  printf '%s\n' "$out"
+  [ "$rc" -eq 0 ] || { echo "FAIL: the dry run exited $rc; nothing is committed"; exit 1; }
+  w=$(printf '%s\n' "$out" | sed -n 's/^dry-run\.jsonl sha256=\([0-9a-f]\{64\}\)$/\1/p' | tail -1)
+  [ -n "$w" ] && [ "$(sha256sum < "$C/results/s-bin/dry-run.jsonl" | cut -c1-64)" = "$w" ] || { echo "FAIL: the dry run reported no dry-run.jsonl sha256, or the file is not the bytes it reported ('$w'); nothing is committed"; exit 1; }
+  test -s "$C/results/s-bin/dry-run/run.txt" || { echo "FAIL: no run.txt; nothing is committed"; exit 1; }
+  a=$(tail -2 "$C/results/s-bin/dry-run/audit.txt" 2>/dev/null)
+  printf '%s\n' "$a" | head -1 | grep -q '^rule_outcome_pass1=' && printf '%s\n' "$a" | tail -1 | grep -q '^rule_outcome_pass2=' || { echo "FAIL: audit.txt does not end in its rule_outcome lines; nothing is committed"; exit 1; }
+  [ ! -e "$C/results/s-bin.jsonl" ] && [ ! -e "$C/results/s-bin/fixture.json" ] || { echo "FAIL: a set record or the set's fixture exists; the dry run writes neither"; exit 1; }
+  git -C "$C" add results/s-bin/dry-run.jsonl results/s-bin/driver-tests.txt results/s-bin/dry-run results/s-bin/raw/dry-run results/s-bin/rendered/dry-run || exit 1
+  git -C "$C" commit -q -m "s8i: S-BIN's zero-spend dry run over the D21153-8i runner (D21-153 item 7), the D21149 dry run ed280009 kept as superseded" || exit 1
+  st=$(git -C "$C" status --porcelain --untracked-files=all -- . ':(exclude)runner/target/'); rc=$?
+  [ "$rc" -eq 0 ] && [ -z "$st" ] || { echo "FAIL: the corpus is not clean after the dry run's commit (rc=$rc)"; printf '%s\n' "$st"; exit 1; }
+  [ "$(git -C "$C" cat-file blob HEAD:results/s-bin/dry-run.jsonl | sha256sum | cut -c1-64)" = "$w" ] || { echo "FAIL: the committed dry run is not the one reported"; exit 1; }
+  echo "DRY COMMIT OK $(git -C "$C" rev-parse HEAD) dry-run.jsonl sha256=$w"
+  python "$S/s8i_D21153-8i-C_review.py" remove || { echo "FAIL: the dry review repository was not removed"; exit 1; } )
+# 5c. The set's fixture.json (eight leak tokens, the D21153 bases, the five review commits rebuilt for ruling (11)),
+#     one path, after 4c.
+( S=D:/repos/redkiln-sev/afk-tools/sp/s8i
+  out=$(bash "$S/s8i_D21153-8i-I_stage.sh" fixture 2>&1); rc=$?
+  printf '%s\n' "$out"
+  [ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -q '^FIXTURE OK [0-9a-f]\{40\}$' || { echo "FAIL: the fixture commit did not complete (rc=$rc)"; exit 1; } )
+#     Greenness is not re-run: no file the rule changed is one the build or the suite reads (D21-153 item 7's condition;
+#     READSET_OK, section 8i.4's D21153-8i-A note), so the five committed greenness reports stand.
+# 5p. (dated 2026-10-08, s8i build, D21153-8i-F; approved by the operator in chat on 2026-10-08) Step 0m's cwd probe's
+#     cost committed: its one line appended to results/s-bin/probes.jsonl (haiku 2 of 3, the operator's rulings on the
+#     probe, (2)) and its raw stream copied beside it, one commit of exactly three paths. After 5c, so that 1c to 5c
+#     commit exactly as rehearsed; before 10c, whose re-sum reads it. readout.txt is Windows Python's output through tee,
+#     so its CRs are dropped before it is read. Nothing is committed unless every guard holds.
+( C=${CORPUS:-D:/repos/redkiln-corpus}; W=D:/repos/redkiln-sev/afk-tools/sp/s8i/cwdprobe/out/cwd1
+  L=D:/repos/redkiln-rs/spikes/DECISIONS-2026-09-21.md; R=results/s-bin/raw/probe-2-cwd
+  [ "$(git -C "$C" rev-parse --abbrev-ref HEAD)" = main ] || { echo "FAIL: the corpus is not on main"; exit 1; }
+  st=$(git -C "$C" status --porcelain --untracked-files=all -- . ':(exclude)runner/target/'); rc=$?
+  [ "$rc" -eq 0 ] && [ -z "$st" ] || { echo "FAIL: the corpus is not clean (rc=$rc)"; printf '%s\n' "$st"; exit 1; }
+  [ "$(git -C "$C" cat-file blob HEAD:results/s-bin/fixture.json | sha256sum | cut -c1-64)" = 82add83e5cf2ef8f3ccd8bb7e561afd40a14274496bedd49d9d0ea4b369397cb ] || { echo "FAIL: HEAD's fixture.json is not step 5c's"; exit 1; }
+  [ "$(git -C "$C" cat-file blob HEAD:results/s-bin/probes.jsonl | sha256sum | cut -c1-64)" = 84be19edb63ccd04c28d583ced1e1cb9d2754df30dbff2c42c0cca9e14e9084a ] || { echo "FAIL: HEAD's probes.jsonl is not B1's one line; the probe's cost is committed once"; exit 1; }
+  for f in "$R.jsonl" "$R.stderr.txt"; do [ ! -e "$C/$f" ] || { echo "FAIL: $f exists; a raw stream is never overwritten"; exit 1; }; done
+  ent=$(awk '/^## D21-153 /{p=1;next} p&&/^## /{p=0} p' "$L")
+  ga=$(printf '%s\n' "$ent" | grep '^S-BIN probe go-ahead cwd1 ')
+  [ "$(printf '%s\n' "$ga" | grep -c .)" -eq 1 ] || { echo "FAIL: D21-153 holds $(printf '%s\n' "$ga" | grep -c .) 'S-BIN probe go-ahead cwd1' lines, not 1"; exit 1; }
+  gt=$(printf '%s\n' "$ga" | sed -n 's/^S-BIN probe go-ahead cwd1 \([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}Z\) — .*/\1/p')
+  [ -n "$gt" ] || { echo "FAIL: the probe go-ahead line is unsigned: its time is not a UTC time"; exit 1; }
+  printf '%s\n' "$ga" | grep -qE ', caps used so far \$[0-9]+\.[0-9]{2}$' || { echo "FAIL: the probe go-ahead line's caps are unsigned"; exit 1; }
+  lt=$(tr -d '\r' < "$W/launch.txt" | sed -n 's/^PROBE_GOAHEAD=//p')
+  [ "$lt" = "$gt" ] || { echo "FAIL: launch.txt's PROBE_GOAHEAD ('$lt') is not the signed line's time ($gt)"; exit 1; }
+  rd=$(tr -d '\r' < "$W/readout.txt")
+  printf '%s\n' "$rd" | grep -q '^VALID yes ' || { echo "FAIL: the probe's reading is not VALID yes; no line is committed"; exit 1; }
+  printf '%s\n' "$rd" | grep -q '^PROBE_LINE written .*probe-line\.json$' || { echo "FAIL: readout.py did not write the probe line"; exit 1; }
+  c=$(python -I -c '
+import json, math, sys
+t = open(sys.argv[1], encoding="utf-8", newline="").read()
+p = json.loads(t)
+assert t == json.dumps(p, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n", "not one compact key-sorted LF line"
+assert type(p["probe"]) is int and p["probe"] == 2, "probe is not 2"
+assert p["kind"] == "cwd", "kind is not cwd"
+assert isinstance(p["observed_model"], str) and "haiku" in p["observed_model"], "observed_model is not a haiku"
+v = p["total_cost_usd"]
+assert isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and v >= 0, "total_cost_usd is not a number"
+assert p["raw_ref"] == sys.argv[2] + ".jsonl", "raw_ref is not the copied path"
+print(v)
+' "$W/probe-line.json" "$R" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the probe line is not the registered form: $c"; exit 1; }
+  cp "$W/raw.jsonl" "$C/$R.jsonl" && cp "$W/raw.stderr.txt" "$C/$R.stderr.txt" || exit 1
+  cat "$W/probe-line.json" >> "$C/results/s-bin/probes.jsonl" || exit 1
+  git -C "$C" add results/s-bin/probes.jsonl "$R.jsonl" "$R.stderr.txt" || exit 1
+  sn=$(git -C "$C" diff --cached --name-only); rc=$?
+  [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$sn" | LC_ALL=C sort | tr '\n' ' ')" = "results/s-bin/probes.jsonl $R.jsonl $R.stderr.txt " ] || { echo "FAIL: the staged paths are not exactly the three; nothing is committed"; printf '%s\n' "$sn"; exit 1; }
+  for x in jsonl stderr.txt; do
+    [ "$(git -C "$C" cat-file blob ":$R.$x" | sha256sum | cut -c1-64)" = "$(sha256sum < "$W/raw.$x" | cut -c1-64)" ] || { echo "FAIL: the staged $R.$x is not the probe's raw.$x byte for byte; nothing is committed"; exit 1; }
+  done
+  git -C "$C" commit -q -m "s8i: D21-153 ruling (r6)'s cwd probe on CLI 2.1.289: probes.jsonl's second line (haiku 2 of 3, total_cost_usd $c) and its raw stream (D21153-8i-F step 5p)" || exit 1
+  st=$(git -C "$C" status --porcelain --untracked-files=all -- . ':(exclude)runner/target/'); rc=$?
+  [ "$rc" -eq 0 ] && [ -z "$st" ] || { echo "FAIL: the corpus is not clean after the probe's commit (rc=$rc)"; printf '%s\n' "$st"; exit 1; }
+  echo "PROBE COMMIT OK $(git -C "$C" rev-parse HEAD) total_cost_usd=$c" )
+# 6c. Re-sign D21-143's B1 line IN PLACE, under the operator's ruling (r2): its time becomes the UTC at which it is
+#     written, and its dry-run sha256 becomes the one step 4c printed. Nothing else on the line moves, and it is not
+#     duplicated (D21-143's How to sign; D21-149 item 3's re-signing of 2026-10-07 is the precedent). Checkpoint 8i (5)
+#     requires the B1 line to name the pinned dry run. The line then reads:
+#     S-BIN go-ahead B1 <YYYY-MM-DDTHH:MM:SSZ> — at most 3 haiku flag probes on throwaway trees, then the five /ue-verify capture sessions on D:/sb/cap/item-1..5, caps used so far $0.00; fixture proofs: Checkpoint 8h d24d15a, dry run <sha256 from step 4c>; amendment 285b659fbcd3cd4d424541c4211e3b6398ea26ed
+#     Then this read-only check: three go-ahead lines in the entry, and the B1 line names the committed dry run.
+( C=${CORPUS:-D:/repos/redkiln-corpus}; L=D:/repos/redkiln-rs/spikes/DECISIONS-2026-09-21.md
+  dry=$(git -C "$C" cat-file blob HEAD:results/s-bin/dry-run.jsonl | sha256sum | cut -c1-64)
+  printf '%s\n' "$dry" | grep -qxE '[0-9a-f]{64}' || { echo "FAIL: no committed dry run at HEAD"; exit 1; }
+  [ "$dry" != ed2800095d245882d10da1b8ff6a56571cd00102ba4acacc241d115947d707f7 ] && [ "$dry" != e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 ] || { echo "FAIL: HEAD's dry run is the old ed280009 or empty"; exit 1; }
+  ent=$(awk '/^## D21-143 /{p=1;next} p&&/^## /{p=0} p' "$L"); [ -n "$ent" ] || { echo "FAIL: no D21-143 entry in $L"; exit 1; }
+  n=$(printf '%s\n' "$ent" | grep -c 'S-BIN go-ahead B[0-4] ')
+  [ "$n" -eq 3 ] || { echo "FAIL: D21-143 holds $n go-ahead lines, not 3 (B0, B1, B2; a line is never duplicated)"; exit 1; }
+  b1=$(printf '%s\n' "$ent" | grep '^S-BIN go-ahead B1 ')
+  printf '%s\n' "$b1" | grep -qF "dry run $dry;" || { echo "FAIL: the B1 line does not name the committed dry run $dry"; exit 1; }
+  echo "B1 LINE OK" )
+# 10. Section 8i.5's BrittonGames snapshot block, as written, with WHEN=before-B2 (it removes its scratch directory at
+#     its end, ruling (r5)). It appends a second before-B2 line to results/s-bin/brittongames-snapshots.txt, which step
+#     1c kept in place; Checkpoint 8i (12) needs the first line to be before-B2 and every line to be one state. Commit
+#     it with B2's results. Then D21-145's absence check before the batch: nothing under %TEMP%/claude is a review-root slug.
+( d="${TEMP:-}/claude"
+  [ -n "${TEMP:-}" ] || { echo "FAIL: TEMP is not set in this shell"; exit 1; }
+  if [ -d "$d" ]; then
+    l=$(ls -1 "$d"); rc=$?
+    [ "$rc" -eq 0 ] || { echo "FAIL: $d is unreadable (rc=$rc)"; exit 1; }
+    printf '%s\n' "$l" | grep -qi '^D--sb-' && { echo "FAIL: a review-root slug is under $d (D21-145); triage it first"; exit 1; }
+  fi
+  echo "TEMP SLUGS OK" )
+# 10b. The bases and review repositories re-verified, read-only (the s8i verify panel: base, base-old and rev are one
+#     inode set, so one in-place write into any of them would move the frozen bases). Each HEAD is the committed
+#     fixture's, each status is empty, and the rule's files and each headless.log are at their registered sha256.
+( C=${CORPUS:-D:/repos/redkiln-corpus}; S=D:/repos/redkiln-sev/afk-tools/sp/s8i
+  [ "$(sha256sum < "$S/s8i_D21153-8i-I_baseverify.py" | cut -c1-64)" = eaec6487092a2631aa2e68f2dc2e86e7e54d5982b3196d1902ce9a924015e7cc ] || { echo "FAIL: the base verifier is not D21153-8i-I's"; exit 1; }
+  [ "$(git -C "$C" cat-file blob HEAD:results/s-bin/fixture.json | sha256sum | cut -c1-64)" = 82add83e5cf2ef8f3ccd8bb7e561afd40a14274496bedd49d9d0ea4b369397cb ] || { echo "FAIL: HEAD's fixture.json is not step 5c's"; exit 1; }
+  out=$(GIT_OPTIONAL_LOCKS=0 python "$S/s8i_D21153-8i-I_baseverify.py" "$C/results/s-bin/fixture.json" 2>&1); rc=$?
+  printf '%s\n' "$out"
+  [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$out" | tail -1)" = BASES_OK ] || { echo "FAIL: a base or review repository moved (rc=$rc); a stop (section 8i.6)"; exit 1; } )
+# 10r. The refuting rounds recorded (step 0r), naming the patch step 2c committed.
+( C=${CORPUS:-D:/repos/redkiln-corpus}; S=D:/repos/redkiln-sev/afk-tools/sp/s8i; P=$S/S8I-D21153-8i-sbin-driver.patch
+  L=D:/repos/redkiln-rs/spikes/DECISIONS-2026-09-21.md
+  ps=$(sha256sum < "$P" | cut -c1-64)
+  [ "$(git -C "$C" cat-file blob HEAD:runner/src/sbin.rs | sha256sum | cut -c1-64)" = 664fd3678ea88145b4dbd35378ebbaa22b3880ccb977da2162f1ea2e1ef39c5a ] || { echo "FAIL: HEAD's sbin.rs is not step 2c's runner"; exit 1; }
   ent=$(awk '/^## D21-153 /{p=1;next} p&&/^## /{p=0} p' "$L"); [ -n "$ent" ] || { echo "FAIL: no D21-153 entry in $L"; exit 1; }
   n=$(printf '%s\n' "$ent" | grep -c '^D21-153 refuting rounds: [1-9][0-9]*, patch [0-9a-f]\{64\}, verdict clean$')
   [ "$n" -eq 1 ] || { echo "FAIL: D21-153 holds $n clean refuting-round lines, not 1; step 0r comes before the B2 line"; exit 1; }
