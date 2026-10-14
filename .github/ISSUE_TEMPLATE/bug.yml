@@ -1,0 +1,36 @@
+name: Bug
+description: One defect, with evidence. See docs/BACKLOG.md.
+type: Bug
+labels: ["source/human", "needs/triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is wrong, and what should happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: "path:line at a commit SHA, logs, run ids."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: "Checkboxes with exact commands (cargo nextest run -p ..., node .claude/temper/temper.mjs baseline --check, git grep ... returns nothing)."
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: input
+    id: docs
+    attributes:
+      label: Doc links
+      description: "AC-, ADR-, D21- ids and paths; runbook section if relevant."
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope

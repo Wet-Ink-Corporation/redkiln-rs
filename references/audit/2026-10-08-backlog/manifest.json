@@ -1,0 +1,1298 @@
+{
+ "id": "2026-10-08",
+ "repo": "Wet-Ink-Corporation/redkiln-rs",
+ "labels": [
+  {
+   "name": "area/types",
+   "color": "1d76db",
+   "description": "rk-types: ids, typed artifacts, Digest, Drift, StepError"
+  },
+  {
+   "name": "area/ports",
+   "color": "1d76db",
+   "description": "rk-ports: the five port traits, fakes, CancelToken"
+  },
+  {
+   "name": "area/kernel",
+   "color": "1d76db",
+   "description": "rk-kernel: selection, gates, budgets, runtime, replay"
+  },
+  {
+   "name": "area/store",
+   "color": "1d76db",
+   "description": "rk-store: typed store, identity, retention, connection discipline"
+  },
+  {
+   "name": "area/git",
+   "color": "1d76db",
+   "description": "rk-git: git as the tier-1 store, trailers, worktrees"
+  },
+  {
+   "name": "area/containment",
+   "color": "1d76db",
+   "description": "rk-containment: Job Object, process group, bounded run"
+  },
+  {
+   "name": "area/adapter-claude",
+   "color": "1d76db",
+   "description": "rk-adapter-claude: the real Harness"
+  },
+  {
+   "name": "area/adapter-sqlite",
+   "color": "1d76db",
+   "description": "rk-adapter-sqlite: the real EventStore"
+  },
+  {
+   "name": "area/toolchain",
+   "color": "1d76db",
+   "description": "rk-adapter-toolchain-rust and -node"
+  },
+  {
+   "name": "area/cli",
+   "color": "1d76db",
+   "description": "rk-cli: the redkiln binary and its tests"
+  },
+  {
+   "name": "area/migrate",
+   "color": "1d76db",
+   "description": "redkiln-migrate: the old-corpus converter"
+  },
+  {
+   "name": "area/ci",
+   "color": "1d76db",
+   "description": ".github/workflows, CI jobs and reports"
+  },
+  {
+   "name": "area/records",
+   "color": "1d76db",
+   "description": "Runbook, PROGRESS, DECISIONS, ADRs, registers"
+  },
+  {
+   "name": "area/pack",
+   "color": "1d76db",
+   "description": ".redkiln/ packs, catalog and schemas"
+  },
+  {
+   "name": "status/ready",
+   "color": "0e8a16",
+   "description": "Meets the definition of ready: criteria present, no needs/*, not blocked"
+  },
+  {
+   "name": "status/in-progress",
+   "color": "fbca04",
+   "description": "An agent or human is working on it"
+  },
+  {
+   "name": "needs/triage",
+   "color": "d93f0b",
+   "description": "Not yet triaged; agents do not pick it up"
+  },
+  {
+   "name": "needs/decision",
+   "color": "b60205",
+   "description": "Waits on an operator decision; agents do not pick it up"
+  },
+  {
+   "name": "needs/repro",
+   "color": "d93f0b",
+   "description": "Needs a reproduction before work starts"
+  },
+  {
+   "name": "needs/human",
+   "color": "b60205",
+   "description": "Needs a human action (push, paid run, record edit timing)"
+  },
+  {
+   "name": "source/audit-2026-10-06",
+   "color": "c2410c",
+   "description": "Finding from the 2026-10-06 status-quo audit",
+   "renameFrom": "audit-2026-10-06"
+  },
+  {
+   "name": "source/agent",
+   "color": "c5def5",
+   "description": "Filed by an AFK agent"
+  },
+  {
+   "name": "source/human",
+   "color": "c5def5",
+   "description": "Filed by a human"
+  },
+  {
+   "name": "source/ci",
+   "color": "c5def5",
+   "description": "Filed from a CI result"
+  },
+  {
+   "name": "prio/p0",
+   "color": "b60205",
+   "description": "Interim priority: drop everything (until org Priority field)"
+  },
+  {
+   "name": "prio/p1",
+   "color": "d93f0b",
+   "description": "Interim priority: high"
+  },
+  {
+   "name": "prio/p2",
+   "color": "fbca04",
+   "description": "Interim priority: medium"
+  },
+  {
+   "name": "prio/p3",
+   "color": "c5def5",
+   "description": "Interim priority: low"
+  },
+  {
+   "name": "size/s",
+   "color": "ededed",
+   "description": "Interim effort: under half a day"
+  },
+  {
+   "name": "size/m",
+   "color": "ededed",
+   "description": "Interim effort: half a day to two days"
+  },
+  {
+   "name": "size/l",
+   "color": "ededed",
+   "description": "Interim effort: more than two days"
+  },
+  {
+   "name": "pre-m5",
+   "color": "5319e7",
+   "description": "Must land before M5 or be folded into s8j (appendix §15)"
+  },
+  {
+   "name": "bug",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "enhancement",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "question",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "documentation",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "good first issue",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "help wanted",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "invalid",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "duplicate",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  },
+  {
+   "name": "wontfix",
+   "color": "ededed",
+   "description": "GitHub default, retired after migration",
+   "deleteAfterMigration": true
+  }
+ ],
+ "existing": [
+  {
+   "number": 5,
+   "audit_id": "A1",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "pre-m5",
+    "prio/p1",
+    "status/ready"
+   ],
+   "parent": "new:run-path-fixes",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-cli/src/main.rs:34-37` still matches `Ok(token) => drop(token)`.\n- `crates/rk-cli/src/signal.rs:46-51`: `install()` builds the token, and only the handler holds the clone.\n- `crates/rk-cli/src/verbs/run.rs:398` still builds an orphan `CancelToken::new()`, read at `run.rs:1324`, `:1336` and `:2761`.\n- `crates/rk-cli/tests/it/root.rs:1358` `signal_during_dispatch_is_cancelled_by_signal_exit_13` fires a token it builds itself, not the real entry point.\n- Audit placement: before any paid lane run (`references/audit/2026-10-06-status/appendix.md` §5 D3, §13 O-7, §14 'Ctrl-C inert' Medium, §15 item 3). Parented under the run-path fixes epic.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] `verbs::run` receives the token returned by `rk_cli::signal::install()`, and the `CancelToken::new()` at `verbs/run.rs:398` is gone\n- [ ] A process-level test spawns the `redkiln` binary under the fake harness, delivers a real interrupt mid-dispatch, and asserts exit 13 or 130 plus the cancellation row. It runs green with `cargo nextest run -p rk-cli --test it root::`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=A1 -->\n\n**Merge hold (operator, 2026-10-08):** agents may open the PR (`Closes #N`), but it is not merged into `build/phase-0-to-1` while s8i is open. It merges just before s8j re-runs its entry chain through Checkpoint 8i (`runbook/phase-1/s8j-run-preparation.md:51`), so that re-run covers it."
+  },
+  {
+   "number": 6,
+   "audit_id": "A2",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "pre-m5",
+    "prio/p1",
+    "status/ready"
+   ],
+   "parent": "new:run-path-fixes",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-cli/src/verbs/status.rs:172-177`: `item_of` reads `payload[\"item\"]`.\n- `status.rs:183-191`: `recorded_stage` is the last `StageTransition` in the whole store. `status.rs:196-216`: `roll_up` passes that one stage, plus every item-less row, to each item.\n- `Event::item()` exists at `crates/rk-types/src/event.rs:99`, but `status.rs` does not use it.\n- Audit placement: `references/audit/2026-10-06-status/appendix.md` §5 D4, §13 O-7, §14 ('status wrong with two items' Medium), §15 item 3.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] `status` partitions rows by `Event::item()` and derives each item's stage from that item's own `stage_transition` rows. Item-less rows are shared only for the kinds ADR-0182 carries\n- [ ] `lane_e2e::two_items_in_one_store_do_not_fold_together` (`crates/rk-cli/tests/it/lane_e2e.rs:1297`) also runs `redkiln status` and asserts the two items' distinct stages: `cargo nextest run -p rk-cli --test it lane_e2e:: status::`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=A2 -->\n\n**Merge hold (operator, 2026-10-08):** agents may open the PR (`Closes #N`), but it is not merged into `build/phase-0-to-1` while s8i is open. It merges just before s8j re-runs its entry chain through Checkpoint 8i (`runbook/phase-1/s8j-run-preparation.md:51`), so that re-run covers it."
+  },
+  {
+   "number": 7,
+   "audit_id": "A3",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "pre-m5",
+    "prio/p1",
+    "status/ready"
+   ],
+   "parent": "new:run-path-fixes",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-kernel/src/select/step4.rs:595-600`: `TOOLCHAIN_INSTANCES` still has four rows (node, unreal, dotnet, node+unreal). `rank_lint` (`step4.rs:533`) runs at load from `select/lints.rs:362` (AC-047).\n- `crates/rk-kernel/src/rigor.rs:561-566` carries the same four-row const. `lattice.rs:175-176` and `:189` ship python and rust, so the two models disagree.\n- Placement: §14 rates it Low-Medium (post-M5 list), but §15 item 3 says fix before the paid lane run, so it is labelled `pre-m5` (`references/audit/2026-10-06-status/appendix.md` §5 D7, §6 C9).\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] `rank_lint` and the rigor sweep derive their toolchain domain from `lattice::Axes::shipped()` (`lattice.rs:303`) or from the registry's toolchain facet values, with no hand-kept list\n- [ ] A new must-be-red fixture with a rust-only rank tie fails the load lint: `cargo nextest run -p rk-kernel` passes, with the fixture's test named in the PR\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=A3 -->\n\n**Merge hold (operator, 2026-10-08):** agents may open the PR (`Closes #N`), but it is not merged into `build/phase-0-to-1` while s8i is open. It merges just before s8j re-runs its entry chain through Checkpoint 8i (`runbook/phase-1/s8j-run-preparation.md:51`), so that re-run covers it."
+  },
+  {
+   "number": 8,
+   "audit_id": "A4",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "prio/p3"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; epic-sized**.\n\n- No caller of `evaluate_gate` (`workflow/budget.rs:873`), `exhausted_counter` (`:816`), `wall_clock_expiry_mark` (`:1050`), `substitute` (`workflow/degrade.rs:285`), `degraded_event` (`:320`) or `gate_closes` (`:388`) exists outside their own modules.\n- `crates/rk-kernel/src/runtime.rs:93` still records AC-024 as ARMED, NOT DISCHARGED with zero call sites. `runtime/activity.rs:371` `pass_charges()` exists, but nothing folds it into a `BudgetLedger`.\n- Audit placement: off the M5 path (`references/audit/2026-10-06-status/appendix.md` §5 D10, §14 Low-Medium, §15 item 7). Converted to an Epic: a decision child gates three PR-sized wiring children.\n\nChildren: the wire-or-defer decision; AC-025's ledger fold and gate; AC-024's wall-clock mark; AC-363's degradation substitute.\n\n<!-- ledger: src=audit id=A4 -->",
+   "title": "Budget exhaustion, wall-clock expiry and degradation wiring (AC-024, AC-025, AC-363)"
+  },
+  {
+   "number": 9,
+   "audit_id": "A5",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; two separable PRs**.\n\n- `crates/rk-kernel/src/workflow/envelope.rs:445-448`: only absent or null usage is filtered, and a non-null usage that fails to deserialise is skipped by `continue`, which charges 0.\n- `crates/rk-kernel/src/runtime/activity.rs:636-638`: `envelope.admit(&self.journal(item)?, item)?` and the dispatch append are separate steps, and the store guard is taken per call (`activity.rs:643`, `:699`, `:807`, `:846`).\n- Audit placement: `references/audit/2026-10-06-status/appendix.md` §4.5 and §7 only; not pre-M5.\n\nChildren: the fail-closed usage charge, and atomic admission.\n\n<!-- ledger: src=audit id=A5 -->"
+  },
+  {
+   "number": 10,
+   "audit_id": "A6",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/pack"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; two separable PRs**.\n\n- `crates/rk-kernel/src/catalog.rs:1024-1035`: the `text` and `strings` closures drop wrong-typed values silently. `catalog.rs:1335` defaults `min_rigor` to `\"optional\"`.\n- `crates/rk-kernel/src/select/canonical.rs:70-91`: `catalog_json` omits `excludes` and `deviation_ok`.\n- Audit placement: `references/audit/2026-10-06-status/appendix.md` §4.3 only; not pre-M5.\n\nChildren: strict header parsing (agent-ready), and the digest change (needs a decision, because it moves goldens and recorded run ids).\n\n<!-- ledger: src=audit id=A6 -->"
+  },
+  {
+   "number": 11,
+   "audit_id": "A7",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "pre-m5",
+    "prio/p1",
+    "status/ready"
+   ],
+   "parent": "new:run-path-fixes",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `redkiln_command` in `crates/rk-cli/tests/it/main.rs` (about `:280-292`) still removes only `rk_cli::env::LAUNCH_RECORD`. No `ANTHROPIC_*` or `CLAUDE_*` variable is scrubbed (the file changed in `f433854` and `ef747da`, but this constructor did not).\n- `run::every_binary_spawn_withholds_or_supplies_the_launch_record` (`crates/rk-cli/tests/it/run.rs:1478`) still asserts that a single constructor exists, so the fix belongs in that one place.\n- Audit: `references/audit/2026-10-06-status/appendix.md` §5 D11, §14 Low-Medium, §15 item 3.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] `redkiln_command` removes every name in rk-adapter-claude's env denylist, plus every inherited variable prefixed `ANTHROPIC_` or `CLAUDE_`\n- [ ] A test sets a provider variable in the parent and asserts that the child's launch gate is unchanged\n- [ ] `CLAUDE_CODE_USE_BEDROCK=1 ANTHROPIC_BASE_URL=http://127.0.0.1:9 cargo nextest run -p rk-cli --test it` is green (non-secret dummy values only)\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=A7 -->\n\n**Merge hold (operator, 2026-10-08):** agents may open the PR (`Closes #N`), but it is not merged into `build/phase-0-to-1` while s8i is open. It merges just before s8j re-runs its entry chain through Checkpoint 8i (`runbook/phase-1/s8j-run-preparation.md:51`), so that re-run covers it."
+  },
+  {
+   "number": 12,
+   "audit_id": "A8",
+   "action": "keep",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "status/ready"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-cli/Cargo.toml:58` (`anyhow`) and `:69` (`proptest`) are still declared, and no `.rs` file under `crates/rk-cli` uses either.\n- The workspace rows stay: `crates/redkiln-migrate/src/run_contract.rs:84` and `:355` use anyhow, and `rk-kernel` and `rk-adapter-claude` still declare proptest.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] Both lines are removed from `crates/rk-cli/Cargo.toml`, and the root `[workspace.dependencies]` rows are unchanged\n- [ ] `cargo build -p rk-cli` and `cargo nextest run -p rk-cli` pass, and `cargo deny check bans advisories licenses` is green\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\nOut of scope: adding `cargo machete` or udeps to CI. That is a CI-config change for a human to approve.\n\n<!-- ledger: src=audit id=A8 -->"
+  },
+  {
+   "number": 13,
+   "audit_id": "A9",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/cli"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; three separable PRs**.\n\n- `crates/rk-kernel/src/review/quarantine.rs:50` `grant` and `:80` `remove` have no caller in `crates/*/src`.\n- `crates/rk-kernel/src/review/confirm.rs:351` `retire_not_re_raised` has no caller.\n- `crates/rk-cli/src/doctor/rules.rs:2432` is the only caller of `verify::claims::bind` (`crates/rk-kernel/src/verify/claims.rs:126`). Nothing binds at plan time (AC-349).\n- `crates/rk-cli/src/review_pass.rs:220` still refuses non-`Run` repro kinds. That stays refused under ADR-0162 and is not part of this epic.\n\nChildren: plan-time claim binding (AC-349), advisory retirement, and the quarantine verb (needs a decision: build or defer by ADR).\n\n<!-- ledger: src=audit id=A9 -->"
+  },
+  {
+   "number": 14,
+   "audit_id": "A10",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/cli"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; three separable PRs**.\n\n- `crates/rk-kernel/src/select/step7.rs:344` `step7` is called only from `replay.rs:1518` and `:2017`.\n- `crates/rk-kernel/src/pack_validation.rs:309` `pack_capability_routing_rule` and `resolver.rs:371` `resolve_activity` have no caller outside their own module.\n- `crates/rk-kernel/src/runtime/step.rs:2214` and `:2241` still refuse `to = \"deviate\"` by name as OWED.\n- There is no select-against-lattice differential test under `crates/rk-kernel/tests/it`.\n\nChildren: the differential test, the routing-rule call at the composition root, and the step-7 phase decision.\n\n<!-- ledger: src=audit id=A10 -->"
+  },
+  {
+   "number": 15,
+   "audit_id": "B1",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/git",
+    "area/kernel",
+    "area/store",
+    "area/types",
+    "prio/p3"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; neither scheduled nor deferred**.\n\n- `crates/rk-types/src/drift.rs:93` declares `OrphanedAnchor`, and nothing constructs it.\n- `EventKind::Rewrite` appears only in exhaustive-match arms (`rk-kernel/src/workflow/breaker.rs:635`, `fsm.rs:1730`, `memo.rs:753`).\n- `GitOp::PatchId` is only listed and named (`crates/rk-git/src/git_exec.rs:42`, `:135`, `:175`, `:212`); nothing calls it.\n- A grep for AC-167/169/170/171 across `runbook/`, `spikes/DECISIONS-*.md` and `references/adr` finds no scheduling or deferral.\n- Audit placement: `references/audit/2026-10-06-status/appendix.md` §5 D8, §14 Low-Medium (avoid rebasing `rk-run/*` refs until it exists), §15 item 7.\n\nChildren: the schedule-or-defer decision, the orphan report (AC-167), rewrite events by patch-id with the AC-170 negative test (AC-169, AC-170), and the human gate (AC-171). The three build children are blocked by the decision.\n\n<!-- ledger: src=audit id=B1 -->"
+  },
+  {
+   "number": 16,
+   "audit_id": "B2",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/git",
+    "area/cli",
+    "prio/p3",
+    "status/ready"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-git/src/error.rs:15` derives only Debug for `GitError`. `NonZeroExit.stderr` and `WorktreeRemoveFailed.stderr` are `Vec<u8>`.\n- The `{e:?}` workaround remains at `crates/rk-cli/src/verbs/doctor.rs:115-117`, `crates/rk-cli/src/repo.rs:90`, `:99`, `:102` and `:105`, and `crates/rk-cli/src/doctor/rebuild.rs:337` and `:341` (the audit's `:143` has moved).\n- rk-git closed at Step 6, so the PR carries a dated amendment note in the Step 6 record.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] `impl Display for GitError` renders the op, the exit code and the stderr (lossy UTF-8, truncated), with a rendering test for `NonZeroExit`\n- [ ] The listed `{e:?}` git-error sites print `{e}`, and the doc at `repo.rs:45-50` is updated\n- [ ] `cargo nextest run -p rk-git -p rk-cli` passes\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=B2 -->"
+  },
+  {
+   "number": 17,
+   "audit_id": "B3",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/store",
+    "status/ready"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-store/src/identity.rs:63-74`: `query_row(...).unwrap_or(false)` swallows every error, while the doc at `:65-66` promises `StoreError::Sqlite`.\n- `crates/rk-store/src/migrate.rs:45-60`: `establish` treats `stamped == None` as a fresh store (AC-179).\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The probe uses rusqlite's `OptionalExtension::optional()` and propagates every error except no-rows with `?`\n- [ ] Tests show that a failing probe (a non-database file, or a locked connection) returns `Err(StoreError::Sqlite)` from both `read` and `establish`: `cargo nextest run -p rk-store`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=B3 -->"
+  },
+  {
+   "number": 18,
+   "audit_id": "B4",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/git",
+    "status/ready"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-git/src/trailer/grammar.rs:225-247`: `parse_body` takes any column-0 `key: value` line anywhere in the body.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] Parsing is limited to the final paragraph, matching `git interpret-trailers --parse`, and AC-165's malformed-trailer surfacing still holds inside that block\n- [ ] Tests cover three cases: a trailer-like line mid-body is ignored, the same line in the last paragraph is read, and a message with no trailer paragraph yields none. `cargo nextest run -p rk-git` passes\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=B4 -->"
+  },
+  {
+   "number": 19,
+   "audit_id": "B5",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/types",
+    "prio/p3",
+    "status/ready"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-types/src/digest.rs:19-23` derives `Deserialize` on `#[serde(transparent)] pub struct Digest(String)`, while `:35-36` documents `from_hex` as the only constructor, so serde bypasses its validation.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] Deserialisation goes through `#[serde(try_from = \"String\")]` backed by `from_hex`, and the serialised output is byte-identical\n- [ ] Rejection tests cover 63 characters, uppercase and non-hex input. The schemars output is unchanged, or gains a `pattern`: `cargo nextest run -p rk-types`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=B5 -->"
+  },
+  {
+   "number": 20,
+   "audit_id": "B6",
+   "action": "narrow",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/containment",
+    "pre-m5",
+    "prio/p1",
+    "status/ready"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **partly stale: the kill fix landed, `is_empty` did not**.\n\n- Done: `9959b2f` reached this branch through the merge `88a8dbd`. `crates/rk-containment/src/posix.rs:71-93` now runs `killpg_all` and then polls zombie-filtered `pids()`.\n- Still open: `posix.rs:96-100` `Group::is_empty` calls `sys::group_has_members` (`ffi.rs:650-664`, `kill(-pgid, 0)`), which reports a zombie member as present.\n- Narrowed to the `is_empty` fix. The records note about the red CI before `9959b2f` moves to #23.\n- Placement: `references/audit/2026-10-06-status/appendix.md` §5 D5, §14 High (CI and POSIX containment), §15 item 1.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] `Group::is_empty` is zombie-aware (for example `Ok(self.pids()?.is_empty())`), or it is renamed and documented for what it measures\n- [ ] A POSIX test with an exited, unreaped member passes on the ubuntu leg of `ci.yml`, and `cargo nextest run -p rk-containment` is green on both legs\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=B6 -->",
+   "title": "Make rk-containment Group::is_empty zombie-aware (POSIX)"
+  },
+  {
+   "number": 21,
+   "audit_id": "B7",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/adapter-claude",
+    "area/cli",
+    "needs/decision"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; needs a design decision**.\n\n- `crates/rk-adapter-claude/src/lib.rs:205` constructs `Mutex::new(Guard::empty())`, with no seed from the event store. `throttle.rs:88-98` still says the first dispatch of a batch is unguarded.\n- The adapter depends only on rk-types, rk-ports and rk-containment. Seeding it needs a seed injected by the rk-cli composition root, or a new port. Either way the constructor changes, which makes it an API decision under H-16, so it is labelled `needs/decision`.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] Decision recorded: the seed is injected by the composition root, or read through a port\n- [ ] A fresh process with a near-limit `rate_limit_reading` row refuses or waits on its first dispatch: `cargo nextest run -p rk-adapter-claude -p rk-cli`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=B7 -->"
+  },
+  {
+   "number": 22,
+   "audit_id": "B9",
+   "action": "keep",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "area/store",
+    "status/ready"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-store/src/retention.rs:59` `looks_like_credential` and `crates/rk-store/src/conn.rs:209` `looks_like_network_filesystem` are called only from `rk-store/tests/it/store.rs`.\n- `crates/rk-cli/src/doctor/rules.rs` keeps its own narrower copies: `network_fs` near `:1296-1312`, and `credential_retained`'s two `SHAPES` near `:1334`.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The doctor rules call the rk-store detectors, and the local copies are deleted\n- [ ] New doctor fixtures cover a PEM private-key header and a `\\\\?\\C:\\` path: `cargo nextest run -p rk-cli --test it doctor::`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n<!-- ledger: src=audit id=B9 -->"
+  },
+  {
+   "number": 23,
+   "audit_id": "C1",
+   "action": "narrow",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "area/containment",
+    "pre-m5",
+    "prio/p1",
+    "needs/human"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **partly stale: the merge and push are done, the records are not**.\n\n- Done: merge `88a8dbd` brought `origin/build/phase-0-to-1` (`9959b2f`, `ef747da`, `cb4ddd4`, `aab766c`, `f433854` and the temper PRs). `origin/build/phase-0-to-1` equals `71fc926`.\n- Green runs exist: ci `37310935003` and temper `37310935029` at `62dd3b8` (audit README); ci `37580924548` and temper `37580924561` at `88a8dbd` (2026-10-07); ci `37728963020` and temper `37728963069` at `71fc926` (2026-10-08).\n- Still stale, and this issue's: `runbook/PROGRESS.md:561`; `crates/rk-containment/src/lib.rs:38`; `references/adr/0127-rk-containment-owns-process-containment.md:178`.\n- Still stale, but the runbook's (not this issue): `runbook/phase-1/s8j-run-preparation.md:1178-1179` (§8j.7's premise) and `.github/workflows/ci.yml:216`, `:305` and `:580`. §8j.7 owns them: *\"The ARMED comments in `ci.yml` get dated, comment-only corrections once their job has run green\"* (`s8j-run-preparation.md:1222`).\n- The temper baseline decision (audit O-2) is recorded only in AGENTS.md's decisions log (2026-10-03). No PROGRESS row cites it or the run ids.\n- Removed from this issue: re-running the checkpoints on the integrated tree, the `ci.yml` ARMED-comment corrections and the §8j.7 premise all belong to s8j, which the runbook owns until M5.\n- Why `needs/human`: the live s8i session holds uncommitted edits to `runbook/PROGRESS.md`, so a human must time this edit. The ADR-0127 line is corrected through `ERRATA.md`, not by editing a decision.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] PROGRESS.md records the run ids above, the red runs before `9959b2f` (as far as they can be recovered), and the temper baseline decision, citing AGENTS.md's decisions-log row\n- [ ] Every stale line listed as this issue's carries a dated correction (ADR-0127's through `references/adr/ERRATA.md`); `git grep -n -E \"never (run|executed)|never been pushed\" runbook/PROGRESS.md crates/rk-containment` returns only lines that are dated as historical\n- [ ] The diff touches only `runbook/PROGRESS.md`, `crates/rk-containment/src/lib.rs` and `references/adr/ERRATA.md` (`git diff --stat` against the base); `s8j-run-preparation.md` and `ci.yml` are not edited\n- [ ] No ADR `## Decision` sentence and no DECISIONS ledger entry is edited by an agent; corrections are dated in-place notes in the repo's existing convention\n\n<!-- ledger: src=audit id=C1 -->",
+   "title": "Record the green CI runs and the temper baseline decision; correct the stale \"never pushed / CI never ran\" statements outside s8j"
+  },
+  {
+   "number": 24,
+   "audit_id": "C2",
+   "action": "keep",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "needs/decision"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [
+    "#23"
+   ],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `runbook/INDEX.md:100` (the M5 row) has no landing or merge action, and no runbook file names one.\n- `git ls-files 'spikes/*.log'` still tracks four stale logs.\n- The landing method is audit O-10 (`references/audit/2026-10-06-status/appendix.md` §11, §13), so the issue is labelled `needs/decision`. §16 lists landing under post-M5 hardening. Blocked by #23: the records must be true before the landing step cites them.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The operator picks the landing method (the audit recommends a `--no-ff` merge to `main` after the checkpoints and CI are green)\n- [ ] INDEX.md's M5 row and `s8-exit-criterion.md` name the landing step and its order\n- [ ] The four `spikes/*.log` files are untracked with `git rm --cached` in a separate small commit\n- [ ] The diff touches only the files named above (`git diff --stat` against the base)\n- [ ] No ADR `## Decision` sentence and no DECISIONS ledger entry is edited by an agent; corrections are dated in-place notes in the repo's existing convention\n\n<!-- ledger: src=audit id=C2 -->"
+  },
+  {
+   "number": 25,
+   "audit_id": "C3",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p1"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; two separable parts**.\n\n- `runbook/phase-1/s8j-run-preparation.md:2073-2076` still says Checkpoint 8j is one-shot and refuses an existing `rk-run/<fix item>`. `:2191` fails if `rk-run/$fx` exists.\n- No recovery or re-freeze procedure exists in `s8j`, `s8-exit-criterion.md` or `halts.md`.\n- Audit: `references/audit/2026-10-06-status/appendix.md` §13 O-9, §12.2 (repair-and-re-freeze scenario, 45% weight), §14 High (first real contact), §15 item 4.\n\nChildren: the recovery procedure (option a), and a single real dispatch before the freeze (option c, a paid step, so it needs a decision). Both edit runbook files that the operator is about to execute, so neither is agent-ready.\n\n<!-- ledger: src=audit id=C3 -->"
+  },
+  {
+   "number": 26,
+   "audit_id": "C4",
+   "action": "narrow",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p2",
+    "needs/decision"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; narrowed to the decision**.\n\n- `runbook/INDEX.md:100` still reads 'Checkpoint 8 passed', with no scope limit. `runbook/phase-1/s8-exit-criterion.md` has no acceptance set.\n- Audit: `references/audit/2026-10-06-status/appendix.md` §7 GAP2 (50 unscheduled binding ACs, 14 provisional ACs with no spike), §9, §13 O-5, §14 Medium, §15 item 5.\n- Narrowed: this issue is now the operator's O-5 decision plus a one-paragraph scope statement. The disposition table moved to a child of #27, blocked by this issue and by #27's reconciliation report. If the decision requires the table before M5, that child and the report move under the M5 initiative.\n- The scope statement may also carry #33's verify-stage note.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The operator decides: (a) a disposition for each unscheduled binding AC and each unspiked provisional AC before M5, or (b) M5 certifies the six exit checks only\n- [ ] INDEX.md's M5 row and `s8-exit-criterion.md` state the decided scope in a dated paragraph\n- [ ] The diff touches only the files named above (`git diff --stat` against the base)\n- [ ] No ADR `## Decision` sentence and no DECISIONS ledger entry is edited by an agent; corrections are dated in-place notes in the repo's existing convention\n\n<!-- ledger: src=audit id=C4 -->",
+   "title": "Decide what M5 certifies (audit O-5) and state it in the M5 record"
+  },
+  {
+   "number": 27,
+   "audit_id": "C5",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/ci",
+    "area/records",
+    "prio/p2"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; epic-sized**.\n\n- `.github/workflows` holds only `ci.yml` and `rust.yml`. No reconciliation of the AC register against tests exists.\n- Sampled silent gaps: AC-084 and AC-116 have no code or test hit. AC-363 and AC-446 appear only in prose. AC-168 now has a real test at `crates/rk-store/tests/it/store.rs:369-400`. AC-122 and AC-471 have code hits that need checking.\n- AC-291 and AC-292 are still orphaned (`runbook/phase-1/s7b-ii-gates.md:981-990`). The amendments for AC-043, AC-044, AC-045 and AC-056 are still owed (`s7b-kernel.md:263-264`, `:705-707`).\n- Audit: `references/audit/2026-10-06-status/appendix.md` §7 GAP2, §9, §14 Medium (silent AC gaps), §15 item 7. This epic is also the home for the unscheduled-AC backlog (about 50 binding and 14 provisional).\n\nChildren: the reconciliation script and CI report; triage of the named gaps and orphans; the owed register amendments; the disposition table, which is blocked by #26 and by the report.\n\n<!-- ledger: src=audit id=C5 -->",
+   "title": "AC traceability: register-wide reconciliation, gap triage and disposition (SM-100)"
+  },
+  {
+   "number": 28,
+   "audit_id": "C6",
+   "action": "keep",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p2",
+    "needs/decision"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `spikes/DECISIONS-2026-09-21.md` still holds the provisional rulings D21-106 to D21-128 (except D21-107 and D21-116 to D21-118) and D21-137, with no recorded confirmation. Flip-on-silence wording is at `:5857-5858`. The open asks are at `:5036` and `:5805`.\n- Accepted ADRs that rest on silence: ADR-0189, ADR-0191, ADR-0194 and ADR-0196.\n- Audit: `references/audit/2026-10-06-status/appendix.md` §10.1, §12.1, §13 O-3, §15 item 6. It can be folded into one of the operator's S-BIN sittings, together with ADR-0197's decision-7 table (its own issue).\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The operator confirms or reverses each ruling from one consolidated list\n- [ ] One dated D21 entry, written by the operator's session, cites each id, and the PROGRESS rows and ADR flip notes that rest on silence are updated\n\n<!-- ledger: src=audit id=C6 -->"
+  },
+  {
+   "number": 29,
+   "audit_id": "C7",
+   "action": "retitle",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "needs/human"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; widened to absorb the plan's gap-5 rows**.\n\n- `runbook/PROGRESS.md:119` **L2** 'NOT TAKEN, owed to Step 7b': done. `$CORPUS_REPO/results/p1-arm-d-panel-scored.json` exists, `runbook/phase-1/s7b-kernel.md:1702` checks it, and Checkpoint 7b passed (`PROGRESS.md:607`).\n- `PROGRESS.md:123` **L3** 'NOT REPAIRED HERE': repaired at s8e §8e.1 (`runbook/phase-1/s8e-tier-one-and-the-lane.md:438`). `crates/rk-store/src/conn.rs:137-141` carries the dated removal note.\n- `PROGRESS.md:166` **D17-3** 'open': fixed by ADR-0192 (accepted), at s8g §8g.3 (`s8g-verify-and-restored-demands.md:782`).\n- `PROGRESS.md:167` **D17-4** 'open, 7c with a record': `s8g-verify-and-restored-demands.md:961` says 'D17-4 closes in the tracker commit'.\n- `PROGRESS.md:181` **RT-27** 'register amendment OWED': settled by exact id equality (`s8h-cards-and-run-environment.md:481`). ADR-0197 is still `proposed`, so the row should be updated, not closed.\n- `PROGRESS.md:310` **D21-143** (C7 lists it) is dropped from this issue: it is s8i's live go-ahead row, still genuinely open (B2 halted at the §8i.6 stop and re-runs under D21-153), and the runbook owns s8i state until M5.\n- `PROGRESS.md:322` **O-12…O-16** (PROGRESS's own O-namespace, not the audit's) 'OPEN 2026-09-18': each answered 2026-09-19 in `spikes/DECISIONS-2026-09-18.md:507-511` (O-16 by D18-19, `PROGRESS.md:200`).\n- `PROGRESS.md:325` **R-40…R-62** status cell 'awaiting-ryan': the row's own text says every id was swept, settled, repaired or closed on 2026-09-20 (R-63 raised). Check and update the cell.\n- `PROGRESS.md:324` R-37 stays open (it has its own issue).\n- `runbook/INDEX.md:99` M4 has no REACHED stamp, though Checkpoint 7e passed. `PROGRESS.md:16`'s execution order omits 8a to 8j (compare `INDEX.md:45`).\n- Why `needs/human`: the live s8i session holds uncommitted edits to `PROGRESS.md`.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] Each row above carries a dated status pointing at its closing record, and RT-27 is refreshed rather than closed; the D21-143 row is not touched\n- [ ] INDEX.md's M4 row is stamped REACHED with the Checkpoint 7e hash, and `PROGRESS.md:16` matches `INDEX.md:45`\n- [ ] The diff touches only the files named above (`git diff --stat` against the base)\n- [ ] No ADR `## Decision` sentence and no DECISIONS ledger entry is edited by an agent; corrections are dated in-place notes in the repo's existing convention\n\nOut of scope: a checkpoint check that no tracker row reads OPEN once a closing commit exists (C7's suggestion 3). That is a separate PR; file it on its own if wanted.\n\n<!-- ledger: src=audit id=C7 -->",
+   "title": "Correct stale tracker rows (L2, L3, D17-3, D17-4, RT-27, O-12…O-16, R-40…R-62), stamp M4, fix the execution-order line"
+  },
+  {
+   "number": 30,
+   "audit_id": "C9",
+   "action": "keep",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p1",
+    "needs/decision"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; its value shrinks as S-BIN proceeds**.\n\n- `runbook/INDEX.md:87` (Step 8j) still has the entry gate 'Checkpoint 8i'. `runbook/phase-1/s8j-run-preparation.md:62` says 'The entry gate stays Checkpoint 8i' and gives no reason.\n- s8i is still in progress: B2 halted at §8i.6 and is being re-run under D21-153.\n- Audit: `references/audit/2026-10-06-status/appendix.md` §7 GAP4, §12.2 assumption 6, §13 O-1, §15 item 2.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The operator decides between option (a) (re-point to 8h under the audit's conditions), option (c) (split 8j into 8j-build and 8j-run), and rejection\n- [ ] The outcome is recorded: the INDEX.md row and s8j header edits plus a D21 entry, or a dated reason for rejecting\n\n<!-- ledger: src=audit id=C9 -->"
+  },
+  {
+   "number": 31,
+   "audit_id": "C10",
+   "action": "convert-to-epic",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "area/git",
+    "area/kernel",
+    "area/records",
+    "prio/p2"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid; epic-sized; after M5**.\n\n- `crates/rk-cli/src/verbs/run.rs` has 6,481 lines and `crates/rk-git/src/worktree.rs` has 2,883.\n- Headers that contradict the code: `crates/rk-cli/src/lib.rs:23`, `doctor/mod.rs:4`, `verbs/answer.rs:7` and `:283`, `verbs/doctor.rs:37`, against the populated `doctor/rules.rs:75` `RULES`. `crates/rk-kernel/src/lib.rs:10` says steps 6 and 7 are not built.\n- 241 `.rs` files under `crates/` match 'proposed'.\n- The audit says do this after M5, because the edits re-trigger checkpoint re-runs (`references/audit/2026-10-06-status/appendix.md` §10.3, §14 Medium, §15 item 7, §16). The epic and every child are blocked by the M5 initiative.\n\nChildren: the 'proposed' sweep, the header fixes, moving provenance into the ledgers, the run.rs split, the worktree.rs split, and the stage-file size cap (a decision).\n\n<!-- ledger: src=audit id=C10 -->",
+   "title": "Post-M5 hardening: stale-record sweep and god-module split"
+  },
+  {
+   "number": 32,
+   "audit_id": "C11",
+   "action": "narrow",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p2",
+    "needs/human"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **partly stale: the redkiln-rs half is done, the corpus half is not**.\n\n- Stale part, dropped: redkiln-rs is no longer unpushed. `origin/build/phase-0-to-1` equals `71fc926`, with a 0/0 left-right count.\n- Still valid: `git -C D:/repos/redkiln-corpus remote -v` prints nothing. The corpus HEAD is now `07bd6a2` (S-BIN B2 pass-1 records). `C:/rk-corpus-backup` holds only the bundles of 2026-09-12 and 2026-09-15. `runbook/PROGRESS.md:551` (PIA-021 route (b)) is the only record.\n- A checkpoint line asserting that `CORPUS_PIN` resolves on a remote would edit Checkpoint 8i or 8j, which the runbook owns, so it is not tracked here.\n- Audit: `references/audit/2026-10-06-status/appendix.md` §11, §14 Medium (single-machine risk).\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The operator chooses (a) a private remote under the org, or (b) a bundle refreshed after each s8i capture batch, and carries it out\n- [ ] PROGRESS's PIA-021 row records the remote URL, or the new bundle's date and sha\n\n<!-- ledger: src=audit id=C11 -->",
+   "title": "Give the redkiln-corpus repo an off-machine copy (private remote or refreshed bundle)"
+  },
+  {
+   "number": 33,
+   "audit_id": "C12",
+   "action": "keep",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "area/cli",
+    "pre-m5",
+    "prio/p1",
+    "needs/decision"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "comment": "**Ledger reconciliation, 2026-10-08, re-verified at `71fc926`.** Verdict: **still valid**.\n\n- `crates/rk-cli/src/verify_pass.rs:667` and `:707` still set `assertion_flipped: None` (the doc at `:574` says why). `crates/rk-cli/src/verbs/run.rs:4228-4231` passes an empty `BTreeMap` to `compute_ledger`.\n- No D21 entry and no s8 or s8j line accepts human-only closure (AC-334 is still ARMED).\n- Audit: `references/audit/2026-10-06-status/appendix.md` §5 D2, §13 O-6, §14 Medium-High (operator bandwidth), §15 item 5.\n- If the decision is 'accept now, wire later', the wiring becomes a Feature under the Phase 2 initiative when that initiative is broken down. No child is filed now.\n\n**Acceptance criteria** (added so the issue meets the definition of ready):\n- [ ] The operator decides, and a D21 entry plus an M5 scope note record it (it can merge with #26's statement)\n\n<!-- ledger: src=audit id=C12 -->"
+  }
+ ],
+ "new": [
+  {
+   "key": "m5-phase1-exit",
+   "title": "M5 — Phase-1 exit (pointer: the runbook owns s8i, s8j and Step 8)",
+   "type": "Initiative",
+   "labels": [
+    "source/human",
+    "area/records"
+   ],
+   "parent": null,
+   "blockedBy": [],
+   "body": "## Outcome\nM5 is reached when Checkpoint 8 passes (`runbook/INDEX.md:100`): Redkiln-RS has run its own fix lane and authored a Phase-2 story.\n\n## The runbook owns this milestone\nStage state, checkpoints, go-aheads and spend for s8i, s8j and Step 8 live **only** in the runbook. This issue never mirrors them, and no issue is filed for a runbook section.\n- `runbook/INDEX.md` (execution order `:45`; rows `:86-88`; milestones `:95-100`)\n- `runbook/PROGRESS.md` (the tracker)\n- `runbook/phase-1/s8i-s-bin.md` (Step 8i, in progress)\n- `runbook/phase-1/s8j-run-preparation.md` (Step 8j)\n- `runbook/phase-1/s8-exit-criterion.md` (Step 8, the six exit checks)\n\n## What sits under this initiative\nAudit findings and operator decisions that the audit places before M5 (label `pre-m5`, `references/audit/2026-10-06-status/appendix.md` §13 and §15) and that no runbook section owns yet.\n\n## Exit\nClosed by a human when Checkpoint 8 is recorded passed in PROGRESS.md. Items still open then are re-parented to Post-M5 hardening.\n\n<!-- ledger: src=docs id=initiative-m5 -->"
+  },
+  {
+   "key": "post-m5-hardening",
+   "title": "Post-M5 hardening",
+   "type": "Initiative",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records"
+   ],
+   "parent": null,
+   "blockedBy": [],
+   "body": "## Outcome\nA short hardening pass between Phase 1 exit and Phase 2: the defect and debt list, the ARMED ACs, the doc sweep, and landing to `main`.\n\n## Source\n- `references/audit/2026-10-06-status/appendix.md` §15 item 7 and §16 ('Post-M5 hardening', 1-2 weeks, judgement)\n- §14's Low-Medium and Medium rows marked 'post-M5'\n\n## Rules\n- Defects here may land earlier when a human schedules them. Only #31 and its children are hard-blocked on M5, because their edits re-trigger checkpoint re-runs (§10.3).\n- A cap on stage-file size for Phase 2 is decided here (a child of #31).\n\n## Exit\nEvery child is closed or re-parented to Phase 2 with a reason.\n\n<!-- ledger: src=audit id=initiative-post-m5-hardening -->"
+  },
+  {
+   "key": "phase-2",
+   "title": "Phase 2 — packs and parallelism (placeholder)",
+   "type": "Initiative",
+   "labels": [
+    "source/human",
+    "area/records"
+   ],
+   "parent": null,
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "body": "## Placeholder\nThis initiative is broken down only when its work is due (the user's decision of 2026-10-08).\n\n## Definition\n- Enter when: Phase 1 exit (1) recorded: self-hosting is a log fact, not a claim (design §10.2).\n- Scope: the remaining process packs (incident, spike, initiative, project); the project DAG in parallel worktrees plus a merge queue; .NET, Python and Unreal toolchain adapters (Unreal conditional on S-BIN); `rk-plugin-gen`; old-corpus migration (AC-463).\n- Source: `references/2026-09-08-architecture-design.md` §10.2 (the phase table, line 1862 onward); `references/audit/2026-10-06-status/appendix.md` §16 (effort, judgement).\n\n## Out of scope\n- No sub-issues until a human breaks the phase down.\n\n<!-- ledger: src=docs id=initiative-phase-2 -->"
+  },
+  {
+   "key": "phase-3",
+   "title": "Phase 3 — surfaces (placeholder)",
+   "type": "Initiative",
+   "labels": [
+    "source/human",
+    "area/records"
+   ],
+   "parent": null,
+   "blockedBy": [
+    "new:phase-2"
+   ],
+   "body": "## Placeholder\nThis initiative is broken down only when its work is due (the user's decision of 2026-10-08).\n\n## Definition\n- Enter when: Phase 2 stable on one initiative (design §10.2).\n- Scope: the GitHub adapter and comment grammar (AC-507 owns the `rk:` label namespace), the mdBook adapter and docs pipeline, the web view, DORA metrics, and phone-answerable gates.\n- Source: `references/2026-09-08-architecture-design.md` §10.2 (the phase table, line 1862 onward); `references/audit/2026-10-06-status/appendix.md` §16 (effort, judgement).\n\n## Out of scope\n- No sub-issues until a human breaks the phase down.\n\n<!-- ledger: src=docs id=initiative-phase-3 -->"
+  },
+  {
+   "key": "phase-4",
+   "title": "Phase 4 — reach (placeholder)",
+   "type": "Initiative",
+   "labels": [
+    "source/human",
+    "area/records"
+   ],
+   "parent": null,
+   "blockedBy": [
+    "new:phase-3"
+   ],
+   "body": "## Placeholder\nThis initiative is broken down only when its work is due (the user's decision of 2026-10-08).\n\n## Definition\n- Enter when: Phase 3 stable for a quarter (design §10.2).\n- Scope: the Codex adapter, only after S-CODEX passes (ADR-0167), plus Linear and Astro adapters as demanded.\n- Source: `references/2026-09-08-architecture-design.md` §10.2 (the phase table, line 1862 onward); `references/audit/2026-10-06-status/appendix.md` §16 (effort, judgement).\n\n## Out of scope\n- No sub-issues until a human breaks the phase down.\n\n<!-- ledger: src=docs id=initiative-phase-4 -->"
+  },
+  {
+   "key": "run-path-fixes",
+   "title": "Run-path defects to fix before the first paid lane run (#5 #6 #7 #11)",
+   "type": "Epic",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "area/kernel",
+    "pre-m5",
+    "prio/p1"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "body": "## Problem\nFour confirmed defects that the audit says to fix before any paid `redkiln run`: an inert Ctrl-C (#5), `status` folding items together (#6), a rank-tie lint that is blind to rust and python (#7), and rk-cli tests that are not hermetic against provider env (#11). None is owned by s8j today.\n\n## Evidence (at `71fc926` unless noted)\n- `references/audit/2026-10-06-status/appendix.md` §5 D3, D4, D7 and D11; §12.1 last row ('Recommended additions … not yet in any stage', 0.5-1 d)\n- `references/audit/2026-10-06-status/appendix.md` §13 O-7; §15 item 3\n\n## Acceptance criteria\n- [ ] #5, #6, #7 and #11 are closed by merged PRs\n- [ ] The audit O-7 decision child records whether the fixes are folded into s8j's chain before the first paid launch\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §13, §15\n- `runbook/phase-1/s8j-run-preparation.md` (the chain that would re-run after these land)\n\n## Out of scope\n- Any s8j step itself: the runbook owns it\n\n## Merge hold\nagents may open the PR (`Closes #N`), but it is not merged into `build/phase-0-to-1` while s8i is open. It merges just before s8j re-runs its entry chain through Checkpoint 8i (`runbook/phase-1/s8j-run-preparation.md:51`), so that re-run covers it.\n\n<!-- ledger: src=audit id=epic-run-path-fixes -->"
+  },
+  {
+   "key": "followups-spikes",
+   "title": "Disposition the unrun audit follow-ups and the registered-but-unrun spikes",
+   "type": "Task",
+   "labels": [
+    "source/agent",
+    "area/records",
+    "needs/decision"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "body": "## Problem\nThe 2026-09-10 pre-implementation audit's §8 follow-ups are still marked 'not run', and three registered spikes that hold criteria provisional have not run. Nothing schedules them or disposes of them.\n\n## Evidence (at `71fc926` unless noted)\n- `runbook/PROGRESS.md:485-514` (§5): M-05/M-14, M-08, M-03, M-04, M-07, M-09, M-10, C-03, C-07 and C-08/M-13 read 'not run'. C-02 reads 'before Step 7b', but `PROGRESS.md:578` records it DISCHARGED.\n- S-SUBTLE-CB and its twin S-SUBTLE-SYM are registered and unrun (`references/2026-09-08-architecture-design.md:1107`, ADR-0101). AC-312 stays PROVISIONAL until S-SUBTLE-CB runs (`references/2026-09-08-acceptance-criteria.md:5231`).\n- S-CLASS-REPLAY ($0) holds AC-284 provisional (`acceptance-criteria.md:4809`, `:4824`).\n- S-SPF is registered and unrun (`runbook/PROGRESS.md:169`, D17-6).\n- `references/audit/2026-10-06-status/appendix.md` §10.1 ('Audit residue never dispositioned')\n\n## Acceptance criteria\n- [ ] Each id above has a disposition recorded in PROGRESS §5 (run, waived or deferred, with a reason) by the operator\n- [ ] Each id chosen to run is filed as its own issue, with commands and a cost line, before it starts (this Task is then promoted to an Epic with those issues as sub-issues)\n- [ ] C-02's stale 'before Step 7b' cell is corrected (it can ride #29)\n\n## Doc links\n- `runbook/PROGRESS.md` §5\n- `references/2026-09-10-pre-implementation-audit.md` §8\n- ADR-0101\n\n## Out of scope\n- The 14 unspiked provisional ACs in general: these belong to the #27 disposition table\n- F35, F36 and F37 draft limits (`spikes/F3[5-7]-DRAFT.md`): no owed action is recorded (F35's verdict clears at `F35-DRAFT.md:59`)\n\n<!-- ledger: src=docs id=epic-followups-spikes -->"
+  },
+  {
+   "key": "a4-decide",
+   "title": "Decide: wire budget exhaustion and degradation now, or defer them to Phase 2 by ADR",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/records",
+    "prio/p3",
+    "needs/decision"
+   ],
+   "parent": "#8",
+   "blockedBy": [],
+   "body": "## Problem\nAC-024 (wall-clock mark), AC-025 (exhaustion gate) and AC-363 (degradation substitution) have finished library code and no caller. The operator either funds the wiring in this hardening pass or records a Phase-2 deferral with register amendments.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/runtime.rs:93` (AC-024 ARMED, NOT DISCHARGED, zero call sites)\n- `crates/rk-kernel/src/workflow/budget.rs:816`, `:873`, `:1050`; `workflow/degrade.rs:285`, `:320`, `:388` (no callers)\n- `references/audit/2026-10-06-status/appendix.md` §5 D10 ('On M5 path? no'), §14 Low-Medium, §15 item 7\n\n## Acceptance criteria\n- [ ] The decision is recorded (a D21 entry or an ADR)\n- [ ] If deferred: the AC-024, AC-025 and AC-363 rows carry a dated note, and this epic's three build children are closed as not planned\n- [ ] If wired: the three build children are unblocked\n\n## Doc links\n- AC-024, AC-025, AC-363\n- `crates/rk-kernel/src/runtime.rs` header table\n\n## Out of scope\n- The wiring itself (children of #8)\n\n<!-- ledger: src=audit id=A4-decide -->"
+  },
+  {
+   "key": "a4-ledger-gate",
+   "title": "Fold pass charges into the BudgetLedger and gate dispatch on exhaustion (AC-025)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "prio/p3"
+   ],
+   "parent": "#8",
+   "blockedBy": [
+    "new:a4-decide"
+   ],
+   "body": "## Problem\nThe step executor never folds `pass_charges()` into a `BudgetLedger`, and it never evaluates the exhaustion gate before the next dispatch. A run that exhausts a budget keeps dispatching.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/runtime/activity.rs:371` `pass_charges()`\n- `crates/rk-kernel/src/workflow/budget.rs:356` `BudgetLedger`, `:816` `exhausted_counter`, `:873` `evaluate_gate` (no callers outside the module)\n\n## Acceptance criteria\n- [ ] After each pass, the executor folds the charges into one ledger per item and calls `evaluate_gate` before the next dispatch\n- [ ] A test under `crates/rk-kernel/tests/it` drives a fake run past a budget and asserts that the next dispatch is refused with the gate's reason: `cargo nextest run -p rk-kernel`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-025\n- `references/2026-09-08-acceptance-criteria.md:596`\n\n## Out of scope\n- The wall-clock mark (a sibling issue)\n- Degradation (a sibling issue)\n\n<!-- ledger: src=audit id=A4-ledger -->"
+  },
+  {
+   "key": "a4-wallclock",
+   "title": "Write the durable wall-clock expiry mark when a run's budget expires (AC-024)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "prio/p3"
+   ],
+   "parent": "#8",
+   "blockedBy": [
+    "new:a4-decide"
+   ],
+   "body": "## Problem\n`wall_clock_expiry_mark` exists with zero call sites, so a run that reaches its wall-clock budget writes no mark.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/workflow/budget.rs:1050`\n- `crates/rk-kernel/src/runtime.rs:93`\n\n## Acceptance criteria\n- [ ] The runtime calls `wall_clock_expiry_mark` when the budget expires, writes the mark durably and exits 0, with no sleeping thread\n- [ ] A test asserts the mark row and exit 0 under the fake clock: `cargo nextest run -p rk-kernel`\n- [ ] The `runtime.rs:93` row is updated from ARMED to discharged, with a dated note\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-024\n- `references/2026-09-08-acceptance-criteria.md:588`\n\n## Out of scope\n- Budget extension or answer flows\n\n<!-- ledger: src=audit id=A4-wallclock -->"
+  },
+  {
+   "key": "a4-degrade",
+   "title": "Route the degradation policy's model substitution through harness dispatch (AC-363)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "prio/p3"
+   ],
+   "parent": "#8",
+   "blockedBy": [
+    "new:a4-decide"
+   ],
+   "body": "## Problem\n`degrade::substitute`, `degraded_event` and `gate_closes` exist, but dispatch never consults them, so a pack-permitted substitution can never happen or be recorded.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/workflow/degrade.rs:285`, `:320`, `:388`\n- `crates/rk-kernel/tests/it/degradation.rs:12` (says the AC is 'not claimed here')\n\n## Acceptance criteria\n- [ ] Dispatch applies a pack-permitted substitution through `substitute`, and the event and the activity digest record its origin, target and reason\n- [ ] A test with a fake harness asserts the `degraded` row and the digest field: `cargo nextest run -p rk-kernel`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-363\n- ADR-0003\n\n## Out of scope\n- Choosing substitution tables for the shipped packs\n\n<!-- ledger: src=audit id=A4-degrade -->"
+  },
+  {
+   "key": "a5-usage-fail-closed",
+   "title": "Fail closed on a malformed per-item usage charge",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "status/ready"
+   ],
+   "parent": "#9",
+   "blockedBy": [],
+   "body": "## Problem\nA dispatch whose `usage` is present and not null, but fails to deserialise, is skipped by `continue`, so it charges 0 tokens against the per-item envelope.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/workflow/envelope.rs:445-448`\n\n## Acceptance criteria\n- [ ] A non-null `usage` that fails to deserialise is an error (or a saturating charge, with the choice stated in the doc comment), never 0\n- [ ] A test row with malformed usage asserts the refusal: `cargo nextest run -p rk-kernel`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- ADR-0198 (the per-item envelope)\n- `references/audit/2026-10-06-status/appendix.md` §4.5\n\n## Out of scope\n- Atomic admission (a sibling issue)\n\n<!-- ledger: src=audit id=A5-usage -->"
+  },
+  {
+   "key": "a5-atomic-admission",
+   "title": "Make per-item dispatch admission atomic across journal read, admit and append",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "status/ready"
+   ],
+   "parent": "#9",
+   "blockedBy": [],
+   "body": "## Problem\nAdmission reads the journal, admits, and appends the dispatch row as separate steps, each taking the store guard on its own. Two concurrent dispatches for one item can both be admitted against the same journal.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/runtime/activity.rs:636-638`; store guard taken per call at `:643`, `:699`, `:807` and `:846`\n\n## Acceptance criteria\n- [ ] One store guard (or a reservation row) spans journal, admit and append\n- [ ] A concurrency test with two dispatches at the envelope's edge admits exactly one: `cargo nextest run -p rk-kernel`\n- [ ] No lock guard is held across `.await` (H-14)\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- ADR-0198\n- ADR-0105 clause 7 (connection discipline)\n- `references/audit/2026-10-06-status/appendix.md` §4.5\n\n## Out of scope\n- Malformed usage (a sibling issue)\n\n<!-- ledger: src=audit id=A5-admission -->"
+  },
+  {
+   "key": "a6-strict-header",
+   "title": "Load catalog headers strictly: typed errors, a closed key set, no silent min_rigor default",
+   "type": "Bug",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/pack",
+    "status/ready"
+   ],
+   "parent": "#10",
+   "blockedBy": [],
+   "body": "## Problem\nCatalog header loading silently drops wrong-typed values, accepts unknown keys, and defaults a missing `min_rigor` to `optional`.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/catalog.rs:1024-1035` (`text` and `strings` closures)\n- `crates/rk-kernel/src/catalog.rs:1335` (the `min_rigor` default)\n\n## Acceptance criteria\n- [ ] `text` and `strings` return `Result`, and a wrong-typed or unknown key is a load diagnostic naming the file and the key\n- [ ] A missing `min_rigor` is an error, unless an ADR documents the default (if no ADR exists, the PR raises the question rather than choosing)\n- [ ] `.redkiln/` still loads clean: `cargo nextest run -p rk-kernel` and `cargo nextest run -p rk-cli --test it lint::` pass\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §4.3\n\n## Out of scope\n- Changing the catalog digest (a sibling issue)\n\n<!-- ledger: src=audit id=A6-strict -->"
+  },
+  {
+   "key": "a6-digest-fields",
+   "title": "Add excludes and deviation_ok to the catalog digest (moves goldens and run ids)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/pack",
+    "needs/decision"
+   ],
+   "parent": "#10",
+   "blockedBy": [],
+   "body": "## Problem\n`catalog_json` omits `excludes` and `deviation_ok`, so two catalogs that differ only in those fields digest the same. Fixing this changes every recorded digest and `run_id`, which makes it a migration-class change (H-16).\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/select/canonical.rs:70-91`\n\n## Acceptance criteria\n- [ ] The operator approves the digest change and its timing relative to `CORPUS_PIN` and the recorded goldens\n- [ ] One dated change adds both fields, regenerates the goldens, and records the run-id movement: `cargo nextest run -p rk-kernel`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §4.3\n\n## Out of scope\n- Strict header parsing (a sibling issue)\n\n<!-- ledger: src=audit id=A6-digest -->"
+  },
+  {
+   "key": "a9-bind-claims",
+   "title": "Bind verify claims at plan time and refuse an equal-specificity tie by name (AC-349)",
+   "type": "Feature",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/cli",
+    "status/ready"
+   ],
+   "parent": "#13",
+   "blockedBy": [],
+   "body": "## Problem\n`verify::claims::bind` is called only by a doctor rule, so a tie between two claims at equal specificity is never refused at plan time.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/verify/claims.rs:126` `bind`\n- `crates/rk-cli/src/doctor/rules.rs:2432` (the only caller)\n\n## Acceptance criteria\n- [ ] The plan step binds claims and refuses a `ClaimTie` as a configuration error naming both claims\n- [ ] A run-level test with two equal-specificity claims exits with the configuration-error code: `cargo nextest run -p rk-cli --test it`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-349\n- ADR-0073\n\n## Out of scope\n- Mutate re-execution (refused under ADR-0162)\n\n<!-- ledger: src=audit id=A9-bind -->"
+  },
+  {
+   "key": "a9-retire",
+   "title": "Retire advisories not re-raised after each review pass",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/cli",
+    "status/ready"
+   ],
+   "parent": "#13",
+   "blockedBy": [],
+   "body": "## Problem\n`retire_not_re_raised` has no caller, so an advisory the next review pass does not re-raise is never retired.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/review/confirm.rs:351`\n- `crates/rk-cli/src/review_pass.rs` (the review pass)\n\n## Acceptance criteria\n- [ ] The review pass calls `retire_not_re_raised` after each pass and journals the retirement\n- [ ] A two-pass test asserts that an advisory absent from pass 2 is retired: `cargo nextest run -p rk-cli --test it review_pass::`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §4.4\n\n## Out of scope\n- Quarantine (a sibling issue)\n\n<!-- ledger: src=audit id=A9-retire -->"
+  },
+  {
+   "key": "a9-quarantine",
+   "title": "Decide: a quarantine grant/remove verb, or an ADR deferring it to Phase 2",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/cli",
+    "area/records",
+    "needs/decision"
+   ],
+   "parent": "#13",
+   "blockedBy": [],
+   "body": "## Problem\n`quarantine::grant` and `remove` exist and nothing exposes them, so no operator can quarantine or release a finding.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/review/quarantine.rs:50`, `:80`\n\n## Acceptance criteria\n- [ ] The operator decides between building a verb and deferring by ADR\n- [ ] If built: a child issue with the CLI grammar is filed. If deferred: an ADR or D21 line names Phase 2\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §4.4\n- ADR-0074 decision 6 (`Quarantined` is a first-class finding state)\n- AC-307 (grant and removal are events), ADR-0124\n\n## Out of scope\n- The verb implementation itself, until it is decided\n\n<!-- ledger: src=audit id=A9-quarantine -->"
+  },
+  {
+   "key": "a10-differential",
+   "title": "Add a differential test: lattice and rigor cells against select over .redkiln/",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "status/ready"
+   ],
+   "parent": "#14",
+   "blockedBy": [],
+   "body": "## Problem\nThree models of selection (lattice, rigor and select) exist, and no test asserts that they agree over the shipped pack set.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/lattice.rs`, `rigor.rs`, `select/`\n- There is no such test under `crates/rk-kernel/tests/it`\n\n## Acceptance criteria\n- [ ] A test runs `lattice::run` cells over `.redkiln/` and asserts that `select` picks within each cell's admissible set; disagreements fail with the cell named\n- [ ] `cargo nextest run -p rk-kernel` passes\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §4.3\n\n## Out of scope\n- Fixing any disagreement found: file each one as its own Bug\n\n<!-- ledger: src=audit id=A10-diff -->"
+  },
+  {
+   "key": "a10-routing",
+   "title": "Call pack_capability_routing_rule from the run composition root",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/cli",
+    "status/ready"
+   ],
+   "parent": "#14",
+   "blockedBy": [],
+   "body": "## Problem\nThe pack capability routing rule and the activity resolver are never called on the run path, so a pack demanding a capability that no adapter claims is not refused at run start.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/pack_validation.rs:309`\n- `crates/rk-kernel/src/resolver.rs:371`\n\n## Acceptance criteria\n- [ ] `rk-cli`'s run composition root evaluates `pack_capability_routing_rule` against the adapters' claimed set and refuses with a named diagnostic\n- [ ] A test with an unclaimed capability refuses before dispatch: `cargo nextest run -p rk-cli --test it run::`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-495 (the rule's criterion; `crates/rk-kernel/src/pack_validation.rs:299`)\n- `references/audit/2026-10-06-status/appendix.md` §4.3\n\n## Out of scope\n- Selection step 7 (a sibling decision)\n\n<!-- ledger: src=audit id=A10-routing -->"
+  },
+  {
+   "key": "a10-step7",
+   "title": "Decide whether mid-walk deviation (selection step 7) is Phase 2",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "area/records",
+    "needs/decision"
+   ],
+   "parent": "#14",
+   "blockedBy": [],
+   "body": "## Problem\n`step7` runs only in replay, and the runtime refuses `to = \"deviate\"` as OWED. No record says whether mid-walk deviation is Phase 1 or Phase 2.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-kernel/src/select/step7.rs:344`; callers `replay.rs:1518` and `:2017`\n- `crates/rk-kernel/src/runtime/step.rs:2214`, `:2241`\n\n## Acceptance criteria\n- [ ] The decision is recorded (an ADR note or a D21 line)\n- [ ] If Phase 1: a build child is filed with acceptance tests\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §4.3\n\n## Out of scope\n- Implementation, until it is decided\n\n<!-- ledger: src=audit id=A10-step7 -->"
+  },
+  {
+   "key": "b1-decide",
+   "title": "Decide: schedule the orphan/rewrite detector, or record a dated deferral",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "area/git",
+    "prio/p3",
+    "needs/decision"
+   ],
+   "parent": "#15",
+   "blockedBy": [],
+   "body": "## Problem\nStep 6 claimed AC-160 to AC-199 and closed without building the orphan and rewrite producers. No stage reschedules them, and no record defers them.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-types/src/drift.rs:93` (no construction site)\n- `crates/rk-git/src/git_exec.rs:42` (`GitOp::PatchId` unused)\n- `references/audit/2026-10-06-status/appendix.md` §5 D8, §6 C10\n\n## Acceptance criteria\n- [ ] The operator decides between scheduling (unblocking the three build children) and deferring\n- [ ] If deferred: a dated PROGRESS line plus an edit to s6's acceptance set, and the build children are closed as not planned\n\n## Doc links\n- AC-167, AC-169, AC-170, AC-171\n- ADR-0018\n\n## Out of scope\n- The producers themselves\n\n<!-- ledger: src=audit id=B1-decide -->"
+  },
+  {
+   "key": "b1-orphan-report",
+   "title": "reconcile() reports unreachable anchors as Drift::OrphanedAnchor without deleting rows (AC-167)",
+   "type": "Feature",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/git",
+    "area/kernel",
+    "area/store",
+    "prio/p3"
+   ],
+   "parent": "#15",
+   "blockedBy": [
+    "new:b1-decide"
+   ],
+   "body": "## Problem\nNothing detects rows anchored to commits that a rebase, reset, amend or force-push made unreachable.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-types/src/drift.rs:93`, `:115`, `:136`\n\n## Acceptance criteria\n- [ ] `reconcile()` emits `Drift::OrphanedAnchor` with the anchor SHAs for every unreachable anchor, and no row is deleted or re-anchored\n- [ ] A test rewrites history in a temp repo and asserts the drift row and the unchanged row count: `cargo nextest run -p rk-git -p rk-kernel`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-167\n- AC-168 (already tested at `crates/rk-store/tests/it/store.rs:369-400`)\n- ADR-0018\n\n## Out of scope\n- Re-anchoring (a sibling issue)\n\n<!-- ledger: src=audit id=B1-orphan -->"
+  },
+  {
+   "key": "b1-rewrite-event",
+   "title": "Emit rewrite(old, new, mechanism) by patch-id before re-anchoring, with the AC-170 negative test",
+   "type": "Feature",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/git",
+    "area/kernel",
+    "area/types",
+    "prio/p3"
+   ],
+   "parent": "#15",
+   "blockedBy": [
+    "new:b1-decide",
+    "new:b1-orphan-report"
+   ],
+   "body": "## Problem\n`EventKind::Rewrite` is never produced and `GitOp::PatchId` is never called, so a rewritten commit's rows can never be re-anchored by a recorded mechanism.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-git/src/git_exec.rs:42`, `:135`, `:175`, `:212`\n- `EventKind::Rewrite` appears only in match arms (`rk-kernel/src/workflow/fsm.rs:1730`)\n\n## Acceptance criteria\n- [ ] An orphan whose successor is found by patch-id equality (or `ORIG_HEAD`, or the operation's own reflog entry) gets a `rewrite` event before its rows are re-anchored\n- [ ] A negative test: with no mechanism, the row stays orphaned and nothing is inferred from branch name, path, message or time (AC-170)\n- [ ] `cargo nextest run -p rk-git -p rk-kernel`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-169\n- AC-170\n- ADR-0018\n\n## Out of scope\n- The human gate (a sibling issue)\n\n<!-- ledger: src=audit id=B1-rewrite -->"
+  },
+  {
+   "key": "b1-human-gate",
+   "title": "Route an unresolvable orphan that blocks an item to a human gate (AC-171)",
+   "type": "Feature",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/kernel",
+    "prio/p3"
+   ],
+   "parent": "#15",
+   "blockedBy": [
+    "new:b1-decide",
+    "new:b1-rewrite-event"
+   ],
+   "body": "## Problem\nNo gate exists for an orphan that survives AC-170 and blocks the next action.\n\n## Evidence (at `71fc926` unless noted)\n- AC-171's 'Verified by' is 'routed to a human gate; not machine-decidable' (`references/2026-09-08-acceptance-criteria.md:3249`)\n\n## Acceptance criteria\n- [ ] The kernel opens a human gate carrying the orphan set, both SHAs and their diff\n- [ ] A gate test with fake answers covers both outcomes: `cargo nextest run -p rk-kernel`\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- AC-171\n- ADR-0018\n\n## Out of scope\n- Inferring successors\n\n<!-- ledger: src=audit id=B1-gate -->"
+  },
+  {
+   "key": "c3-recovery-procedure",
+   "title": "Write the failed-first-real-run recovery and re-freeze procedure (audit O-9, option a)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p1",
+    "needs/human"
+   ],
+   "parent": "#25",
+   "blockedBy": [],
+   "body": "## Problem\nCheckpoint 8j is one-shot. It refuses an existing `rk-run/<item>` and a moved store, so a failed first real run has no documented way back.\n\n## Evidence (at `71fc926` unless noted)\n- `runbook/phase-1/s8j-run-preparation.md:2073-2076`, `:2191`\n- `references/audit/2026-10-06-status/appendix.md` §7 GAP3, §12.2, §13 O-9\n\n## Acceptance criteria\n- [ ] A dated section in `s8-exit-criterion.md` and/or `halts.md`, cross-referenced from s8j, covers archiving the `rk-run/<item>` ref and the store, minting a fresh item, and re-running 8j's (3) and (12) against it\n- [ ] The operator approves the text before the 8j freeze\n- [ ] The diff touches only the files named above (`git diff --stat` against the base)\n- [ ] No ADR `## Decision` sentence and no DECISIONS ledger entry is edited by an agent; corrections are dated in-place notes in the repo's existing convention\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §13 O-9, §14 row 1\n\n## Out of scope\n- Changing Checkpoint 8j's assertions (the runbook owns them)\n\n<!-- ledger: src=audit id=C3-recovery -->"
+  },
+  {
+   "key": "c3-pre-freeze-dispatch",
+   "title": "Decide: one real redkiln run dispatch on the fixture item before the 8j freeze (audit option c)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p1",
+    "needs/decision"
+   ],
+   "parent": "#25",
+   "blockedBy": [],
+   "body": "## Problem\nBoth earlier structural insertions came from first real contact. The audit recommends one time-boxed real dispatch through `redkiln run` right after the §8j.6 pin move, so a surprise lands in 8j rather than at Step 8. It adds paid spend, so it is the operator's call.\n\n## Evidence (at `71fc926` unless noted)\n- `references/audit/2026-10-06-status/appendix.md` §14 row 1 (High), §15 item 4\n- `runbook/phase-1/s8j-run-preparation.md:931` (§8j.6, the probe session)\n\n## Acceptance criteria\n- [ ] The operator decides. If accepted, s8j gains the step by a dated edit, with its spend line and go-ahead\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §12.2 scenarios\n\n## Out of scope\n- Running the dispatch (a runbook step under the operator's go-ahead)\n\n<!-- ledger: src=audit id=C3-dispatch -->"
+  },
+  {
+   "key": "c5-reconcile-report",
+   "title": "Add a register-wide AC-to-test reconciliation script and CI report",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/ci",
+    "area/records",
+    "prio/p2",
+    "status/ready"
+   ],
+   "parent": "#27",
+   "blockedBy": [],
+   "body": "## Problem\nNo tool reconciles the AC register against tests. Silent gaps (about 13% of sampled ids) can only be found by hand.\n\n## Evidence (at `71fc926` unless noted)\n- `.github/workflows/` holds only `ci.yml` and `rust.yml`\n- `references/audit/2026-10-06-status/appendix.md` §9 (the seven sampled silent gaps), §14 Medium\n- `references/2026-09-08-acceptance-criteria.md:41-43` (526 in force)\n\n## Acceptance criteria\n- [ ] A script (in the repo's existing script style, no new dependency) lists every in-force binding AC id and the test functions, trybuild cases and checkpoint lines that cite it, and writes a machine-readable report\n- [ ] A non-blocking report-only CI job publishes the report as an artifact. The CI change is flagged in the PR for human approval\n- [ ] The report, run locally at the merge commit, shows the counts for AC-084, AC-116, AC-122, AC-168, AC-363, AC-446 and AC-471\n\n## Doc links\n- SM-100 (`references/2026-09-08-success-measures.md:755`)\n- `references/audit/2026-10-06-status/appendix.md` §9\n\n## Out of scope\n- Making the job blocking\n- Fixing the gaps it finds\n\n<!-- ledger: src=audit id=C5-report -->"
+  },
+  {
+   "key": "c5-triage-gaps",
+   "title": "Triage the sampled silent AC gaps and the orphaned AC-291 and AC-292",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "area/git",
+    "area/kernel",
+    "area/store",
+    "prio/p2",
+    "needs/decision"
+   ],
+   "parent": "#27",
+   "blockedBy": [],
+   "body": "## Problem\nSeven sampled ids have a gap that no ARMED/OWED line admits, and AC-291 and AC-292 have no owning stage.\n\n## Evidence (at `71fc926` unless noted)\n- AC-168 now has a real test at `crates/rk-store/tests/it/store.rs:369-400` (likely covered)\n- AC-084 and AC-116: no code or test hit. AC-363: prose only. AC-446: a comment only. AC-122 and AC-471: code hits that need checking\n- `runbook/phase-1/s7b-ii-gates.md:981-990` (AC-291/AC-292 orphaned; owner by an s6 amendment or an s7c erratum)\n\n## Acceptance criteria\n- [ ] Each of the nine ids gets an owner, a waiver or a deferral, decided by the operator\n- [ ] Gaps that need code are filed as Bugs under this epic\n\n## Doc links\n- AC-084, AC-116, AC-122, AC-168, AC-363, AC-446, AC-471, AC-291, AC-292\n\n## Out of scope\n- The register-wide disposition (a sibling issue)\n\n<!-- ledger: src=audit id=C5-triage -->"
+  },
+  {
+   "key": "c5-register-amendments",
+   "title": "Land or schedule the owed AC-043, AC-044, AC-045 and AC-056 register amendments",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "prio/p2",
+    "needs/decision"
+   ],
+   "parent": "#27",
+   "blockedBy": [],
+   "body": "## Problem\nRegister amendments to AC-043, AC-044, AC-045 and AC-056 have been owed since Step 7b, and no later stage lists them.\n\n## Evidence (at `71fc926` unless noted)\n- `runbook/phase-1/s7b-kernel.md:263-264`, `:705-707`, `:2035-2039`\n- `references/audit/2026-10-06-status/appendix.md` §9 ('Orphaned ids')\n\n## Acceptance criteria\n- [ ] The operator decides to land them now or to schedule them in s8j's amendment set\n- [ ] The amendments are dated in the register\n\n## Doc links\n- AC-043, AC-044, AC-045, AC-056\n\n## Out of scope\n- Code changes\n\n<!-- ledger: src=audit id=C5-amend -->"
+  },
+  {
+   "key": "c4-disposition-table",
+   "title": "Build the disposition table for the unscheduled binding ACs and unspiked provisional ACs",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "prio/p2"
+   ],
+   "parent": "#27",
+   "blockedBy": [
+    "#26",
+    "new:c5-reconcile-report"
+   ],
+   "body": "## Problem\nAbout 50 binding ACs are ARMED or OWED with no schedule, and 14 provisional ACs have no scheduled spike. No table records whether each is discharged, scheduled, waived or deferred.\n\n## Evidence (at `71fc926` unless noted)\n- `references/audit/2026-10-06-status/appendix.md` §7 GAP2 (the 50 by group: 28 register amendments or owners, 6 corpus replay, 4 live or spike, 3 POSIX or CI, 9 unwired code or fixtures)\n\n## Acceptance criteria\n- [ ] A table lists every id with one of: discharged, scheduled (a stage or issue link), waived (a record) or deferred (a phase), derived from the reconciliation report\n- [ ] It is published where #26's decision says (the M5 record, or the hardening initiative)\n\n## Doc links\n- #26 (the O-5 decision)\n- `references/audit/2026-10-06-status/appendix.md` §7, §9, §13 O-5\n\n## Out of scope\n- Deciding the dispositions: each one is the operator's\n\n<!-- ledger: src=audit id=C4-table -->"
+  },
+  {
+   "key": "c10-proposed-sweep",
+   "title": "Sweep stale 'proposed' ADR labels in source comments against ADR status",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "area/kernel",
+    "area/cli",
+    "prio/p2"
+   ],
+   "parent": "#31",
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "body": "## Problem\nSource comments call ADRs 'proposed' that have since been accepted (for example ADR-0191, accepted on D21-131).\n\n## Evidence (at `71fc926` unless noted)\n- 241 `.rs` files under `crates/` match 'proposed' (`grep -rli proposed crates --include=*.rs`)\n\n## Acceptance criteria\n- [ ] Each 'proposed' mention that names an ADR now `accepted` in `references/adr/README.md` is corrected; mentions of genuinely proposed records (for example ADR-0197) stay\n- [ ] Comments only: `cargo nextest run --workspace` is unchanged\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §10.3, §14 (doc rot), §16\n\n## Out of scope\n- Code changes\n- Checkpoint greps that assert on this prose: report them, do not edit them\n\n<!-- ledger: src=audit id=C10-proposed -->"
+  },
+  {
+   "key": "c10-headers",
+   "title": "Fix crate and module headers that contradict the code",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "area/kernel",
+    "prio/p2"
+   ],
+   "parent": "#31",
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "body": "## Problem\nModule headers still describe skeletons and unbuilt steps that now exist.\n\n## Evidence (at `71fc926` unless noted)\n- `crates/rk-cli/src/lib.rs:23`, `doctor/mod.rs:4`, `verbs/answer.rs:7` and `:283`, and `verbs/doctor.rs:37`, against the populated `doctor/rules.rs:75` `RULES`\n- `crates/rk-kernel/src/lib.rs:10` (says steps 6 and 7 are not built)\n\n## Acceptance criteria\n- [ ] Each listed header describes the current code, or is deleted\n- [ ] `cargo doc --workspace --no-deps` is warning-free\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §10.3, §14 (doc rot), §16\n\n## Out of scope\n- Moving provenance (a sibling issue)\n\n<!-- ledger: src=audit id=C10-headers -->"
+  },
+  {
+   "key": "c10-provenance",
+   "title": "Move dated provenance comments out of source into the ledgers",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "area/cli",
+    "area/kernel",
+    "prio/p2"
+   ],
+   "parent": "#31",
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "body": "## Problem\nDated provenance makes up 30-50% of source lines, and checkpoints grep that prose, which makes it load-bearing.\n\n## Evidence (at `71fc926` unless noted)\n- `references/audit/2026-10-06-status/appendix.md` §10.3\n\n## Acceptance criteria\n- [ ] A rule for what stays in source (why) and what moves to PROGRESS or the ledgers (when and who) is agreed in the PR description, and applied to one crate (`rk-cli`) in this PR; each further crate is filed as its own Task\n- [ ] Every checkpoint grep that read moved prose is listed in the PR\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §10.3, §14 (doc rot), §16\n\n## Out of scope\n- Editing DECISIONS entries\n\n<!-- ledger: src=audit id=C10-provenance -->"
+  },
+  {
+   "key": "c10-split-run",
+   "title": "Split crates/rk-cli/src/verbs/run.rs behind the existing tests",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/cli",
+    "prio/p2"
+   ],
+   "parent": "#31",
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "body": "## Problem\n`verbs/run.rs` has 6,481 lines.\n\n## Evidence (at `71fc926` unless noted)\n- `wc -l crates/rk-cli/src/verbs/run.rs` gives 6481 at `71fc926`\n\n## Acceptance criteria\n- [ ] `run.rs` is split into cohesive submodules with no behaviour change, and no file is over 1,500 lines\n- [ ] `cargo nextest run -p rk-cli` passes unchanged, and no test is edited (H-12)\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §10.3, §14 (doc rot), §16\n\n## Out of scope\n- Behaviour changes\n\n<!-- ledger: src=audit id=C10-run -->"
+  },
+  {
+   "key": "c10-split-worktree",
+   "title": "Split crates/rk-git/src/worktree.rs behind the existing tests",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/git",
+    "prio/p2"
+   ],
+   "parent": "#31",
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "body": "## Problem\n`worktree.rs` has 2,883 lines.\n\n## Evidence (at `71fc926` unless noted)\n- `wc -l crates/rk-git/src/worktree.rs` gives 2883 at `71fc926`\n\n## Acceptance criteria\n- [ ] The file is split into submodules with no behaviour change, and the one git wrapper boundary (ADR-0077, ADR-0098) is kept\n- [ ] `cargo nextest run -p rk-git` passes unchanged, and no test is edited\n- [ ] `cargo fmt --all --check` is clean\n- [ ] `cargo clippy --workspace --all-targets` adds no warning\n- [ ] `node .claude/temper/temper.mjs baseline --check` passes (no new finding against `.claude/temper-baseline.json`)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §10.3, §14 (doc rot), §16\n\n## Out of scope\n- Behaviour changes\n\n<!-- ledger: src=audit id=C10-worktree -->"
+  },
+  {
+   "key": "c10-stage-cap",
+   "title": "Decide a stage-file size cap for Phase 2",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "prio/p2",
+    "needs/decision"
+   ],
+   "parent": "#31",
+   "blockedBy": [
+    "new:m5-phase1-exit"
+   ],
+   "body": "## Problem\nPhase 1's runbook grew to about 50k lines, with 32k in s8's stage files, and nothing caps it.\n\n## Evidence (at `71fc926` unless noted)\n- `references/audit/2026-10-06-status/appendix.md` §10.3 ('nothing caps it'), §15 item 7\n\n## Acceptance criteria\n- [ ] The operator records a cap and its enforcement (a process rule in RUNBOOK.md, or a checkpoint line)\n\n## Doc links\n- `references/audit/2026-10-06-status/appendix.md` §10.3\n\n## Out of scope\n- Rewriting Phase 1 stage files\n\n<!-- ledger: src=audit id=C10-cap -->"
+  },
+  {
+   "key": "o4-record-a",
+   "title": "Sign ADR-0197 (Record A) decision 7's table (audit O-4)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p1",
+    "needs/decision"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "body": "## Problem\nADR-0197 stays `proposed` until both §8h.11 probes pass at s8j and the operator signs its decision 7 table (AC-156). The probes and the flip are runbook steps. The signing is not scheduled in any step.\n\n## Evidence (at `71fc926` unless noted)\n- `references/adr/0197-cards-models-and-the-run-environment-are-least-privilege-pinned-and-launched.md` (`status: proposed`)\n- `runbook/PROGRESS.md:305` (D21-138: 'until both §8h.11 probes pass at `s8j` and the operator signs its decision 7 table (AC-156)')\n- `runbook/phase-1/s8j-run-preparation.md:1135-1137` (the flip after both probes is the runbook's)\n- `references/audit/2026-10-06-status/appendix.md` §13 O-4, §14 High, §15 item 6\n\n## Acceptance criteria\n- [ ] The operator signs the decision 7 table by a dated line (it can share the #28 sitting)\n\n## Doc links\n- ADR-0197\n- AC-156\n- D21-138\n\n## Out of scope\n- Probes 0, 1 and 2 and the record's flip: s8j §8j.6 owns them\n\n<!-- ledger: src=audit id=O-4 -->"
+  },
+  {
+   "key": "o7-fold-fixes",
+   "title": "Decide whether the run-path fixes join s8j's chain before the first paid launch (audit O-7)",
+   "type": "Task",
+   "labels": [
+    "source/audit-2026-10-06",
+    "area/records",
+    "pre-m5",
+    "prio/p1",
+    "needs/decision"
+   ],
+   "parent": "new:run-path-fixes",
+   "blockedBy": [],
+   "body": "## Problem\nThe audit asks the operator to put the Ctrl-C and `status` fixes (and #7, #11) into s8j before any paid lane run. Landing them in rk-cli or rk-kernel re-triggers checkpoint re-runs, so their timing is the operator's.\n\n## Evidence (at `71fc926` unless noted)\n- `references/audit/2026-10-06-status/appendix.md` §13 O-7, §15 item 3\n- No s8j line owns them (re-verified at `71fc926`)\n\n## Acceptance criteria\n- [ ] The operator records the decision. If yes, s8j gains a dated line naming #5, #6, #7 and #11 and where in the chain they land\n\n## Doc links\n- #5, #6, #7, #11\n\n## Out of scope\n- The fixes themselves\n\n<!-- ledger: src=audit id=O-7 -->"
+  },
+  {
+   "key": "r37-spec-supplier",
+   "title": "Settle R-37: the spec supplier seam cannot make a node dispatchable on its own",
+   "type": "Task",
+   "labels": [
+    "source/agent",
+    "area/kernel",
+    "area/records",
+    "needs/decision"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "body": "## Problem\nR-37 is the only residual of R-37 to R-39 still open ('awaiting-ryan'). `replay::resume`'s `supply_spec` seam is consulted, but `RunInputs::activations()` derives from the same `specs` list, so a supplier-only node has no activation and `workflow::idem::checked_key` refuses it for want of an `@version`. The `activity_id@version` join was recorded as a decision the stage could not take.\n\n## Evidence (at `71fc926` unless noted)\n- `runbook/PROGRESS.md:324` (R-37…R-39 row: 'R-37 alone is still not settled', status awaiting-ryan)\n- `crates/rk-kernel/tests/it/resume.rs` (header: the coupling)\n\n## Acceptance criteria\n- [ ] The operator decides whether later records (for example ADR-0190's `activity_id@version`) already settle it, or rules on the join\n- [ ] The PROGRESS row is updated with the outcome\n\n## Doc links\n- `runbook/PROGRESS.md:324`\n- `runbook/phase-1/s7d-cli-and-migrate.md` §7d.5 step (9)\n\n## Out of scope\n- Code changes until it is decided\n\n<!-- ledger: src=docs id=R-37 -->"
+  },
+  {
+   "key": "r64-tag-rebuild",
+   "title": "Measure R-64: can doctor --rebuild re-derive every event-store tag from git alone?",
+   "type": "Task",
+   "labels": [
+    "source/agent",
+    "area/cli",
+    "area/store",
+    "area/adapter-sqlite",
+    "status/ready",
+    "pre-m5"
+   ],
+   "parent": "new:m5-phase1-exit",
+   "blockedBy": [],
+   "body": "## Problem\nADR-0131 decision 10 leaves open whether `doctor --rebuild` can re-derive every tag from git. If it cannot, AC-184's rebuild differential must exclude tags. R-64 is UNMEASURED.\n\n## Evidence (at `71fc926` unless noted)\n- `runbook/PROGRESS.md:326` (R-64 'open, unmeasured')\n- `spikes/DECISIONS-2026-09-21.md:337-341` (D21-6 opens R-64)\n- `references/adr/0131-the-event-store-selector-is-a-tag-set-outside-the-canonical-digest.md` decision 10\n\n## Acceptance criteria\n- [ ] A comment on this issue lists each tag the store writes, its source, and whether `crates/rk-cli/src/doctor/rebuild.rs` can re-derive it from git, with `path:line` evidence\n- [ ] If any tag cannot be re-derived, a follow-up issue proposes the AC-184 exclusion for the operator; no record is edited by the agent\n\n## Doc links\n- ADR-0131\n- AC-184\n- D21-6\n\n## Out of scope\n- Changing `rebuild_differential` (Step 8 owns it)\n\n<!-- ledger: src=docs id=R-64 -->"
+  },
+  {
+   "key": "temper-r1",
+   "title": "Make the temper gate green on the merged Rust (operator ruling r1, 2026-10-08)",
+   "type": "Task",
+   "labels": [
+    "source/agent",
+    "area/ci",
+    "needs/repro"
+   ],
+   "parent": "new:post-m5-hardening",
+   "blockedBy": [],
+   "body": "## Problem\nThe operator ruled on 2026-10-08 that 'the temper gate red on origin's merged Rust is left to the PR line'. GitHub's `temper` workflow is green on this branch, so which gate is red (the local `/temper:gate` with its reviewer, or `baseline --check` on a dev box) still needs a reproduction.\n\n## Evidence (at `71fc926` unless noted)\n- `spikes/DECISIONS-2026-09-21.md`, the paragraph headed *(dated 2026-10-08, s8i build, D21153-8i-E)* \"The operator's rulings of 2026-10-08\", ruling (r1). It is uncommitted at `71fc926` and still moving (line 7017 of the working tree on 2026-10-08), so it is cited by that heading, not by line\n- GitHub runs: temper `37728963069` at `71fc926` and `37580924561` at `88a8dbd`, both success\n- AGENTS.md decisions log, 2026-10-03 (temper adoption and its baseline)\n\n## Acceptance criteria\n- [ ] The failing gate and command are reproduced and quoted here (`node .claude/temper/temper.mjs baseline --check`, or `node \"$TEMPER_CLI\" gate`)\n- [ ] Then: a PR on its own line makes that gate green, with no lint weakened and no baseline entry added (H-05, H-12)\n\n## Doc links\n- `spikes/DECISIONS-2026-09-21.md` D21153-8i-E (r1)\n- ADR-0102\n\n## Out of scope\n- Changing the s8i line's own work\n\n<!-- ledger: src=docs id=D21153-8i-E-r1 -->"
+  }
+ ]
+}
