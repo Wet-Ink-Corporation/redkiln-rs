@@ -300,7 +300,7 @@ content with a migration-loss marker, and **no `ChangeSummary` value is synthesi
 toolchain-keyed kinds (ADR-0073) are not finalised either.
 *(Amended 2026-09-24, s8a §8a.3, ADR-0165: this paragraph is true of Step 5 and is not true now. ADR-0165 splits
 `ChangeSummary` into an enum defined only in `rk-ports`: a `Text` arm (a typed diff plus a manifest) finalised at `s8a`,
-and a sealed `Binary` slot that S-BIN fills at `s8i`. "No value is synthesised" still holds for `redkiln-migrate`
+and a sealed `Binary` slot that S-BIN fills at `s8i` [S-BIN reported (s8i) 2026-10-14: ADR-0199 (proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*) opens the slot through one checked constructor; the `Binary` arm is filled, and Checkpoint 5's dated notes below record what lapses]. "No value is synthesised" still holds for `redkiln-migrate`
 (AC-475). Checkpoint 5's `ChangeSummary` statements below are replaced to match.)*
 
 **The fixture existing does not move this.** Step 3c records that S-BIN's fixture is now identified — the real
@@ -424,6 +424,10 @@ test -d crates/rk-types/src || { echo "FAIL: crates/rk-types/src absent"; exit 1
 # split with "for …ChangeSummary" on its own line is not seen; cargo fmt --check above holds the tree to rustfmt's
 # one-line form. The opacity pins are floors; the behavioural pin is the trybuild case
 # change_summary::binary_arm_is_not_constructible_outside_rk_ports. The sealed-slot pins are SUPERSEDED BY NAME at s8i.
+# *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* Superseded now: S-BIN has reported (F43, proposed), and ADR-0199 (proposed) opens the slot.
+# The behavioural pin named above and the no-pub-field opacity pin below are replaced by the record's construction
+# rule, carried by the trybuild case ui::trybuild_pins_the_binary_change_summary_construction_rule (after the struck
+# lines below). "With a sealed Binary slot that S-BIN fills at s8i" above lapses here: S-BIN has filled it.
 # [amended 2026-09-25, s8a fix round 3] Stated limit, corrected: the ban reads one PHYSICAL line at a time, and rustfmt
 # wraps any definition wider than its width, so fmt --check does NOT hold the tree to a one-line form for those. Measured
 # 2026-09-25: rustfmt writes a long alias as `pub type X =` then `    Result<…ChangeSummary, …>;`, and a long impl
@@ -445,6 +449,15 @@ mkdir -p target/cp5-ctl || { echo "FAIL: cannot make target/cp5-ctl for the seal
 # ChangeSummary) and a digit in the prefix (`pub struct V2ChangeSummary;`, `impl Clone for Sha1ChangeSummary {`)
 # passed, and each compiles under rustc -D warnings. Both arms now take [A-Za-z0-9_]*, and the definition arm an
 # optional r# prefix. Controls 29, 30 and 31 fire.
+# *(dated 2026-10-14, s8i build, S8I-D3-RECORDS; s8i section 8i.8, "Three lines whose condition lapses here")* S-BIN has
+# reported (F43, proposed; ADR-0199, proposed; nothing flipped). Section 8i.8 amends this line "if s8a's record kept
+# that condition" ("until S-BIN reports", ADR-0099 clause 5's words). It did not: ADR-0165 decision 9 supersedes, in
+# part, ADR-0099 clause 5's sentence and its forbids bullet "Forbids `ChangeSummary` appearing anywhere in `crates/` but
+# its `rk-ports` newtype until S-BIN reports.", and its decision 2 replaces them with no time condition. So nothing in
+# CS_BAN or the rk-kernel ban below lapses, and both stand unchanged. The render (rk-store) and review-input (rk-cli)
+# sites name the type and define, alias, rename or implement nothing: these lines, cut from this file's bytes and run
+# read-only over the working tree after s8i fix round D, pass, and fail on a planted alias in rk-store/src and on a
+# planted type use in rk-kernel/src. Only "a sealed Binary slot that S-BIN fills at s8i" lapses (S8I-C4-PORTS's note).
 CS_BAN='\b(struct|enum|type|trait|union)[[:space:]]+(r#)?[A-Za-z0-9_]*ChangeSummary\b|\btype[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[^=]*=.*\b[A-Za-z_]*ChangeSummary\b|\bimpl\b.*\bfor[[:space:]]+.*\b[A-Za-z0-9_]*ChangeSummary\b|\bimpl(<[^>]*>)?[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*ChangeSummary\b|\b[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Z_]|\buse\b[^;]*\b[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Za-z_]|^[^:]+:[0-9]+:[[:space:]]*([A-Za-z_][A-Za-z0-9_:]*([[:space:]]+as[[:space:]]+[A-Za-z_][A-Za-z0-9_]*)?[[:space:]]*,[[:space:]]*)*([A-Za-z_][A-Za-z0-9_]*::)*[{]?[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(,.*)?$'
 # [amended 2026-09-25, s8a fix round 5] The string blank was `s/"([^"\]|\.)*"/""/g`: in ERE a backslash inside a
 # bracket is literal and `\.` is a literal dot, so a string holding a backslash escape ("a\n") was never blanked and
@@ -499,14 +512,14 @@ for m in decls:
 print("SEALED decls=%d pubfields=%d" % (len(decls), pub))
 PY
 sealed() { python target/cp5-ctl/sealed.py "$1" 2>&1; }
-out=$(sealed crates/rk-ports/src/toolchain.rs); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the sealed-slot reader could not run (rc=$rc): $out"; exit 1; }
-[ "$out" = "SEALED decls=1 pubfields=0" ] || { echo "FAIL: rk-ports' sealed Binary payload reads '$out', expected one declaration with no pub field — none means the pin passes over nothing, a pub field means it is constructible"; exit 1; }
-for ctl in 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary { pub bytes: u64 }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub u64);' 'SEALED decls=1 pubfields=0|// pub struct BinaryChangeSummary(pub u64);  pub struct BinaryChangeSummary(pub(crate) ());' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary { bytes: u64, note: Vec<u8> }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub ());' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub (u8, u8));' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary(pub(in crate::toolchain) ());' 'SEALED decls=1 pubfields=1|#[doc = "spec: https://git-lfs.com"] pub struct BinaryChangeSummary { pub bytes: () }'; do
-  printf '%s\n' "${ctl#*|}" | sed 's/  pub struct/\npub struct/' > target/cp5-ctl/sealed_ctl.rs || { echo "FAIL: cannot write a sealed-slot control"; exit 1; }
-  out=$(sealed target/cp5-ctl/sealed_ctl.rs); rc=$?
-  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-slot reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }
-done
+# ~~out=$(sealed crates/rk-ports/src/toolchain.rs); rc=$?~~
+# ~~[ "$rc" -eq 0 ] || { echo "FAIL: the sealed-slot reader could not run (rc=$rc): $out"; exit 1; }~~
+# ~~[ "$out" = "SEALED decls=1 pubfields=0" ] || { echo "FAIL: rk-ports' sealed Binary payload reads '$out', expected one declaration with no pub field — none means the pin passes over nothing, a pub field means it is constructible"; exit 1; }~~
+# ~~for ctl in 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary { pub bytes: u64 }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub u64);' 'SEALED decls=1 pubfields=0|// pub struct BinaryChangeSummary(pub u64);  pub struct BinaryChangeSummary(pub(crate) ());' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary { bytes: u64, note: Vec<u8> }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub ());' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub (u8, u8));' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary(pub(in crate::toolchain) ());' 'SEALED decls=1 pubfields=1|#[doc = "spec: https://git-lfs.com"] pub struct BinaryChangeSummary { pub bytes: () }'; do~~
+# ~~  printf '%s\n' "${ctl#*|}" | sed 's/  pub struct/\npub struct/' > target/cp5-ctl/sealed_ctl.rs || { echo "FAIL: cannot write a sealed-slot control"; exit 1; }~~
+# ~~  out=$(sealed target/cp5-ctl/sealed_ctl.rs); rc=$?~~
+# ~~  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-slot reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }~~
+# ~~done~~
 # [amended 2026-09-25, s8a fix round 1] A fifth sealed-slot control: a line-continued string BEFORE the declaration,
 # with a later string. Under the old string blank (\\. for an escape) the quotes re-pair across the declaration and
 # the reader reports decls=0, losing the pub field that makes the payload constructible; this pins BOTH copies of
@@ -517,9 +530,24 @@ done
 # re.S reads the same). It goes red only when the escape arm is \\. AND re.S is dropped (decls=0 pubfields=0).
 # So it pins that pair, not the blank; no input can tell \\. from \\[\s\S] under re.S, so no single-point
 # control on the escape arm exists.
-printf '%s\n' '#[error("a message \' '   continued")]' 'pub struct BinaryChangeSummary(pub u64);' 'const LATER: &str = "later";' > target/cp5-ctl/sealed_cont.rs || { echo "FAIL: cannot write the continued-string sealed-slot control"; exit 1; }
-out=$(sealed target/cp5-ctl/sealed_cont.rs); rc=$?
-[ "$rc" -eq 0 ] && [ "$out" = "SEALED decls=1 pubfields=1" ] || { echo "FAIL: CONTROL — a line-continued string before the declaration hid it from the sealed-slot reader: '$out' (want SEALED decls=1 pubfields=1)"; exit 1; }
+# ~~printf '%s\n' '#[error("a message \' '   continued")]' 'pub struct BinaryChangeSummary(pub u64);' 'const LATER: &str = "later";' > target/cp5-ctl/sealed_cont.rs || { echo "FAIL: cannot write the continued-string sealed-slot control"; exit 1; }~~
+# ~~out=$(sealed target/cp5-ctl/sealed_cont.rs); rc=$?~~
+# ~~[ "$rc" -eq 0 ] && [ "$out" = "SEALED decls=1 pubfields=1" ] || { echo "FAIL: CONTROL — a line-continued string before the declaration hid it from the sealed-slot reader: '$out' (want SEALED decls=1 pubfields=1)"; exit 1; }~~
+# *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* THE PIN THAT REPLACES s8a section 8a.3's opacity pin ("the sealed payload type declares no
+# `pub` field", struck above; s8i section 8i.8; ADR-0199 decision 2, proposed): the record's construction rule, carried
+# by the trybuild case ui::trybuild_pins_the_binary_change_summary_construction_rule. Its two cases each commit a .stderr: a struct literal
+# fails on private fields (E0451), and a field read (E0616), Default, From<u8> and Deserialize each fail by name, so a
+# pub field or a second route changes a .stderr and the test goes red. The ChangeSummary ban above is unchanged.
+# ADR-0165 had already dropped its "until S-BIN reports" condition (ADR-0099 clause 5's words), so nothing else lapses.
+# Two controls: a selection that ran nothing, and a FAILED case, must not read as the pin passing.
+for f in crates/rk-ports/tests/ui/change_summary_binary_construction_rule crates/rk-ports/tests/ui/change_summary_binary_struct_literal; do
+  test -s "$f.rs" && test -s "$f.stderr" || { echo "FAIL: $f.rs or its committed .stderr is absent or empty — a trybuild case without a .stderr is green whenever compilation fails for ANY reason (s7a section 7a.8)"; exit 1; }
+done
+cs_rule_ok() { printf '%s\n' "$1" | grep -qxF 'test ui::trybuild_pins_the_binary_change_summary_construction_rule ... ok' && printf '%s\n' "$1" | grep -qE '^test result: ok\. 1 passed; 0 failed'; }
+out=$(cargo test -p rk-ports --test it -- ui::trybuild_pins_the_binary_change_summary_construction_rule --exact 2>&1); rc=$?
+[ "$rc" -eq 0 ] && cs_rule_ok "$out" || { echo "FAIL: the construction-rule trybuild case did not run and pass exactly once (ADR-0199 decision 2)"; printf '%s\n' "$out" | tail -20; exit 1; }
+! cs_rule_ok 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 28 filtered out' || { echo "FAIL: CONTROL — a selection that ran nothing reads as the pin passing"; exit 1; }
+! cs_rule_ok 'test ui::trybuild_pins_the_binary_change_summary_construction_rule ... FAILED' || { echo "FAIL: CONTROL — a FAILED case reads as the pin passing"; exit 1; }
 test -f Cargo.toml || { echo "FAIL: no root manifest"; exit 1; }
 meta=$(cargo metadata --format-version 1 --no-deps); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
 printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; allowed={'rk-cli','redkiln-migrate'}; bad=sorted(p['name'] for p in m['packages'] if p['name'] not in allowed and any(d['name']=='anyhow' for d in p['dependencies'])); print(bad); sys.exit(1 if bad else 0)" \

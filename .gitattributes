@@ -120,3 +120,10 @@ crates/rk-store/tests/fixtures/*.sqlite3 binary
 # VERBATIM to the fixture child's stdout by the same driver as `exit/`, so it takes `exit/`'s rule; the row lands
 # with the files.
 crates/rk-cli/tests/fixtures/slice/** -text
+#
+# ADDED 2026-10-14 at s8i (section 8i.8's Rust table, package S8I-C5-STORE; ADR-0199, proposed; ADR-0151's
+# route): AC-154's golden rendering of the `Binary` arm. render::ac154_binary_entries_render_from_typed_fields
+# compares the renderer's LF bytes to this file byte for byte (include_bytes!), so no checkout may rewrite it.
+# Same header rule: the row lands with the file whose bytes a test pins. A config change routed to the
+# operator (R2 of 2026-10-14).
+crates/rk-store/tests/fixtures/render/ac154-binary-summary.md -text

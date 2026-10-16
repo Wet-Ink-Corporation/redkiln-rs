@@ -16,7 +16,9 @@
 //! `Binary` arm's payload, [`BinaryChangeSummary`], has the same crate-private unit field and no
 //! public constructor, so the crate holds four opaque newtypes: `Snapshot`, `ExternalRef` and
 //! `TypedInput` with no record behind them, and `BinaryChangeSummary`, the sealed slot ADR-0165
-//! stands behind and `s8i` opens.)*
+//! stands behind and `s8i` opens.)* *(Noted 2026-10-14, s8i, ADR-0199, proposed: `s8i` has
+//! opened it. `BinaryChangeSummary` now carries S-BIN's four recorded fields behind one checked
+//! constructor, so it is no longer one of the crate's opaque newtypes.)*
 //! *(Dated 2026-09-26, s8c: `test`'s selection type is decided now. Record T = ADR-0169 decision
 //! 7, proposed, replaces `&[String]` with the closed [`Selection`], and `test` returns a
 //! [`TestOutcome`]; `build` returns a `BuildReport`; every step-reached method takes a
@@ -29,6 +31,12 @@ use std::num::NonZeroU64;
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verb_output::BuildReport;
 use rk_types::verify::{BasisReason, VerifyReport};
+
+mod binary;
+
+pub use binary::{
+    BinaryAsset, BinaryCapture, BinaryChangeSummary, BinaryChangeSummaryError, PointerDefect,
+};
 
 /// What `classify` says about one path (design:269; AC-497's port shape turns on `Binary`,
 /// register :7109).
@@ -66,12 +74,16 @@ pub enum Classification {
 /// (`artifact:ChangeSummary.sha`, `${summarise.outputs.diff}`, `artifact:Changeset.files`).
 /// *(Amended 2026-09-25, s8a fix round 10: this read "three members", before `files`.)* A `Binary` value cannot be
 /// serialised: its payload refuses by name until S-BIN decides what it carries.
+/// *(Amended 2026-10-14, s8i, ADR-0199, proposed: S-BIN has decided. A `Binary` value serialises
+/// as its payload's four members at the top level, `assets`, `captures`, `tests` and `build`
+/// ([`BinaryChangeSummary`]).)*
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[serde(untagged)]
 pub enum ChangeSummary {
     /// Every path in the range classifies `Text` or `Generated`: the typed diff plus a manifest.
     Text(TextChangeSummary),
-    /// The range carries a `Binary` path. The payload is sealed: `s8i` (S-BIN) fills it.
+    /// The range carries a `Binary` path: the four fields S-BIN fixed (ADR-0199), built only
+    /// through [`BinaryChangeSummary::new`].
     Binary(BinaryChangeSummary),
 }
 
@@ -139,26 +151,6 @@ pub enum ChangeKind {
     Deleted,
     /// The path exists at both ends with different content or mode.
     Modified,
-}
-
-/// The `Binary` arm's payload: a **sealed slot** until S-BIN reports at `s8i` (ADR-0165).
-///
-/// The type is public so the enum can name it; its one field is `pub(crate)` and it has no
-/// public constructor, no `Default` and no `From`, so no crate outside `rk-ports` can build one
-/// (`tests/ui/change_summary_binary_not_constructible.rs` pins the privacy reason). Nothing inside
-/// `rk-ports` constructs it either: [`crate::fakes::FixtureToolchain`] refuses a range carrying a
-/// `Binary` path by name rather than answering this arm. **`s8i` supersedes this seal by name**
-/// when S-BIN finalises what the arm carries; a later record opens the slot.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BinaryChangeSummary(pub(crate) ());
-
-impl serde::Serialize for BinaryChangeSummary {
-    fn serialize<S: serde::Serializer>(&self, _serializer: S) -> Result<S::Ok, S::Error> {
-        Err(serde::ser::Error::custom(
-            "the Binary arm of ChangeSummary is sealed until S-BIN reports (ADR-0165); it carries \
-             nothing to serialise",
-        ))
-    }
 }
 
 /// A step's declared bound (record B = ADR-0171 decision 3, proposed).

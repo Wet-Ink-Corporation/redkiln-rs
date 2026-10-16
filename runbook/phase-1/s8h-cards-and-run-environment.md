@@ -1569,8 +1569,23 @@ literal).
 
 Both packs carry all 45 questions, so each stays independently complete. That is **51 rows** in `bug-standard` and
 **53** in `story`, plus one row per kernel-minted class in each. At this stage's close that means `s8f`'s two and
-`s8g`'s one, for 54 and 56. After `s8j`'s three the totals are 57 and 59. `budget_extension` joins the table only if §8h.0 item 5 finds
+`s8g`'s one, for 54 and 56. After `s8j`'s three the totals are ~~57 and 59~~ *(dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY: 58 and 60, with `s8i`'s one below)*. `budget_extension` joins the table only if §8h.0 item 5 finds
 a producer.
+
+*(dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9; ADR-0199 decision 3, proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*.)* **A fourth
+kernel-minted class, minted at `s8i`: `automated-verdict-refused`.** The kernel's gate request (D21-48 X16) opens a gate
+whose kind is `GateReason::AutomatedVerdictRefused`'s one spelling, read from its `&str` constant
+`AUTOMATED_VERDICT_REFUSED_KIND` in `crates/rk-kernel/src/workflow/gate.rs`; `rk-cli` opens it when a stage's review
+input is a `Binary` summary (`review_input::route`), which any pack's stage can read, so every pack reaches it. Its rows
+land in the change that mints it, as this section provides for a later stage's class: one `fail` row in both packs
+(55 and 57 rows now), `run::MINTED_GATE_KINDS` reads the spelling through `GateReason::as_str` (so the lint requires and
+admits the row), `pack-min`'s eight packs carry the row, and Checkpoint 8h's `MINTED_CLASSES` literal gains it by dated
+edit. `cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class`'s premises move from 54 / 56 to
+55 / 57 by dated line. The table row:
+
+| class | minted by | the class guard admits it as | its rows land | in `MINTED_CLASSES` |
+| --- | --- | --- | --- | --- |
+| `automated-verdict-refused` | `s8i` §8i.8, ADR-0199 decision 3: the kernel's type-neutral gate request, opened by `rk-cli`'s `Binary` review route | a kernel-minted class. It is not one of the 45 catalog questions | at `s8i`, in both packs | yes, from `s8i` |
 
 **The draft is `fail` for every row.** `auto-decide` is refused by name in `run.rs` because it has no verdict carrier
 (RT-57), so it cannot be drafted. `escalate` is admissible only as a signed exception with a warrant. None is
@@ -2515,7 +2530,11 @@ REC_A=0197
 REC_B=0198
 A_SUPERSEDES="0126 0074"
 TOKENS_APPETITE=24000000
-MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"
+# *(dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9)* A fourth kernel-minted class joins, in the
+# change that mints it (§8h.10): automated-verdict-refused, gate::GateReason's one spelling, read from its &str constant
+# AUTOMATED_VERDICT_REFUSED_KIND in crates/rk-kernel/src/workflow/gate.rs (ADR-0199 decision 3, proposed). Was:
+# ~~MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"~~
+MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates automated-verdict-refused"
 printf '%s\n' "$REC_A" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_A (Record A's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 printf '%s\n' "$REC_B" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_B (Record B's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 [ "$REC_A" != "$REC_B" ] || { echo "FAIL: REC_A and REC_B record the same id ($REC_A)"; exit 1; }

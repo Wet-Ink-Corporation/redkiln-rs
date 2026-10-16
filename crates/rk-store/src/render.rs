@@ -52,6 +52,11 @@ use rk_types::event_kind::EventKind;
 use crate::canon::{self, CanonError};
 use crate::locator::{self, Anchor};
 
+// *(dated 2026-10-14, s8i build, package S8I-C5-STORE; ADR-0199, proposed.)* AC-154's binary
+// rendering: the `Binary` arm of a `ChangeSummary`, from its typed fields only.
+mod binary;
+pub use binary::{BinaryRenderError, render_binary_summary};
+
 /// The managed tree an item's rendered artifacts live under, repo-relative inside the run-owned
 /// worktree (decision 6): `.redkiln/artifacts/<item>/`.
 pub const ARTIFACTS_DIR: &str = ".redkiln/artifacts";

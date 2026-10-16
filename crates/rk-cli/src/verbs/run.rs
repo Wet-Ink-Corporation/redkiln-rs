@@ -39,6 +39,8 @@ use crate::exit::{Exit, Halt};
 use crate::verbs::Startup;
 use crate::{env::Env, repo};
 
+mod kept_refusal;
+
 /// The adapter-facing pack values, read by **`rk-cli`** over the same
 /// `.redkiln/packs/<pack>.toml` bytes the kernel's `Pack::from_toml` reads.
 ///
@@ -1795,13 +1797,16 @@ impl std::fmt::Display for GateExpiryLint {
 }
 
 /// The gate kinds the kernel mints, read from the constants at their mint sites (never a list
-/// copied beside them): `s8f`'s landing refusal and drift gate, and `s8g`'s AC-357 verify gate.
-/// Every pack reaches each of them (any lane can land, drift at entry or reach verify), so every
-/// pack carries their rows.
-const MINTED_GATE_KINDS: [&str; 3] = [
+/// copied beside them): `s8f`'s landing refusal and drift gate, `s8g`'s AC-357 verify gate, and
+/// the gate request's one reason, `automated-verdict-refused` (ADR-0199 decision 3, which any
+/// stage's walk reaches when its review input is a `Binary` summary). Every pack reaches each of
+/// them (any lane can land, drift at entry, reach verify or read a `Binary` summary), so every pack
+/// carries their rows.
+const MINTED_GATE_KINDS: [&str; 4] = [
     rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND,
     rk_kernel::workflow::fsm::DRIFT_GATE_KIND,
     rk_kernel::verify::ac_gate::AC_GATE_KIND,
+    rk_kernel::workflow::gate::GateReason::AutomatedVerdictRefused.as_str(),
 ];
 
 /// **ADR-0146's load-time lint, both halves** (`s8h` §8h.10; D21-42 21c; Record B = ADR-0198
@@ -2843,14 +2848,52 @@ fn resume_and_read(
     let pass_boundary = boundary
         .as_ref()
         .map(rk_kernel::runtime::tier_one::Boundary::sibling);
-    let recorded = match rk_kernel::replay::resume_routed(
-        inputs,
-        ports,
-        routing,
-        &prior,
-        supply_spec,
-        boundary,
-    ) {
+    // **The `Binary` route's hook** (`s8i` §8i.8; ADR-0199 decision 3, proposed). The stage's
+    // toolchain is wrapped in `review_input::route`: a `Binary` summary is refused to the kernel
+    // (the walk stops before any reviewer) and its refusal is kept. When `resume`'s outcome is
+    // that refusal, the human gate opens from it through a sibling of the stage's boundary; any
+    // other outcome is reported and mapped below as it would be with no refusal kept. The kernel
+    // never names the type: it carries the summary as the request's opaque attachment.
+    let review_gate_boundary = boundary
+        .as_ref()
+        .map(rk_kernel::runtime::tier_one::Boundary::sibling);
+    let (routed, refusals) = crate::review_input::route(Arc::clone(&ports.toolchain));
+    let ports = rk_ports::root::Ports {
+        toolchain: routed,
+        ..ports
+    };
+    let resumed =
+        rk_kernel::replay::resume_routed(inputs, ports, routing, &prior, supply_spec, boundary);
+    // Bound first, so the stderr lock is released before an arm writes anything (ASY-14).
+    let next = kept_refusal::next(&item_id, resumed, &refusals, &mut std::io::stderr().lock());
+    let resumed = match next {
+        kept_refusal::Next::Map(resumed) => resumed,
+        kept_refusal::Next::Exit(exit) => return Ok(exit),
+        kept_refusal::Next::Gate(refused) => {
+            let run_id = match inputs.run_id() {
+                Ok(id) => id,
+                Err(e) => {
+                    return Ok(told(
+                        &mut std::io::stderr().lock(),
+                        &format!("redkiln: the stage run's id could not be derived: {e}"),
+                        Exit::ConfigError,
+                    ));
+                }
+            };
+            return open_review_gate(
+                resolved,
+                &store,
+                review_gate_boundary,
+                refused,
+                &ReviewGateAt {
+                    tree_hash,
+                    now,
+                    run_id: &run_id,
+                },
+            );
+        }
+    };
+    let recorded = match resumed {
         Ok(run) => run,
         // 🛑 A FAILED DISPATCH IS NOT A CONFIGURATION ERROR, AND THE CLASS NOW ARRIVES ON THIS VALUE.
         //
@@ -3652,6 +3695,92 @@ fn open_refused_landing_gate(
          exclude` or `redkiln answer {item} abort`"
     );
     Exit::Success
+}
+
+/// Where and when the `Binary` item's human gate opens: the stage run's tree, its one clock read,
+/// and its id.
+struct ReviewGateAt<'a> {
+    tree_hash: &'a str,
+    now: i64,
+    run_id: &'a str,
+}
+
+/// One line to the operator through a locked handle (H-06), then `exit`. A line that cannot be
+/// written turns the exit into `ConfigError` (3): what happened is already recorded, and the code
+/// then says the report of it did not reach the operator.
+fn told(out: &mut dyn std::io::Write, line: &str, exit: Exit) -> Exit {
+    match writeln!(out, "{line}") {
+        Ok(()) => exit,
+        Err(_unwritten) => Exit::ConfigError,
+    }
+}
+
+/// **The `Binary` item's human gate** (`s8i` §8i.8; ADR-0199 decision 3, proposed; D21-48 X16;
+/// operator ruling R7).
+///
+/// The stage's walk read a `Binary` summary through [`crate::review_input::route`], which refused
+/// an automated verdict and dispatched no reviewer. The refusal opens its gate here through
+/// [`crate::review_input::AutomatedVerdictRefused::open_gate`] (X16's type-neutral request: the
+/// closed reason as the gate's kind, the token `GateRecord::derive_reach`'s through `gate::reach`
+/// over the journal as it now stands, the typed summary's serialisation as the opaque attachment),
+/// and its `gate_opened` row goes through [`gate_rows_through`], the run's gate path: bound, a
+/// tier-1 act on the landed arm through a sibling of the stage's boundary; unbound (`run_with`'s
+/// machinery seam), appended. Its deadline is the pack's `gate_deadline_secs` from the run's clock
+/// read, and its opening run is this stage run. `run` exits `0` at the gate (golden constraint 2).
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from a store acquisition; a refusal is the inner [`Exit`] (`3`), named.
+fn open_review_gate(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    mut boundary: Option<rk_kernel::runtime::tier_one::Boundary>,
+    refused: &crate::review_input::AutomatedVerdictRefused,
+    at: &ReviewGateAt<'_>,
+) -> Result<Exit, Halt> {
+    let item = resolved.item.id();
+    let state = match folded_state(resolved, store)? {
+        Ok(state) => state,
+        Err(exit) => return Ok(exit),
+    };
+    let deadline = rk_types::time::Timestamp::from_unix_seconds(
+        at.now.saturating_add(resolved.extras.gate_deadline_secs),
+    );
+    let ctx = rk_kernel::workflow::fsm::FsmContext::supplied(item, at.tree_hash, deadline, None);
+    let row = match refused.open_gate(&state, &ctx) {
+        Ok(row) => row,
+        Err(e) => {
+            return Ok(told(
+                &mut std::io::stderr().lock(),
+                &format!("redkiln: the human gate of `{item}` could not be opened: {e}"),
+                Exit::ConfigError,
+            ));
+        }
+    };
+    let token = row
+        .payload
+        .get("token")
+        .and_then(serde_json::Value::as_str)
+        .map(ToOwned::to_owned);
+    if let Err(exit) = gate_rows_through(
+        store,
+        boundary.as_mut(),
+        &state,
+        vec![row],
+        Some((&resolved.stage, at.run_id)),
+        Opens::Landed,
+    )? {
+        return Ok(exit);
+    }
+    let reason = rk_kernel::workflow::gate::GateReason::AutomatedVerdictRefused;
+    Ok(told(
+        &mut std::io::stdout().lock(),
+        &format!(
+            "{item}: gate {} is open ({reason}): the change carries a Binary-classified path, so \
+             no automated reviewer receives it and a human decides (ADR-0199)",
+            token.as_deref().unwrap_or("(no token)")
+        ),
+        Exit::Success,
+    ))
 }
 
 /// **The entry landing** (D21-114, TAKEN PROVISIONALLY under D21-105; ADR-0188 decision 2's dated
@@ -5211,6 +5340,8 @@ pub fn bridged(
 }
 
 /// The decorator [`bridged`] returns: every method delegates; `run_verb` unwraps `checklist`.
+/// `change_summary` delegates too: the `Binary` route is [`crate::review_input::route`]'s, on the
+/// run path.
 struct ChecklistBridge {
     inner: Arc<dyn rk_ports::toolchain::Toolchain>,
 }
@@ -5322,6 +5453,9 @@ impl rk_ports::toolchain::Toolchain for ChecklistBridge {
         range: &str,
         bound: rk_ports::toolchain::StepBound,
     ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {
+        // The bridge delegates: the hook is `review_input::route`, which `resume_and_read` wraps
+        // around this toolchain and which must read the `Binary` value to open its gate. A refusal
+        // here would pre-empt it.
         self.inner.change_summary(range, bound)
     }
     fn run_verb(

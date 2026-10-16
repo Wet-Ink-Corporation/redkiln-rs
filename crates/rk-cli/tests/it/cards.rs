@@ -334,9 +334,12 @@ fn require_axes(pack: &str) -> BTreeSet<String> {
 /// **§8h.10: both packs carry a fail-closed `[[gate_expiry]]` row for every reachable class, and
 /// for nothing else** — the 45 catalog questions, `unknown_facet:<axis>` for every axis the pack's
 /// `require` rows read (5 in `bug-standard`, 7 in `story`), `unknown_facet:change` by name (`s8d`'s
-/// R6 triage gate), `escalation`, and the kernel-minted kinds READ FROM THEIR CONSTANTS. That is 54
-/// and 56 rows, each `fail` (AC-276's draft; no exception is signed). The expected set is derived
-/// here, and the counts are PREMISES, so a catalog change that moves the set fails by name.
+/// R6 triage gate), `escalation`, and the kernel-minted kinds READ FROM THEIR CONSTANTS. That is
+/// ~~54 and 56~~ 55 and 57 rows, each `fail` (AC-276's draft; no exception is signed). The expected
+/// set is derived here, and the counts are PREMISES, so a catalog change that moves the set fails
+/// by name. *(dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9)* The fourth
+/// minted kind is `automated-verdict-refused` (`GateReason::AutomatedVerdictRefused`, ADR-0199
+/// decision 3, proposed), so each count rises by one.
 ///
 /// RED (observed 2026-10-02, before the rows were written): 0 rows in each pack.
 #[test]
@@ -351,12 +354,13 @@ fn shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class() {
         rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND,
         rk_kernel::workflow::fsm::DRIFT_GATE_KIND,
         rk_kernel::verify::ac_gate::AC_GATE_KIND,
+        rk_kernel::workflow::gate::GateReason::AutomatedVerdictRefused.as_str(),
     ]
     .into_iter()
     .map(str::to_owned)
     .collect();
     let escalation = rk_kernel::workflow::gate::ESCALATION_CLASS;
-    for (pack, axes_want, rows_want) in [("bug-standard", 5, 54), ("story", 7, 56)] {
+    for (pack, axes_want, rows_want) in [("bug-standard", 5, 55), ("story", 7, 57)] {
         let axes = require_axes(pack);
         assert_eq!(axes.len(), axes_want, "PREMISE: {pack} reads {axes:?}");
         assert!(
@@ -402,6 +406,107 @@ fn shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class() {
         assert!(
             not_fail.is_empty(),
             "{pack}: rows drafted other than `fail` with no signed exception (AC-276): {not_fail:?}"
+        );
+    }
+}
+
+/// **ADR-0146's load-time lint, both halves, passes over both SHIPPED packs**: every class the lint
+/// counts reachable has a row, and every row names a reachable class.
+/// *(Added 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9; ADR-0199, proposed.)*
+/// `automated-verdict-refused` is a kernel-minted kind (`GateReason`'s one spelling), so the lint
+/// requires its row and admits it; a row the lint does not know is refused as misspelt. The lint's
+/// registry inputs are read from the shipped `facets.toml` with the `toml` crate: every facet name,
+/// and the facets `s8d`'s change deriver derives.
+#[test]
+fn shipped_packs_pass_the_load_time_gate_expiry_lint() {
+    let questions = catalog_questions();
+    let path = workspace_root().join(".redkiln").join("facets.toml");
+    let doc: toml::Value =
+        toml::from_str(&std::fs::read_to_string(&path).expect("the shipped facets.toml reads"))
+            .expect("the shipped facets.toml is TOML");
+    let facets = doc
+        .get("facet")
+        .and_then(toml::Value::as_table)
+        .expect("facets.toml carries a [facet] table");
+    let registered: BTreeSet<String> = facets.keys().cloned().collect();
+    let derived: Vec<String> = facets
+        .iter()
+        .filter(|(_, f)| {
+            f.get("source").and_then(toml::Value::as_str) == Some("derived")
+                && f.get("deriver").and_then(toml::Value::as_str)
+                    == Some(rk_cli::change_deriver::DERIVER)
+        })
+        .map(|(name, _)| name.clone())
+        .collect();
+    assert_eq!(
+        derived,
+        ["change"],
+        "PREMISE: the change deriver derives `change` alone"
+    );
+    for pack in PACKS {
+        let extras = pack_extras(pack);
+        let refusals = rk_cli::verbs::run::lint_gate_expiry(
+            &extras.gate_expiry,
+            pack,
+            &pack_src(pack),
+            &questions,
+            &registered,
+            &derived,
+        );
+        assert_eq!(refusals, [], "{pack}: the load-time lint refuses");
+    }
+}
+
+/// **A lapsed `automated-verdict-refused` gate expires with `fail` under both shipped packs**, not
+/// with `Exit::ConfigError` (AC-260 forbids a default, so a class with no row cannot resolve).
+/// *(Added 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9; ADR-0199, proposed.)*
+/// The gate is opened as `run` opens it, through the kernel's `GateRequest`, and `run`'s and
+/// `answer`'s own `expiry_pass` resolves it one second past its deadline.
+#[test]
+fn a_lapsed_automated_verdict_refused_gate_expires_with_fail_under_both_shipped_packs() {
+    use rk_kernel::workflow::fsm::{FsmContext, fold};
+    use rk_kernel::workflow::gate::{GateAttachment, GateReason, GateRequest};
+
+    const ITEM: &str = "INC-1";
+    const STAGE: &str = "review";
+    const TREE: &str = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+    const DEADLINE: i64 = 1_700_003_600;
+
+    let empty = fold(ITEM, STAGE, &[]).expect("an empty journal folds");
+    let ctx = FsmContext::supplied(
+        ITEM,
+        TREE,
+        rk_types::time::Timestamp::from_unix_seconds(DEADLINE),
+        None,
+    );
+    let opened = GateRequest::new(
+        GateReason::AutomatedVerdictRefused,
+        GateAttachment::new(b"summary".to_vec()),
+    )
+    .open(&empty, &ctx)
+    .expect("the request opens its gate");
+    let state = fold(ITEM, STAGE, std::slice::from_ref(opened.event())).expect("the row folds");
+    assert_eq!(
+        state.open_gates().count(),
+        1,
+        "PREMISE: one open gate to lapse"
+    );
+
+    for pack in PACKS {
+        let events =
+            rk_cli::verbs::run::expiry_pass(&pack_extras(pack), &state, DEADLINE + 1, TREE);
+        let want = rk_kernel::workflow::gate::gate_expired_event(
+            opened.record().token(),
+            &rk_kernel::workflow::gate::ExpiryAction::Fail,
+            None,
+        );
+        assert_eq!(
+            events.map(|rows| rows
+                .into_iter()
+                .map(|e| (e.kind, e.payload))
+                .collect::<Vec<_>>()),
+            Ok(vec![(want.kind, want.payload)]),
+            "{pack}: the lapsed gate expires with exactly one `fail` row"
         );
     }
 }

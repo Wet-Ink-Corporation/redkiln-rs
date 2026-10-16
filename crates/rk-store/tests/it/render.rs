@@ -2496,3 +2496,278 @@ fn write_keyed_same_key_replaces() {
         "the last write's bytes are the sidecar's"
     );
 }
+
+// ------------------------------------------------------------------------------- AC-154
+
+// *(dated 2026-10-14, s8i build, package S8I-C5-STORE; ADR-0199, proposed; `s8i` §8i.8's Rust
+// table.)* The `Binary` arm of a `ChangeSummary` renders from its typed fields only. The value
+// below is the arm's serialised form exactly as `rk-ports` writes it (`assets`, `captures`,
+// `tests: { report_ref }`, `build: { log_ref }`); `rk-store` does not depend on `rk-ports`, so the
+// value is written here as JSON, and the type's own serialisation is pinned in `rk-ports`.
+
+/// The golden rendering, pinned `-text` in `.gitattributes` (ADR-0151): its bytes are compared
+/// verbatim, so no checkout may rewrite them.
+const AC154_GOLDEN: &[u8] = include_bytes!("../fixtures/render/ac154-binary-summary.md");
+
+/// The asset's own bytes in the fixture: not UTF-8, a NUL, and a marker no rendering may carry.
+const AC154_ASSET_BYTES: &[u8] = b"\x00\xc1\x83\x2a\xffS-BIN-ASSET-PAYLOAD\x9e\x00\x10";
+const AC154_MARKER: &str = "S-BIN-ASSET-PAYLOAD";
+
+fn binary_summary_value() -> Json {
+    json!({
+        "assets": [
+            {
+                "path": "Content/Maps/Arena.umap",
+                "kind": "umap",
+                "action": "modified",
+                "size": 48213,
+                "lfs_oid": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae"
+            },
+            {
+                "path": "Content/Props/Crate \"B\".uasset",
+                "kind": "uasset",
+                "action": "added",
+                "size": 1_048_576,
+                "lfs_oid": "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+            }
+        ],
+        "captures": [
+            {
+                "path": "_s-bin/captures/arena-top.png",
+                "viewport": "PIE, top-down orthographic",
+                "note": "/Game/Maps/Arena"
+            }
+        ],
+        "tests": { "report_ref": "_s-bin/report/automation.json" },
+        "build": { "log_ref": "_s-bin/report/headless.log" }
+    })
+}
+
+/// `value` with `member` removed from the object `parent` names, or `None` when `parent` is not
+/// an object or does not hold `member`.
+fn without(value: &Json, parent: &str, member: &str) -> Option<Json> {
+    let mut v = value.clone();
+    v.pointer_mut(parent)
+        .and_then(Json::as_object_mut)?
+        .shift_remove(member)?;
+    Some(v)
+}
+
+/// `value` with `member` set to `extra` on the object `parent` names, or `None` when `parent` is
+/// not an object.
+fn with(value: &Json, parent: &str, member: &str, extra: Json) -> Option<Json> {
+    let mut v = value.clone();
+    v.pointer_mut(parent)
+        .and_then(Json::as_object_mut)?
+        .insert(member.to_owned(), extra);
+    Some(v)
+}
+
+/// **AC-154's THEN** (ADR-0199 decision 1): the binary entries render from the typed fields —
+/// every asset's `path`, `kind`, `action`, `size` (read from the LFS pointer) and `lfs_oid`, every
+/// capture's `path`, `viewport` and `note`, `tests.report_ref` and `build.log_ref` — byte for byte
+/// as the golden file, and a value missing any one of those fields is refused by name, never
+/// rendered with a gap. Red: no binary rendering exists.
+#[test]
+fn ac154_binary_entries_render_from_typed_fields() {
+    let v = binary_summary_value();
+    let out = render::render_binary_summary(&v).expect("the Binary arm renders");
+    assert!(
+        !AC154_GOLDEN.contains(&b'\r'),
+        "PREMISE: the golden file is LF only; a checkout rewrote it (its `-text` row is missing)"
+    );
+    assert_eq!(
+        text(&out),
+        text(AC154_GOLDEN),
+        "the rendering is not the golden file's"
+    );
+    assert_eq!(out, AC154_GOLDEN, "the rendering is not the golden bytes");
+    assert_eq!(
+        render::render_binary_summary(&v).expect("renders twice"),
+        out,
+        "two renderings of one value differ"
+    );
+
+    // Every typed field is required: removing any one is refused by name.
+    let fields: [(&str, &str); 14] = [
+        ("", "assets"),
+        ("", "captures"),
+        ("", "tests"),
+        ("", "build"),
+        ("/assets/0", "path"),
+        ("/assets/0", "kind"),
+        ("/assets/0", "action"),
+        ("/assets/0", "size"),
+        ("/assets/0", "lfs_oid"),
+        ("/captures/0", "path"),
+        ("/captures/0", "viewport"),
+        ("/captures/0", "note"),
+        ("/tests", "report_ref"),
+        ("/build", "log_ref"),
+    ];
+    for (parent, member) in fields {
+        let gap = without(&v, parent, member).expect("PREMISE: the fixture holds the member");
+        match render::render_binary_summary(&gap) {
+            Err(render::BinaryRenderError::Missing { member: m, .. }) => {
+                assert_eq!(m, member, "the refusal names another member");
+            }
+            other => panic!("a value without {parent}/{member} was not refused: {other:?}"),
+        }
+    }
+
+    // The typed shapes: a size that is not a whole number, an action outside the closed set and
+    // an oid that is not 64 lower-case hex are each refused, never rendered.
+    for (parent, member, bad) in [
+        ("/assets/0", "size", json!("48213")),
+        ("/assets/0", "size", json!(-1)),
+        ("/assets/0", "action", json!("renamed")),
+        ("/assets/0", "lfs_oid", json!("2C26B46B")),
+        ("/assets/0", "path", json!(7)),
+        ("/captures/0", "note", json!(null)),
+    ] {
+        let wrong =
+            with(&v, parent, member, bad.clone()).expect("PREMISE: the fixture holds the object");
+        assert!(
+            matches!(
+                render::render_binary_summary(&wrong),
+                Err(render::BinaryRenderError::Mistyped { member: m, .. }) if m == member
+            ),
+            "{parent}/{member} = {bad} was not refused as mistyped"
+        );
+    }
+
+    // Empty lists render as an explicit `_none_`, not as an absent section.
+    let empty = json!({
+        "assets": [], "captures": [],
+        "tests": { "report_ref": "r" }, "build": { "log_ref": "l" }
+    });
+    let e = text(&render::render_binary_summary(&empty).expect("an empty value renders"));
+    assert!(
+        e.contains("## assets\n\n_none_\n") && e.contains("## captures\n\n_none_\n"),
+        "an empty list is not rendered as `_none_`:\n{e}"
+    );
+}
+
+/// **AC-154's AND** (ADR-0199 decisions 1 and 2): no binary content is embedded, parsed or diffed
+/// as text. The renderer takes the typed value and nothing else — no bytes, no path it could open
+/// — and a value that tries to carry content (an asset row with a `content` member, a `diff`, a
+/// `Text` arm's member) is refused by name before anything renders. Red: no binary rendering
+/// exists.
+#[test]
+fn ac154_no_binary_content_is_embedded_parsed_or_diffed_as_text() {
+    let v = binary_summary_value();
+    let out = render::render_binary_summary(&v).expect("the Binary arm renders");
+    let s = std::str::from_utf8(&out).expect("the rendering is UTF-8 text");
+    for absent in [
+        AC154_MARKER,
+        "\0",
+        "diff --git",
+        "@@ ",
+        "GIT binary patch",
+        "Binary files",
+        "version https://git-lfs",
+        "oid sha256:",
+        "```",
+    ] {
+        assert!(
+            !s.contains(absent),
+            "the rendering carries {absent:?}, which no typed field holds"
+        );
+    }
+    // Each asset renders as its five typed lines and nothing more.
+    for block in s.split("### asset ").skip(1) {
+        let rows: Vec<&str> = block
+            .lines()
+            .take_while(|l| !l.starts_with('#'))
+            .filter(|l| l.starts_with("- "))
+            .collect();
+        let names: Vec<&str> = rows
+            .iter()
+            .filter_map(|l| l.strip_prefix("- ")?.split_once(':').map(|(n, _)| n))
+            .collect();
+        assert_eq!(
+            names,
+            ["path", "kind", "action", "size", "lfs_oid"],
+            "an asset renders other than its five typed fields"
+        );
+    }
+
+    // Content smuggled into the value is refused by name, and nothing renders.
+    let payload = Json::String(String::from_utf8_lossy(AC154_ASSET_BYTES).into_owned());
+    assert!(
+        payload.as_str().is_some_and(|p| p.contains(AC154_MARKER)),
+        "PREMISE: the smuggled payload carries the marker"
+    );
+    for (parent, member, extra) in [
+        ("/assets/0", "content", payload.clone()),
+        ("/assets/0", "bytes", json!(AC154_ASSET_BYTES)),
+        ("/captures/0", "image", payload.clone()),
+        (
+            "",
+            "diff",
+            json!(
+                "diff --git a/Content/Maps/Arena.umap b/Content/Maps/Arena.umap\nGIT binary patch\n"
+            ),
+        ),
+        ("", "sha", json!("c0ffee0000000000000000000000000000000001")),
+        ("", "manifest", json!([])),
+        ("", "files", json!(["Content/Maps/Arena.umap"])),
+        ("/tests", "report", payload.clone()),
+        ("/build", "log", payload),
+    ] {
+        let smuggled =
+            with(&v, parent, member, extra).expect("PREMISE: the fixture holds the object");
+        match render::render_binary_summary(&smuggled) {
+            Err(render::BinaryRenderError::Unknown { member: m, .. }) => {
+                assert_eq!(m, member, "the refusal names another member");
+            }
+            other => panic!("{parent}/{member} rode into the rendering: {other:?}"),
+        }
+    }
+
+    // Nothing in the renderer reads bytes or parses: its code lines open no file, decode no UTF-8
+    // and call no deserializer. The scan has its control.
+    let banned = |src: &str| -> Vec<String> {
+        code_lines(src)
+            .into_iter()
+            .filter(|(_, l)| {
+                [
+                    "std::fs",
+                    "std::io",
+                    "File::",
+                    "from_utf8",
+                    "from_slice(",
+                    "from_str(",
+                    "from_reader(",
+                    "from_value(",
+                    "Deserialize",
+                    "include_bytes!",
+                ]
+                .iter()
+                .any(|b| l.contains(b))
+            })
+            .map(|(n, l)| format!("{n}: {l}"))
+            .collect()
+    };
+    assert_eq!(
+        banned("// std::fs::read(p)\nlet b = std::fs::read(p)?;\n").len(),
+        1,
+        "CONTROL: the scan keeps the code line and drops the comment"
+    );
+    let src = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("render")
+            .join("binary.rs"),
+    )
+    .expect("the binary renderer's source reads");
+    assert!(
+        src.contains("pub fn render_binary_summary("),
+        "PREMISE: the scanned file is the renderer"
+    );
+    assert!(
+        banned(&src).is_empty(),
+        "the binary renderer reads or parses bytes: {:?}",
+        banned(&src)
+    );
+}

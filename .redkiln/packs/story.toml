@@ -311,6 +311,9 @@ accepts_effort = true
 # s8d's R6 triage gate); `escalation`; and the three kernel-minted kinds, read from their
 # constants. 56 rows. ADR-0146's load-time lint (Record B decision 7) refuses, at `run` and
 # `answer`, a reachable class with no row here and a row whose class nothing reaches.
+# (dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9) A fourth
+# kernel-minted kind, `automated-verdict-refused` (gate::GateReason, ADR-0199 decision 3,
+# proposed), takes its fail-closed row: ~~56~~ 57 rows.
 
 # catalog question
 [[gate_expiry]]
@@ -590,6 +593,11 @@ action = "fail"
 # kernel-minted, verify::ac_gate::AC_GATE_KIND, ADR-0191 decision 10
 [[gate_expiry]]
 class = "verify.ac-discriminates"
+action = "fail"
+
+# kernel-minted, gate::GateReason::AutomatedVerdictRefused, ADR-0199 decision 3
+[[gate_expiry]]
+class = "automated-verdict-refused"
 action = "fail"
 
 

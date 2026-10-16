@@ -102,6 +102,13 @@ action = "fail"
 class = "verify.ac-discriminates"
 action = "fail"
 
+# (dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9) A fourth kernel-minted
+# kind, gate::GateReason::AutomatedVerdictRefused (ADR-0199 decision 3, proposed), is reachable
+# in every pack, so the lint requires its row here too. Drafted `fail`, as the installed packs' is.
+[[gate_expiry]]
+class = "automated-verdict-refused"
+action = "fail"
+
 # `timeout_secs` on EVERY activity (`BindRequest.timeout_secs`).
 [activity.emit-report]
 timeout_secs = 900

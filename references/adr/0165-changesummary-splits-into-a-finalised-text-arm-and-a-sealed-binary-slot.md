@@ -6,7 +6,7 @@ date: 2026-09-24
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-41 (i) (the Checkpoint 5 record) and D21-42 decision 2 (split the type now, run S-BIN before exit), folded into one record as D21-42 says; D21-40's table (Checkpoint 5 red on its `ChangeSummary` line); spikes/DECISIONS-2026-09-17.md D17-9 (the root of the conflict) and runbook/PROGRESS.md §2's D17-1 readings 2 and 3; runbook/phase-1/s8a-records-and-red-checkpoints.md §8a.2 (the supersession table this record executes) and §8a.3; references/adr/0099 clause 5 and its forbids; references/adr/0135 decisions 4 and 5 and its third and fourth forbids bullets; references/adr/0093 decision 4; references/adr/0094 decision 1; references/adr/0008 Decision and its first forbids bullet; references/adr/0127 decision 6 (*"every bullet of its forbids stand"*); references/adr/0077 (*"gix owns the read path"*)
 supersedes: ["0008", "0093", "0094", "0099", "0135"]
-superseded_by: []
+superseded_by: ["0199"]
 related: ["0003", "0073", "0077", "0091", "0092", "0105", "0112", "0127", "0148"]
 evidence: []
 consumers: []
