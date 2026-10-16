@@ -1,7 +1,7 @@
 //! `ffi` — the ONE module in the workspace under a commented `#![allow(unsafe_code)]`, holding
 //! **both** containment arms: the Windows Job Object and the POSIX process group.
 //!
-//! **Why one module holds two platforms** (`s7c` §7c.10): `libc::killpg` and `libc::kill(-pgid, 0)`
+//! **Why one module holds two platforms** (`s7c` §7c.10): `libc::killpg` and `libc::kill`
 //! are `unsafe extern "C"` calls too, so a `posix.rs` carrying them would need its own `allow` —
 //! which ADR-0102 decision 2 forbids (*"the only `allow` permitted in source"*) and Checkpoint 7c's
 //! exactly-one count would catch. So the POSIX arm lives here under `#[cfg(unix)]`, beside the
@@ -31,9 +31,10 @@
 //! | `process_start_time` | `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` + `GetExitCodeProcess == STILL_ACTIVE` + `GetProcessTimes` | the start-time half of `s8d-ii`'s run-lock liveness predicate (ADR-0180 decision 6, proposed): a lock is live only when its pid is alive AND that pid's start time equals the recorded one. A production read, spawns nothing *(dated 2026-09-27, s8d-ii build, P3)* |
 //!
 //! The POSIX arm's sites: spawn (`std`'s `CommandExt::process_group(0)`), kill (`killpg(pgid,
-//! SIGKILL)`), the emptiness probe (`kill(-pgid, 0)`), `terminate_pid` (`kill(pid, SIGKILL)`) and
-//! `is_alive` (`kill(pid, 0)`). Enumeration by pid on POSIX has no syscall; `posix.rs` reads
-//! `/proc` for it and this module carries only the signal calls. **The POSIX arm is written, not
+//! SIGKILL)`), `terminate_pid` (`kill(pid, SIGKILL)`) and `is_alive` (`kill(pid, 0)`). *(Dated
+//! 2026-10-16, issue #20: the emptiness probe `kill(-pgid, 0)` was removed; it counted a zombie
+//! member, and `posix.rs`'s `Group::is_empty` reads its zombie-filtered `/proc` listing instead.)*
+//! Enumeration by pid on POSIX has no syscall; `posix.rs` reads `/proc` for it and this module carries only the signal calls. **The POSIX arm is written, not
 //! run: this box is Windows and the arm is ARMED to a recorded CI run** (`s7c` §7c.10; `ci.yml`
 //! has never run).
 //!
@@ -645,23 +646,6 @@ pub mod posix {
             return Ok(());
         }
         Err(err)
-    }
-
-    /// The emptiness probe: `kill(-pgid, 0)` — `0` or `EPERM` means a member exists, `ESRCH` means
-    /// the group is gone.
-    pub fn group_has_members(pgid: u32) -> io::Result<bool> {
-        let pgid = pid_t(pgid)?;
-        // SAFETY: plain-integer arguments; signal 0 delivers nothing.
-        let rc = unsafe { libc::kill(-pgid, 0) };
-        if rc == 0 {
-            return Ok(true);
-        }
-        let err = io::Error::last_os_error();
-        match err.raw_os_error() {
-            Some(libc::ESRCH) => Ok(false),
-            Some(libc::EPERM) => Ok(true),
-            _ => Err(err),
-        }
     }
 
     /// **`terminate_pid`** (test support): `kill(pid, SIGKILL)`; the code is Windows' and is

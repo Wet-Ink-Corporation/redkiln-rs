@@ -560,3 +560,37 @@ fn process_start_time_reads_a_live_child_and_nothing_for_an_exited_one() {
     dir.close()
         .expect("the fixture tree deletes after the kill");
 }
+
+/// Issue #20: **a group whose only member has exited but is not yet reaped is empty.** The
+/// `exit` fixture leads its own group and exits at once; the test holds its `Child` and does not
+/// `wait()` it, so the member stays a zombie (`/proc/<pid>/stat` state `Z`, read here as the
+/// precondition). `Group::is_empty` must read that group empty, as [`Group::pids`] and
+/// [`is_alive`] already read a zombie gone. Red by the `kill(-pgid, 0)` probe, which succeeds
+/// while a zombie member exists. POSIX only: the Windows `Group` has no `is_empty`.
+#[cfg(unix)]
+#[test]
+fn group_reads_empty_when_its_only_member_exited_unreaped() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let mut reaper = Reaper::new();
+    let Contained { mut child, group } =
+        spawn_into_job(fixture("exit:0", dir.path())).expect("spawn_into_job");
+    let pid = child.id();
+    reaper.track(pid);
+    assert!(wait_dead(pid, DEAD_POLLS), "the exit fixture did not exit");
+    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat"))
+        .expect("precondition: the unreaped child still has a /proc entry");
+    let state = stat
+        .rsplit_once(')')
+        .and_then(|(_, rest)| rest.split_whitespace().next());
+    assert_eq!(state, Some("Z"), "precondition: the child is a zombie");
+
+    let empty = group.is_empty().expect("the emptiness probe reads");
+
+    assert!(
+        empty,
+        "group {} read non-empty while its only member {pid} is an unreaped zombie",
+        group.pgid()
+    );
+    child.wait().expect("reap the child");
+    dir.close().expect("the fixture tree deletes");
+}
