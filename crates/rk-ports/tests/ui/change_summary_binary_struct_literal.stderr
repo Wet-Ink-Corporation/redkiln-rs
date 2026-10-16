@@ -1,0 +1,13 @@
+error[E0451]: fields `assets`, `captures`, `tests_report_ref` and `build_log_ref` of struct `BinaryChangeSummary` are private
+  --> tests/ui/change_summary_binary_struct_literal.rs:14:9
+   |
+13 |     let literal = BinaryChangeSummary {
+   |                   ------------------- in this type
+14 |         assets: Vec::new(),
+   |         ^^^^^^ private field
+15 |         captures: Vec::new(),
+   |         ^^^^^^^^ private field
+16 |         tests_report_ref: String::new(),
+   |         ^^^^^^^^^^^^^^^^ private field
+17 |         build_log_ref: String::new(),
+   |         ^^^^^^^^^^^^^ private field

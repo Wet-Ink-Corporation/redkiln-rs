@@ -18,7 +18,7 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - **`s8i` supersedes three of this stage's pins by name** when it finalises `Binary`: the sealed-slot test,
   Checkpoint 8a's no-`pub`-field guard, and guard (6)'s `sealed_open` floor (§8a.2, §8a.9, guard (6)). *(Amended
   2026-09-25, s8a fix round 8: this read **two**. Fix round 7 added the floor and named its supersession only in
-  its own comment, while `s8i`'s recorded constructor needs an impl block the floor fails on.)*
+  its own comment, while `s8i`'s recorded constructor needs an impl block the floor fails on.)* *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* **Superseded now, by name, as this bullet said:** S-BIN has reported (F43, proposed *(dated 2026-10-15, `s8i` close, D21-154: F43 and ADR-0199 accepted)*) and ADR-0199 (proposed) opens the slot through one recorded checked constructor. The three pins are replaced by the record's construction rule: the `trybuild` case `ui::trybuild_pins_the_binary_change_summary_construction_rule` and, in guard (6), a construction-rule floor (`s8i` §8i.8).
 - **An LFS pointer path is `Binary`** in the `Text` variant's manifest, whatever its extension says. This was checked
   against D21-45 W4 (§8a.2). There are two new tests, so the stage adds nine.
 - **No accidental dispatch.** The card guard now runs before **both** whole runs that can reach `redkiln run` (7i and
@@ -461,7 +461,7 @@ fires like a bare one. The amendment contains:
 - **The `rk-kernel` production ban.** `crates/rk-kernel/src`, code lines only, strings blanked: no
   `\bChangeSummary\b`.
 - **The opacity pin inside `rk-ports`.** The ban excludes `rk-ports`, so this pin is what guards opacity there.
-  `rk-ports` declares exactly one `pub enum ChangeSummary`, and the sealed payload type declares no `pub` field. The
+  `rk-ports` declares exactly one `pub enum ChangeSummary`, and the sealed payload type declares no `pub` field. *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* (S-BIN has reported: the no-`pub`-field half is superseded by name by ADR-0199's construction rule, which keeps the payload's fields private, `s8i` §8i.8.) The
   **behavioural** pin is the `trybuild` case in §8a.9, because a grep cannot prove non-constructibility.
   *(amended 2026-09-24, D21-47)* The two textual pins read **code only**, with comments stripped, so a commented-out
   declaration is not counted. They read the payload's field list in **both** forms, tuple `(…)` and brace `{ … }`,
@@ -791,7 +791,7 @@ git-as-authority case and the single-revision named refusal (decisions 4 and 6) 
 
 **`s8i` supersedes three of these pins by name** (§8a.2 item 1): `binary_arm_is_not_constructible_outside_rk_ports`,
 guard (6)'s no-`pub`-field line, and guard (6)'s `sealed_open` floor. *(Amended 2026-09-25, s8a fix round 8: this
-read **two**.)* That is expected. It is not drift, and nobody should restore the pins.
+read **two**.)* That is expected. It is not drift, and nobody should restore the pins. *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* Done: S-BIN has reported (F43, proposed *(dated 2026-10-15, `s8i` close, D21-154: F43 and ADR-0199 accepted)*), ADR-0199 (proposed) fixes the construction rule, and guard (6) carries it in their place.
 
 ⚠️ **Checkpoint 7c becomes provisional, and this stage does NOT re-run it.** Its named
 `ac489_capability_registry_dated` is amended here. Its block must run from a shell outside Claude Code, and it
@@ -1110,6 +1110,9 @@ kctl=$(printf '%s\n' 'crates/rk-kernel/src/x.rs:2:    let r = check("a\n", Chang
 nenum=$(grep -cE '^pub enum ChangeSummary[[:space:]]*\{' crates/rk-ports/src/toolchain.rs)
 [ "$nenum" -eq 1 ] || { echo "FAIL: $nenum 'pub enum ChangeSummary {' in rk-ports, expected 1 — the split did not land"; exit 1; }
 # The sealed-slot pins below (nbin, npub) are SUPERSEDED BY NAME at s8i when S-BIN finalises Binary (§8a.2 item 1).
+# *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* Superseded now: S-BIN has reported (F43, proposed) and ADR-0199 (proposed) opens the slot. The
+# asserting lines of the no-pub-field pin and of the sealed_open floor are struck below (each `# ~~…~~`); their readers
+# stay written. The record's construction rule replaces them after the sealed_open block (s8i section 8i.8).
 # [amended 2026-09-24, s8a D21-47] Read over CODE only (comments stripped) and over BOTH field-list forms, tuple (…)
 # and brace { … }: the old grep counted a commented-out declaration and missed a brace struct's pub field. These are
 # floors beneath the trybuild case (§8a.9), which is the behavioural pin.
@@ -1139,14 +1142,14 @@ for m in decls:
 print("SEALED decls=%d pubfields=%d" % (len(decls), pub))
 PY
 sealed() { python target/s8a-ctl/sealed.py "$1" 2>&1; }
-out=$(sealed crates/rk-ports/src/toolchain.rs); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the sealed-slot reader could not run (rc=$rc): $out"; exit 1; }
-[ "$out" = "SEALED decls=1 pubfields=0" ] || { echo "FAIL: rk-ports' sealed Binary payload reads '$out', expected one declaration with no pub field — none means the pin passes over nothing, a pub field means it is constructible"; exit 1; }
-for ctl in 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary { pub bytes: u64 }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub u64);' 'SEALED decls=1 pubfields=0|// pub struct BinaryChangeSummary(pub u64);  pub struct BinaryChangeSummary(pub(crate) ());' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary { bytes: u64, note: Vec<u8> }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub ());' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub (u8, u8));' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary(pub(in crate::toolchain) ());' 'SEALED decls=1 pubfields=1|#[doc = "spec: https://git-lfs.com"] pub struct BinaryChangeSummary { pub bytes: () }'; do
-  printf '%s\n' "${ctl#*|}" | sed 's/  pub struct/\npub struct/' > target/s8a-ctl/sealed_ctl.rs || { echo "FAIL: cannot write a sealed-slot control"; exit 1; }
-  out=$(sealed target/s8a-ctl/sealed_ctl.rs); rc=$?
-  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-slot reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }
-done
+# ~~out=$(sealed crates/rk-ports/src/toolchain.rs); rc=$?~~
+# ~~[ "$rc" -eq 0 ] || { echo "FAIL: the sealed-slot reader could not run (rc=$rc): $out"; exit 1; }~~
+# ~~[ "$out" = "SEALED decls=1 pubfields=0" ] || { echo "FAIL: rk-ports' sealed Binary payload reads '$out', expected one declaration with no pub field — none means the pin passes over nothing, a pub field means it is constructible"; exit 1; }~~
+# ~~for ctl in 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary { pub bytes: u64 }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub u64);' 'SEALED decls=1 pubfields=0|// pub struct BinaryChangeSummary(pub u64);  pub struct BinaryChangeSummary(pub(crate) ());' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary { bytes: u64, note: Vec<u8> }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub ());' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub (u8, u8));' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary(pub(in crate::toolchain) ());' 'SEALED decls=1 pubfields=1|#[doc = "spec: https://git-lfs.com"] pub struct BinaryChangeSummary { pub bytes: () }'; do~~
+# ~~  printf '%s\n' "${ctl#*|}" | sed 's/  pub struct/\npub struct/' > target/s8a-ctl/sealed_ctl.rs || { echo "FAIL: cannot write a sealed-slot control"; exit 1; }~~
+# ~~  out=$(sealed target/s8a-ctl/sealed_ctl.rs); rc=$?~~
+# ~~  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-slot reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }~~
+# ~~done~~
 # [amended 2026-09-25, s8a fix round 1] A fifth sealed-slot control: a line-continued string BEFORE the declaration,
 # with a later string. Under the old string blank (\\. for an escape) the quotes re-pair across the declaration and
 # the reader reports decls=0, losing the pub field that makes the payload constructible; this pins BOTH copies of
@@ -1157,9 +1160,9 @@ done
 # re.S reads the same). It goes red only when the escape arm is \\. AND re.S is dropped (decls=0 pubfields=0).
 # So it pins that pair, not the blank; no input can tell \\. from \\[\s\S] under re.S, so no single-point
 # control on the escape arm exists.
-printf '%s\n' '#[error("a message \' '   continued")]' 'pub struct BinaryChangeSummary(pub u64);' 'const LATER: &str = "later";' > target/s8a-ctl/sealed_cont.rs || { echo "FAIL: cannot write the continued-string sealed-slot control"; exit 1; }
-out=$(sealed target/s8a-ctl/sealed_cont.rs); rc=$?
-[ "$rc" -eq 0 ] && [ "$out" = "SEALED decls=1 pubfields=1" ] || { echo "FAIL: CONTROL — a line-continued string before the declaration hid it from the sealed-slot reader: '$out' (want SEALED decls=1 pubfields=1)"; exit 1; }
+# ~~printf '%s\n' '#[error("a message \' '   continued")]' 'pub struct BinaryChangeSummary(pub u64);' 'const LATER: &str = "later";' > target/s8a-ctl/sealed_cont.rs || { echo "FAIL: cannot write the continued-string sealed-slot control"; exit 1; }~~
+# ~~out=$(sealed target/s8a-ctl/sealed_cont.rs); rc=$?~~
+# ~~[ "$rc" -eq 0 ] && [ "$out" = "SEALED decls=1 pubfields=1" ] || { echo "FAIL: CONTROL — a line-continued string before the declaration hid it from the sealed-slot reader: '$out' (want SEALED decls=1 pubfields=1)"; exit 1; }~~
 # [amended 2026-09-25, s8a fix round 7] The trybuild case tried only the private tuple constructor, and rustc's
 # E0423 text does not move when rk-ports adds a Default, a From, a Deserialize or a pub const, so each opened the slot
 # with every pin green. The trybuild case now pins Default, From, `new` and Deserialize as their own errors; no
@@ -1205,12 +1208,85 @@ for src in srcs:
     ctors += sum(1 for m in re.finditer(r"(\bstruct\s+)?\b(?:%s)\s*[({]" % alt, src) if not m.group(1) and not any(a <= m.start() < b for a, b in heads))
 print("OPEN impls=%d ctors=%d aliases=%d" % (impls, ctors, aliases))
 PY
-out=$(python target/s8a-ctl/sealed_open.py $(find crates/rk-ports/src -name '*.rs' | LC_ALL=C sort) 2>&1); rc=$?
-[ "$rc" -eq 0 ] && [ "$out" = "OPEN impls=0 ctors=0 aliases=0" ] || { echo "FAIL: rk-ports opens the sealed Binary payload: '$out' (want OPEN impls=0 ctors=0 aliases=0; rc=$rc)"; exit 1; }
-for ctl in 'OPEN impls=1 ctors=0 aliases=0|impl BinaryChangeSummary { pub const EMPTY: Self = Self(()); }' 'OPEN impls=1 ctors=0 aliases=0|impl From<u8> for BinaryChangeSummary { fn from(_: u8) -> Self { Self(()) } }' 'OPEN impls=0 ctors=1 aliases=0|pub const SEALED: BinaryChangeSummary = BinaryChangeSummary(());' 'OPEN impls=0 ctors=0 aliases=0|pub struct BinaryChangeSummary(pub(crate) ());' 'OPEN impls=0 ctors=0 aliases=0|impl serde::Serialize for BinaryChangeSummary { fn f() { let s = "BinaryChangeSummary(())"; } }' 'OPEN impls=0 ctors=0 aliases=0|// impl BinaryChangeSummary { pub const EMPTY: Self = Self(()); }' 'OPEN impls=0 ctors=0 aliases=0|    Binary(BinaryChangeSummary),' 'OPEN impls=1 ctors=0 aliases=1|type Bcs = BinaryChangeSummary; impl Bcs { pub const EMPTY: Self = Self(()); }' 'OPEN impls=1 ctors=0 aliases=1|mod open { use super::BinaryChangeSummary as B; impl B { pub const EMPTY: Self = Self(()); } }' 'OPEN impls=0 ctors=1 aliases=1|use super::BinaryChangeSummary as B; pub const SEALED: B = B(());' 'OPEN impls=0 ctors=1 aliases=0|pub const SEALED: BinaryChangeSummary = BinaryChangeSummary { 0: () };' 'OPEN impls=0 ctors=1 aliases=0|impl ChangeSummary { pub fn open() -> Self { Self::Binary(BinaryChangeSummary { 0: () }) } }'; do
-  printf '%s\n' "${ctl#*|}" > target/s8a-ctl/sealed_open_ctl.rs || { echo "FAIL: cannot write a sealed-open control"; exit 1; }
-  out=$(python target/s8a-ctl/sealed_open.py target/s8a-ctl/sealed_open_ctl.rs 2>&1); rc=$?
-  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-open reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }
+# ~~out=$(python target/s8a-ctl/sealed_open.py $(find crates/rk-ports/src -name '*.rs' | LC_ALL=C sort) 2>&1); rc=$?~~
+# ~~[ "$rc" -eq 0 ] && [ "$out" = "OPEN impls=0 ctors=0 aliases=0" ] || { echo "FAIL: rk-ports opens the sealed Binary payload: '$out' (want OPEN impls=0 ctors=0 aliases=0; rc=$rc)"; exit 1; }~~
+# ~~for ctl in 'OPEN impls=1 ctors=0 aliases=0|impl BinaryChangeSummary { pub const EMPTY: Self = Self(()); }' 'OPEN impls=1 ctors=0 aliases=0|impl From<u8> for BinaryChangeSummary { fn from(_: u8) -> Self { Self(()) } }' 'OPEN impls=0 ctors=1 aliases=0|pub const SEALED: BinaryChangeSummary = BinaryChangeSummary(());' 'OPEN impls=0 ctors=0 aliases=0|pub struct BinaryChangeSummary(pub(crate) ());' 'OPEN impls=0 ctors=0 aliases=0|impl serde::Serialize for BinaryChangeSummary { fn f() { let s = "BinaryChangeSummary(())"; } }' 'OPEN impls=0 ctors=0 aliases=0|// impl BinaryChangeSummary { pub const EMPTY: Self = Self(()); }' 'OPEN impls=0 ctors=0 aliases=0|    Binary(BinaryChangeSummary),' 'OPEN impls=1 ctors=0 aliases=1|type Bcs = BinaryChangeSummary; impl Bcs { pub const EMPTY: Self = Self(()); }' 'OPEN impls=1 ctors=0 aliases=1|mod open { use super::BinaryChangeSummary as B; impl B { pub const EMPTY: Self = Self(()); } }' 'OPEN impls=0 ctors=1 aliases=1|use super::BinaryChangeSummary as B; pub const SEALED: B = B(());' 'OPEN impls=0 ctors=1 aliases=0|pub const SEALED: BinaryChangeSummary = BinaryChangeSummary { 0: () };' 'OPEN impls=0 ctors=1 aliases=0|impl ChangeSummary { pub fn open() -> Self { Self::Binary(BinaryChangeSummary { 0: () }) } }'; do~~
+# ~~  printf '%s\n' "${ctl#*|}" > target/s8a-ctl/sealed_open_ctl.rs || { echo "FAIL: cannot write a sealed-open control"; exit 1; }~~
+# ~~  out=$(python target/s8a-ctl/sealed_open.py target/s8a-ctl/sealed_open_ctl.rs 2>&1); rc=$?~~
+# ~~  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-open reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }~~
+# ~~done~~
+# *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* THE RECORD'S CONSTRUCTION RULE replaces the three seal pins struck above (ADR-0199
+# decision 2, proposed: "The payload's fields are private. It is constructed only through one public checked
+# constructor in rk-ports"; s8i section 8i.8; ADR-0165 decision 7 provides the supersession by name). Measured on the
+# new tree, read-only: the struck readers print SEALED decls=1 pubfields=0 (still true) and OPEN impls=1 ctors=0
+# aliases=0 (the constructor's impl block, as fix round 8 foresaw). This reader carries sealed.py's one-pass
+# comment strip and string blank and sealed_open.py's alias collection, over rk-ports' src (code only), and prints one
+# line: one declaration; no pub field (a pub(crate|self|super|in …) restriction is not pub); no derive beyond Debug,
+# Clone, PartialEq and Eq (Default and Deserialize are routes); no alias; no trait impl naming the payload but
+# serde::Serialize; one inherent impl whose only public associated fn or const yielding Self is `new`; and one literal
+# construction, the constructor's own `Self { .. }` (a `-> Self {` return type is not one). The behavioural pin is the
+# trybuild case ui::trybuild_pins_the_binary_change_summary_construction_rule, which Checkpoint 8i (8) runs. Fifteen
+# controls; the seventh is the old sealed slot itself, which this floor refuses (inherent=0 ctors=none). Stated limits:
+# one physical source per file, read as a whole; a constructor spelled through a macro is not seen (the trybuild case
+# and Checkpoint 8i (8)'s BIN_RE floor outside rk-ports are the other layers).
+cat > target/s8a-ctl/ctor_rule.py <<'PY'
+import re, sys
+srcs = []
+for f in sys.argv[1:]:
+    src = open(f, encoding="utf-8").read().replace(chr(13), "")
+    srcs.append(re.sub(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\]|\\[\s\S])*"', lambda m: '""' if m.group(0)[0] == '"' else '', src, flags=re.S))
+def body(src, i):
+    depth = 0
+    for j in range(i, len(src)):
+        depth += src[j] in "({[" and 1 or 0
+        depth -= src[j] in ")}]" and 1 or 0
+        if depth == 0:
+            return src[i:j + 1]
+    return src[i:]
+names, aliases = {"BinaryChangeSummary"}, 0
+for src in srcs:
+    for m in re.finditer(r"\btype\s+(\w+)[^=;{]*=[^;]*\bBinaryChangeSummary\b", src):
+        aliases += 1; names.add(m.group(1))
+    for u in re.finditer(r"\buse\b[^;]*;", src):
+        for m in re.finditer(r"\bBinaryChangeSummary\s+as\s+(\w+)", u.group(0)):
+            aliases += 1; names.add(m.group(1))
+alt = "|".join(sorted(names))
+decls = pubf = traits = inherent = literals = 0
+derives, ctors = set(), []
+for src in srcs:
+    for m in re.finditer(r"((?:#\[[^\]]*\]\s*)*)(?:pub(?:\([^)]*\))?\s+)?\bstruct\s+BinaryChangeSummary\b\s*", src):
+        decls += 1
+        for d in re.findall(r"#\[derive\(([^)]*)\)\]", m.group(1)):
+            derives.update(x.strip().split("::")[-1] for x in d.split(",") if x.strip())
+        rest = src[m.end():]
+        if rest[:1] and rest[:1] in "({":
+            pubf += len(re.findall(r"\bpub\b(?!\s*\(\s*(?:(?:crate|self|super)\s*\)|in\s))", body(rest, 0)[1:-1]))
+    heads = []
+    for m in re.finditer(r"\bimpl\b[^{;]*?\b(?:%s)\b[^{;]*\{" % alt, src):
+        heads.append((m.start(), m.end()))
+        if re.fullmatch(r"impl\s+serde::Serialize\s+for\s+BinaryChangeSummary\s*\{", m.group(0)):
+            continue
+        if re.search(r"\bfor\b", m.group(0)):
+            traits += 1
+            continue
+        inherent += 1
+        blk = body(src, m.end() - 1)
+        for f in re.finditer(r"\bpub\s+(?:const\s+)?fn\s+(\w+)\s*(?:<[^>]*>)?\s*\(([^)]*)\)\s*(?:->\s*([^{;]*))?", blk):
+            if not re.search(r"\bself\b", f.group(2)) and re.search(r"\b(?:Self|%s)\b" % alt, f.group(3) or ""):
+                ctors.append(f.group(1))
+        for c in re.finditer(r"\bpub\s+const\s+(\w+)\s*:\s*(?:Self|%s)\b" % alt, blk):
+            ctors.append("const:" + c.group(1))
+        literals += len(re.findall(r"\bSelf\s*[({]", re.sub(r"->\s*(?:Self|%s)\b" % alt, "-> _", blk)))
+    literals += sum(1 for m in re.finditer(r"(\bstruct\s+)?\b(?:%s)\s*[({]" % alt, src) if not m.group(1) and not re.search(r"->\s*$", src[max(0, m.start() - 40):m.start()]) and not any(a <= m.start() < b for a, b in heads))
+extra = sorted(derives - {"Debug", "Clone", "PartialEq", "Eq"})
+print("RULE decls=%d pubfields=%d derives=%s aliases=%d traits=%d inherent=%d ctors=%s literals=%d" % (decls, pubf, ",".join(extra) or "ok", aliases, traits, inherent, ",".join(ctors) or "none", literals))
+PY
+out=$(python target/s8a-ctl/ctor_rule.py $(find crates/rk-ports/src -name '*.rs' | LC_ALL=C sort) 2>&1); rc=$?
+[ "$rc" -eq 0 ] && [ "$out" = "RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1" ] || { echo "FAIL: rk-ports' Binary payload breaks ADR-0199's construction rule: '$out' (want RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1; rc=$rc)"; exit 1; }
+for ctl in 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=1 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { pub assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new,unchecked literals=2|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn unchecked(a: Vec<u8>) -> Self { Self { assets: a } } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=1 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { } impl From<u8> for BinaryChangeSummary { fn from(_: u8) -> Self { Self { assets: Vec::new() } } }' 'RULE decls=1 pubfields=0 derives=Default aliases=0 traits=0 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq, Default)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=1 traits=0 inherent=2 ctors=new,const:EMPTY literals=2|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { } type B = BinaryChangeSummary; impl B { pub const EMPTY: Self = Self { assets: Vec::new() }; }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=0 ctors=none literals=0|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary(pub(crate) ()); impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { } // impl BinaryChangeSummary { pub fn open() -> Self { Self { assets: vec![] } } }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=none literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new,empty literals=2|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub const fn empty() -> Self { Self { assets: Vec::new() } } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=2|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { } pub const SEALED: BinaryChangeSummary = BinaryChangeSummary { assets: Vec::new() };' 'RULE decls=1 pubfields=0 derives=Deserialize aliases=0 traits=0 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { let s = "pub fn open() -> Self { Self { x } }"; &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { pub(crate) assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { }' 'RULE decls=1 pubfields=0 derives=ok aliases=1 traits=1 inherent=1 ctors=new literals=1|#[derive(Debug, Clone, PartialEq, Eq)] pub struct BinaryChangeSummary { assets: Vec<u8> } impl BinaryChangeSummary { pub fn new(assets: Vec<u8>, d: &str) -> Result<Self, E> { Ok(Self { assets }) } pub fn assets(&self) -> &[u8] { &self.assets } } impl serde::Serialize for BinaryChangeSummary { } use super::BinaryChangeSummary as P; impl<T> From<T> for P { fn from(_: T) -> Self { todo() } }'; do
+  printf '%s\n' "${ctl#*|}" > target/s8a-ctl/ctor_rule_ctl.rs || { echo "FAIL: cannot write a construction-rule control"; exit 1; }
+  out=$(python target/s8a-ctl/ctor_rule.py target/s8a-ctl/ctor_rule_ctl.rs 2>&1); rc=$?
+  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the construction-rule reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }
 done
 # [amended 2026-09-24, s8a D21-47] NO GIT FROM THE ADAPTER, BY ANY ROUTE. The adapter spawns through
 # run::run_program(config, dir, tag, program: &Path, args), so a Command::new("git") grep passes a
@@ -1414,7 +1490,12 @@ run_named() {  # $1 = package, $2 = exact count, then the module-qualified names
   printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: $pkg's selection did not run exactly $want tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
   nd_check "$pkg's named selection" || exit 1
 }
-run_named rk-ports 3 change_summary::text_variant_serialises_sha_diff_and_manifest change_summary::binary_arm_is_not_constructible_outside_rk_ports fake_behaviour::toolchain_fake_classifies_binary
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* The superseded sealed-slot pin is replaced by name (§8a.2 item 1; s8i §8i.8;
+# ADR-0199 decision 2, proposed): S8I-C4-PORTS removed binary_arm_is_not_constructible_outside_rk_ports, so this line
+# failed 'renamed, deleted or not selected' (measured red by S8I-C8-CP8I re-deriving s8i's (11) on the merged tree).
+# Its successor is the recorded-constructor test; the count stays 3. Struck:
+# ~~run_named rk-ports 3 change_summary::text_variant_serialises_sha_diff_and_manifest change_summary::binary_arm_is_not_constructible_outside_rk_ports fake_behaviour::toolchain_fake_classifies_binary~~
+run_named rk-ports 3 change_summary::text_variant_serialises_sha_diff_and_manifest change_summary::binary_is_constructible_only_through_its_recorded_constructor fake_behaviour::toolchain_fake_classifies_binary
 # [amended 2026-09-25, s8a fix round 1] rk-git 3 -> 5 and the Rust adapter 5 -> 6: the binary mark, the
 # no-final-newline marker and the adapter's refusal of a binary blob the working tree does not hold (§8a.9).
 run_named rk-git 5 diff::range_diff_lists_every_changed_path_with_its_change_kind diff::range_diff_refuses_an_unresolvable_range diff::range_diff_marks_an_lfs_pointer_path diff::range_diff_marks_a_binary_blob_at_either_end diff::range_diff_marks_a_missing_final_newline

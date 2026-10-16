@@ -41,6 +41,8 @@ pub mod no_dispatch;
 pub mod processes;
 pub mod release_tag;
 pub mod repo;
+// The review input and the `Binary` human-gate route (`s8i` §8i.8; ADR-0199, proposed).
+pub mod review_input;
 pub mod review_pass;
 pub mod signal;
 pub mod store;

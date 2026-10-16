@@ -1,6 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-07 (D21-1 … D21-153), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-15 (D21-1 … D21-155), and what they license
 
-*(Title moved 2026-10-07 during `s8i`: it read **"2026-09-21 … 2026-10-06 (D21-1 … D21-152)"**; `D21-153` is appended with this move.)*
+*(Title moved 2026-10-15 at `s8i`'s close: it read **"2026-09-21 … 2026-10-07 (D21-1 … D21-153)"**; `D21-154` was appended without this move. Measured: `grep -c '^## D21-'` over this file → 154, the last `D21-154`. Moved again the same day for `D21-155`, `s8i`'s close entry: → 155, the last `D21-155`.)*
 
 *(Title moved 2026-10-06 during `s8i`: it read **"(D21-1 … D21-151)"**; `D21-152` is appended with this move.)*
 
@@ -7277,3 +7277,73 @@ D21-153 refuting rounds: 9, patch 59408f5858764cdf2faa4bc5b2d49edf232ad7e6895062
 - **The audit.** `audit-s.py bin` over the ten records, with the ten rulings, reads `rule_outcome_pass1=branch1` and `rule_outcome_pass2=undecided-fp`: strong detection 2/2 in both passes, approval on clean items 2/3 in pass 1 and 1/3 in pass 2. Neither pass fires branch 2, so B4 does not run. `missing-fields.jsonl` stays empty, because pass 2 missed no seed either.
 - **Spend.** $33.483585 before B3 plus $11.111433 makes $44.595018 of $90. Opus dispatches used: 16 of 18, with one retry used in the discarded pass 1.
 - Nothing here signs a line.
+
+---
+
+## D21-154 · The operator signs the two `automated-verdict-refused` gate-expiry rows (AC-276); ADR-0199 and F43 flip to accepted
+
+**Signed 2026-10-15 by the operator, in the operator's own words in the session that records it.** This is the
+operator's dated signing line that `s8i` §8i.10 requires before the formal Checkpoint 8i (*"The record flips from
+`proposed` only on the operator's dated ledger line, which precedes the checkpoint run"*), and the AC-276 signature
+the two new expiry rows need (*"routed to a human gate; not machine-decidable"*). It follows D21-139's form. It is not
+a provisional ruling under the AFK rules of D21-105, and the session that writes it down takes no ruling of its own.
+The operator chose, on 2026-10-14, to sign on the same line as the flip (as D21-139 did) and, on 2026-10-15, to sign
+last, after refuting rounds 21 to 24 (round 24 moved no code and no guard).
+
+**The signature, verbatim.** The three items were laid out with their content, and the operator answered: *"Sign all
+three as drafted"*, against the drafted text *"Sign both automated-verdict-refused rows as fail; flip ADR-0199 and F43
+to accepted as drafted."*
+
+**Signed: AC-276, row by row. Both rows are `fail`.** `class = "automated-verdict-refused"`, `action = "fail"` in
+`.redkiln/packs/bug-standard.toml` and in `.redkiln/packs/story.toml` (the kernel-minted kind ADR-0199 decision 3
+names; ruling R9 of 2026-10-14). No `escalate` and no `auto-decide`. With the three kinds D21-139 signed, the
+kernel-minted classes are four, each `fail`; the packs hold 55 (`bug-standard`) and 57 (`story`) rows.
+
+**Flipped: ADR-0199, `proposed → accepted`.** `references/adr/0199-the-binary-change-summary-carries-the-four-cited-fields-and-its-item-takes-a-human-gate.md`,
+as drafted: `Binary field set (4 fields)` (`assets`, `captures`, `tests.report_ref`, `build.log_ref`);
+`Binary review route: human gate` (pass 1 `branch1`, pass 2 `undecided-fp`, D21-43 N21); `Binary producers in Phase 1:
+none`; a `binary`-class AC keeps AC-337's `not-feasible(reason)` route; what an answered gate does is owed under
+Wet-Ink-Corporation/redkiln-rs#80. It supersedes ADR-0165 decision 1 in part, so ADR-0165 takes the `superseded_by`
+back-link and stays `accepted` (ADR-0092's partial-supersession rule).
+
+**Flipped: F43, `proposed → accepted`.** `spikes/F43-DRAFT.md`, as drafted, its pins block naming corpus
+`e1e90d11a716bc43046e31ddab6282a6e91708b4` (58 `file=` lines checked against that commit's blobs).
+
+**Not signed here:** the formal Checkpoint 8i, which the operator runs next from a plain Git Bash with `rust-src`
+removed (ruling R6), and the `s8i` close commits. D21-143 stays OPEN until the operator closes it.
+
+---
+
+## D21-155 · `s8i` closes: the formal Checkpoint 8i passed; what stays owed
+
+**Recorded 2026-10-15 at `s8i`'s close.** This entry records a result and takes no ruling of its own; the operator
+chose its form (a close entry, then the work and tracker commits, §8i.10) on 2026-10-15.
+
+**The formal Checkpoint 8i passed whole.** The operator ran it from a plain Git Bash, outside Claude Code, on
+2026-10-15 from 20:33 to 21:12, with `rust-src` removed for the run and added back after it (ruling R6). The block was
+extracted from `runbook/phase-1/s8i-s-bin.md` §8i.9 by its fence, 1,445 lines, sha256
+`8a3beba772879eb3951ceee6d92f65e2bc484284d769a6a32355685452c21f1e`. Its output reads, whole:
+*"nodispatch: fake claude 2.1.278 at /d/repos/redkiln-rs/target/cp8i/nd/bin; trap D:/repos/redkiln-rs/target/cp8i/nd/trap;
+real claude before the wrapper: /c/Users/ryanm/.local/bin/claude"* and *"CP8I-END-OF-BLOCK reached"*: no `FAIL` line,
+and every guard ends in `exit 1`, so the end marker is the pass. It ran over the uncommitted working tree; no file of
+this stage changed after 20:33 [measured: modification times against the run's start], so the `s8i` close work commit
+holds exactly the tree it checked, less another session's uncommitted `AGENTS.md` edit, which the block does not read.
+Inside it, (11) re-ran Checkpoints 8h, 8a and 5 whole under `RK_CP_NESTED=1`.
+
+**What the close settled.** S-BIN ran (B2 and B3 under D21-153; corpus `e1e90d1`; $44.595018 of $90; 16 of 18 Opus;
+no B4). F43 and ADR-0199 are accepted (D21-154): the `Binary` arm carries four fields behind one checked constructor,
+the route is the human gate (pass 1 `branch1`, pass 2 `undecided-fp`), and Phase 1 has no `Binary` producer. AC-154 is
+binding. The corpus is back at `CORPUS_PIN` `61f590e` and the review root `D:/sb` is removed (§8i.5 steps 11 and 12).
+Refuting rounds 21 to 24 ran over the close; round 24 moved no code and no guard.
+
+**Owed after the close, each with its owner:**
+- s8's own `S8_BIN` does not see the point-free `.map(BinaryChangeSummary::new)` or the qualified
+  `<BinaryChangeSummary>::new(` forms that Checkpoint 8i (8)'s `BIN_RE` now catches: owed to s8's block (recorded in
+  §8i.8's S8I-F1-GUARDS note).
+- What an answered `automated-verdict-refused` gate does: owed to the first `Binary` producer (Phase 2),
+  Wet-Ink-Corporation/redkiln-rs#80.
+- The temper ratchet's 9 Windows platform count overages: Linux CI is the authoritative ratchet (operator ruling C,
+  Weigh-In wi-2709b0); the baseline is re-recorded on the CI platform, never on this box.
+- The scratch folders the guard controls leave under `D:/repos/redkiln-sev/afk-tools/sp/s8i/tmp/`: the operator's to
+  delete.
+- D21-143 stays OPEN until the operator closes it.

@@ -1,7 +1,7 @@
 ## F43 — S-BIN RESULT: without a text diff the reviewer detects both binary seeds in both passes (2/2, 2/2) from the assets' own bytes, but blocks 1/3 then 2/3 clean items, so the registered rule decides pass 1 (branch 1) and not pass 2 (`undecided-fp`), and the `Binary` variant takes the human-gate route
 
-**Status: proposed** (written 2026-10-14 by the s8i build, an AFK session, package S8I-C1-F43). Nothing here is
-accepted, and nothing here flips a record. The `Binary` record (ADR-0199) is a separate record.
+~~**Status: proposed**~~ **Status: accepted** *(dated 2026-10-15, `s8i` close, D21-154: flipped `proposed → accepted` as drafted, on the operator's dated signing line; nothing below moves)* (written 2026-10-14 by the s8i build, an AFK session, package S8I-C1-F43). ~~Nothing here is
+accepted, and~~ nothing here flips a record. The `Binary` record (ADR-0199) is a separate record.
 
 **Established by:** 16 Opus dispatches, arm `b-typed-sbin`, model `claude-opus-5-5` (`--model opus`, effort
 `xhigh`, `observed_model` on every record), `claude` **2.1.289** on every record and both launch records, runner
@@ -10,6 +10,7 @@ accepted, and nothing here flips a record. The `Binary` record (ADR-0199) is a s
   per `(pass, item)`, **10 valid, 0 void**, in `results/s-bin.jsonl` at corpus `835b122` (B2 `f5ac506`,
   missing-fields `326f4e8`, B3 `835b122`). The final `corpus_commit`, the one that also holds
   `results/s-bin/audit.txt`, is the operator's corpus write and is **owed** (the pins block below marks it).
+  *(dated 2026-10-15, s8i build, S8I-F2-RECORDS; s8i refuting round 21's records minor: no longer owed. The operator committed `results/s-bin/audit.txt` as corpus `e1e90d1` (`e1e90d11a716bc43046e31ddab6282a6e91708b4`, a descendant of `835b122`; `rule_outcome_pass1=branch1`, `rule_outcome_pass2=undecided-fp`), and the pins block below is filled at that commit: 58 `file=` lines, and `S8I-C1-F43_pins_check.py` re-run on 2026-10-15 reads `checked=58 owed=none bad=0`.)*
 - **Discarded, not scored:** pass 1's first set, six records of 2026-10-07 (UTC), moved to
   `results/s-bin/superseded/pass1-d21153/s-bin.jsonl` at the §8i.6 stop (D21-153 item 1, below).
 - **Cost: $44.595018 of the $90.00 cap**, which counts the discarded set (D21-153 item 8: *"The $90 cap and the
@@ -253,10 +254,10 @@ diff-prose section to lift (§8i.8). Its corpus-scale verification stays Phase 2
 
 ### The pins
 
-Generated from corpus `835b122`'s blobs by `S8I-C1-F43_pins_gen.py` (scratch, `D:/repos/redkiln-sev/afk-tools/sp/s8i/c1f43/`), which re-runs the pinned `audit-s.py bin`, and checked line by line against `git cat-file blob 835b122:<path>` by `S8I-C1-F43_pins_check.py` (57 checked, 0 bad). **Two values are owed operator inputs:** `corpus_commit` and `results/s-bin/audit.txt`'s line, both marked `OWED-operator`, so Checkpoint 8i (2) and (3) refuse the block until they are filled. After committing `results/s-bin/audit.txt` to the corpus's `main`, the operator runs `python -I S8I-C1-F43_pins_gen.py <that commit> --ac475 0/0 > pins.txt` and `python -I S8I-C1-F43_pins_apply.py spikes/F43-DRAFT.md pins.txt`; the generator refuses an `audit.txt` whose outcomes differ from the re-run audit's.
+Generated from corpus `835b122`'s blobs by `S8I-C1-F43_pins_gen.py` (scratch, `D:/repos/redkiln-sev/afk-tools/sp/s8i/c1f43/`), which re-runs the pinned `audit-s.py bin`, and checked line by line against `git cat-file blob 835b122:<path>` by `S8I-C1-F43_pins_check.py` (57 checked, 0 bad). **Two values are owed operator inputs:** `corpus_commit` and `results/s-bin/audit.txt`'s line, both marked `OWED-operator`, so Checkpoint 8i (2) and (3) refuse the block until they are filled. After committing `results/s-bin/audit.txt` to the corpus's `main`, the operator runs `python -I S8I-C1-F43_pins_gen.py <that commit> --ac475 0/0 > pins.txt` and `python -I S8I-C1-F43_pins_apply.py spikes/F43-DRAFT.md pins.txt`; the generator refuses an `audit.txt` whose outcomes differ from the re-run audit's. *(dated 2026-10-14, s8i build: filled. The operator committed `results/s-bin/audit.txt` as corpus `e1e90d1` (`e1e90d11a716bc43046e31ddab6282a6e91708b4`; its `rule_outcome` lines read `branch1` and `undecided-fp`); the generator re-ran over that commit and the block now carries 58 `file=` lines with nothing owed, and `S8I-C1-F43_pins_check.py` reads `checked=58 owed=none bad=0`.)*
 
 <!-- s-bin-pins
-corpus_commit=OWED-operator:the-corpus-commit-that-adds-results/s-bin/audit.txt
+corpus_commit=e1e90d11a716bc43046e31ddab6282a6e91708b4
 cli_version=2.1.289
 observed_model=claude-opus-5-5
 ceiling_secs=4500
@@ -266,7 +267,7 @@ rule_outcome_pass2=undecided-fp
 ac475_lift_share=0/0
 file=results/audit-s.py sha256=bd6df55b28690913772c0fedef03c3a71526412447617d0566b1d758b16817dd
 file=results/s-bin.jsonl sha256=da27621ab099d809bed8873c1df57ac2bd014192ca1adbc7c3925f137e175480
-file=results/s-bin/audit.txt sha256=OWED-operator:re-run-S8I-C1-F43_pins_gen.py-after-audit.txt-is-committed
+file=results/s-bin/audit.txt sha256=ea977d4961e2c831c93a429c5623f0209998c78d9fdb39f086419702c522181c
 file=results/s-bin/brittongames-snapshots.txt sha256=59fdff794573af2e350e508488b34d2d2891ea4b21a60e9ba537fd763666feef
 file=results/s-bin/captures/item-1/capture-1.png sha256=9ba295de7b614c61b8e17585a5888ab30b654440d0b5e92de86d1a3f756a98d0
 file=results/s-bin/captures/item-4/capture-1.png sha256=97e93259f73f150a68b9fdc1cb6adc981b7bda632e31d8f9c24e1accf649a1c4

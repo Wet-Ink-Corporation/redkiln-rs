@@ -311,6 +311,7 @@ mod facet_stability;
 mod feed;
 mod forward_ref_lint;
 mod fsm;
+mod gate_request;
 mod gate_step;
 mod gates;
 mod grammar;

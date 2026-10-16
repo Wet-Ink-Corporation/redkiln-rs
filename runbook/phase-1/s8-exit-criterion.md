@@ -291,7 +291,7 @@ unviolated across the whole phase:
   `recent_deploy`) — ADR-0093.
 - **`bisect` carries `max_rigor = "recommended"`** and the rigor-monotonicity lint passes on the shipped catalog
   (P7-CEIL, DECISIONS-2026-09-11 #1).
-- No `Binary` arm constructed outside `rk-ports`, no `ChangeSummary` definition outside it. *(Amended 2026-09-24,
+- No `Binary` arm constructed outside `rk-ports`, no `ChangeSummary` definition outside it. *(Amended 2026-10-14, s8i §8i.8, ADR-0199 decision 2, proposed *(dated 2026-10-15, `s8i` close, D21-154: F43 and ADR-0199 accepted)*; package S8I-C4-PORTS: S-BIN has reported (F43, proposed), and the record's construction rule replaces the first clause. The `Binary` payload is built outside `rk-ports` only through its recorded checked constructor, `BinaryChangeSummary::new`, and only in test code (`crates/*/tests`, `benches`, `examples`) while the record's `Binary producers in Phase 1` line reads `none`. No struct literal, tuple construction or other associated function builds it anywhere outside `rk-ports`. The guard below is amended to match.)* *(Amended 2026-10-15, s8i §8i.8, package S8I-F1-GUARDS, operator ruling R10 on s8i refuting round 21's blocker B1, proposed: test code includes an in-source `#[cfg(test)] mod`. The recorded constructor is admitted inside one, as it is under `crates/*/tests`. The guard finds the module by counting braces, and a production call in `src` still fires. s8i's fix round E put such a fake in `rk-cli`'s `kept_refusal.rs`, and the guard below gains the lines and controls for it.)* *(Amended 2026-09-24,
   s8a §8a.3, ADR-0165. This bullet read "No finalised `ChangeSummary` type; no synthesised `ChangeSummary` value. **The
   S-BIN fixture existing at `D:/repos/BrittonGames` does not change this** — the spike has not run." ADR-0165 finalises
   the `Text` arm now and seals the `Binary` slot until S-BIN reports at `s8i`, so the Rust adapter returns a real `Text`
@@ -321,7 +321,7 @@ unviolated across the whole phase:
   oracle-construction exercise; SM-024 has no baseline and S-FACET is what gives it one.
 - **No section decides source asymmetry.** `commits` beats `docs` and `union` is worse than `commits` alone on
   `toolchain` and `change` [measured, F39 §3]; the decision is an arm of S-FACET and ADR-0089 does not take it.
-- **No document, section or commit message describes this design as final.** S-BIN, S-H1c and P8's unrun arms gate
+- **No document, section or commit message describes this design as final.** S-BIN, S-H1c and P8's unrun arms gate [S-BIN reported (s8i) 2026-10-14: S-H1c and P8's unrun arms still gate the label]
   that label, and P8 has no result on its own question.
 - **The `--stay`-class state stays unconstructible, and its `trybuild` case is asserted BY PATH.** *(Added
   2026-09-15 with the withdrawal of exit criterion (5); `DECISIONS-2026-09-14 D-14`.)* Both
@@ -442,15 +442,263 @@ S8_UNCON='s/(->|@)([[:space:]]*)([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*BinaryChang
 # its closing quote paired with the NEXT string on the line, blanking the code between (a ChangeSummary impl, a
 # diff_tree_to_tree call). It is now escape-aware, `[^"\\]|\\.` (a non-quote non-backslash, or a backslash and any
 # byte), as sealed.py's \\[\s\S] has been since fix round 1. Planted controls carry a backslash-escaped string.
-s8_cs() { local in; in=$(grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/"([^"\\]|\\.)*"/""/g'); { printf '%s\n' "$in" | grep -E "$S8_DEF"; printf '%s\n' "$in" | sed -E "$S8_UNCON" | grep -E "$S8_BIN"; }; }
+# ~~s8_cs() { local in; in=$(grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/"([^"\\]|\\.)*"/""/g'); { printf '%s\n' "$in" | grep -E "$S8_DEF"; printf '%s\n' "$in" | sed -E "$S8_UNCON" | grep -E "$S8_BIN"; }; }~~
+# *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* THE RECORD'S CONSTRUCTION RULE (s8i section 8i.8; ADR-0199 decisions 2 and 4, proposed).
+# S-BIN has reported (F43, proposed). The Binary payload may now be built outside rk-ports through its one recorded
+# checked constructor, BinaryChangeSummary::new, and only in test code while the record's producer line reads none:
+# the render and review-input tests construct it in crates/<crate>/tests. S8_CTOR blanks that call, path-qualified
+# or not, on a line whose path is under crates/<crate>/tests, benches or examples, and ONLY there, before S8_BIN reads
+# the line. A struct literal, a tuple construction or any other associated function still fires everywhere, and so
+# does the recorded constructor in a crate's src. The line above is the superseded s8_cs; the old controls stand
+# (their paths are x.rs, so control 5's `BinaryChangeSummary::new(1)` still fires), and six more follow the loop.
+S8_CTOR='\%^crates/[^/:]+/(tests|benches|examples)/%s/\b([A-Za-z_][A-Za-z0-9_]*::)*BinaryChangeSummary::new[[:space:]]*\(/_(/g'
+s8_cs() { local in; in=$(grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/"([^"\\]|\\.)*"/""/g'); { printf '%s\n' "$in" | grep -E "$S8_DEF"; printf '%s\n' "$in" | sed -E "$S8_UNCON" | sed -E "$S8_CTOR" | grep -E "$S8_BIN"; }; }
+# *(dated 2026-10-14, s8i build, S8I-D3-RECORDS; fix round D, measured by S8I-C7-REVIEW-INPUT)* A FALSE POSITIVE, fixed by
+# extending S8_UNCON, not by rewriting it: its `->` arm admits a return type only when the name follows `->` directly,
+# so a return type written `-> &BinaryChangeSummary {` (or `-> &'a mut path::BinaryChangeSummary {`) reached S8_BIN
+# unblanked and fired as a construction, the `{` being the fn body's. The expression appended below blanks the name
+# after `->`, `&`, an optional lifetime and an optional `mut`, and ONLY there; the line above stands. A construction
+# later on the same line still fires (a body `{ &BinaryChangeSummary(()) }`), as control 18 does for the bare form.
+# Four controls follow the construction rule's loop: two return types are admitted, two constructions fire.
+S8_UNCON="$S8_UNCON; s/->([[:space:]]*)&([[:space:]]*'[A-Za-z_][A-Za-z0-9_]*)?([[:space:]]*mut[[:space:]]+)?[[:space:]]*([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*BinaryChangeSummary\b/->\1_/g"
 raw=$(grep -rn 'ChangeSummary' crates/ --include=*.rs); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the ChangeSummary search found nothing or could not run (grep rc=$rc) -- rk-ports' own enum must be seen"; exit 1; }
 printf '%s\n' "$raw" | grep -qE '^crates/rk-ports/src/toolchain.rs:[0-9]+:pub enum ChangeSummary[[:space:]]*\{' || { echo "FAIL: rk-ports' own ChangeSummary enum was not found by this search -- the split did not land, or the ban is looking at the wrong tree"; exit 1; }
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; s8i refuting round 21's blocker B1, operator ruling R10)* IN-SOURCE TEST
+# MODULES ARE TEST CODE. s8i's fix round E1 put a test fake inside `crates/rk-cli/src/verbs/run/kept_refusal.rs`'s
+# `#[cfg(test)] mod tests`. The fake builds the payload through the recorded constructor, and this guard fired on it,
+# because S8_CTOR admits that call only by path (crates/<crate>/tests, benches, examples). The code is test code, and
+# it does not exist in a shipped build. s8i owns this amendment because s8i's change made the guard false. The lines
+# below are inserted, and no line above is rewritten. Inside an in-source test module, located by s8_cfgtest_mods, the
+# recorded constructor `BinaryChangeSummary::new(` (path-qualified or not) is blanked exactly as S8_CTOR blanks it under
+# a test path, and ONLY that call. Everything else on such a line still reaches s8_cs unchanged: a definition, an alias,
+# a struct literal, a tuple construction and any other associated function all still fire. Outside a test module,
+# nothing changes.
+# A test module is a line that is exactly `#[cfg(test)]` (or `#[cfg(test)] mod <name> {`), followed on the NEXT line by
+# `mod <name> {`. It runs from that line to the line where its braces close. The braces are counted by a lexer that
+# runs from the top of the file. The lexer skips `//` comments, nested `/* */` comments, strings that span lines, raw
+# strings and char literals, and it leaves lifetimes alone. A `#[cfg(test)]` on any other item opens nothing, and so
+# does one inside a string or a comment. A module that never closes fails the guard.
+# Measured 2026-10-15 over crates/*/src: eight modules, the same ranges as an independent reading (s8i §8i.9 (8) lists
+# them). Of the files this guard's search returns, kept_refusal.rs is the only one with a test module. Its module runs
+# from line 63 to line 288, and line 116 is inside it. The controls follow the construction rule's loops.
+# (dated 2026-10-15, s8i build, orchestrator; a minor of s8i refuting round 22) Correction: crates/rk-cli/tests/it/review_input.rs (lines 61-215) also holds a
+# test module; it sits under tests/, which S8_CTOR already admits, so the count of src files is the claim.
+s8_cfgtest_mods() {
+  LC_ALL=C awk '
+    function lex(s,   i, n, c, d, j, h) {
+      n = length(s); i = 1
+      while (i <= n) {
+        c = substr(s, i, 1); d = substr(s, i, 2)
+        if (bc > 0) { if (d == "/*") { bc++; i += 2 } else if (d == "*/") { bc--; i += 2 } else i++; continue }
+        if (st == 1) { if (c == "\\") i += 2; else { if (c == "\"") st = 0; i++ }; continue }
+        if (st == 2) { if (c == "\"" && substr(s, i + 1, rh) == hs) { st = 0; i += 1 + rh } else i++; continue }
+        if (d == "//") return
+        if (d == "/*") { bc = 1; i += 2; continue }
+        if (c == "\"") { st = 1; i++; continue }
+        # (dated 2026-10-15, s8i build, orchestrator; the major of s8i refuting round 22) `cr` joins `br`: a raw C string `cr"\"` was read as an escaped string, which
+        # inverted the string state and could admit a later production call. Was: (c == "r" || d == "br"), and j = i + (c == "b" ? 2 : 1).
+        if ((c == "r" || d == "br" || d == "cr") && (i == 1 || substr(s, i - 1, 1) !~ /[A-Za-z0-9_]/)) {
+          j = i + (c == "b" || c == "c" ? 2 : 1); h = ""
+          while (substr(s, j, 1) == "#") { h = h "#"; j++ }
+          if (substr(s, j, 1) == "\"") { st = 2; hs = h; rh = length(h); i = j + 1; continue }
+        }
+        if (c == "\047") {
+          if (substr(s, i + 1, 1) == "\\") { j = index(substr(s, i + 3), "\047"); i = j ? i + 3 + j : n + 1; continue }
+          if (substr(s, i + 2, 1) == "\047") { i += 3; continue }
+          if (substr(s, i + 1, 1) > "\177") { j = index(substr(s, i + 1, 5), "\047"); if (j > 1) { i += j + 1; continue } }
+          i++; continue
+        }
+        if (c == "{") depth++; else if (c == "}") depth--
+        i++
+      }
+    }
+    function done_file() { if (inmod) print "UNCLOSED " fname " " start; inmod = 0 }
+    FNR == 1 { done_file(); fname = FILENAME; depth = 0; bc = 0; st = 0; pend = 0 }
+    {
+      line = $0; sub(/\r$/, "", line); clean = (bc == 0 && st == 0)
+      if (!inmod && clean) {
+        if (pend && line ~ /^[ \t]*(pub(\([^)]*\))?[ \t]+)?mod[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*\{/) { inmod = 1; start = pend; base = depth }
+        else if (line ~ /^[ \t]*#\[cfg\(test\)\][ \t]*(pub(\([^)]*\))?[ \t]+)?mod[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*\{/) { inmod = 1; start = FNR; base = depth }
+      }
+      pend = (!inmod && clean && line ~ /^[ \t]*#\[cfg\(test\)\][ \t]*$/) ? FNR : 0
+      lex(line)
+      if (inmod && depth <= base) { print fname " " start " " FNR; inmod = 0 }
+    }
+    END { done_file() }' "$@"
+}
+s8_cfgtest() {
+  local in f ranges=""; local -a fa=()
+  in=$(cat)
+  while IFS= read -r f; do
+    [ -n "$f" ] && grep -qE '^[[:space:]]*#\[cfg\(test\)\]' "$f" && fa+=("$f")
+  done <<< "$(printf '%s\n' "$in" | sed -n 's/^\([^:]*\):[0-9][0-9]*:.*/\1/p' | sort -u)"
+  if [ "${#fa[@]}" -gt 0 ]; then
+    ranges=$(s8_cfgtest_mods "${fa[@]}") || { echo "FAIL: the test-module reader could not run"; return 1; }
+  fi
+  case "$ranges" in *UNCLOSED*) echo "FAIL: an in-source #[cfg(test)] module never closes:"; printf '%s\n' "$ranges" | grep UNCLOSED; return 1;; esac
+  # (dated 2026-10-15, s8i close, orchestrator; runbook/tools/check-checkpoints.py [PIPE-STATUS]) The tagger's output
+  # is captured and guarded before the blanking sed, so an awk failure is not lost in the pipe. Was: the awk below
+  # piped straight into the sed (`printf .. | CFGR=.. awk '..' | sed -E ..`).
+  local tagged
+  tagged=$(printf '%s\n' "$in" | CFGR="$ranges" awk '
+    BEGIN { n = split(ENVIRON["CFGR"], a, "\n"); for (i = 1; i <= n; i++) { split(a[i], f, " "); F[i] = f[1]; S[i] = f[2] + 0; E[i] = f[3] + 0 } }
+    { p = index($0, ":"); file = substr($0, 1, p - 1); r = substr($0, p + 1); ln = substr(r, 1, index(r, ":") - 1) + 0
+      t = 0; for (i = 1; i <= n; i++) if (F[i] == file && ln >= S[i] && ln <= E[i]) t = 1
+      print (t ? "T|" : "P|") $0 }') || { echo "FAIL: the test-module tagger could not run"; return 1; }
+  printf '%s\n' "$tagged" | sed -E '/^T[|]/s/\b([A-Za-z_][A-Za-z0-9_]*::)*BinaryChangeSummary::new[[:space:]]*\(/_(/g; s/^[TP][|]//'
+}
+raw=$(printf '%s\n' "$raw" | s8_cfgtest) || { printf '%s\n' "$raw"; exit 1; }
 out=$(printf '%s\n' "$raw" | s8_cs); test -z "$out" || { echo "FAIL: a ChangeSummary definition, or a Binary payload constructed, outside rk-ports (ADR-0165):"; printf '%s\n' "$out"; exit 1; }
 for ctl in 'F|x.rs:1:pub struct ChangeSummary;' 'F|x.rs:2:type Cs = rk_ports::toolchain::ChangeSummary;' 'F|x.rs:3:    let b = BinaryChangeSummary(());' 'F|x.rs:4:    let b = rk_ports::toolchain::BinaryChangeSummary { bytes: 1 };' 'F|x.rs:5:    let b = BinaryChangeSummary::new(1);' 'P|x.rs:6:        Ok(ChangeSummary::Text(text))' 'P|x.rs:7:        ChangeSummary::Binary(_) => {}' 'P|x.rs:8:use rk_ports::toolchain::{ChangeSummary, Classification, Toolchain};' 'P|x.rs:9:    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {' 'P|x.rs:10:    let k = "BinaryChangeSummary(())";' 'P|x.rs:11:    // let b = BinaryChangeSummary(());' 'F|x.rs:12:use rk_ports::toolchain::ChangeSummary as summary;' 'F|x.rs:13:    toolchain::{ChangeSummary as cs, Toolchain},' 'P|x.rs:14:    let n = Capability::ChangeSummary as usize;' 'P|x.rs:15:fn binary_of(cs: ChangeSummary) -> BinaryChangeSummary {' 'P|x.rs:16:        ChangeSummary::Binary(b @ BinaryChangeSummary { .. }) => b,' 'P|x.rs:17:        ChangeSummary::Binary(rk_ports::toolchain::BinaryChangeSummary { .. }) => {}' 'F|x.rs:18:    let f = || -> BinaryChangeSummary { BinaryChangeSummary(()) };' 'F|x.rs:19:    const A: &str = "a\n"; impl Clone for ChangeSummary { fn n() -> &str { "z" } }' 'P|x.rs:20:    let k = "a\"impl Clone for ChangeSummary\"";' 'F|x.rs:21:impl Render for &ChangeSummary {' 'F|x.rs:22:impl Render for Box<rk_ports::toolchain::ChangeSummary> {' 'F|x.rs:23:pub struct r#ChangeSummary;' 'F|x.rs:24:pub struct V2ChangeSummary;' 'F|x.rs:25:impl Clone for Sha1ChangeSummary {'; do
   want=${ctl%%|*}; got=$(printf '%s\n' "${ctl#*|}" | s8_cs)
   if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: CONTROL must FIRE and did not -- the ban is vacuous for: ${ctl#*|}"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: CONTROL must be ADMITTED and fired -- the ban blocks what ADR-0165 licenses: ${ctl#*|}"; exit 1; }; fi
 done
+# *(dated 2026-10-14, s8i build, S8I-C4-PORTS)* The construction rule's six controls: the recorded constructor in two test files is
+# admitted (bare and path-qualified); it fires in a src file (producers: none), and an unchecked associated fn, a struct
+# literal and a second construction beside an admitted call each fire in a test file.
+for ctl in 'P|crates/rk-store/tests/it/render.rs:1:    let b = BinaryChangeSummary::new(assets, captures, report, log, "")?;' 'P|crates/rk-cli/tests/it/review_input.rs:2:    let s = ChangeSummary::Binary(rk_ports::toolchain::BinaryChangeSummary::new(a, c, r, l, "").expect("clean"));' 'F|crates/rk-store/src/render.rs:3:    let b = BinaryChangeSummary::new(assets, captures, report, log, "")?;' 'F|crates/rk-store/tests/it/render.rs:4:    let b = BinaryChangeSummary::unchecked(assets);' 'F|crates/rk-cli/tests/it/review_input.rs:5:    let b = BinaryChangeSummary { assets, captures, tests_report_ref, build_log_ref };' 'F|crates/rk-store/tests/it/render.rs:6:    let b = BinaryChangeSummary::new(a, c, r, l, "")?; let d = BinaryChangeSummary(());'; do
+  want=${ctl%%|*}; got=$(printf '%s\n' "${ctl#*|}" | s8_cs)
+  if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: CONTROL must FIRE and did not -- the construction rule is vacuous for: ${ctl#*|}"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: CONTROL must be ADMITTED and fired -- the ban blocks ADR-0199's recorded constructor: ${ctl#*|}"; exit 1; }; fi
+done
+# *(dated 2026-10-14, s8i build, S8I-D3-RECORDS)* The reference-return controls (the S8_UNCON extension above): a return
+# type `-> &BinaryChangeSummary {` and `-> &'a mut path::BinaryChangeSummary {` are admitted; a body that constructs
+# the payload after either still fires. Under the line S8_UNCON had before the extension, the first two fired.
+for ctl in 'P|crates/rk-cli/src/review_input.rs:26:    pub fn summary(&self) -> &BinaryChangeSummary {' 'P|crates/rk-cli/src/review_input.rs:27:    fn binary<'"'"'a>(s: &'"'"'a mut ChangeSummary) -> &'"'"'a mut rk_ports::toolchain::BinaryChangeSummary {' 'F|crates/rk-cli/src/review_input.rs:28:    let f = || -> &BinaryChangeSummary { &BinaryChangeSummary(()) };' 'F|crates/rk-cli/src/review_input.rs:29:    fn g() -> &'"'"'static BinaryChangeSummary { &BinaryChangeSummary { bytes: 1 } }'; do
+  want=${ctl%%|*}; got=$(printf '%s\n' "${ctl#*|}" | s8_cs)
+  if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: CONTROL must FIRE and did not -- the reference-return blank hides a construction: ${ctl#*|}"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: CONTROL must be ADMITTED and fired -- a reference return type reads as a construction: ${ctl#*|}"; exit 1; }; fi
+done
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; operator ruling R10)* The test-module controls. Each writes one
+# synthetic file, crates/x/src/y.rs, into a scratch tree. This guard's own lines then run over that tree: the
+# ChangeSummary grep, s8_cfgtest and s8_cs. Each control names the exact line numbers the guard must report.
+# - The recorded constructor in a src file fires.
+# - The same call inside a #[cfg(test)] module is admitted.
+# - A call after the module closes fires.
+# - A #[cfg(test)] on a fn or an impl opens nothing.
+# - So does a #[cfg(test)] that is in a comment, in a string, negated, or a blank line away from its mod.
+# - Inside a test module, a struct literal, another associated function and a definition each still fire, as they do
+#   in crates/<crate>/tests.
+# - A module that never closes fails the guard.
+# - The confuser loop (see s8i §8i.9 (8)) checks the brace count.
+S8C_TMP=$(mktemp -d) && mkdir -p "$S8C_TMP/crates/x/src" || { echo "FAIL: no scratch tree for the test-module controls"; exit 1; }
+s8c_file() { cat > "$S8C_TMP/crates/x/src/y.rs" || { echo "FAIL: could not write the test-module control file"; exit 1; }; }
+s8c_run() ( cd "$S8C_TMP" || exit 1; r=$(grep -rn 'ChangeSummary' crates/ --include=*.rs); printf '%s\n' "$r" | s8_cfgtest )
+s8c_want() {
+  out=$(s8c_run) || { echo "FAIL: CONTROL '$2': the module reader refused: $out"; exit 1; }
+  got=$(printf '%s\n' "$out" | s8_cs | cut -d: -f2 | sort -n | uniq | paste -sd' ' -)
+  [ "$got" = "$1" ] || { echo "FAIL: CONTROL '$2': the guard reported line(s) '$got', not '$1'"; exit 1; }
+}
+s8c_file <<'RS'
+pub fn produce(a: A) -> Result<BinaryChangeSummary, E> {
+    BinaryChangeSummary::new(a, c, r, l, "")
+}
+RS
+s8c_want "2" "the recorded constructor in a src file fires"
+s8c_file <<'RS'
+pub fn produce() {}
+#[cfg(test)]
+mod tests {
+    use rk_ports::toolchain::{BinaryChangeSummary, ChangeSummary};
+    fn fake() -> Result<ChangeSummary, E> {
+        if x { let _ = [1, 2]; }
+        rk_ports::toolchain::BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary)
+    }
+}
+RS
+s8c_want "" "the same call inside a #[cfg(test)] module is admitted"
+s8c_file <<'RS'
+#[cfg(test)]
+mod tests {
+    fn fake() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }
+}
+pub fn after() -> Result<ChangeSummary, E> {
+    BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary)
+}
+RS
+s8c_want "6" "a call after the test module closes fires"
+s8c_file <<'RS'
+#[cfg(test)]
+fn helper() -> Result<ChangeSummary, E> {
+    BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary)
+}
+#[cfg(test)]
+impl Fake {
+    fn f() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }
+}
+RS
+s8c_want "3 7" "a #[cfg(test)] on a fn or an impl opens no exclusion"
+s8c_file <<'RS'
+// #[cfg(test)]
+mod not_tests {
+    fn f() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }
+}
+const DOC: &str = "
+#[cfg(test)]
+mod quoted { "; pub fn g() -> Result<ChangeSummary, E> {
+    BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary)
+}
+#[cfg(not(test))]
+mod shipped {
+    fn h() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }
+}
+#[cfg(test)]
+
+mod spaced {
+    fn i() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }
+}
+RS
+s8c_want "3 8 12 17" "an attribute in a comment, in a string, negated or a line away opens nothing"
+s8c_file <<'RS'
+/*
+#[cfg(test)]
+mod commented { */ pub fn k() -> Result<ChangeSummary, E> {
+    BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary)
+}
+RS
+s8c_want "4" "an attribute inside a block comment opens nothing"
+s8c_file <<'RS'
+#[cfg(test)] mod tests {
+    fn a() -> BinaryChangeSummary { BinaryChangeSummary { assets, captures, tests_report_ref, build_log_ref } }
+    fn b() -> Result<BinaryChangeSummary, E> { BinaryChangeSummary::unchecked(assets) }
+    pub struct FakeChangeSummary;
+    fn c() -> Result<BinaryChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+}
+RS
+s8c_want "2 3 4" "inside a test module, a struct literal, another associated fn and a definition still fire"
+s8c_file <<'RS'
+#[cfg(test)]
+mod tests {
+    fn fake() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }
+RS
+out=$(s8c_run) && { echo "FAIL: CONTROL 'a module that never closes': the module reader admitted it: $out"; exit 1; }
+while IFS= read -r cz; do
+  cz=${cz//<NL>/$'\n'}
+  printf '%s\n' '#[cfg(test)]' 'mod tests {' "$cz" '    fn fake() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }' '}' 'fn after() -> Result<ChangeSummary, E> { BinaryChangeSummary::new(a, c, r, l, "").map(ChangeSummary::Binary) }' | s8c_file
+  s8c_want "$(( $(printf '%s\n' "$cz" | grep -c '') + 5 ))" "a confuser inside the module: $cz"
+done <<'RS'
+    let _ = "{";
+    let _ = "}";
+    let _ = '{';
+    let _ = '}';
+    let _ = b'{';
+    let _ = '"'; let _ = "{";
+    let _ = '\''; let _ = '{';
+    let _ = '\u{7b}'; let _ = "}";
+    let _ = "a\"{";
+    let _ = "a\\"; let _ = '}';
+    let _ = r#"a"{"#;
+    let _ = br"}";
+    let _ = r"\"; let _ = '{';
+    let _ = cr"\"; let _ = "}";
+    let _ = br"\"; let _ = "}";
+    // {
+    /* } */
+    /* /* */ { */
+    let s = "{<NL>    }{";
+    /* {<NL>    */
+    fn f<'a>(x: &'a str) -> &'a str { x }
+RS
+rm -rf "$S8C_TMP"
 
 # card append route never defaulted on; no quality-shorthand default or terminal condition
 grep -rnE 'append(_route)? *= *true' crates/ .redkiln/ --include=*.rs --include=*.toml; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a card append route is enabled by default (rc=$rc)"; exit 1; }

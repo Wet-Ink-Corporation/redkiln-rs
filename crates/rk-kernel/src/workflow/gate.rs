@@ -9,6 +9,7 @@
 //! | [`answer`] | **AC-246**, **AC-247**, **AC-249**, ADR-0017 | applied / void / refused-as-spent / refused-wrong-gate | the rows in [`AnswerOutcome::events`], or nothing on a refusal that is an error |
 //! | [`expire`] | **AC-259**, **AC-272**, AC-256/AC-257's kernel half, ADR-0017, ADR-0105 clause 10 | not due / already settled / failed / escalated / auto-decided, at a journaled `now` | `gate_expired { action }`, plus the escalation's own `gate_opened` |
 //! | [`drifted`], [`dispatches_across_open_gates`], [`prefix_rewrites_exceeding_one`], [`lint_expiry_policy_row`] | **AC-253**, **AC-243**, **AC-279**, **AC-260** | the drift predicate; two replay checkers; the expiry-policy lint | nothing — readers and checkers |
+//! | [`GateRequest::open`](crate::workflow::gate::GateRequest::open) *(added 2026-10-14, `s8i`; ADR-0199 decision 3, proposed)* | D21-48 X16, the human-gate route | a closed [`GateReason`](crate::workflow::gate::GateReason) opens a gate through [`reach`](crate::workflow::gate::reach), the reason as its kind, carrying an opaque [`GateAttachment`](crate::workflow::gate::GateAttachment) (bytes and digest) it never parses | nothing; the caller appends [`OpenedGate::event`](crate::workflow::gate::OpenedGate::event) |
 //!
 //! # What is decided here and what is derived from the journal
 //!
@@ -138,6 +139,333 @@ pub fn reach(state: &RunState, kind: &str, ctx: &FsmContext<'_>) -> Result<GateR
         ctx.deadline(),
         state.reaches(kind).saturating_add(1),
     )
+}
+
+// ------------------------------------------------------------------ D21-48 X16: the type-neutral gate request
+//
+// *(Added 2026-10-14, `s8i` build, package S8I-C6-KERNEL-GATE; ADR-0199 decision 3, proposed.)* Built
+// on the human-gate route only. Kept in this file rather than a submodule so that
+// `module_boundary::GATE_PATH_MODULES`' purity rule (AC-242) scans it as part of the gate path.
+
+/// **Why a gate request opens a gate: a closed set with exactly one value** (D21-48 X16).
+///
+/// A reason string this set does not hold is refused by name ([`UnknownGateReason`]) and is never
+/// carried as free text, so a caller cannot widen the kernel's vocabulary by spelling a new word.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GateReason {
+    /// An automated review verdict was refused for the item, so a human decides
+    /// (`automated-verdict-refused`; ADR-0199's human-gate route).
+    AutomatedVerdictRefused,
+}
+
+/// [`GateReason::AutomatedVerdictRefused`]'s spelling, the kind of the gate it opens: one `&str`
+/// constant at the mint site, so the gate-kind readers (`rk-cli`'s expiry lint, Checkpoint 8h's
+/// minted-class reader) find the spelling without a copy beside it.
+const AUTOMATED_VERDICT_REFUSED_KIND: &str = "automated-verdict-refused";
+
+impl GateReason {
+    /// The reason's one spelling, which is also the kind of the gate it opens.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::AutomatedVerdictRefused => AUTOMATED_VERDICT_REFUSED_KIND,
+        }
+    }
+}
+
+impl std::fmt::Display for GateReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for GateReason {
+    type Err = UnknownGateReason;
+
+    /// Exact match against the closed set: no trimming, no case folding.
+    fn from_str(reason: &str) -> Result<Self, Self::Err> {
+        let known = Self::AutomatedVerdictRefused;
+        if reason == known.as_str() {
+            return Ok(known);
+        }
+        Err(UnknownGateReason {
+            reason: reason.to_owned(),
+        })
+    }
+}
+
+/// A reason string outside [`GateReason`]'s closed set, refused by name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnknownGateReason {
+    reason: String,
+}
+
+impl UnknownGateReason {
+    /// The reason that was refused, exactly as presented.
+    #[must_use]
+    pub fn reason(&self) -> &str {
+        &self.reason
+    }
+}
+
+impl std::fmt::Display for UnknownGateReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the gate reason {:?} is not in the closed set; the only reason is {:?}",
+            self.reason,
+            GateReason::AutomatedVerdictRefused.as_str()
+        )
+    }
+}
+
+impl std::error::Error for UnknownGateReason {}
+
+/// **An opaque attachment: bytes and their digest** (D21-48 X16).
+///
+/// The kernel carries the bytes and never parses, decodes or types them: what they are is the
+/// caller's knowledge and the render side's, never this crate's. The digest is the one hash
+/// ([`rk_types::digest::sha256`]) over exactly these bytes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GateAttachment {
+    bytes: Vec<u8>,
+    digest: Digest,
+}
+
+/// The `gate_opened` payload member that carries the attachment's bytes, as lower-case hex.
+pub const ATTACHMENT_MEMBER: &str = "attachment";
+/// The `gate_opened` payload member that carries the attachment's digest.
+pub const ATTACHMENT_DIGEST_MEMBER: &str = "attachment_digest";
+
+impl GateAttachment {
+    /// Take the bytes as they are and digest them.
+    #[must_use]
+    pub fn new(bytes: Vec<u8>) -> Self {
+        let digest = rk_types::digest::sha256(&bytes);
+        Self { bytes, digest }
+    }
+
+    /// The bytes, exactly as given.
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    /// The digest of [`Self::bytes`].
+    #[must_use]
+    pub const fn digest(&self) -> &Digest {
+        &self.digest
+    }
+
+    /// Read the attachment back off a `gate_opened` row a [`GateRequest`] produced.
+    ///
+    /// The lower-case hex on the row is the row's transport for arbitrary bytes, and undoing it is
+    /// the only decoding done: the bytes themselves are not parsed. The digest is recomputed from
+    /// the bytes and must equal the one the row carries.
+    ///
+    /// # Errors
+    ///
+    /// [`GateAttachmentError::Absent`] when the row carries no attachment;
+    /// [`GateAttachmentError::Malformed`] when a member is not a string or the bytes are not
+    /// lower-case hex; [`GateAttachmentError::DigestMismatch`] when the bytes do not hash to the
+    /// carried digest.
+    pub fn from_gate_opened(event: &Event) -> Result<Self, GateAttachmentError> {
+        let carried = event.payload.get(ATTACHMENT_MEMBER);
+        let carried_digest = event.payload.get(ATTACHMENT_DIGEST_MEMBER);
+        let (Some(carried), Some(carried_digest)) = (carried, carried_digest) else {
+            return if carried.is_none() && carried_digest.is_none() {
+                Err(GateAttachmentError::Absent)
+            } else {
+                Err(GateAttachmentError::Malformed {
+                    member: if carried.is_none() {
+                        ATTACHMENT_MEMBER
+                    } else {
+                        ATTACHMENT_DIGEST_MEMBER
+                    },
+                })
+            };
+        };
+        let bytes =
+            carried
+                .as_str()
+                .and_then(from_lower_hex)
+                .ok_or(GateAttachmentError::Malformed {
+                    member: ATTACHMENT_MEMBER,
+                })?;
+        let carried_digest = carried_digest
+            .as_str()
+            .ok_or(GateAttachmentError::Malformed {
+                member: ATTACHMENT_DIGEST_MEMBER,
+            })?;
+        let attachment = Self::new(bytes);
+        if attachment.digest.as_str() != carried_digest {
+            return Err(GateAttachmentError::DigestMismatch {
+                carried: carried_digest.to_owned(),
+                computed: attachment.digest,
+            });
+        }
+        Ok(attachment)
+    }
+}
+
+/// Why [`GateAttachment::from_gate_opened`] could not read an attachment off a row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GateAttachmentError {
+    /// The row carries neither attachment member.
+    Absent,
+    /// The named member is missing beside the other, not a string, or (for the bytes) not
+    /// lower-case hex.
+    Malformed {
+        /// The payload member at fault.
+        member: &'static str,
+    },
+    /// The bytes do not hash to the digest the row carries.
+    DigestMismatch {
+        /// The digest the row carries.
+        carried: String,
+        /// The digest of the bytes the row carries.
+        computed: Digest,
+    },
+}
+
+impl std::fmt::Display for GateAttachmentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Absent => f.write_str("the gate_opened row carries no attachment"),
+            Self::Malformed { member } => write!(
+                f,
+                "the gate_opened row's `{member}` member is missing, not a string, or not lower-case hex"
+            ),
+            Self::DigestMismatch { carried, computed } => write!(
+                f,
+                "the attachment's bytes hash to {}, not to the carried digest {carried}",
+                computed.as_str()
+            ),
+        }
+    }
+}
+
+impl std::error::Error for GateAttachmentError {}
+
+/// **D21-48 X16's type-neutral gate request**: a closed reason and an opaque attachment.
+///
+/// [`Self::open`] opens the gate through [`reach`], so its token is
+/// [`GateRecord::derive_reach`]'s like every other gate's; the reason is the gate's kind, and the
+/// attachment's digest rides beside it on the row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GateRequest {
+    reason: GateReason,
+    attachment: GateAttachment,
+}
+
+impl GateRequest {
+    /// A request for `reason`, carrying `attachment`.
+    #[must_use]
+    pub const fn new(reason: GateReason, attachment: GateAttachment) -> Self {
+        Self { reason, attachment }
+    }
+
+    /// The request's reason.
+    #[must_use]
+    pub const fn reason(&self) -> GateReason {
+        self.reason
+    }
+
+    /// The request's attachment.
+    #[must_use]
+    pub const fn attachment(&self) -> &GateAttachment {
+        &self.attachment
+    }
+
+    /// Open the gate: the record [`reach`] mints for the reason's kind over `ctx`'s tree and
+    /// deadline, and the `gate_opened` row the caller appends — the runtime's producer shape
+    /// ([`crate::runtime::gate_opened_event`]) plus the attachment's bytes and digest.
+    ///
+    /// # Errors
+    ///
+    /// [`CanonError`] as [`reach`].
+    pub fn open(&self, state: &RunState, ctx: &FsmContext<'_>) -> Result<OpenedGate, CanonError> {
+        let record = reach(state, self.reason.as_str(), ctx)?;
+        // One `json!`, the producer's five members and the attachment's two, so there is no
+        // branch in which the row goes out without its attachment.
+        let event = Event::new(
+            EventKind::GateOpened,
+            serde_json::json!({
+                "deadline": record.deadline().unix_seconds(),
+                "kind": record.kind(),
+                "reach": record.reach(),
+                "token": record.token().as_str(),
+                "tree_hash": record.tree_hash(),
+                ATTACHMENT_MEMBER: lower_hex(self.attachment.bytes()),
+                ATTACHMENT_DIGEST_MEMBER: self.attachment.digest().as_str(),
+            }),
+        );
+        Ok(OpenedGate { record, event })
+    }
+}
+
+/// What [`GateRequest::open`] minted: the gate's record and the row that opens it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct OpenedGate {
+    record: GateRecord,
+    event: Event,
+}
+
+impl OpenedGate {
+    /// The record [`reach`] minted.
+    #[must_use]
+    pub const fn record(&self) -> &GateRecord {
+        &self.record
+    }
+
+    /// The `gate_opened` row the caller appends.
+    #[must_use]
+    pub const fn event(&self) -> &Event {
+        &self.event
+    }
+
+    /// The row, by value, for the caller to append.
+    #[must_use]
+    pub fn into_event(self) -> Event {
+        self.event
+    }
+}
+
+/// Every byte as two lower-case hex digits, in order.
+fn lower_hex(bytes: &[u8]) -> String {
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len().saturating_mul(2));
+    for &byte in bytes {
+        for nibble in [byte >> 4, byte & 0x0f] {
+            if let Some(&digit) = DIGITS.get(usize::from(nibble)) {
+                out.push(char::from(digit));
+            }
+        }
+    }
+    out
+}
+
+/// The bytes [`lower_hex`] wrote, or `None` for an odd length or a character outside `[0-9a-f]`.
+fn from_lower_hex(text: &str) -> Option<Vec<u8>> {
+    let (pairs, rest) = text.as_bytes().as_chunks::<2>();
+    if !rest.is_empty() {
+        return None;
+    }
+    pairs
+        .iter()
+        .map(|&[high, low]| Some((hex_value(high)? << 4) | hex_value(low)?))
+        .collect()
+}
+
+const fn hex_value(digit: u8) -> Option<u8> {
+    match digit {
+        b'0'..=b'9' => digit.checked_sub(b'0'),
+        b'a'..=b'f' => match digit.checked_sub(b'a') {
+            Some(n) => n.checked_add(10),
+            None => None,
+        },
+        _ => None,
+    }
 }
 
 /// **R6 (ADR-0178 decision 4, proposed; `s8d` §8d.7, D21-43 N3): the gate a derived facet's

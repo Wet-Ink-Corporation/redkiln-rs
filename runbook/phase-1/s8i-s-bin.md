@@ -187,7 +187,7 @@ measurements sit in the sections named, and nothing here is a go-ahead or a disp
   whole suite read **1404 passed / 0 failed / 9 ignored over 44 result lines** (FLOOR 1404)"*. So the base is
   **1404** over **44** result lines, the drafted 1243 (and the older 1168 and 1222) is struck, Checkpoint 8i (0) sets
   `FLOOR_8H_PASSED=1404` and `FLOOR_8H_RESULTS=44`, and this stage's floor is **1404 + 6 + NFIELDS + NGATE** (NGATE 3
-  on the human-gate route, 0 on the reviewer route). This build adds 0 workspace tests before S-BIN reports: the
+  on the human-gate route, 0 on the reviewer route). *(dated 2026-10-15, s8i build, S8I-F1-GUARDS, R11)* Plus NDE: 15 on the human-gate route and 4 on the reviewer route, the D/E-round tests that (8) names (1432 on the human-gate route). This build adds 0 workspace tests before S-BIN reports: the
   driver's 25 tests are the corpus runner's, not this workspace's. NFIELDS and NGATE are known only after S-BIN reports.
 - *(dated 2026-10-02, s8i build)* **Entry held**: Checkpoint 8h passed WHOLE at `d24d15a` and re-ran green after the Record B flip
   (`9ff08fb`) at `b2ab1dc` (tracker `09018dd`). ADR-0198 (Record B) is accepted (D21-139); ADR-0197 (Record A) stays
@@ -204,7 +204,7 @@ measurements sit in the sections named, and nothing here is a go-ahead or a disp
 - *(dated 2026-10-02, s8i build)* **`spikes/FINDINGS.md`** gains F41's and F42's rows (§8i.0 item 10; §8i.7).
 - *(dated 2026-10-02, s8i build)* **Ids reserved** (each is the next free at writing; if one is taken first, the next free id is used and
   this line takes a dated note): ledger ~~**D21-141**~~ **D21-143** *(dated 2026-10-03, s8i build)* D21-141 and D21-142 were taken first; D21-143 is written OPEN on 2026-10-03 for this stage's S-BIN entry, which holds the go-ahead lines;
-  ADR **0199** for the post-dispatch `Binary` record, NOT written in this build; finding **F43** for the S-BIN draft,
+  ADR **0199** for the post-dispatch `Binary` record, NOT written in this build *(dated 2026-10-14, s8i build, S8I-C2-ADR0199)* written 2026-10-14, `proposed` *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*, after measuring that `references/adr/` ended at `0198` and held no `0199-*.md` (§8i.8's dated note); finding **F43** for the S-BIN draft,
   also post-dispatch. `SBIN_LEDGER`, `BIN_ADR` and `SBIN_F` are written into Checkpoint 8i (0) by dated edit, each
   on the day its record is written (D21-47), never before.
 
@@ -6887,7 +6887,7 @@ the procedure log.
 
 *(dated 2026-10-03, s8i, R9FIX-8i; refuting round 9)* **Refuting round 9 (D21-147 item 3's round on the changed fixture): no blocker, no major.** Five dimensions, every one returned; 12 minors. The documentation minors are fixed here. One coverage minor is recorded, not fixed, because it would re-cut `DRV`: `a_dirty_or_mismatched_copy_refuses_before_spawning`'s case *"the stub missing"* builds no backlog directory at all, so no case holds the directory without the stub; the code refuses that shape (`[one]` arity plus `stub.is_file()`). Two finders each wrote one file to `%TEMP%` by mistake and removed it at once (an earlier panel's five backlog JSONs, D21-147 item 5; round 9's `ms_old`, a METHOD-S copy); a scan of %TEMP% after found no leak-token file outside `%TEMP%/claude`.
 
-*(dated 2026-10-06, s8i, R11FIX-8i)* **Refuting rounds 10 and 11.** Round 10 (base `7fcca61`) found no blocker and one major, upheld 2-0: Checkpoint 8i did not tie the pinned capture files to `fixture.json`; R10FIX-8i (`94082e2`) built `capfiles_ok` with 14 synthetic pins, 7/7 guard mutants killed, and fixed its seven minors. Round 11 (base `524aadd`) found no blocker and no major, and four minors. Two wording minors are fixed here. **Two are owed before the formal Checkpoint 8i, by dated edit with synthetic controls:** (a) a read-only guard that lists the pinned corpus commit's `results/s-bin/captures/` (`git ls-tree -r --name-only`) and requires its `item-<n>/` entries to equal the pinned capture paths, so that an unpinned committed capture refuses; (b) a §8i.9 criterion and a (9) guard that F43 carries D21-152 item 2's disclosure, D21-152 item 3's evidence-source tag on each blocking finding, and D21-149 item 2's confound. Neither touches B2's inputs.
+*(dated 2026-10-06, s8i, R11FIX-8i)* **Refuting rounds 10 and 11.** Round 10 (base `7fcca61`) found no blocker and one major, upheld 2-0: Checkpoint 8i did not tie the pinned capture files to `fixture.json`; R10FIX-8i (`94082e2`) built `capfiles_ok` with 14 synthetic pins, 7/7 guard mutants killed, and fixed its seven minors. Round 11 (base `524aadd`) found no blocker and no major, and four minors. Two wording minors are fixed here. **Two are owed before the formal Checkpoint 8i, by dated edit with synthetic controls:** (a) a read-only guard that lists the pinned corpus commit's `results/s-bin/captures/` (`git ls-tree -r --name-only`) and requires its `item-<n>/` entries to equal the pinned capture paths, so that an unpinned committed capture refuses; (b) a §8i.9 criterion and a (9) guard that F43 carries D21-152 item 2's disclosure, D21-152 item 3's evidence-source tag on each blocking finding, and D21-149 item 2's confound. Neither touches B2's inputs. *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* Both are built: (a) as (3)'s `capdiff` and (b) as (9)'s `f43_ok`, each with synthetic controls, red-first against the pre-edit block (§8i.9's two dated bullets).
 
 ### 8i.6 Kill and abort conditions
 
@@ -6991,6 +6991,26 @@ with one `file=` line per corpus file listed above, per raw transcript and per c
 - The `Binary` record and the dated notes, AC-475's replacement among them (§8i.8).
 - The tracker rows.
 
+*(dated 2026-10-14, s8i build, S8I-C1-F43)* **F43's draft is written, proposed *(dated 2026-10-15, `s8i` close, D21-154: F43 accepted)*** (`spikes/F43-DRAFT.md`), from corpus
+`835b122`'s blobs only, with its `spikes/FINDINGS.md` row after F42's; (2)'s `idx_missing` reads empty over the edited
+index, and its synthetic empty index still lists every draft. The pins block carries `rule_outcome_pass1=branch1`,
+`rule_outcome_pass2=undecided-fp` (re-run from the pinned `audit-s.py`'s own blob), `cli_version=2.1.289`,
+`observed_model=claude-opus-5-5`, `ceiling_secs=4500`, `review_root=D:/sb`, `ac475_lift_share=0/0` and 58 `file=`
+lines: every file listed above, each of the 26 files under `results/s-bin/raw/`, the three captures (items 1, 4 and
+5; D21-149), each greenness report and rendering, and `results/s-bin/superseded/pass1-d21153/s-bin.jsonl` (the
+discarded set, for Checkpoint 8i (4)'s cap count). 57 lines match `git cat-file blob 835b122:<path>` byte for byte
+(`S8I-C1-F43_pins_check.py`). **Owed, the operator's:** `results/s-bin/audit.txt` is not at `835b122` (only
+`results/s-bin/dry-run/audit.txt` is), so `corpus_commit` and the `audit.txt` line are marked `OWED-operator` and
+(2) and (3) refuse the block until the operator commits `audit.txt` and re-runs the generator
+(`S8I-C1-F43_pins_gen.py <commit> --ac475 0/0`, then `S8I-C1-F43_pins_apply.py`); the generator refuses an
+`audit.txt` whose outcomes differ from the re-run audit's (10 synthetic controls, `PINS_CONTROLS_OK`). The cited-field
+census over the ten records reads `assets` 10, `captures` 6, `tests.report_ref` 6, `build.log_ref` 3, `text_diff` 1
+(the build brief's captures 5 was a miscount). The draft carries D21-152 item 2's disclosure, item 3's tag on each of
+the 13 blocking findings (13 `asset`, 0 `spec/report only`), D21-149 item 2's confound, D21-153 item 3's runtime
+disclosure, and ruling (24)'s cross-check with B3's lost capture and its substitute.
+
+*(dated 2026-10-15, s8i build, S8I-F2-RECORDS; s8i refuting round 21's records minor)* **The operator's two inputs the paragraph above marks as owed are filled.** The operator committed `results/s-bin/audit.txt` to the corpus as `e1e90d1` (`e1e90d11a716bc43046e31ddab6282a6e91708b4`, a descendant of `835b122`, whose `audit.txt` reads `rule_outcome_pass1=branch1` and `rule_outcome_pass2=undecided-fp`); the generator re-ran over that commit, and F43's pins block now carries `corpus_commit=e1e90d11a716bc43046e31ddab6282a6e91708b4` and 58 `file=` lines, none of them owed (F43's own dated note in its pins section). Re-measured 2026-10-15, read-only: `python -I S8I-C1-F43_pins_check.py spikes/F43-DRAFT.md` reads `checked=58 owed=none bad=0 commit=e1e90d11a716bc43046e31ddab6282a6e91708b4`, and `git show e1e90d1:results/s-bin/audit.txt` carries both outcome lines. The paragraph above stays as written: it describes the draft before that commit. F43's Established-by bullet and ADR-0199's Evidence section carry the same dated note.
+
 ### 8i.8 From the finding to the `Binary` variant
 
 **The record.** One new ADR, the next free id at writing, in ADR-0085's form as D21-42 24a enforces it from ADR-0164
@@ -7013,6 +7033,7 @@ BrittonGames, W4 would not refuse (§8i.0 item 12). What an LFS path's summary c
 item 2a makes an LFS pointer path `Binary` in the `Text` variant's manifest, and says *"What an LFS asset's summary
 carries (for example its size read from the pointer) is `Binary`'s content, and so `s8i`'s."* §8i.2 item 6's
 `assets[].size`, read from the pointer, is that content. This stage does not re-specify the pointer rule.
+*(dated 2026-10-14, s8i build, S8I-C2-ADR0199)* **Written, proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*: `references/adr/0199-the-binary-change-summary-carries-the-four-cited-fields-and-its-item-takes-a-human-gate.md`.** The id is the next free one, measured: `references/adr/` ended at `0198` and held no `0199-*.md` (stage-open reservation). Its `evidence:` line names `F43`, `S-BIN` and `corpus@835b122`; it carries seven `### Option — ` headings and a **What this forbids** block (`python -I runbook/tools/check-adr-options.py`: 36 records scanned, 0 flagged). Its `## Decision` carries the three parsed lines once each: the field set (4 fields: `assets` with `size` read from the pointer, `captures`, `tests.report_ref`, `build.log_ref`), the route `human gate`, and producers `none`. The field set is argued from F43's `cited_fields` census against METHOD-S §3.3: `assets` 10/10, `captures` 6/10 (every record whose item has a capture), `tests.report_ref` 6/10, `build.log_ref` 3/10, `text_diff` 1/10 (citing that it is empty), and `range`, `build` (`command`, `exit`) and the `tests` counts 0/10 [measured, `835b122:results/s-bin.jsonl`; the driver's vocabulary at `835b122:runner/src/sbin.rs`]. The per-field tests (8)'s pattern counts are therefore four, for example `change_summary::binary_field_assets`, `…_captures`, `…_tests_report_ref` and `…_build_log_ref`; their names are the Rust package's. **ADR-0092 rule 1, applied to ADR-0165's text:** its decision 1 sentence *"It cannot be constructed outside `rk-ports`, and no fake or adapter constructs it inside `rk-ports` either."* carries no condition in its own words, and the recorded constructor makes it false, so the record **supersedes ADR-0165 decision 1 in part**; ADR-0165 decision 7, its third forbids bullet (whose own words end *"until a later record opens the slot"*) and the three seal pins are executed under it, not superseded. ADR-0165's `superseded_by` back-link moves in the flip commit. The record also: keeps AC-337's `not-feasible(reason)` route for a `binary`-class AC, with AC-357's human gate as its evidence (decision 5); names the Phase-2 producer's run worktree as ADR-0180's `.redkiln/worktrees/<item>` under D21-45 W4 as D21-46 R8, D21-47 V1 and D21-48 X2 refine it, from the records and not measured (decision 7); states X16's request (decision 3); records the rendered-representation requirement against ADR-0008's Phase-2 Unreal adapter, with a rendering for the asset types `capture_scene_preview` rejected owed by that adapter's record (decision 6); and cites item 2a without re-specifying it (decision 1). The design's falsifier does not fire (detection 4/4), and the record says so in an option. It stays `proposed`: it flips only on the operator's dated ledger line (§8i.10).
 
 **How the finding maps to the record** — per pass, never pooled:
 
@@ -7024,6 +7045,8 @@ carries (for example its size read from the pointer) is `Binary`'s content, and 
 | the passes disagree | the more conservative route, and the disagreement reported as a stability finding |
 | an outcome the rule does not decide (`undecided-fp`, `undecided-silent`) | **route: human gate** (D21-43 N21: *"If either occurs, the `Binary` variant takes the human-gate route."*), with the outcome reported as *"not decided by the registered rule"* |
 | exactly one seed missed, counted after any B4 re-run, with summary fields cited and no missing field named (`undecided-partial`) | **route: human gate** (D21-48 X3: *"Registered before dispatch as a third undecided outcome"*, *"routed to the human gate, as D21-43 N21 routes the other two"*), with the outcome reported as *"not decided by the registered rule"* |
+
+*(dated 2026-10-14, s8i build, S8I-C2-ADR0199)* **The rows that apply.** F43 reads pass 1 `branch1` (2/2, 1/3) and pass 2 `undecided-fp` (2/2, 2/3). Two rows apply and agree: *"the passes disagree"* (the more conservative route) and *"an outcome the rule does not decide"* (N21). ADR-0199 takes **route: human gate**, reports pass 2 as *"not decided by the registered rule"* and the disagreement as a stability finding (clean item 1 approved in pass 1 and blocked on a `narrowed-pin` in pass 2). No branch 2 fired, so no B4 field was added, and no branch 3 fired, so the human-gate row's field rule (*"keeps the manifest and test fields the reviewers did cite"*) is applied by its words, not as a branch-3 reading: the record keeps exactly the fields the census shows cited.
 
 **The route, mechanically.** The pins carry `rule_outcome_pass1` and `rule_outcome_pass2`. Each is one of six
 values (five until D21-48 X3):
@@ -7040,6 +7063,7 @@ pinned records and `missing-fields.jsonl`. It re-runs the pinned `audit-s.py bin
 the audit and its own computation to agree. A B4 re-run record exists for a `(pass, item)` exactly when that
 missed seed has a named field. Guard (7) then asserts that the record's route line agrees with the computed
 outcomes.
+*(dated 2026-10-14, s8i build, S8I-C2-ADR0199)* **Replayed read-only against ADR-0199** (the `s8i` block's (7) lines, from this file's bytes, with `BIN_ADR=0199`, `SBIN_F=F43`, `O1=branch1` and `O2=undecided-fp` set by hand because (4) was not run): one `references/adr/0199-*.md`; `evidence:` names `F43` and `S-BIN`; seven `### Option — ` headings; `What this forbids` present; the README row check matches and its prose control stays empty; `NFIELDS=4`; `ROUTE=human gate`, and `route_for branch1 undecided-fp` gives `human gate` with every synthetic control passing; `PRODUCERS=none`. The `status: accepted` line **fails**, as it must for a `proposed` *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)* record: the flip is the operator's dated ledger line (§8i.10). With NGATE 3 on this route, (10)'s floor reads 1404 + 6 + 4 + 3 = 1417.
 
 **If the answer is "no, the reviewer cannot verify without a diff"**, the design has already written the falsifier,
 and the record answers it clause by clause rather than by silence: *"`ChangeSummary` is not a type problem but an
@@ -7150,6 +7174,21 @@ request. The refusal reaches the kernel with the reason `automated-verdict-refus
 `review_input`'s serialisation of the typed summary. A second mutant must flip it: open the gate through a gate
 step's free `kind` string with no attachment. The three `gate_request::` rows are G = 3 of this stage's new tests
 on the human-gate route, and none on the reviewer route. Mutant cycles run **from Python, never the shell**, as `nodispatch python <script>` (§8i.3).
+*(dated 2026-10-14, s8i build, S8I-C4-PORTS)* **The `CS` = `rk-ports` rows are built, under ADR-0199 (proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*; nothing flipped).** `BinaryChangeSummary` (`crates/rk-ports/src/toolchain.rs`) now carries the record's four fields, all private: `assets` (`BinaryAsset`: `path`, `kind`, `action`, `size`, `lfs_oid`, private, built only by `BinaryAsset::from_pointer`, which READS `size` and `lfs_oid` from the git-lfs pointer and refuses a blob that is not one by name), `captures` (`BinaryCapture`: `path`, `viewport`, `note`), `tests_report_ref` and `build_log_ref`, serialised as `assets`, `captures`, `tests: { report_ref }` and `build: { log_ref }`. The one recorded constructor is `BinaryChangeSummary::new(assets, captures, tests_report_ref, build_log_ref, range_diff: &str) -> Result<Self, BinaryChangeSummaryError>`: it stores no diff and refuses, naming the path (`BinaryChangeSummaryError::TextPatchForBinaryPath`), a `range_diff` that patches an asset path as text (a `diff --git` section with a hunk or a `GIT binary patch`, or a `--- a/<p>`/`+++ b/<p>` line), while git's content-free `Binary files … differ` and a patch of another path are admitted. **Red first:** the six `change_summary::` tests against today's `rk-ports` failed to compile, `error[E0599]: no associated function or constant named `new` found for struct `BinaryChangeSummary`` (the sealed slot: nothing constructs) and `error[E0432]: unresolved imports `rk_ports::toolchain::BinaryAsset`, `rk_ports::toolchain::BinaryCapture`, `rk_ports::toolchain::BinaryChangeSummaryError`` (the fields do not exist); the `trybuild` test, run in a private worktree at `42a923f`'s sealed `src`, failed with `mismatch` for `s8a`'s sealed-slot reason (`error[E0599]` for `new` in the first case, `error[E0560]: struct `BinaryChangeSummary` has no field named `assets`` in the second). Disclosed: the two committed `.stderr` files were generated after the constructor existed, so that red ran the final cases against the old `src`. **Green** (`nd.sh`): `cargo test -p rk-ports --test it -- change_summary::binary_is_constructible_only_through_its_recorded_constructor change_summary::binary_rejects_a_text_patch_for_a_binary_classified_path ui::trybuild_pins_the_binary_change_summary_construction_rule --exact` reads each `... ok` and `test result: ok. 3 passed; 0 failed`; `-- change_summary::binary_field_` reads four `... ok` lines (`binary_field_assets`, `binary_field_captures`, `binary_field_tests_report_ref`, `binary_field_build_log_ref`) and `ok. 4 passed`. The `trybuild` test runs two cases: `tests/ui/change_summary_binary_construction_rule.rs` (a field read E0616, `Default`, `From<u8>`, `Deserialize` on the payload and on the enum) and `tests/ui/change_summary_binary_struct_literal.rs` (E0451 on all four fields), because rustc reports E0451 only when type checking succeeded; neither `.stderr` points into the standard library, since this box's `rust-src` component adds a source excerpt there (measured: `s8a`'s old case is red on this box at `42a923f` for that reason alone). **Mutants** (`S8I-C4-PORTS_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored): 18 of 18 killed by their named test, among them the table's own (an unchecked constructor; accept the patch; make the fields `pub`; size inferred from the blob's length rather than read from the pointer) and one per other field (captures dropped; `tests.report_ref` and `build.log_ref` swapped each way; a fifth serialised member). **Superseded by name (H-12, the operator's 2026-10-14 approval R2):** `change_summary::binary_arm_is_not_constructible_outside_rk_ports` and `tests/ui/change_summary_binary_not_constructible.rs` with its `.stderr` (removed); in the same change, by dated amendment, Checkpoint 8a guard (6)'s no-`pub`-field line and `sealed_open` floor (struck; measured on the new tree `SEALED decls=1 pubfields=0` and `OPEN impls=1 ctors=0 aliases=0`) are replaced by a construction-rule floor (`RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1`, 15 controls; it fails `42a923f`'s sealed `src`); Checkpoint 5's copy of the opacity pin is struck and replaced by the `trybuild` case's two files and its named run (two controls); `s8`'s bullet carries a dated amendment and its guard gains `S8_CTOR`, which admits `BinaryChangeSummary::new(` only under `crates/<crate>/tests|benches|examples` (six controls; the superseded `s8_cs` fires on that admitted line). Each amended block's lines ran read-only from the patched files' bytes and passed (`S8I-C4-PORTS_run_guards.py`). (8)'s `BIN_RE` floor over `crates/*/src`, with `PRODUCERS=none`, finds no line and its five controls pass; a planted `crates/rk-store/src` construction fails it. The three adapter refusal pins and `classify::ac497_classify_binary_paths` in both adapters pass unchanged. PROGRESS rows 5 and 8a are marked re-run pending, discharged by (11). New public API (routed, R2): the constructor, `BinaryAsset`, `BinaryCapture`, `PointerDefect`, `BinaryChangeSummaryError` and the four accessors.
+*(dated 2026-10-14, s8i build, S8I-C5-STORE)* **The two `rk-store` rows are built, under ADR-0199 (proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*; nothing flipped), in the module measurement 3 named (`render::`).** `crates/rk-store/src/render/binary.rs` (declared `mod binary;` in `render.rs`, re-exported as `rk_store::render::{render_binary_summary, BinaryRenderError}`) renders the `Binary` arm's serialised form exactly as `rk-ports` writes it (`assets`, `captures`, `tests: { report_ref }`, `build: { log_ref }`): it reads the value member by member into a private typed view (`Asset`: `path`, `kind`, `action` in the closed set `added`/`deleted`/`modified`, `size` a whole number, `lfs_oid` 64 lower-case hex; `Capture`: `path`, `viewport`, `note`; `report_ref`; `log_ref`) and renders from the view alone, every string JSON-quoted, LF only. A typed field absent (`Missing`) or of the wrong shape (`Mistyped`), or a member the arm does not carry (`Unknown`: an asset's `content`, a `diff`, a `Text` arm's `sha`/`manifest`/`files`), is refused by name and nothing renders. `rk-store` does not depend on `rk-ports` (its charter; no new edge, H-16), so the tests write the serialised value as JSON; the one code line in `rk-store/src` that spells `ChangeSummary` is the rendering's heading, a string literal, and Checkpoint 5's `CS_BAN`, `s8`'s `S8_BIN` and (8)'s `BIN_RE` each match 0 lines there (run read-only), and `render.rs`'s one deserializer call (AC-125's scan) is unchanged. **Red first:** both tests failed to compile against today's `rk-store`, `error[E0425]: cannot find function `render_binary_summary` in module `render`` and `error[E0433]: cannot find `BinaryRenderError` in `render`` (no binary rendering). **Green** (`nd.sh`): `cargo test -p rk-store --test it -- render::ac154_binary_entries_render_from_typed_fields render::ac154_no_binary_content_is_embedded_parsed_or_diffed_as_text --exact` reads both `... ok` and `test result: ok. 2 passed; 0 failed`. The golden file `crates/rk-store/tests/fixtures/render/ac154-binary-summary.md` (written by hand from the record's fields before the renderer existed; LF, 0 CR) is compared byte for byte through `include_bytes!`, and its `.gitattributes` row (ADR-0151; a config change routed to the operator, R2) reads `git check-attr text` = `unset` (a sibling path under the same directory reads `auto`, the control); smudged to CRLF on a scratch copy, the first test goes red on its `PREMISE: the golden file is LF only` line. **Mutants** (`S8I-C5-STORE_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored and verified, the unmutated pair green after): 4 of 4 killed — the table's *drop a typed field* (an asset's `lfs_oid` line, and a capture's `viewport` line) by `ac154_binary_entries_render_from_typed_fields` (`the rendering is not the golden file's`), and the table's *embed the asset's bytes* in two forms by `ac154_no_binary_content_is_embedded_parsed_or_diffed_as_text`: reading the asset path and embedding what it holds (the code-line scan, `the binary renderer reads or parses bytes`) and admitting a `content` member (`/assets/0/content rode into the rendering`; the view has no slot to embed it, so what that mutant shows is the refusal, which is the pin). `rk-store`'s suite: 99 passed, 1 ignored (was 97 and 1), doctest 1; 23 `render::` tests ok. `cargo fmt` clean; clippy on `rk-store --all-targets --all-features` shows no finding on a line this package wrote; rustdoc shows none in `render/binary.rs`; the temper ratchet reads only R1's 10 platform count overages (`rk-cli`, `rk-containment`), none in `rk-store`. Owed elsewhere: `rk-cli`'s `review_input` (or the gate's render side) calling `render_binary_summary` on the attachment's bytes, and a cross-crate test there that `rk-ports`' serialisation and this renderer agree (the one crate that sees both).
+*(dated 2026-10-14, s8i build, S8I-C6-KERNEL-GATE)* **The three `gate_request::` rows are built (human-gate route, G = 3; D21-48 X16), under ADR-0199 (proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*; nothing flipped).** `crates/rk-kernel/src/workflow/gate.rs` gains, in the file itself so that `module_boundary::GATE_PATH_MODULES`' AC-242 purity rule scans it: `GateReason` (a closed enum, one value `AutomatedVerdictRefused`, whose `as_str` is the one kernel code line spelling the reason; `FromStr` matches exactly, no trim or case fold, and refuses anything else as `UnknownGateReason { reason }`, which names the string and the closed set); `GateAttachment` (private `bytes` plus `digest`, the one hash `rk_types::digest::sha256` over exactly those bytes; `new(Vec<u8>)`, `bytes()`, `digest()`; the bytes are never parsed, decoded or typed); `GateRequest::new(reason, attachment)` and `GateRequest::open(&RunState, &FsmContext) -> Result<OpenedGate, CanonError>`, which mints the record through `gate::reach` (so the token is `GateRecord::derive_reach`'s over the context's tree and deadline at reach `n + 1`), takes the reason as the gate's `kind`, and writes the runtime's `gate_opened` producer shape (`runtime::gate_opened_event`) plus `attachment` (every byte as lower-case hex, the row's transport for arbitrary bytes) and `attachment_digest` beside it; and `GateAttachment::from_gate_opened(&Event)`, the render side's reader, which undoes only the hex transport and refuses a row whose bytes do not hash to the carried digest (`GateAttachmentError::{Absent, Malformed, DigestMismatch}`). No `ChangeSummary` is named on any kernel code line. **Red first:** `cargo test -p rk-kernel --test it -- gate_request::` failed to compile, `error[E0432]: unresolved imports rk_kernel::workflow::gate::GateAttachment, ...GateAttachmentError, ...GateReason, ...GateRequest` (no gate request exists). **Green** (`nd.sh`): `cargo test -p rk-kernel --test it -- gate_request::automated_verdict_refused_opens_a_gate_through_the_existing_reach_path gate_request::the_reason_is_closed_and_an_unknown_reason_is_refused_by_name gate_request::the_attachment_is_carried_byte_for_byte_and_never_parsed --exact` reads each `... ok` and `test result: ok. 3 passed; 0 failed`. **Mutants** (`S8I-C6-KERNEL-GATE_mutants.py` and `..._mutant_m2c.py`, anchor once, tmp + `os.replace`, sha256 restored and verified): 7 of 7 killed. The table's *fixed token* (a `GateRecord::derive` over an empty tree at epoch 0) is killed by the first test (`the request opens through gate::reach`), and so is a fixed reach of 1 (`reach 2's token is derive_reach's`). The table's *`Other(String)` arm* is killed by the second test: built to compile in `src`, it fails the test's exhaustive match, `error[E0004]: non-exhaustive patterns: GateReason::Other(_) not covered`; the first form also fails `src` (E0204); and accepting any non-empty reason panics on the first unknown. The table's *decode as UTF-8 JSON before carrying* is killed by the third test on the row's bytes, as is a lossy UTF-8 carry; that test's fixture is 16 bytes that are neither UTF-8 nor JSON, both premises asserted. **(8), read-only, cut from this file's bytes** (`S8I-C6-KERNEL-GATE_guard8.py`, ROUTE=`human gate`): the closed-reason scan counts exactly 1 kernel code line (`gate.rs:166`) and its two controls hold; `kt_scan` prints nothing, admitting exactly the two `KT_EXEMPT` lines, and all 17 kt controls ran and held; in a scratch copy of `crates/rk-kernel/src`, a second spelling, zero spellings and a planted `ChangeSummary` type use each fail the block. Checkpoint 8a's `rk-kernel` production ban (`k_filter`), cut from `s8a`'s bytes, passes, and a planted type use fails it. `rk-kernel`'s suite: lib 12 passed; `it` 419 passed, 1 failed, 5 ignored (it had 422 tests at entry and has 425 now). The one failure, `ui::trybuild_pins_the_reason_each_kernel_fixture_fails` (mismatches in `ac020`, `ac032` and `ac050`, all of them `rust-src`'s `$RUST/core` excerpt), reproduces identically at `42a923f` in a private worktree, so it is this box's environment and not this package. `cargo fmt` is clean. Clippy on `rk-kernel --all-targets` finds nothing on a line this package wrote. Rustdoc's warning set is identical to `42a923f`'s (a first draft's module-doc row added 4 broken intra-doc links, which are now fixed with `crate::` paths). The temper ratchet reads only R1's 10 platform count overages, none in `rk-kernel`. New public API (H-16, listed for the operator): `GateReason`, `UnknownGateReason`, `GateAttachment`, `GateAttachmentError`, `GateRequest`, `OpenedGate`, `ATTACHMENT_MEMBER` and `ATTACHMENT_DIGEST_MEMBER`. Owed elsewhere: `rk-cli`'s `review_input` building the request from its serialisation of the typed summary, and appending `OpenedGate::into_event()`.
+*(dated 2026-10-14, s8i build, S8I-C7-REVIEW-INPUT)* **The two `review_input::` rows are built (human-gate route), under ADR-0199 (proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*; nothing flipped), in the new module this section names (`crates/rk-cli/src/review_input.rs`, `pub mod review_input;` in `lib.rs`; tests in `crates/rk-cli/tests/it/review_input.rs`).** `review_input::assemble(&dyn Toolchain, range, StepBound, &dyn DiffAssembler) -> Result<ReviewInput, ReviewInputError>` reads the item's typed `ChangeSummary` through the port's `change_summary` for the item's range: a `Text` value becomes `ReviewInput::Reviewer` (the typed summary plus the diff the `DiffAssembler` assembles; the production assembler `SummaryDiff` is the `Text` arm's own diff and refuses a `Binary` value by name); a `Binary` value assembles **no diff** (the assembler is not called, AC-497's *Verified by*) and becomes `ReviewInput::HumanGate(AutomatedVerdictRefused)`, which holds the typed summary and a `GateRequest::new(GateReason::AutomatedVerdictRefused, GateAttachment::new(bytes))` whose bytes are `serde_json::to_vec` of the `ChangeSummary` value (the `Binary` arm's four members). `AutomatedVerdictRefused::open_gate(&RunState, &FsmContext) -> Result<Event, CanonError>` opens it through C6's `GateRequest::open` (so `gate::reach` and `GateRecord::derive_reach`) and returns the `gate_opened` row for the caller to append. **Measurement 2's choice:** of the two rk-cli places, the code hooks the `Toolchain` decorator: `ChecklistBridge::change_summary` now returns `review_input::screen(self.inner.change_summary(range, bound)?)`, which passes a `Text` value unchanged and refuses a `Binary` one as `StepError::Unsupported` naming `automated-verdict-refused`, so no automated reviewer the kernel dispatches receives a `Binary` value; the kernel names no type (no `rk-kernel` file changed). **Red first:** `cargo test -p rk-cli --test it -- review_input::` failed to compile, `error[E0432]: unresolved import `rk_cli::review_input`` (the review input has no `Binary` path and no route exists). **Green** (`nd.sh`): `cargo test -p rk-cli --test it -- review_input::ac497_binary_classification_assembles_no_diff_and_carries_the_typed_summary review_input::binary_item_refuses_an_automated_verdict_and_opens_a_human_gate --exact` reads both `... ok` and `test result: ok. 2 passed; 0 failed`. The first test drives a `Toolchain` fake with a binary fixture (one LFS asset built by `BinaryAsset::from_pointer`, one capture, both refs, through `BinaryChangeSummary::new` in the test tree) and a recording assembler, with a `Text` control proving the assembler is reachable; the second pins the hand-off (kind `automated-verdict-refused`, the token `derive_reach`'s at reach 1, `GateAttachment::from_gate_opened` reading back exactly the serialisation, the fold opening one gate), the render side's agreement (`rk_store::render::render_binary_summary` renders the carried bytes, the cross-crate pin S8I-C5-STORE left owed), and the decorator's refusal with a `Text` control. One expectation of the first test was corrected before green: it assumed sorted JSON keys and the workspace's `serde_json` preserves insertion order, so it now sorts them. **Mutants** (`S8I-C7-REVIEW-INPUT_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored and verified, the unmutated pair green after): 5 of 5 killed, run on the final source — the table's *call the diff assembler for a `Binary` path* by the first test (`the diff assembler was called for a Binary classification`); *the other route's behaviour* in `assemble` (both tests) and in `screen` (the second, `the decorator refuses a Binary summary`); and D21-48's *open the gate through a gate step's free `kind` string with no attachment* in two forms by the second (`the gate's kind is the closed reason, not a gate step's free kind`; and, with the reason as the kind but no attachment, `the opened gate carries the attachment: Absent`). **Guards, read-only, cut from the files' bytes** (`S8I-C7-REVIEW-INPUT_guards.py`): (8)'s `BIN_RE` floor (`CS_CRATE=rk-ports`, `PRODUCERS=none`), `s8`'s `S8_DEF`..`S8_CTOR` block with both control loops, and Checkpoint 5's `CS_BAN` block each pass over the tree, and each FAILS over a scratch copy of `crates/` with a construction and an alias planted in `rk-cli/src/review_input.rs`. Measured on the way, not repaired (another stage's guard): `s8`'s `S8_BIN` fires on a return type written `-> &BinaryChangeSummary {`, because `S8_UNCON` admits only `->` directly before the name; the refusal therefore holds the `ChangeSummary` value (the `Binary` arm by construction) and returns `&ChangeSummary`. `rk-cli`'s suite under `nd.sh`: 331 passed, 0 failed (was 329) with the session's `ANTHROPIC_BASE_URL` unset for the run; with it set, 60 process-level tests refuse by the product's own ADR-0010 check, an environment fact and not this package. `cargo fmt` clean; clippy on `rk-cli --all-targets` finds nothing on a line this package wrote or touched; rustdoc shows nothing in `review_input.rs`; the temper ratchet reads only R1's 10 platform count overages, and `rk-cli`'s four counts equal the entry measurement at `42a923f`. New public API (H-16, listed for the operator): `review_input::{assemble, screen, DiffAssembler, SummaryDiff, ReviewInput, ReviewerInput, AutomatedVerdictRefused, ReviewInputError}`. Owed elsewhere, not built here: appending the `gate_opened` row in `redkiln run`'s loop (the decorator holds no journal or `RunState`; with Binary producers `none` no Phase-1 path reaches it), and AC-497's register note still reads that the `ac497_*` test *is not yet written*.
+*(dated 2026-10-14, s8i build, S8I-D1-PORTS; fix round D, the independent review's F2, F3, F4, F7 and F8)* **The `CS` = `rk-ports` rows' constructor check is rebuilt to read a diff the way git writes one (proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)* with ADR-0199; nothing flipped).** F2: S8I-C4-PORTS' `patches_as_text` matched only unquoted `diff --git a/<p> b/<p>`, `--- a/<p>` and `+++ b/<p>` lines, so a text patch of a `Binary` path git C-quotes (a `"`, a backslash, a control or a non-ASCII byte) or writes with a trailing TAB was admitted, a `GIT binary patch` in a rename section was admitted, and a hunk line reading `--- a/<p>` was refused. The check is now `crates/rk-ports/src/toolchain/binary/text_patch.rs`: each `diff --git` line's a-side and b-side are parsed with git's C-unquoting (octal escapes, `\"`, `\\`, `\t`, `\n` and the other one-letter escapes), either side naming an asset makes the section the asset's (renames and copies both ways), an unquoted `---`/`+++` name ends at its first TAB, and `---`/`+++` are headers only outside a hunk, whose extent is its header's counts (an unparseable count reads the following lines as headers, so a malformed hunk can only refuse more). F7: the `Binary` payload unit moved, unchanged in behaviour, to `crates/rk-ports/src/toolchain/binary.rs` and is re-exported from `toolchain` under the same paths (`toolchain.rs` 870 -> 526 lines; `binary.rs` 355, `text_patch.rs` 259). F8: `read_pointer` requires ASCII digits for `size` (`u64::from_str` took `+50724`). F3: the constructor test asserts the exact `TextPatchForBinaryPath` value where it asserted `is_err()`, and the admitted cases assert equality with `binary("")`'s value where they asserted `is_ok()` (each strictly stronger; no expectation loosened). F4: the ERR-14 deviation (`new` drops the other fields on refusal, `from_pointer` drops `kind`, C7's `screen` drops the value) is stated with its reason in ADR-0199's consequences: the refused input is invalid by the record and no caller has a retry that could use it. **Red first** (`S8I-D1-PORTS_cases.py`, each new case run alone, and with `--old` against C4's `patches_as_text`): seven cases added to `change_summary::binary_rejects_a_text_patch_for_a_binary_classified_path` (a quoted name holding a `"`; a non-ASCII name in octal escapes; a rename away from a quoted non-ASCII a-side with a `GIT binary patch` and no `---`/`+++`; a plain diff with git's TAB after a spaced name; a rename into the asset and a rename away from it, each with a `GIT binary patch`; a hunk of another path whose lines read `--- a/<asset>` and `+++ b/<asset>`, under explicit and bare counts) each FAILED for its stated reason (`left: Ok(...)` where the refusal was owed, and `left: Err(TextPatchForBinaryPath ...)` for the look-alike), and `change_summary::binary_field_assets`' new `size +50724` case FAILED with `left: Ok(BinaryAsset { ... size: 50724 ...` against `NotAnLfsPointer { defect: Size }`. **Green** (`nd.sh`): each case alone `ok. 1 passed`; `cargo test -p rk-ports` reads `it` 28 passed, doctests 2 passed (with `--all-features`, `it` 30 passed: the `conformance` feature's two); `rk-adapter-toolchain-rust --test it` 72 passed and `rk-adapter-toolchain-node --test it` 18 passed, 0 failed each; `ui::trybuild_pins_the_binary_change_summary_construction_rule` ok. **Mutants** (`S8I-D1-PORTS_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored and verified): 13 of 13 killed by their named test: the unquoting dropped, octal not decoded, the `\"` escape refused, a quoted a-side dropped, the TAB kept, the old both-sides-equal section rule, an unquoted b-side dropped, an unquoted a-side dropped, every section read as the asset's, hunks read as headers, a removed line ending the hunk, a bare count read as 0, and a signed `size` read. **Guards after the move, read-only, cut from the files' bytes** (`S8I-D1-PORTS_run_guards.py`): Checkpoint 8a guard (6)'s construction rule reads `RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1` over `crates/rk-ports/src` (its `find` reaches the new file) and FAILS over a scratch copy with a `pub` field planted in `toolchain/binary.rs`; Checkpoint 5's construction-rule pin, `s8`'s `S8_DEF`..`S8_CTOR` block and (8)'s `BIN_RE` floor pass, and the floor fails on a planted construction; `pub enum ChangeSummary {` stays in `toolchain.rs` (the `nenum` lines read 1). `cargo fmt` clean; clippy on `rk-ports --all-targets --all-features` and rustdoc show no finding in `binary.rs`, `text_patch.rs` or `change_summary.rs`; the temper ratchet reads only R1's 10 platform count overages (`rk-cli`, `rk-containment`), none in `rk-ports`. No public API changed: the re-exports keep every path.
+*(dated 2026-10-14, s8i build, S8I-D2-WIRE-GATE; fix round D, the independent review's F1, F5 and F8's second half; operator ruling R7)* **The `Binary` route is wired on `redkiln run`'s production path (ADR-0199 decision 3, proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*; nothing flipped).** **The seam, measured first.** `redkiln run`'s kernel reads a summary only at a `tool` step naming `toolchain:change_summary` (`rk-kernel`'s `runtime/step.rs`, `ToolCall::Port(PortMethod::SummariseChanges)`, which serialises the value without naming the type); the eleven shipped catalog activities that name that step are all `implement`-stage (among them `change-summary.toml` and `change-summary-ue.toml`), and the review stage's reviewer receives the emitted artifact. The kernel is handed the stage's toolchain in `Ports`, inside `rk-cli`'s `resume_and_read` (`run_lane` -> `run_with_advance` -> `resume_and_read` -> `replay::resume_routed`), so the hook goes there and the kernel names no type. C7's hook, `ChecklistBridge::change_summary` returning `review_input::screen(..)`, refused a `Binary` value as `StepError::Unsupported` and dropped it: no gate could open (F1). **The wiring.** `review_input::route(Arc<dyn Toolchain>) -> (Arc<dyn Toolchain>, Refusals)` decorates the stage's toolchain: its `change_summary` calls `review_input::assemble(inner, range, bound, &SummaryDiff)`; `ReviewInput::Reviewer` hands the kernel the typed summary unchanged; `ReviewInput::HumanGate` keeps the `AutomatedVerdictRefused` in `Refusals` (an `Arc<OnceLock<..>>`, set once, read after the kernel returns) and refuses the step to the kernel by name, so the walk stops and nothing is dispatched. `resume_and_read` wraps `ports.toolchain` in it before `resume_routed` (taking a sibling of the stage's boundary first, as the refused-landing and verify-pass gates do), and when `Refusals::first()` holds a refusal, ~~whatever `resume` returned,~~ *(dated 2026-10-14, s8i build, S8I-E1-RUN-OUTCOME: only when `resume`'s outcome is that refusal; see the E1 note below)* `open_review_gate` folds the journal, calls `AutomatedVerdictRefused::open_gate` with `FsmContext::supplied(item, tree_hash, now + gate_deadline_secs, None)`, and appends the row through `gate_rows_through` with `Opens::Landed` and the opening `(stage, run_id)` (bound: a tier-1 act; unbound: appended), then exits `0` with the gate's token on stdout. `screen` is removed and `ChecklistBridge::change_summary` delegates, because a refusal there would pre-empt the gate. Production callers now (grep over `crates/rk-cli/src`, non-comment lines): ~~`review_input.rs:304` `match assemble(self.inner.as_ref(), range, bound, &SummaryDiff)`~~ *(dated 2026-10-14, s8i build, S8I-E1-RUN-OUTCOME: `Routed::change_summary` now matches the inner summary, F4)*, `verbs/run.rs:2856` `crate::review_input::route(Arc::clone(&ports.toolchain))`, `verbs/run.rs:3740` `refused.open_gate(&state, &ctx)`. `crates/rk-kernel/src` names `ChangeSummary` on exactly two non-comment lines, the two exempt literals (`lattice.rs:2036`, `memo.rs:908`). **Red first:** the new test `review_input::binary_item_on_the_run_path_opens_one_human_gate_and_dispatches_no_reviewer` (a `Binary` fake toolchain behind `verbs::run::run_with_advance`, `pack-min` with `emit-report`'s agent step preceded by a `toolchain:change_summary` step, the registry's verbatim `change_summary` row, item `story-1`) failed for its stated reason, `a Binary item's stage dispatched 1 time(s): no automated reviewer may run` (left 1, right 0). Two earlier runs failed on the fixture and not on the reason: the shipped registry's `checklist.closure` source is absent from a temp repository, and `bug-1`'s `has_repro` opens the `TestReport` unsatisfiable gate before the activity. **Green** (`nd.sh`, `ANTHROPIC_BASE_URL` unset): `cargo test -p rk-cli --test it -- review_input::` reads all three `... ok`, `test result: ok. 3 passed; 0 failed`. C7's second test's last block asserted that `verbs::run::bridged` refuses a `Binary` value; that behaviour moved to the hook, so the block now asserts the same of `review_input::route`, plus that the hook keeps the refusal with the typed summary and that a `Text` control refuses nothing (a test edit, listed for the operator under H-16; no assertion was weakened). **Mutants** (`S8I-D2-WIRE-GATE_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored and verified): 4 of 4 killed. M1, C7's screen-refusal path (refuse the value, keep nothing): killed by the new test (`exactly one gate opens on the run path`, left 0) and C7's second (`the hook keeps the refusal`, left None). M2, the run path never opens the kept refusal: killed by the new test (left 0). M3, the reviewer route's behaviour (hand the kernel the `Binary` value): killed by both (`dispatched 1 time(s)`; `the decorator refuses a Binary summary`). M4, the row's attachment member dropped: killed by `gate_request::the_attachment_is_carried_byte_for_byte_and_never_parsed`. **F5.** `GateRequest::open` builds the `gate_opened` row in one `json!` (the producer's five members, `attachment` and `attachment_digest`); the `if let Some(payload) = event.payload.as_object_mut()` branch, whose `None` arm sent the row with no attachment, is gone. `cargo test -p rk-kernel --test it -- gate_request::` reads `test result: ok. 3 passed; 0 failed`. **F8 (second half).** The `text_summary` fixture is re-indented and its diff written with `concat!`. **Records.** AC-497's register note gains an inline dated insertion naming the written `ac497_*` test; ADR-0199 (proposed) gains two dated insertions, the seam's name (decision 3's *What it means*) and the ERR-14 bullet's `screen` clause struck (the hook keeps the value, so it is no longer a deviation). **Gate:** `cargo fmt --all -- --check` clean; clippy on `rk-cli` and `rk-kernel`, all targets, finds nothing on a line this package wrote; rustdoc (`--document-private-items`) shows nothing in `review_input.rs` or the new `run.rs` and `gate.rs` items; no print macro was added (the two operator lines go through `writeln!` on a locked handle, a failed write turning the exit to `3`). Suites (`nd.sh`): `rk-cli` 332 passed, 0 failed (lib 0, bin 0, `it` 332; it was 331) with `ANTHROPIC_BASE_URL` unset; `rk-kernel` lib 12 passed, `it` 419 passed, 1 failed, 5 ignored, the one failure `ui::trybuild_pins_the_reason_each_kernel_fixture_fails` (`rust-src`, operator ruling R6). New public API (H-16, listed for the operator): `review_input::{route, Refusals, Refusals::first, ReviewerInput::into_summary}`; `review_input::screen` removed. **Not verified, owed:** `Startup` has no toolchain seam, so the test drives `run_with_advance` unbound and the bound arm (a tier-1 `Gate:` act through the sibling boundary) is exercised by no test; ~~no pack declares a `[[gate_expiry]]` row for the class `automated-verdict-refused`, and what `run`'s expiry pass and `answer` do with that gate was not measured;~~ *(dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY: both packs declare it `fail` and a lapsed gate is measured to expire with `fail`; what an ANSWERED gate does is owed, see the E2 note below)*; with Binary producers `none` (ADR-0199 decision 4) no Phase-1 adapter reaches the route.
+
+
+*(dated 2026-10-14, s8i build, S8I-E1-RUN-OUTCOME; fix round E, the second independent review's F1 (blocker), F3, F4 and F8 for `rk-cli`; proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)* with ADR-0199, nothing flipped)* **`resume`'s outcome is read before the gate opens, and the bound gate path is tested.** **F1.** D2's `resume_and_read` bound `resumed` and, when `Refusals::first()` held a refusal, returned `open_review_gate(..)` without reading it, so an `Ok` run (its `write_run`, `*advanced`, review pass) or a store, envelope or tier-1 failure was dropped. The outcome is now read by `crates/rk-cli/src/verbs/run/kept_refusal.rs` (private): `next(item, resumed, &refusals, err) -> Next::{Gate(&AutomatedVerdictRefused), Map(Result<RecordedRun, ReplayError>), Exit(Exit)}`. It hands out the refusal only when the outcome is its own, `Err(NotCommitted { class: Some(c), .. })` or `Err(StepFailedAfterCommit { class: c, .. })` with `review_input::refused_the_step(c)` (pub(crate): exactly the `Unsupported` capability `Routed` hands the kernel, naming `automated-verdict-refused`). Any other outcome while a refusal is kept (a success, another class, `NotCommitted` with no class, any other `ReplayError`) is reported through `told` on stderr as one line naming the item, the reason and the outcome, and handed back whole to the existing mapping, so no gate opens over an unexplained outcome; a report that cannot be written is `Exit::ConfigError`. The call site matches `Next` and has no other route to the refusal. **Red first:** the five `verbs::run::kept_refusal::tests` failed to compile against the absent API (`error[E0432]: unresolved imports super::Next, super::next`), then against a stub with D2's behaviour (gate whenever a refusal is kept) three FAILED for their stated reasons: `an_unrelated_failure_with_a_kept_refusal_is_reported_and_handed_back_not_gated` (`an unrelated failure was not handed back for its own mapping: StoreRefused {..}`), `a_success_with_a_kept_refusal_is_reported_and_handed_back_not_dropped` (`a success with a kept refusal was not handed back`), `an_unwritable_report_exits_config_error` (`..: Gate(AutomatedVerdictRefused {..})`). **Green:** `cargo test -p rk-cli --lib -- kept_refusal` reads `ok. 5 passed; 0 failed`. They are unit tests beside the code (the crate charter's test strategy) because the two unexplained branches are unreachable from `run_with_advance` at HEAD [measured: after a refused tool step `replay::dispatch_through` returns `NotCommitted`/`StepFailedAfterCommit` straight from the walk's report, with no retry and no later store write], and no new `pub` item was added. **F3.** `it` gains `review_input::the_bound_review_gate_is_a_tier_one_act_through_the_stages_sibling_boundary` (a live `Boundary` over a real run tree from `rk_git::worktree::enter` and the repository's real store, ownership read back from the `worktree_assigned` row, `take_baseline` as `run_lane` does; asserts exit `0`, no dispatch, one `automated-verdict-refused` row, the run ref's tip moved and its `Gate:` trailer naming the kind, `opened` and the token, and the row anchored to that commit) and `review_input::a_refusal_after_a_committed_agent_step_opens_one_human_gate` (agent step then `change_summary`: the `StepFailedAfterCommit` shape opens exactly one gate). Both green at their writing (pins; the bound path already worked), each shown to fail by a mutant. **F4.** `Routed::change_summary` matches `self.inner.change_summary(..)?` directly (`Text` passes through; `Binary(b)` -> `refuse(b)`, whose error is now the `serde_json::Error` alone), so no diff is cloned and discarded; behaviour unchanged (C7's test pins it). **F8.** Dated history and struck text removed from this change's `rk-cli` lines (`review_input.rs`'s module doc and the struck `screen` comment, `run.rs`'s `ReviewGateAt`/`told`/`open_review_gate` docs, the hook comment in `resume_and_read`, `ChecklistBridge`'s doc and its `change_summary` comment, `lib.rs`'s `review_input` line, and the `it` module's doc and C7 test comment); the history stays here. **Mutants** (`S8I-E1-RUN-OUTCOME_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored and verified; each run asserts lib 5 and `it` `review_input::` 5 tests): 8 of 9 killed. M1 the own outcome never gates (lib own-outcome test; `it` run-path, after-commit and bound tests); M2 `StepFailedAfterCommit` not accepted (lib own-outcome; `it` after-commit); M3 an unrelated `Err` gates (lib unrelated); M4 a success gates (lib success, unwritable); M5 the report dropped (lib unrelated, success, unwritable); M6 any `Unsupported` taken for the refusal (lib unrelated); M7 the review gate's rows unbound (`it` bound); M8 `Text` refused by the route (`it` C7). **Survivor, unobservable:** M9, the call site's `Next::Exit(exit)` arm returning `Success`: `Next::Exit` arises only when stderr refuses the report, on a branch no in-process seam reaches at HEAD (above); the arm's value is `next`'s, which `an_unwritable_report_exits_config_error` pins. **Gate:** `cargo fmt --all -- --check` clean; clippy `-p rk-cli --all-targets` shows no finding on a line this package wrote (two `redundant_clone`s it found in the new tests were removed); `cargo doc -p rk-cli --no-deps --document-private-items` shows nothing in the new items. Suite (`nd.sh`, `ANTHROPIC_BASE_URL` unset): `cargo test -p rk-cli` reads lib 5 passed, bin 0, `it` 334 passed (it was 332), 0 failed.
+
+*(dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; fix round E, the second independent review's F2 and F9; operator ruling R9; proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)* with ADR-0199, nothing flipped)* **A lapsed `automated-verdict-refused` gate expires with `fail`, and the gate request's row is pinned to the producer's.** **F2 / R9.** Before this package no `[[gate_expiry]]` row named the class, so `run::expiry_pass` (`run` and `answer`) refused every invocation after the gate lapsed with `Exit::ConfigError` (AC-260 forbids a default). R9's row alone would not load: `run::lint_gate_expiry` (ADR-0198 decision 7) refuses a row whose class is not a catalog question, `unknown_facet:<registered facet>`, `escalation` or a kernel-minted kind. The kind is kernel-minted (ADR-0199 decision 3; ADR-0198 decision 6 already provides that a later minted class *"bring[s] [its] rows in the change that mints [it]"*), so the change follows `s8h` §8h.10's mechanism for one: `crates/rk-kernel/src/workflow/gate.rs` spells the kind once, as the private `&str` constant `AUTOMATED_VERDICT_REFUSED_KIND` that `GateReason::as_str` returns (no new public item); `run::MINTED_GATE_KINDS` (`crates/rk-cli/src/verbs/run.rs`) gains `GateReason::AutomatedVerdictRefused.as_str()`, so the lint requires the row in every pack and admits it; both shipped packs gain one row, `action = "fail"`, under a one-line kind comment after `verify.ac-discriminates`, in their existing form, and a dated header line (`bug-standard` ~~54~~ 55 rows, `story` ~~56~~ 57); `pack-min`'s eight packs gain the same row under a dated comment, as they gained the three minted kinds at `s8h`. **Pins on the pack files, each re-derived:** (1) `cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class` (the minted set gains the kind; its PREMISE counts move 54 / 56 -> 55 / 57 by dated doc line; a test-expectation edit under R9, listed for the operator); (2) Checkpoint 8h's `MINTED_CLASSES` literal, by dated edit with the old literal struck in a comment (its (8) block derives `expect_rows` as 51 / 53 + the minted count, so nothing else moves); (3) `s8h` §8h.10's count sentence (*"57 and 59"* struck, 58 and 60 after `s8j`'s three) and a dated table row for the class; (4) the shipped packs' own header comments. No pack digest, golden, census or CI line pins the pack bytes [measured: grep over `runbook/`, `.github/` and `crates/*/tests` for the pack paths beside sha256/digest/census]. Checkpoint 8h (8)'s parser block, extracted from the stage file and run READ-ONLY with its literal inputs (`s8i_E2_cp8h8.py`), prints `SHIPPED_DATA_OK` over the main checkout; its controls: `story`'s new row dropped in a scratch copy -> `BAD: story gate rows: 56 rows, missing ['automated-verdict-refused']`; the old three-class literal over the current packs -> `BAD: ... extra ['automated-verdict-refused']` in both; the kind's `&str` spellings removed from the copy's `crates/*/src` -> `BAD: PREMISE: minted gate kind 'automated-verdict-refused' is spelt by no &str constant`. That last control is not discriminating for the kernel constant alone: `crates/rk-cli/src/verbs/run/kept_refusal.rs`'s `#[cfg(test)]` module also declares `const REASON: &str = "automated-verdict-refused";`, which the block's reader (it skips only `//` lines) counts, so removing the kernel constant alone still prints `SHIPPED_DATA_OK` (recorded, not changed: the reader is `s8h`'s). **Red first** (`nd.sh`, `ANTHROPIC_BASE_URL` unset, `TMP` under `sp/s8i`): `cards::a_lapsed_automated_verdict_refused_gate_expires_with_fail_under_both_shipped_packs` (the gate opened through `GateRequest`, folded, `expiry_pass` one second past the deadline over each shipped pack's `PackExtras`) failed `left: Err(ConfigError)`, `right: Ok([(GateExpired, {"action": "fail", ..})])`; `cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class` failed `bug-standard: 54 rows; missing ["automated-verdict-refused"]`; after the lint change alone, the new `cards::shipped_packs_pass_the_load_time_gate_expiry_lint` failed `left: [Unmatched { class: "automated-verdict-refused" }]`, and the full `rk-cli` `it` suite failed 142 tests on `pack-min`'s packs (`the reachable gate class `automated-verdict-refused` has no `[[gate_expiry]]` row`). **Green:** `cards::` 7 passed; `cargo test -p rk-cli` lib 5, bin 0, `it` 336 passed (it was 334), 0 failed. **F9.** `rk-kernel`'s `gate_request::the_request_row_is_the_producer_row_plus_the_two_attachment_members` asserts, at reach 1 and reach 2, that `GateRequest::open`'s payload with `attachment` and `attachment_digest` removed equals `runtime::gate_opened_event(record).payload`, and that the kinds match. It passed when written (a pin over code that already agreed); its red evidence is the mutants. `gate_request::` 4 passed. **Mutants** (`s8i_E2_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored and verified): 5 of 5 killed. E2-M1 an extra member in `open`'s row and E2-M2 an extra member in `gate_opened_event`'s row: each killed by the F9 test alone (3 passed, 1 failed). E2-M3 `MINTED_GATE_KINDS` without the kind (the slot re-spelt `AC_GATE_KIND`): killed by the lint test. E2-M4 `bug-standard`'s row dropped: killed by the expiry, row-set and lint tests. E2-M5 `story`'s row drafted `escalate`: killed by the expiry and row-set tests. **Records.** ADR-0199 (stays `proposed`) gains a dated Consequences bullet: the gate's expiry is `fail`, and what an ANSWERED gate does (today the next run re-walks the step, re-reads the same `Binary` summary and re-refuses, per R9) is owed to the first `Binary` producer, ADR-0008's Phase-2 Unreal adapter; ledger issue owed (draft at sp/s8i: `issue-draft-answered-gate.md`, fingerprint `fp:4553ec6a10c4eb15`, ~~not filed~~ *(dated 2026-10-14, s8i build: filed on the operator's go-ahead as Wet-Ink-Corporation/redkiln-rs#80, labels `source/agent`, `needs/triage`, `area/cli`, `area/kernel`, `area/records`, `area/pack`)*). The re-walk claim is R9's statement and was not measured here. **Gate:** `cargo fmt --all -- --check` clean; `cargo clippy -p rk-kernel -p rk-cli --all-targets` shows no finding on a line this package wrote. Suites: `rk-kernel` lib 12 passed, `it` 420 passed, 1 failed, 5 ignored (the one failure `ui::trybuild_pins_the_reason_each_kernel_fixture_fails`, `rust-src`, R6).
+
+*(dated 2026-10-14, s8i build, S8I-E3-PORTS-POLISH; fix round E, the second independent review's F5, F6, F7 and F8 for `rk-ports`; proposed *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)* with ADR-0199, nothing flipped)* **The `CS` = `rk-ports` rows' constructor check reads the diff once, refuses a quoted name it cannot read, and states its producer contract.** F7: `crates/rk-ports/src/toolchain/binary/text_patch.rs`'s per-path `patches_as_text(diff, path)`, which `BinaryChangeSummary::new` called once per asset (re-reading the diff each time), is replaced by `TextPatched::read(diff)`, one pass into the set of text-patched paths (a `BTreeSet`: `clippy.toml` disallows `HashSet`), and `new` asks `covers(path)` per asset; the state machine is the same (a section's names count once it holds a hunk or a `GIT binary patch`; `---`/`+++` are headers only outside a hunk), and the refusal still names the first asset in the producer's order. F6: a quoted name that cannot be read (its quote never closes, or it holds an escape git does not write), in a `---`/`+++` header outside a hunk or on either side of a `diff --git` line whose section patches as text, now counts as naming every asset (it was `None`, and the patch was admitted); `BinaryChangeSummary::new`'s rustdoc states the producer contract: git's default `a/` and `b/` prefixes, each stripped once, and no `--no-prefix`, `--src-prefix`/`--dst-prefix`, `diff.noprefix` or `diff.mnemonicPrefix`. F5: `change_summary::binary_field_assets` asserts each refused pointer's whole error with its `PointerDefect` (`NoVersionLine`, `Size`, `Oid`, `TooLong`) where it matched `NotAnLfsPointer { .. }`, and gains a `NotUtf8` case and an oid-less case (each strictly stronger; no expectation loosened). F8: the dated history lines in this change's `rk-ports` src are removed (`binary.rs`' moved-from note, its struck sealed-slot amendment on `BinaryChangeSummary`, the amendment on `new`'s rustdoc, and `text_patch.rs`' added-by note); the history stays in S8I-D1-PORTS' note above and in ADR-0199. The test file's own supersession-by-name comments were left, because they record the supersession the runbook asks the commit to carry. **Red first:** `change_summary::binary_refuses_a_patch_whose_quoted_name_it_cannot_read` FAILED against the D-round src (`S8I-E3-PORTS-POLISH_oldsrc.py`, both files swapped in and restored, sha256 verified) at its first case with `left: Ok(BinaryChangeSummary { ..`, `right: Err(TextPatchForBinaryPath { .. })`; the new `change_summary::binary_reads_names_under_gits_default_prefixes` and `change_summary::binary_checks_every_asset_against_the_diff` and F5's tighter asserts pin behaviour that already held (they passed against the D-round src), so their red evidence is the mutants. **Green** (`nd.sh`): `cargo test -p rk-ports` reads `it` 31 passed (28 before), doctests 2; with `--all-features` `it` 33; `rk-adapter-toolchain-rust --test it` 72 and `rk-adapter-toolchain-node --test it` 18 passed, 0 failed; `rk-cli --test it -- review_input::` 5 and `rk-store --test it -- render::` 28 passed. **Mutants** (`S8I-E3-PORTS-POLISH_mutants.py`, anchor once, tmp + `os.replace`, sha256 restored and verified, each run `--exact` and asserted to match one test): 13 of 13 killed: the unreadable flag dropped for a header, for a quoted a-side, for a section side, in `absorb` and in `covers`; an unknown escape read literally; a header prefix stripped twice; the refusal naming the last patched asset; sections accumulating; and four `PointerDefect` swaps. Two survived a first pass (the prefix-twice mutant, saved by the `+++` line, and no-oid-as-`Size`, which no case reached) and were killed by adding a deletion-only and an addition-only case and the oid-less case. **Guards, read-only:** Checkpoint 8a guard (6)'s construction-rule reader, cut from the stage file's bytes (`S8I-E3-PORTS-POLISH_guards.py`), reads `RULE decls=1 pubfields=0 derives=ok aliases=0 traits=0 inherent=1 ctors=new literals=1` over `crates/rk-ports/src` and `pubfields=1` over a scratch copy with a `pub` field planted. `cargo fmt --all -- --check` clean; clippy on `rk-ports --all-targets --all-features` and rustdoc (with and without `--document-private-items`) show no finding in `binary.rs`, `text_patch.rs` or `change_summary.rs`; the temper ratchet reads only R1's 10 platform count overages (`rk-cli`, `rk-containment`), none in `rk-ports`. No public API changed. Sizes: `binary.rs` 353 lines, `text_patch.rs` 311, `change_summary.rs` 701.
+
+*(dated 2026-10-14, s8i build, orchestrator; the third independent review (fingerprint `66f0ce45ef98344a`): no blocker or major; its F1-F3 fixed here, nothing flipped)* **F1.** `kept_refusal.rs`'s `#[cfg(test)]` `const REASON` now reads `GateReason::AutomatedVerdictRefused.as_str()`, so `crates/*/src` spells `"automated-verdict-refused"` on exactly one line, the kernel's `AUTOMATED_VERDICT_REFUSED_KIND` (`gate.rs:164`) [measured: grep over `crates/*/src`], and Checkpoint 8h (8)'s constant reader goes red if that constant is removed (the E2 note's non-discriminating control is closed). **F2.** `TextPatched::read` marks the diff unreadable when a hunk ends, at a non-hunk line or at end of input, before its counts are spent, so a hunk whose counts overstate its length (and so swallow the next file's `---`/`+++` headers as hunk lines) refuses, as the module's "refuse more, never less" sentence now says. Red first: the new `change_summary::binary_refuses_a_hunk_whose_counts_overstate_its_length` failed (`left: Ok(BinaryChangeSummary { .. })`, `right: Err(TextPatchForBinaryPath { .. })`); green: `rk-ports --test it` 32 passed, toolchain adapters 72 and 18. Mutants (`sp/s8i/f2-mutants.py`): 2 of 2 killed (the mid-loop and end-of-input branches), sha256 restored. **F3.** The two history comments that described removed code (`gate.rs`'s F5 note, `toolchain.rs`'s quote of the sealed-slot rustdoc) are cut to their present-tense contract; the repository's dated-note convention elsewhere is kept. The reviewer's nits N1-N3 are not taken. The temper gate stays red only on R1's Windows platform count overages; under the rubric that keeps the verdict `changes-requested`, which the operator ruled environmental (R1). **Operator approvals recorded in chat, 2026-10-14 (H-12/H-16):** user packs must carry the `automated-verdict-refused` `[[gate_expiry]]` row (the minted-kind growth), `cards.rs`' premise counts 54/56 -> 55/57, the eight `pack-min` fixture rows, and the two `fail` rows (AC-276; the operator's signature line is theirs to write); the answered-gate ledger issue filed as Wet-Ink-Corporation/redkiln-rs#80.
 
 **Who assembles the review input, and where the `Binary` route lives.** No stage owned either at `fc80687`:
 - `rk-cli`'s `review_pass` is ADR-0162's re-execution pass (`crates/rk-cli/src/review_pass.rs`, called from
@@ -7219,6 +7258,18 @@ its stop.*
   loss-marker half. And the tripwire `ac475_zero_change_summary_values_in_output` stands until a lift is built.
   **If *n* = 0**, the note says the corpus holds no diff-prose section to lift, and asserts no rate. F40's index
   line is the precedent: *"recall has no denominator"*.
+  *(dated 2026-10-14, s8i build, S8I-C1-F43)* **Measured: *n* = 0, *k* = 0, `ac475_lift_share=0/0`.** The corpus is
+  `CORPUS_SHA` `61f590e`'s blob `predecessor-47faec9f.bundle`, read through the object store, fetched into a scratch
+  bare repository, and `47faec9f`'s `.bklg/` and `.redkiln/` archived out (1,649 files). *n* is read by a scratch
+  harness calling `redkiln_migrate::lift::run` (an example in a private worktree, run under `nd.sh`; no
+  `target/debug/redkiln*` binary executes): 0 diff-prose markers, against **1** on the `legacy-mini` fixture (the
+  control). The v0 migrator fails 1,161 of the 1,649 files, and a byte census over all 1,649 finds 0 fenced
+  `` ```diff `` blocks, so no failed file hides one. *k* is git's own patch parser over each marker's fenced body
+  (`git apply --numstat`, nothing applied; a real unified diff accepted and diff-shaped prose refused as controls).
+  The commands are in F43's `### AC-475's lift share`; the scripts are `S8I-C1-F43_ac475_share.rs` and
+  `S8I-C1-F43_ac475_k.py` under `D:/repos/redkiln-sev/afk-tools/sp/s8i/c1f43/`. So the **If *n* = 0** branch above
+  applies: the register's replacement states `lift share 0/0` and asserts no rate (the register note is a later
+  package's, by dated amendment).
 - **AC-049** — not moved: its own note scopes S-BIN to *"the `ChangeSummary` type design only (ADR-0093 decision 4)"*.
 
 Each of the four criteria's blocks (AC-154, AC-356, AC-497, AC-475) gains a note in exactly this form, which
@@ -7251,6 +7302,17 @@ design as final"*, whose next sentence names *"S-BIN, S-H1c and P8's unrun arms"
 leaves that gate here. So the same commit gives the line carrying `S-BIN, S-H1c and P8` an inline dated note,
 `[S-BIN reported (s8i) <date>: S-H1c and P8's unrun arms still gate the label]`, and never rewrites it. Guard (9)
 asserts the note.
+*(dated 2026-10-14, s8i build, S8I-C3-NOTES)* **The statuses are written (proposed *(dated 2026-10-15, `s8i` close, D21-154: F43 and ADR-0199 accepted)* with F43 and ADR-0199; nothing flipped).** Floors re-measured at `42a923f` before the edit: `grep -E 'S-BIN' <file> | grep -cE "$STALE"` reads **21** for the design and **19** for the register (the recorded floors; unmoved), `grep -c 'only item 2 is diff-free'` reads **2**, and `s8-exit-criterion.md` carries the final-label bullet at line 324. Every edit is an insertion inside an existing line (no line added or removed, so the line numbers code comments cite do not move; a script check strips each note and gets the original line back byte for byte, and `difflib` over `HEAD`'s blobs finds insert opcodes only): the design's 21 stale lines and the register's 19 each carry `[S-BIN reported (s8i) 2026-10-14: …]`; both 'four of five' lines carry `[Corrected 2026-10-14 (s8i): under the registered scoping every item's text_diff is empty — s8i §8i.0 item 4]`, §10's adding seed 5's replacement R = `6a101bdcd` (D21-142); AC-154 (stays PROVISIONAL: 0199 proposed, `render::ac154_*` not yet green), AC-356 (THEN amended to the four fields and the human gate; evidence standard ADR-0199 decision 5's), AC-497 (recipient amended to the gate node; its `ac497_*` wording test owed by the Rust work) and AC-475 (replaced by a lift criterion at `lift share 0/0`, no rate asserted, E13 and the tripwire kept) each end with `*Amended 2026-10-14 (s8i, S-BIN reported — F43):*`; AC-049 is not moved; `s8`'s line 324 carries `[S-BIN reported (s8i) 2026-10-14: S-H1c and P8's unrun arms still gate the label]`. Guard (9), cut from this file's bytes and run read-only with `SBIN_F=F43` and `SBIN_SHARE=0/0` (from F43's pins block), passes; `nnote` reads 21 (design) and 19 (register), and six mutation controls (an AC note naming another F, the share removed, a correction removed, s8's tag removed, one design and one register tag removed) each fail it with the guard's own message. Scripts: `S8I-C3-NOTES_apply.py`, `S8I-C3-NOTES_guard9.py`, `S8I-C3-NOTES_inserts_only.py` under `D:/repos/redkiln-sev/afk-tools/sp/s8i/c3notes/`.
+*(dated 2026-10-14, s8i build, S8I-D3-RECORDS; fix round D)* **The other two lines, measured and closed (proposed *(dated 2026-10-15, `s8i` close, D21-154: F43 and ADR-0199 accepted)* with F43 and ADR-0199; nothing flipped).**
+- **Checkpoint 5's line: `s8a`'s record did not keep the condition, so nothing lapses there.** ADR-0165 decision 9 supersedes in part ADR-0099 clause 5's sentence and its forbids bullet *"Forbids `ChangeSummary` appearing anywhere in `crates/` but its `rk-ports` newtype until S-BIN reports."*, and its decision 2 replaces them with no time condition. `s5`'s `CS_BAN` and rk-kernel lines carry no `until S-BIN reports` [measured: the phrase's only hit in `s5` is S8I-C4-PORTS's in-block note, which already states this reading]. This package adds two dated insertions to `s5`: a comment block above `CS_BAN` stating the reading, and an inline `[S-BIN reported (s8i) 2026-10-14: …]` after the prose phrase *"and a sealed `Binary` slot that S-BIN fills at `s8i`"*. Run read-only from `s5`'s bytes (`CS_BAN` through the `nenum` floor, plus the construction-rule pin's file check) over the working tree after D1 and D2, it passes. Over a scratch copy of `crates/`, an alias planted in `rk-store/src/render/binary.rs`, a renaming import in `rk-cli/src/review_input.rs` and a type use in `rk-kernel/src/workflow/gate.rs` each fail it, and a naming site that defines nothing is admitted.
+- **`s8`'s standing prohibition: written by S8I-C4-PORTS, not by S8I-C3-NOTES.** The bullet carries C4's inline `*(Amended 2026-10-14, s8i §8i.8, ADR-0199 decision 2, proposed; …)*` to the record's construction rule. The guard carries `S8_CTOR` and the construction rule's six controls, with the superseded `s8_cs` struck beside it. Both match this section's instruction. This package fixed the guard's false positive that S8I-C7-REVIEW-INPUT measured: `S8_UNCON` admitted a return type only with the name straight after `->`, so `-> &BinaryChangeSummary {` fired `S8_BIN` as a construction. An appended `S8_UNCON` expression blanks the name after `->`, `&`, an optional lifetime and an optional `mut`; the original line stands. Four controls follow the construction rule's loop. Red: those controls over the old guard fail with *"FAIL: CONTROL must be ADMITTED and fired -- a reference return type reads as a construction: …-> &BinaryChangeSummary {"*. Green: the amended guard, cut from `s8`'s bytes, passes over the tree. Over the scratch copy, a planted reference return is admitted, while a planted reference return with a construction in its body and a planted recorded constructor in `src` each fail. Five mutants of the expression (no lifetime arm, no `mut` arm, no path arm, the `->` dropped, the extension removed) each fail a control.
+- **Guards (8) and (9) re-run after D1 and D2, read-only, from this file's bytes.** (8) ran with its cargo selections stubbed (they run in the crates' suites): the closed-reason scan, the kernel type scan with its 17 controls, and the `BIN_RE` floor with its five controls pass over the tree. A planted `from_pointer` construction in `rk-cli/src` and a planted `ChangeSummary` type use in `rk-kernel/src` each fail it. (9) passes. It prints no pass line of its own; the driver's `REGION-9-END reached` follows its last line. It fails with *"FAIL: s8's final-label bullet carries no dated s8i note (§8i.8)"* when that note is removed from a worktree copy.
+- *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; s8i refuting round 21's blocker B1, its minor on `BIN_RE` and its tests-mutants finding; operator rulings R10 and R11; proposed *(dated 2026-10-15, `s8i` close, D21-154: F43 and ADR-0199 accepted)* with F43 and ADR-0199, nothing flipped)* **The bullet above held for the D1/D2 tree. It is stale for the tree after fix round E, and the two construction guards are amended.** Fix round E1 (S8I-E1-RUN-OUTCOME) added `crates/rk-cli/src/verbs/run/kept_refusal.rs`. Its `#[cfg(test)] mod tests` (lines 63-288) holds a fake whose `change_summary` calls `BinaryChangeSummary::new` at line 116. **Red, reproduced from the files' bytes before this edit** (`S8I-F1-GUARDS_run.py`, read-only, cargo stubbed): (8)'s floor fails with *"FAIL: a Binary construction on a code line, and the record names no Phase-1 producer:"* and `s8`'s guard fails with *"FAIL: a ChangeSummary definition, or a Binary payload constructed, outside rk-ports (ADR-0165):"*. Both name exactly `kept_refusal.rs:116`. **R10, option A, is built by inserted lines in both blocks. No existing line is rewritten.** Each guard locates every in-source test module by brace counting. A module is a line that is exactly `#[cfg(test)]` with `mod <name> {` on the next line, or both on one line. The count comes from a small lexer that runs from the top of the file and skips comments (nested ones included), strings that may span lines, raw strings and char literals. A module that never closes fails the guard. Over `crates/*/src` the lexer finds eight modules, and an independent reading (the attribute, then the first later `}` at the `mod`'s indent) gives the same eight ranges. `step5.rs:302`'s `#[cfg(test)]` is on a fn and opens nothing. (8)'s floor drops the grep lines inside a module, because the floor does not scan a crate's `tests/` either. `s8`'s guard blanks only the recorded constructor inside a module, as its `S8_CTOR` does under a test path, so a definition, an alias, a struct literal and any other associated function still fire there. `BIN_RE` is widened by an inserted line. It now catches the point-free `.map(BinaryChangeSummary::new)` and the qualified `<BinaryChangeSummary>::new(`, and each has a control. **Controls:** (8) has 9 test-module controls, 19 lexer confusers and 2 `BIN_RE` controls. `s8` has 8 test-module controls and the same 19 confusers. Among them: a production call in `src` fires; the same call inside a module is admitted; a call after the module closes fires; a `#[cfg(test)]` on a fn or an impl opens nothing. **Mutants** (`S8I-F1-GUARDS_mutants.py`, on scratch copies of the patched files, anchor once, the copies' sha256 unchanged): 34 of 34 make their guard fail. The 14 lexer mutants run in each guard: drop the whole file, accept any item after the attribute, no strings, no char literals, no `//` comments, unnested `/* */`, no raw strings, no escapes, no check that an attribute is outside a string or comment, close one level early, stay silent on an unclosed module, no one-line form, and string or comment state reset at each line. The other six are guard-specific: the skip removed (the tree's own line 116 fires, which is the red above), the superseded `BIN_RE`, `BIN_RE` without `>?`, `s8`'s skip removed, a module line dropped rather than blanked, and the blank applied outside modules. Each fails with its named control's FAIL line, except four that fail first on the tree's own line 116: "close one level early" and the skip removed, in each guard. **R11:** (8) now names the fifteen D/E tests with exact counts. They are four `rk-ports` `change_summary::` tests on either route, and on the human-gate route five `rk-cli` `it` tests (three `review_input::`, two `cards::`), one `rk-kernel` `gate_request::` test and five `rk-cli` lib tests (`verbs::run::kept_refusal::tests::`, through a new `rk_lib_named`). Measured against `42a923f`, the stage adds exactly 28 tests net, and the old selections named 13 of them. Two controls check that a selection naming one real test and one absent name fails, one under each function. Run for real under the wrapper, each stays silent as written, and each fires *"FAIL: rk_named passed a selection naming a test that does not exist"* (and its lib twin) against a mutant with its name and count checks removed (`S8I-F1-GUARDS_namedctl.py`). NDE (15, or 4 on the reviewer route) feeds (10)'s floor: 1404 + 6 + 4 + 3 + 15 = **1432**. **Green, from the files' bytes after this edit:** (8)'s whole region ran through `nd.sh` with its cargo selections live, and every control passed. The selections read `ok. 3 / 2 / 2 / 3 / 1 / 1 passed` (the old twelve), `4`, `5`, `1` and `5` (the fifteen), `1` and `1` (the two controls' real halves), and the per-field `4` = NFIELDS. `nd_check` was clean and `END-g8` was reached. `s8`'s guard passes with all its controls. **Measured, not repaired** (s8's own pattern, not this ruling's): `s8`'s `S8_BIN` also misses the point-free and qualified forms. Both synthetic lines read 0 matches. The record of that gap is owed to `s8`'s block, and (8)'s widened floor covers `crates/*/src` meanwhile. Scripts and outputs are under `D:/repos/redkiln-sev/afk-tools/sp/s8i/f1guards/`.
+- Every edit of this package is an insertion, except the two replacing edits inside the R3' draft (§8i.9 (4), as drafted). Scripts and outputs are under `D:/repos/redkiln-sev/afk-tools/sp/s8i/d3records/`.
+
+*(dated 2026-10-15, s8i build, S8I-F2-RECORDS; s8i refuting round 21's tests-mutants minor; assessed and recorded, nothing removed: the surface is the operator's approved one, and removing it is a human decision under H-16)* **`review_input::assemble` and `ReviewerInput::into_summary` have had no production caller since S8I-E1-RUN-OUTCOME's F4.** Measured on the tree, 2026-10-15 (grep over `crates/rk-cli/src`): `redkiln run`'s path is `review_input::route` (`verbs/run.rs`: `let (routed, refusals) = crate::review_input::route(Arc::clone(&ports.toolchain));`), and `Routed::change_summary` matches the inner summary itself, handing a `Text` summary through and calling the private `refuse` for a `Binary` one. Nothing in `crates/rk-cli/src` outside `review_input.rs` calls `assemble`, `DiffAssembler`, `SummaryDiff` or `ReviewInput`; `into_summary` is called nowhere, tests included, and its doc line *"what [`route`] hands the kernel for a `Text` item"* does not describe `route`, which never builds a `ReviewerInput`. **What still holds:** `assemble` and `route` share `refuse`, so the gate request a `Binary` summary yields (the closed reason, the opaque attachment, the typed summary's serialisation) comes from one function on both paths; the production behaviour is pinned by the `route` and run-path tests (`review_input::binary_item_refuses_an_automated_verdict_and_opens_a_human_gate`, `review_input::binary_item_on_the_run_path_opens_one_human_gate_and_dispatches_no_reviewer`, `review_input::a_refusal_after_a_committed_agent_step_opens_one_human_gate`, `review_input::the_bound_review_gate_is_a_tier_one_act_through_the_stages_sibling_boundary` and the five `verbs::run::kept_refusal::tests`), which Checkpoint 8i (8) names (S8I-F1-GUARDS). **What does not:** `review_input::ac497_binary_classification_assembles_no_diff_and_carries_the_typed_summary` and the §8i.8 table's mutant *"call the diff assembler for a `Binary` path"* exercise `assemble`, which is off the production path, and that mutant has no form against `route`, which takes no assembler. So AC-497's *"the diff assembler is not called"* is evidenced on the production path by the run-path test (one gate, no reviewer dispatched), not by the `ac497_*` unit test. **The options, the operator's (none taken here):** (a) keep the surface and read `assemble` as the review-input contract that `route` specialises (this note records it); (b) route `Routed::change_summary`'s `Text` arm back through `assemble`, so the `ac497_*` test covers the production path; (c) remove `assemble`, `DiffAssembler`, `SummaryDiff`, `ReviewInput` and `ReviewerInput::into_summary` and re-point the `ac497_*` test, a public-API removal and a test rewrite. AC-497's 2026-10-14 amendment carries a dated note saying the same.
+
+*(dated 2026-10-15, s8i build, orchestrator; the operator chose (b) of the assessment above)* **`route` goes through `assemble` again, without the copy.** `Routed::change_summary` now calls `review_input::assemble(inner, range, bound, &CarriedInSummary)`: a `Reviewer` input hands the kernel `ReviewerInput::into_summary()` (so `into_summary` has its production caller and its doc line is true), a `HumanGate` keeps the refusal and refuses the step by name, and `Toolchain`/`Diff` errors pass through, a `Serialise` error becoming `StepError::Transport { kind: Decode }` as before. `CarriedInSummary` is a private `DiffAssembler` that returns an empty `String` (no allocation): the kernel's walk carries the typed summary itself, whose `Text` arm already holds the diff, so round E's F4 (no discarded copy) holds. `review_input::ac497_binary_classification_assembles_no_diff_and_carries_the_typed_summary` therefore pins the function production runs. Mutant (`sp/s8i/rb-mutant.py`, sha256 restored): `assemble`'s `Binary` arm handing the summary to the reviewer is killed by `review_input::binary_item_on_the_run_path_opens_one_human_gate_and_dispatches_no_reviewer` (`left: 1` dispatch). Green: `cargo test -p rk-cli` (nd.sh, `ANTHROPIC_BASE_URL` unset) lib 5, `it` 336 passed, 0 failed; `cargo fmt --all -- --check` clean; clippy shows no finding in `review_input.rs`. No public item added or removed.
 
 ### 8i.9 Checkpoint 8i
 
@@ -7289,6 +7351,26 @@ asserts the note.
   - No dry run is in the set.
   - The caps held: at most 18 Opus dispatches and 3 haiku probes, and at most $90.00 over the records, the probes and
     the capture sessions. No cost is missing.
+    *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* ~~These caps do not yet count pass 1's discarded set ($16.074148 and six Opus; §8i.5's
+    D21153-8i-F note, *"Not this package's, for the operator"*). The fix is drafted as a proposed dated edit with its
+    controls (`D:/repos/redkiln-sev/afk-tools/sp/s8i/c8cp8i/S8I-C8-CP8I_gap4_proposed.py`) and is NOT applied: the
+    operator has not ruled on it (ruling R3, 2026-10-14). Until then (4) reads 10 Opus and $28.52 at `835b122`; with
+    it, 16 and $44.60.~~
+    *(dated 2026-10-14, s8i build, S8I-D3-RECORDS; operator ruling R3', 2026-10-14)* **Approved and applied: these caps
+    now count pass 1's discarded set.** The operator approved C8's draft on 2026-10-14 (ruling R3': apply it exactly as
+    drafted). Its six anchored edits are applied to the block below by the draft's own `apply` function (imported by
+    `S8I-D3-RECORDS_gap4_apply.py`; each anchor asserted once). (3) now requires the pins block to pin
+    `results/s-bin/superseded/pass1-d21153/s-bin.jsonl` at its registered sha256, and (4) fetches it and counts it
+    against both caps through one shared `capsum` snippet, with seven synthetic sets, and never scores it. The tags
+    inside the block still read *"PROPOSED under operator ruling R3, applied only if the operator agrees"*; this note
+    records that the condition is met. Re-run on the applied file (regions (2)-(4) and (9) cut from these bytes,
+    read-only, in a private worktree against C8's scratch corpus clone, with `audit.txt` modelled as C8's runs model it
+    and `SBIN_F=F43`): the real set passes and (4) reads **16 Opus and $44.60** at `835b122`; the same lines before the
+    edit read 10 and $28.52; a pins block without the discarded line, and one pinning it at a wrong sha256, each fail
+    with *"FAIL: the pins block does not pin pass 1's discarded set …"*. Two of the six edits replace a line rather than
+    insert, both as drafted: the cap lines (the draft keeps their old text in a `Was:` comment) and the probe call, which
+    gains a ninth argument. Scripts: `S8I-D3-RECORDS_gap4_apply.py` and `S8I-D3-RECORDS_gap4_controls.py` under
+    `D:/repos/redkiln-sev/afk-tools/sp/s8i/d3records/`.
   - The amendment was committed before the first record. METHOD-S.md has been append-only from the amendment's parent
     on, over the whole file.
   - ~~The captures are pinned for all five items, and the procedure log says "yes" for each.~~ *(dated 2026-10-06, s8i build, D21149-8i-A: D21-149
@@ -7303,17 +7385,21 @@ asserts the note.
   - The go-ahead lines are one per batch, in order against the records. The B1 line names Checkpoint 8h's recorded
     pass, the pinned dry run and the amendment (D21-43 N19, N20, N22).
   - BrittonGames' snapshots are unchanged from before B2 through every batch.
+  - *(dated 2026-10-14, s8i build, S8I-C8-CP8I; R11FIX-8i's owed (a))* The pinned commit's committed `results/s-bin/captures/` tree is
+    exactly the pinned capture set: every committed entry pinned, every pinned entry committed, none pinned twice
+    (`git ls-tree -r --name-only`, from the object store). An unpinned committed capture refuses. (3)'s `capdiff`, with
+    seven synthetic controls (the real shape passes in any order; six shapes refuse).
 - **Each pass's rule outcome is computed, not trusted.** The records, the pinned audit re-run over them and the pins
   agree. Every computed outcome is one of the six registered values (D21-48 X3 registered `undecided-partial`),
   and any other shape fails the block. Seven synthetic record sets run through the same computation first, and
   together they must reach all six values.
-- **The driver's ~~twenty-five~~ ~~thirty-three~~ thirty-four tests pass at the pinned corpus commit.** *(dated 2026-10-06, s8i build, D21149-8i-A: D21-151's named test is added, and D21-149's inverted capture test is renamed, as guard (6) selects and asserts; it read thirty-three)* *(dated 2026-10-03, s8i build, R6FIX-8i: §8i.3's 25 and R5FIX-8i's 8 (D21-144), as guard (6) selects and asserts; it read twenty-five)* They are rebuilt from the object store, not
+- **The driver's ~~twenty-five~~ ~~thirty-three~~ ~~thirty-four~~ thirty-six tests pass at the pinned corpus commit.** *(dated 2026-10-15, s8i build, S8I-F2-RECORDS; s8i refuting round 21's minor: D21153-8i-B's two tests for D21-153 items 5 and 6, `a_cd_outside_the_copy_is_audited_then_reset_as_the_cli_does` and `pass_ones_discarded_set_counts_but_never_resumes`, as guard (6) selects and asserts (`36 passed`) and the pinned `results/s-bin/driver-tests.txt` at corpus `e1e90d1` reads (`running 36 tests`); it read thirty-four)* *(dated 2026-10-06, s8i build, D21149-8i-A: D21-151's named test is added, and D21-149's inverted capture test is renamed, as guard (6) selects and asserts; it read thirty-three)* *(dated 2026-10-03, s8i build, R6FIX-8i: §8i.3's 25 and R5FIX-8i's 8 (D21-144), as guard (6) selects and asserts; it read twenty-five)* They are rebuilt from the object store, not
   from a working tree, under the no-dispatch wrapper.
 - **The `Binary` variant is constructible only as the record says.**
   - The record exists and is accepted, and its README index row exists.
-  - Its named tests pass, in the counts its field set implies.
+  - Its named tests pass, in the counts its field set implies. *(dated 2026-10-15, s8i build, S8I-F1-GUARDS, R11)* So do the fifteen tests fix rounds D and E added, each named with its exact count: four on either route and eleven on the human-gate route. A selection that names an absent test fails.
   - No `Binary` construction call appears on a code line outside the type's crate, except where the record names a
-    producer.
+    producer. *(dated 2026-10-15, s8i build, S8I-F1-GUARDS, R10)* Lines inside an in-source `#[cfg(test)]` module are test code and are skipped, as a crate's `tests/` tree is. Point-free and qualified-path uses count as calls.
   - Its route is the one the computed per-pass outcomes give (D21-43 N21, D21-48 X3).
   - On the human-gate route, the refusal opens its gate through X16's type-neutral kernel request. Its three
     `gate_request::` tests pass, and the closed reason is spelled exactly once on a kernel code line. On the reviewer
@@ -7322,16 +7408,35 @@ asserts the note.
     synthetic controls must fire and ~~two~~ three must be admitted *(dated 2026-10-03, s8i build, R1FIX-8i: three and three since D21-141, and a fourth that must fire, a `'"'` char literal before a type use)* (D21-48 X16: ADR-0135's forbids bullet and Checkpoint
     8a's ban stand).
     *(dated 2026-10-06, s8i build, D21149-8i-C)* **D21-141's (B):** the scan blanks no string or char literal. Exactly two lines are exempt, matched on path plus the whole trimmed line, each exactly once, with exactly 2 admitted: `lattice.rs`'s `&& ["Changeset", "ImplReport", "ChangeSummary"]` and `memo.rs`'s `Self::SummariseChanges => "ChangeSummary",`. **Fourteen** synthetic controls must fire and **three** must be admitted. The fourteen are the four kept (a `use`, a field type, a type beside the string, the `'"'` char literal) plus ten new ones: a type use appended to an exempt line, exempt content at another path, a duplicated exempt line, the three blanking probes (a raw string with an inner quote, the closing line of a multi-line string, `r"\"`), each entry stale, one entry twice with the other stale, and a third entry. The three admitted are the two exempt lines alone, a doc comment and the `change_summary` method call.
+    *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* The refuting round scoped to (8) that D21-141's (B) requires is still owed before the formal run.
 - **The notes are in place.**
   - AC-154, AC-356, AC-497 and AC-475 carry their dated notes. AC-475's states the measured lift share.
   - Both "four of five" design lines carry their dated correction.
   - `s8`'s final-label bullet carries its dated note.
   - No design or register line still states S-BIN as pending without a note.
   - Every finding draft has its index row, F41 and F42 included.
+  - *(dated 2026-10-14, s8i build, S8I-C8-CP8I; R11FIX-8i's owed (b))* The finding carries D21-152 item 2's disclosure (*"sufficient given
+    the report"*, not *"ChangeSummary alone sufficient"*, and branch 2's signal less likely), D21-152 item 3's
+    evidence-source tag on exactly the scored records' blocking findings (each row's pass, item, finding, AC and class
+    the record's, each tagged `asset` or `spec/report only`, and its count line agreeing), and D21-149 item 2's
+    confound beside the false-positive outcome, with P(seeded | capture) as `fixture.json` gives it. (9)'s `f43_ok`,
+    with 21 synthetic drafts.
 - **The whole suite is green**, over the floor re-derived from Checkpoint 8h's recorded count (~~1243 expected:
   1189 + 54, D21-48 floor propagation, 2026-09-24; it read 1222~~ *(dated 2026-10-02, s8i build)* **1404** passed over **44** result lines,
   Checkpoint 8h's recorded count at `d24d15a`, `PROGRESS.md` row 8h and D21-138) plus this stage's 6 + N + G, and fmt and clippy are clean. G is 3 on the human-gate route and 0 on the
   reviewer route (D21-48 X16).
+  *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* Re-derived: ~~1404 + 6 + 4 + 3 = **1417** on the human-gate route.~~ *(dated 2026-10-15, s8i build, S8I-F1-GUARDS, R11)* 1404 + 6 + 4 + 3 + NDE 15 = **1432** on the human-gate route, where NDE counts the fifteen D/E-round tests that (8) now names. The tree adds exactly 28 tests over `42a923f`. The merged tree, in a private
+  worktree, read 1416 passed and 1 failed over 44 result lines, fmt and clippy rc 0. The failure is rk-kernel's
+  `ui::trybuild_pins_the_reason_each_kernel_fixture_fails`, which fails identically at `42a923f` on this box because
+  the `rust-src` component adds a `$RUST/core` excerpt its `.stderr` files lack. It is the box's toolchain, not this
+  stage's code, and the formal run needs it green: an operator item.
+  *(dated 2026-10-14, s8i build, S8I-D3-RECORDS; operator ruling R6, 2026-10-14)* **Ruled: the formal Checkpoint 8i
+  runs with `rust-src` removed, and no test is rewritten.** Before the block, from the repository root (so rustup acts
+  on the pinned `1.98.1`), run `rustup component remove rust-src`; after the block, whatever its result, run
+  `rustup component add rust-src`. `rust-toolchain.toml` lists only `rustfmt` and `clippy` as components, so rustup does
+  not re-add `rust-src` during the run [measured 2026-10-14]. `crates/rk-kernel/tests/ui` and its `.stderr` files are
+  never edited for this (H-12). The component change is the operator's, at the formal run; no package of this build
+  has run it.
 - **Checkpoints 8h, 8a and 5 re-run whole and green.** Checkpoint 8h is the entry gate. Checkpoints 8a and 5 are made
   provisional by this stage's edits. No other checkpoint is re-run directly.
   - Each replay runs with `RK_CP_NESTED=1` (D21-46), which 8h and 8a honour; Checkpoint 5 nests nothing.
@@ -7343,6 +7448,11 @@ asserts the note.
     `CORPUS_SHA`, and clean. The packet's step 1 puts the corpus on `main` for S-BIN's commits, so its step 11 puts it
     back on the pin, clean, before this block runs (§8i.5). This block reads the corpus only through its object
     store, so the pin serves it.
+  - *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* Re-derived on the merged tree, read-only: extraction, `RK_CP_NESTED` and `ex8h` (E1=2,
+    E2=1) hold, and the dispatch scans are clean. One replay was false: Checkpoint 8a (7)'s `rk-ports` line still named
+    the superseded `binary_arm_is_not_constructible_outside_rk_ports`; it is amended by dated edit in `s8a` (this
+    stage's s8a amendment, R2) and runs green. The replays' whole-suite lines meet (10)'s rk-kernel trybuild failure on
+    this box, and Checkpoint 5's corpus suite needs §8i.5's step 11 first.
 - **This block dispatches nothing.**
   - It spawns no `claude` of its own.
   - It refuses an extracted block that carries a shape that executes a dispatch.
@@ -7372,8 +7482,10 @@ T=$(mktemp -d "$PWD/target/cp8i/t.XXXXXX"); rc=$?
 # D21-47: a record is located by the id recorded when it was written, never by a title phrase or an "exactly one"
 # count. The three ids are written into these three lines by a dated edit in the work commit, on the day each record
 # is written (§8i.10). Empty means not yet written, and the block stops here.
-SBIN_F=
-BIN_ADR=
+# *(dated 2026-10-14, s8i build, S8I-C1-F43)* F43, the S-BIN finding draft spikes/F43-DRAFT.md, was written (proposed) on 2026-10-14; SBIN_F records it (D21-47).
+SBIN_F=F43
+# *(dated 2026-10-14, s8i build, S8I-C2-ADR0199)* ADR-0199, the `Binary` record references/adr/0199-the-binary-change-summary-carries-the-four-cited-fields-and-its-item-takes-a-human-gate.md, was written (proposed) on 2026-10-14; BIN_ADR records it (D21-47). It flips only on the operator's dated ledger line, so (7)'s `status: accepted` line fails until then, by design.
+BIN_ADR=0199
 # *(dated 2026-10-03, s8i build)* D21-143, S-BIN's go-ahead entry, was written (OPEN) on 2026-10-03; SBIN_LEDGER records it (D21-47).
 SBIN_LEDGER=D21-143
 printf '%s\n' "$SBIN_F" | grep -qxE 'F[0-9]+' || { echo "FAIL: SBIN_F (the S-BIN finding's id) is not recorded in this block — write it by dated edit the day the draft is written"; exit 1; }
@@ -7452,7 +7564,21 @@ files=$(printf '%s\n' "$pins" | sed -n 's/^file=//p')
 for req in results/s-bin.jsonl results/s-bin/fixture.json results/s-bin/driver-tests.txt results/s-bin/dry-run.jsonl results/s-bin/audit.txt results/s-bin/pin-report-2026-09-05/index.json results/s-bin/captures/procedure-log.txt results/s-bin/probes.jsonl results/s-bin/missing-fields.jsonl results/s-bin/brittongames-snapshots.txt runner/src/sbin.rs results/audit-s.py results/s-bin/oot-shadow-rulings.jsonl; do
   printf '%s\n' "$files" | grep -q "^$req sha256=" || { echo "FAIL: the pins block does not pin $req"; exit 1; }
 done
+# *(dated 2026-10-15, s8i build, S8I-F2-RECORDS; s8i refuting round 21's minor)* READING NOTE, comment only: the next line's D21149-8i-A
+# sentence is split by S8I-C8-CP8I's applied insert (its three comment lines, the SBIN_DISCARD line and its pin
+# check); the sentence resumes on the line after that pin check and is SBIN_NOCAP's comment. C8's "s8i line-3332
+# gap" is §8i.5's D21153-8i-F note, the bullet "Not this package's, for the operator: Checkpoint 8i (4) does
+# not count the discarded set."; read it by that anchor, not by a line number. No line is moved or rewritten.
+# (dated 2026-10-15, s8i build, orchestrator; a minor of s8i refuting round 22) Correction: ~~the sentence resumes one line further down, after this READING
+# NOTE itself, which sits between the pin check and SBIN_NOCAP's comment.~~ (dated 2026-10-15, s8i build, orchestrator; s8i refuting round 23) It resumes two lines
+# after that pin check, after S8I-F2-RECORDS's one-line pointer, at "procedure log's n/a lines".
 # (dated 2026-10-06, s8i build, D21149-8i-A) The items whose every asset capture_scene_preview rejected (D21-149; the
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I; PROPOSED under operator ruling R3, applied only if the operator agrees)* The s8i line-3332 gap: pass 1's discarded set
+# (D21-153 items 1 and 8) counts against both caps and is never scored. (3) requires it pinned at its registered sha256
+# (the D21153-8i-C stage packet's measurement, F43's pins block), so (4) can count it.
+SBIN_DISCARD=results/s-bin/superseded/pass1-d21153/s-bin.jsonl
+printf '%s\n' "$files" | grep -qxF "$SBIN_DISCARD sha256=830b957b65253a8c174b0316e24efc1de1d4040ae6080c514d2668dc831e95ef" || { echo "FAIL: the pins block does not pin pass 1's discarded set $SBIN_DISCARD at its registered sha256 830b957b…95ef (D21-153 item 8)"; exit 1; }
+# *(dated 2026-10-15, s8i build, S8I-F2-RECORDS)* The D21149-8i-A sentence split above S8I-C8-CP8I's insert resumes on the next line:
 # procedure log's n/a lines at corpus cc7f222).
 SBIN_NOCAP="2 3"
 for n in 1 2 3 4 5; do
@@ -7468,6 +7594,31 @@ for n in 1 2 3 4 5; do
     *) printf '%s\n' "$files" | grep -qE "^results/s-bin/captures/item-$n/[^ ]+ sha256=" || { echo "FAIL: no capture pinned for item $n — D21-43 N19; only items $SBIN_NOCAP carry none (D21-149)"; exit 1; } ;;
   esac
 done
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I; R11FIX-8i's owed (a), s8i refuting round 11's minor)* THE COMMITTED CAPTURE
+# TREE IS THE PINNED CAPTURE SET. The checks above read the pinned paths only, so a capture committed under
+# results/s-bin/captures/ and left out of the pins block passed (3) and (4) unseen. capdiff compares the pinned commit's
+# whole results/s-bin/captures/ listing (git ls-tree -r --name-only, from the object store) with the pins block's
+# results/s-bin/captures/ paths, as sorted multisets: every committed entry pinned, every pinned entry committed, none
+# pinned twice. procedure-log.txt sits on both sides by (3)'s requirement. ONE function, shared by the real reading and
+# its synthetic controls.
+capdiff() {  # $1 = a committed listing, $2 = the pins block's file= lines; prints every path not on both sides
+  comm -3 <(printf '%s\n' "$1" | grep -E '^results/s-bin/captures/.' | LC_ALL=C sort) <(printf '%s\n' "$2" | sed -n 's#^\(results/s-bin/captures/[^ ]*\) sha256=.*#\1#p' | LC_ALL=C sort)
+}
+capt=$(git -C "$CORPUS_REPO" -c core.quotePath=false ls-tree -r --name-only "$SBIN_CORPUS" -- results/s-bin/captures/); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$capt" ] || { echo "FAIL: the capture tree at $SBIN_CORPUS could not be listed, or lists nothing (rc=$rc) — (3) requires procedure-log.txt there"; exit 1; }
+cdv=$(capdiff "$capt" "$files")
+[ -z "$cdv" ] || { echo "FAIL: the committed results/s-bin/captures/ tree at $SBIN_CORPUS is not the pinned capture set — an unpinned committed capture, a pinned path not committed, or a path pinned twice (R11FIX-8i (a)):"; printf '%s\n' "$cdv"; exit 1; }
+# Controls: the real shape (procedure-log.txt and items 1, 4 and 5's capture-1.png, D21-149) passes in any order, beside
+# the pins block's other lines; an unpinned committed capture, a committed capture for a captures-[] item, a stray
+# committed file outside item-<n>/, a pinned capture not committed, a capture pinned twice, and an empty listing do not.
+CL0=$(printf 'results/s-bin/captures/%s\n' procedure-log.txt item-1/capture-1.png item-4/capture-1.png item-5/capture-1.png)
+CP0=$(printf '%s\n' "$CL0" | sed 's/$/ sha256=0000/'; printf 'results/s-bin.jsonl sha256=0000\nresults/s-bin/raw/p1i1a1.jsonl sha256=0000\n')
+[ -z "$(capdiff "$CL0" "$CP0")" ] && [ -z "$(capdiff "$(printf '%s\n' "$CL0" | sort -r)" "$(printf '%s\n' "$CP0" | sort -r)")" ] || { echo "FAIL: CONTROL — the capture-tree check refuses the real shape (items 1, 4 and 5's capture-1.png and the procedure log)"; exit 1; }
+for c in 'L|results/s-bin/captures/item-1/capture-2.png' 'L|results/s-bin/captures/item-2/capture-1.png' 'L|results/s-bin/captures/notes.txt' 'P|results/s-bin/captures/item-3/capture-1.png sha256=0000' 'P|results/s-bin/captures/item-4/capture-1.png sha256=0000'; do
+  if [ "${c%%|*}" = L ]; then got=$(capdiff "$CL0"$'\n'"${c#*|}" "$CP0"); else got=$(capdiff "$CL0" "$CP0"$'\n'"${c#*|}"); fi
+  [ -n "$got" ] || { echo "FAIL: CONTROL — the capture-tree check cannot see: ${c#*|} — it is vacuous"; exit 1; }
+done
+[ -n "$(capdiff "" "$CP0")" ] || { echo "FAIL: CONTROL — the capture-tree check passes an empty listing"; exit 1; }
 nraw=$(printf '%s\n' "$files" | grep -c '^results/s-bin/raw/')
 [ "$nraw" -ge 10 ] || { echo "FAIL: $nraw raw transcripts pinned; ten dispatches retain ten"; exit 1; }
 while read -r path want; do
@@ -7495,6 +7646,33 @@ done
 # shadow-flagged record, one line {"raw_ref": <its raw_ref>, "ruling": "clear" | "void"}. Absent means no ruling
 # yet, so every flagged record is held unscored. The audit reads it as its third argument.
 # (dated 2026-10-03, s8i build, R7FIX-8i) (3) now requires it pinned, so a set that passed (3) never takes the empty-file branch below.
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I; PROPOSED under operator ruling R3, applied only if the operator agrees)* The discarded set, read for the caps only.
+git -C "$CORPUS_REPO" cat-file blob "$SBIN_CORPUS:$SBIN_DISCARD" > "$T/s-bin_discard.jsonl" && [ -s "$T/s-bin_discard.jsonl" ] || { echo "FAIL: $SBIN_DISCARD is absent or empty at $SBIN_CORPUS (D21-153 item 8)"; exit 1; }
+# The cap count, ONE snippet shared by the record probe and its synthetic sets, as `outc` is: Opus = the scored
+# records plus the discarded ones; the cost list = records, discarded records, probes and every capture line. The
+# discarded records never reach V, pairs or the outcome. An absent or empty discarded set fails.
+discl='
+def capsum(sb, disc, probes, capc):
+    if not disc or not all(r.get("spike")=="s-bin" and r.get("dry_run") is False for r in disc): return None
+    return len(sb)+len(disc), [r.get("total_cost_usd") for r in sb]+[r.get("total_cost_usd") for r in disc]+[p.get("total_cost_usd") for p in probes]+list(capc)
+'
+dctl='
+def R(c=1.0): return {"spike":"s-bin","dry_run":False,"total_cost_usd":c}
+'"$discl"'
+def verdict(x):
+    if x is None: return "BAD"
+    n,cs=x
+    return "ok" if n<=18 and None not in cs and sum(float(c) for c in cs)<=90.0 else "BAD"
+sb=[R() for _ in range(10)]; pr=[{"total_cost_usd":0.05}]; cc=["5.54"]
+cases=[("ok",capsum(sb,[R() for _ in range(6)],pr,cc)),("BAD",capsum(sb,[R() for _ in range(9)],pr,cc)),
+       ("BAD",capsum(sb,[R(15.0) for _ in range(6)],pr,cc)),("BAD",capsum(sb,[],pr,cc)),("BAD",capsum(sb,[R(None)]+[R() for _ in range(5)],pr,cc)),
+       ("BAD",capsum(sb,[dict(R(),dry_run=True)],pr,cc)),("ok",capsum(sb[:2],[R() for _ in range(16)],pr,cc))]
+bad=[str(n) for n,(w,x) in enumerate(cases) if verdict(x)!=w]
+x=capsum(sb,[R() for _ in range(6)],pr,cc)
+if x is None or x[0]!=16: bad.append("count")
+print("ok" if not bad else "BAD:"+",".join(bad))'
+dcv=$(python -c "$dctl"); rc=$?
+[ "$rc" -eq 0 ] && [ "$dcv" = "ok" ] || { echo "FAIL: the discarded-set cap count fails its synthetic sets (rc=$rc): $dcv — 10 scored + 6 discarded counts 16 and passes; a discarded set pushing Opus to 19 or the cost over \$90, an absent or empty one, one with a missing cost or a dry run does not (D21-153 item 8)"; exit 1; }
 if git -C "$CORPUS_REPO" cat-file -e "$SBIN_CORPUS:results/s-bin/oot-shadow-rulings.jsonl" 2>/dev/null; then
   git -C "$CORPUS_REPO" cat-file blob "$SBIN_CORPUS:results/s-bin/oot-shadow-rulings.jsonl" > "$T/s-bin_oot-shadow-rulings.jsonl" || { echo "FAIL: results/s-bin/oot-shadow-rulings.jsonl is unreadable at $SBIN_CORPUS"; exit 1; }
 else
@@ -7756,6 +7934,8 @@ def jl(p): return [json.loads(l) for l in open(p,encoding="utf-8") if l.strip()]
 recs=jl(sys.argv[1]); fx=json.load(open(sys.argv[2],encoding="utf-8")); probes=jl(sys.argv[3]); mf=jl(sys.argv[4])
 plog=[dict(t.split("=",1) for t in l.split()) for l in open(sys.argv[5],encoding="utf-8").read().splitlines() if l.strip()]
 dry=jl(sys.argv[6])
+'"$discl"'
+disc=jl(sys.argv[9])
 '"$holdl"'
 ru=rulings_of(jl(sys.argv[7]))
 it={int(k):v for k,v in fx["items"].items()}
@@ -7795,10 +7975,13 @@ print("ceil", ",".join(sorted({str(r.get("ceiling_secs")) for r in sb})))
 print("first", min(int(r["started_at"]) for r in sb))
 print("reruns", sum(1 for r in sb if r.get("rerun")))
 '"$capl"'
-costs=[r.get("total_cost_usd") for r in sb]+[p.get("total_cost_usd") for p in probes]+capcosts(plog)
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I; PROPOSED under operator ruling R3, applied only if the operator agrees)* The cap lines read capsum: the discarded set cost and Opus count are added, and it is never scored. Was:
+# costs=[r.get("total_cost_usd") for r in sb]+[p.get("total_cost_usd") for p in probes]+capcosts(plog) ... print("opus", len(sb))
+cs=capsum(sb, disc, probes, capcosts(plog))
+nopus,costs=(cs if cs is not None else (99,[None]))
 print("costnull", sum(1 for c in costs if c is None))
 total=sum(float(c) for c in costs if c is not None)
-print("opus", len(sb))
+print("opus", nopus)
 print("haiku", "ok" if len(probes)<=3 and all("haiku" in str(p.get("observed_model")) for p in probes) and not any("haiku" in str(r.get("observed_model")) for r in sb) else "BAD")
 print("cost", "ok" if total<=90.0 else "BAD")
 print("costsum", "%.2f" % total)
@@ -7813,7 +7996,8 @@ print("o1", outcome(1)); print("o2", outcome(2))'
 # for capfiles_ok. The probe took seven arguments, and never read the pinned capture lines.
 printf '%s\n' "$files" > "$T/s-bin_pinfiles" || { echo "FAIL: could not write the pins block's file= lines to $T"; exit 1; }
 [ -s "$T/s-bin_pinfiles" ] || { echo "FAIL: the pins block's file= lines are empty"; exit 1; }
-pv=$(python -c "$probe" "$T/s-bin.jsonl" "$T/s-bin_fixture.json" "$T/s-bin_probes.jsonl" "$T/s-bin_missing-fields.jsonl" "$T/s-bin_captures_procedure-log.txt" "$T/s-bin_dry-run.jsonl" "$T/s-bin_oot-shadow-rulings.jsonl" "$T/s-bin_pinfiles"); rc=$?
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I; PROPOSED under operator ruling R3, applied only if the operator agrees)* The discarded set is the probe's ninth argument.
+pv=$(python -c "$probe" "$T/s-bin.jsonl" "$T/s-bin_fixture.json" "$T/s-bin_probes.jsonl" "$T/s-bin_missing-fields.jsonl" "$T/s-bin_captures_procedure-log.txt" "$T/s-bin_dry-run.jsonl" "$T/s-bin_oot-shadow-rulings.jsonl" "$T/s-bin_pinfiles" "$T/s-bin_discard.jsonl"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pv" ] || { echo "FAIL: the record probe did not run (rc=$rc)"; exit 1; }
 rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 [ "$(rv items)" = "1,2,3,4,5" ] || { echo "FAIL: fixture.json does not hold exactly items 1-5: '$(rv items)'"; exit 1; }
@@ -7844,6 +8028,8 @@ rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 [ "$(rv runbin)" = "ok" ] || { echo "FAIL: a record carries no runner_sha256 (§8i.7)"; exit 1; }
 [ "$(rv ceil)" = "$SBIN_CEIL" ] || { echo "FAIL: the records ran under ceilings '$(rv ceil)', pinned $SBIN_CEIL"; exit 1; }
 [ "$(rv costnull)" = "0" ] || { echo "FAIL: $(rv costnull) records, probes or capture lines carry no cost — a missing cost is never read as zero (§8i.5)"; exit 1; }
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I; PROPOSED under operator ruling R3, applied only if the operator agrees)* (4) now counts pass 1's discarded set: at 835b122 it reads 16 Opus (10 scored + 6 discarded) and
+# $44.60 (records $22.892186, discarded $16.074148, probes $0.0886845, capture lines $5.54). It read 10 and $28.52.
 [ "$(rv opus)" -le 18 ] && [ "$(rv haiku)" = "ok" ] && [ "$(rv cost)" = "ok" ] || { echo "FAIL: a cap was exceeded — $(rv opus) Opus dispatches, haiku $(rv haiku), \$$(rv costsum) over records, probes and capture sessions (§8i.5)"; exit 1; }
 # (dated 2026-10-06, s8i build, D21149-8i-A) The message names D21-149's n/a and D21-150's stalled lines. Was: "the
 # procedure log does not hold one 'yes' line per item with its model, cost and the pinned capture's sha256 (§8i.4)".
@@ -8052,6 +8238,9 @@ KT_RE='\b(Binary)?ChangeSummary\b'
 # and fails the scan. The controls take the two exempt lines as their base, so the counts hold and only the added line can
 # fire. The stale, duplicate and list controls break the counts on purpose. Superseded, by this edit:
 # ~~kt_scan() { comment_line | sed -E "s/'([^'\\\\]|\\\\.)'/''/g" | sed -E 's/"([^"\\]|\\.)*"/""/g' | grep -E "$KT_RE"; }~~
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* STILL OWED before the formal run: D21-141's (B) was taken "with one refuting round scoped to
+# (8)" (its 2026-10-03 line; §8i.5's D21149-8i packet: "Owed, but not before B2"). That round has not run, and no
+# package of this build could spawn it. The exemption and its 17 controls stay proposed until it reports.
 KT_EXEMPT='crates/rk-kernel/src/lattice.rs|&& ["Changeset", "ImplReport", "ChangeSummary"]
 crates/rk-kernel/src/workflow/memo.rs|Self::SummariseChanges => "ChangeSummary",'
 kt_scan() {
@@ -8095,6 +8284,37 @@ kt_ctl F "${KT_BASE%%$'\n'*}"$'\n'"${KT_BASE%%$'\n'*}"  # one entry twice, the o
 kt_ctl F "$KT_BASE"$'\n''crates/rk-kernel/src/workflow/gate.rs:1:    let k = "ChangeSummary";' "$KT_EXEMPT"$'\n''crates/rk-kernel/src/workflow/gate.rs|let k = "ChangeSummary";'  # a third entry, each matched once: 3 admitted
 rk_named rk-adapter-toolchain-node classify::ac497_classify_binary_paths
 rk_named rk-adapter-toolchain-rust classify::ac497_classify_binary_paths
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; refuting round 21's tests-mutants finding, operator ruling R11)* THE
+# FIFTEEN TESTS FIX ROUNDS D AND E ADDED, BY NAME (§8i.8's S8I-D1-PORTS, S8I-D2-WIRE-GATE, S8I-E1-RUN-OUTCOME,
+# S8I-E2-EXPIRY-POLICY and S8I-E3-PORTS-POLISH notes). Before this edit no selection named them, so all fifteen could be
+# deleted with this checkpoint still green. The run-path test is the one AC-497's register note cites. Measured against
+# 42a923f on 2026-10-15, the tree adds 28 tests net over seven files: change_summary.rs 2 -> 11 (one superseded by
+# name), ui.rs 1 -> 2, cards.rs 5 -> 7, render.rs 26 -> 28, review_input.rs 0 -> 5, gate_request.rs 0 -> 4, and
+# kept_refusal.rs 0 -> 5 (`rk-cli`'s lib tests). The selections above name 13 of the 28. These 15 name the rest, each
+# selection with its exact count. Four are `rk-ports`' constructor tests and exist on either route. The other eleven are
+# the human-gate route's: the run path, the expiry policy, the gate row and the kept refusal. On the reviewer route
+# nothing refuses and none of the eleven is built. NDE feeds (10)'s floor: 15 on the human-gate route, 4 on the
+# reviewer route. rk_lib_named is rk_named for a crate's lib target. The last two lines are its controls: a selection
+# that names one real test and one name no test carries must fail, under each function.
+rk_lib_named() {
+  pkg=$1; shift
+  out=$(nodispatch cargo test -p "$pkg" --lib -- "$@" --exact 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the $pkg lib selection did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
+  for t in "$@"; do
+    printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok — renamed, deleted or not selected"; exit 1; }
+  done
+  printf '%s\n' "$out" | grep -qE "test result: ok\. $# passed; 0 failed" || { echo "FAIL: the $pkg lib selection did not run exactly $# tests"; exit 1; }
+}
+rk_named "$CS_CRATE" change_summary::binary_refuses_a_hunk_whose_counts_overstate_its_length change_summary::binary_refuses_a_patch_whose_quoted_name_it_cannot_read change_summary::binary_reads_names_under_gits_default_prefixes change_summary::binary_checks_every_asset_against_the_diff
+NDE=4
+if [ "$ROUTE" = "human gate" ]; then
+  rk_named rk-cli review_input::binary_item_on_the_run_path_opens_one_human_gate_and_dispatches_no_reviewer review_input::a_refusal_after_a_committed_agent_step_opens_one_human_gate review_input::the_bound_review_gate_is_a_tier_one_act_through_the_stages_sibling_boundary cards::shipped_packs_pass_the_load_time_gate_expiry_lint cards::a_lapsed_automated_verdict_refused_gate_expires_with_fail_under_both_shipped_packs
+  rk_named rk-kernel gate_request::the_request_row_is_the_producer_row_plus_the_two_attachment_members
+  rk_lib_named rk-cli verbs::run::kept_refusal::tests::no_kept_refusal_hands_the_outcome_back_and_reports_nothing verbs::run::kept_refusal::tests::the_refusals_own_outcome_opens_the_gate_from_the_kept_refusal_and_reports_nothing verbs::run::kept_refusal::tests::a_success_with_a_kept_refusal_is_reported_and_handed_back_not_dropped verbs::run::kept_refusal::tests::an_unrelated_failure_with_a_kept_refusal_is_reported_and_handed_back_not_gated verbs::run::kept_refusal::tests::an_unwritable_report_exits_config_error
+  NDE=15
+fi
+( rk_named "$CS_CRATE" change_summary::binary_checks_every_asset_against_the_diff change_summary::s8i_control_no_test_carries_this_name ) >/dev/null 2>&1 && { echo "FAIL: rk_named passed a selection naming a test that does not exist — the named selections are vacuous"; exit 1; }
+( rk_lib_named rk-cli verbs::run::kept_refusal::tests::an_unwritable_report_exits_config_error verbs::run::kept_refusal::tests::s8i_control_no_test_carries_this_name ) >/dev/null 2>&1 && { echo "FAIL: rk_lib_named passed a selection naming a test that does not exist — the lib selection is vacuous"; exit 1; }
 out=$(nodispatch cargo test -p "$CS_CRATE" --test it -- change_summary::binary_field_ 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the per-field selection did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
 nf=$(printf '%s\n' "$out" | grep -cE '^test change_summary::binary_field_[a-z0-9_]+ \.\.\. ok$')
@@ -8107,9 +8327,103 @@ nd_check "(8) the variant's tests" || exit 1
 # A match arm or `if let` that DESTRUCTURES `ChangeSummary::Binary(b)` is not a construction and is admitted; a struct
 # literal with private fields does not compile outside the crate, and the trybuild case above carries that.
 BIN_RE='BinaryChangeSummary::[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(::<[^>]*>)?[[:space:]]*\(|ChangeSummary::binary[a-z0-9_]*[[:space:]]*\('
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; refuting round 21's minor, operator ruling R10)* BIN_RE WIDENED, by the
+# line below, which replaces the line above. The line above needs `(` straight after the associated name, and it needs
+# the type name with nothing between it and `::`. So it admitted a point-free use, `parts.map(BinaryChangeSummary::new)`,
+# and a qualified path, `<BinaryChangeSummary>::new(…)`. Both construct the payload. The arm now takes any associated
+# item path after the name, with an optional `>` (the qualified form) and optional space around `::`. The enum arm
+# takes a lower-case `binary…` path the same way. Neither arm needs the `(`. Measured over crates/*/src outside rk-ports
+# on 2026-10-15, both lines match the same single line (kept_refusal.rs:116, inside its test module). The five controls
+# below are unchanged and pass, and two more for these forms follow them. Each of the two fails under the line above.
+BIN_RE='BinaryChangeSummary>?[[:space:]]*::[[:space:]]*[A-Za-z_][A-Za-z0-9_]*|ChangeSummary>?[[:space:]]*::[[:space:]]*binary[a-z0-9_]*'
 raw=$(grep -rnE "$BIN_RE" crates/*/src --include=*.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the construction floor could not run (grep rc=$rc)"; exit 1; }
 bin_code() { grep -E "$BIN_RE" | grep -v "^crates/$CS_CRATE/" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))'; }
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; refuting round 21's blocker B1, operator ruling R10)* THE FLOOR SKIPS
+# IN-SOURCE TEST MODULES. Fix round E1 put a test fake in `crates/rk-cli/src/verbs/run/kept_refusal.rs`, inside its
+# `#[cfg(test)] mod tests`, that builds the payload through the recorded constructor. That code is test code: it does
+# not exist in a shipped build, and the floor does not scan a crate's `tests/` tree either. The floor read the call as a
+# Phase-1 production and failed on a correct tree. The lines below are inserted and none above is rewritten.
+# `cfgtest_mods` reads the files themselves. An in-source test module is a line that is exactly `#[cfg(test)]` (or
+# `#[cfg(test)] mod <name> {`), followed on the NEXT line by `mod <name> {` (an optional `pub`/`pub(…)`). It runs from
+# that attribute line to the line where its braces close. Braces are counted by a small lexer that runs from the
+# top of the file. The lexer skips `//` comments, nested `/* */` comments, escape-aware strings that may span lines,
+# raw strings `r#"…"#` and `br"…"`, and char literals (`'{'`, `'\''`, `'\u{7b}'`, `b'{'`), and it leaves lifetimes
+# alone. An attribute that appears inside a string or a comment opens nothing. A `#[cfg(test)]` on any item other
+# than a `mod` opens nothing. A module that never closes fails the floor (fail closed). `cfgtest_drop` removes the
+# grep lines inside a module and passes every other line through unchanged.
+# Measured 2026-10-15 over the eight crates/*/src files that carry a `#[cfg(test)]` line: eight modules, the same
+# ranges an independent reading gives (the attribute, the `mod` line and the first later `}` at the mod's indent):
+# rk-cli verbs/run/kept_refusal.rs 63-288; rk-kernel registry.rs 807-895, rigor.rs 868-909, select.rs 726-822,
+# select/step5.rs 691-829, toml_subset.rs 521-540 and workflow/fsm.rs 2015-2055; rk-types artifact/findings.rs 228-261.
+# step5.rs:302's `#[cfg(test)]` is on a fn and opens nothing.
+# Limits: ~~a `cr"…"` raw C string is read as an escaped string, and~~ an attribute separated from its `mod` by another
+# attribute or a blank line opens nothing. ~~Either limit makes~~ That limit makes the floor fire, never admit.
+# (dated 2026-10-15, s8i build, orchestrator; s8i refuting round 22's major) The `cr"…"` limit admitted (a production call after a module holding `cr"\"`), so the
+# lexer now reads `cr` as a raw-string prefix, with a confuser control below.
+# Also invisible to the floor: a construction through a renaming import (`use ..BinaryChangeSummary as B`),
+# a type alias, or `Self::new` inside a trait impl for the payload; s8 S8_DEF catches the import and the impl
+# forms in its own guard, and the named tests above remain the assertion.
+cfgtest_mods() {
+  LC_ALL=C awk '
+    function lex(s,   i, n, c, d, j, h) {
+      n = length(s); i = 1
+      while (i <= n) {
+        c = substr(s, i, 1); d = substr(s, i, 2)
+        if (bc > 0) { if (d == "/*") { bc++; i += 2 } else if (d == "*/") { bc--; i += 2 } else i++; continue }
+        if (st == 1) { if (c == "\\") i += 2; else { if (c == "\"") st = 0; i++ }; continue }
+        if (st == 2) { if (c == "\"" && substr(s, i + 1, rh) == hs) { st = 0; i += 1 + rh } else i++; continue }
+        if (d == "//") return
+        if (d == "/*") { bc = 1; i += 2; continue }
+        if (c == "\"") { st = 1; i++; continue }
+        # (dated 2026-10-15, s8i build, orchestrator; the major of s8i refuting round 22) `cr` joins `br`: a raw C string `cr"\"` was read as an escaped string, which
+        # inverted the string state and could admit a later production call. Was: (c == "r" || d == "br"), and j = i + (c == "b" ? 2 : 1).
+        if ((c == "r" || d == "br" || d == "cr") && (i == 1 || substr(s, i - 1, 1) !~ /[A-Za-z0-9_]/)) {
+          j = i + (c == "b" || c == "c" ? 2 : 1); h = ""
+          while (substr(s, j, 1) == "#") { h = h "#"; j++ }
+          if (substr(s, j, 1) == "\"") { st = 2; hs = h; rh = length(h); i = j + 1; continue }
+        }
+        if (c == "\047") {
+          if (substr(s, i + 1, 1) == "\\") { j = index(substr(s, i + 3), "\047"); i = j ? i + 3 + j : n + 1; continue }
+          if (substr(s, i + 2, 1) == "\047") { i += 3; continue }
+          if (substr(s, i + 1, 1) > "\177") { j = index(substr(s, i + 1, 5), "\047"); if (j > 1) { i += j + 1; continue } }
+          i++; continue
+        }
+        if (c == "{") depth++; else if (c == "}") depth--
+        i++
+      }
+    }
+    function done_file() { if (inmod) print "UNCLOSED " fname " " start; inmod = 0 }
+    FNR == 1 { done_file(); fname = FILENAME; depth = 0; bc = 0; st = 0; pend = 0 }
+    {
+      line = $0; sub(/\r$/, "", line); clean = (bc == 0 && st == 0)
+      if (!inmod && clean) {
+        if (pend && line ~ /^[ \t]*(pub(\([^)]*\))?[ \t]+)?mod[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*\{/) { inmod = 1; start = pend; base = depth }
+        else if (line ~ /^[ \t]*#\[cfg\(test\)\][ \t]*(pub(\([^)]*\))?[ \t]+)?mod[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*\{/) { inmod = 1; start = FNR; base = depth }
+      }
+      pend = (!inmod && clean && line ~ /^[ \t]*#\[cfg\(test\)\][ \t]*$/) ? FNR : 0
+      lex(line)
+      if (inmod && depth <= base) { print fname " " start " " FNR; inmod = 0 }
+    }
+    END { done_file() }' "$@"
+}
+cfgtest_drop() {
+  local in f ranges=""; local -a fa=()
+  in=$(cat)
+  while IFS= read -r f; do
+    [ -n "$f" ] && grep -qE '^[[:space:]]*#\[cfg\(test\)\]' "$f" && fa+=("$f")
+  done <<< "$(printf '%s\n' "$in" | sed -n 's/^\([^:]*\):[0-9][0-9]*:.*/\1/p' | sort -u)"
+  if [ "${#fa[@]}" -gt 0 ]; then
+    ranges=$(cfgtest_mods "${fa[@]}") || { echo "FAIL: the test-module reader could not run"; return 1; }
+  fi
+  case "$ranges" in *UNCLOSED*) echo "FAIL: an in-source #[cfg(test)] module never closes:"; printf '%s\n' "$ranges" | grep UNCLOSED; return 1;; esac
+  printf '%s\n' "$in" | CFGR="$ranges" awk '
+    BEGIN { n = split(ENVIRON["CFGR"], a, "\n"); for (i = 1; i <= n; i++) { split(a[i], f, " "); F[i] = f[1]; S[i] = f[2] + 0; E[i] = f[3] + 0 } }
+    { p = index($0, ":"); file = substr($0, 1, p - 1); r = substr($0, p + 1); ln = substr(r, 1, index(r, ":") - 1) + 0
+      for (i = 1; i <= n; i++) if (F[i] == file && ln >= S[i] && ln <= E[i]) next
+      print }'
+}
+raw=$(printf '%s\n' "$raw" | cfgtest_drop) || { printf '%s\n' "$raw"; exit 1; }
 code=$(printf '%s\n' "$raw" | bin_code)
 if [ "$PRODUCERS" = "none" ]; then
   [ -z "$code" ] || { echo "FAIL: a Binary construction on a code line, and the record names no Phase-1 producer:"; printf '%s\n' "$code"; exit 1; }
@@ -8123,6 +8437,151 @@ for ctl in 'F|crates/x/src/y.rs:1:    let b = BinaryChangeSummary::from_pointer(
   want=${ctl%%|*}; line=${ctl#*|}; got=$(printf '%s\n' "$line" | bin_code)
   if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: the floor cannot see a synthetic construction — it is vacuous for: $line"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: the floor fires on a line that constructs nothing: $line"; exit 1; }; fi
 done
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; operator ruling R10)* The widened BIN_RE's two controls. Each fails
+# under the superseded BIN_RE.
+for ctl in 'F|crates/x/src/y.rs:1:    let s = parts.map(BinaryChangeSummary::new);' 'F|crates/x/src/y.rs:1:    let s = <BinaryChangeSummary>::new(a, b, c, d, e);'; do
+  want=${ctl%%|*}; line=${ctl#*|}; got=$(printf '%s\n' "$line" | bin_code)
+  [ -n "$got" ] || { echo "FAIL: the floor cannot see a synthetic construction — it is vacuous for: $line"; exit 1; }
+done
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; operator ruling R10)* The test-module skip's controls. Each writes one
+# synthetic file, crates/x/src/y.rs, into a scratch tree. The floor's own lines then run over that tree: the grep,
+# cfgtest_drop and bin_code. The control names the exact line numbers the floor must keep. A production call in a src
+# file is kept. The same call inside a `#[cfg(test)]` module is dropped. A call after a module closes is kept. A
+# `#[cfg(test)]` on a fn or an impl opens nothing. So does one in a comment or a string, one that `not(...)` negates,
+# and one with a blank line before its `mod`. A nested module is dropped whole. A module that never closes fails the
+# floor. The confuser loop puts one line inside a module, between the attribute and a fake that calls the constructor.
+# A call after the module must be the one line kept. A `{` the lexer counts by mistake drops that call, and a `}` it
+# counts by mistake keeps the fake.
+CFG_TMP=$(mktemp -d) && mkdir -p "$CFG_TMP/crates/x/src" || { echo "FAIL: no scratch tree for the test-module controls"; exit 1; }
+cfg_file() { cat > "$CFG_TMP/crates/x/src/y.rs" || { echo "FAIL: could not write the test-module control file"; exit 1; }; }
+cfg_run() ( cd "$CFG_TMP" || exit 1; r=$(grep -rnE "$BIN_RE" crates/*/src --include=*.rs); printf '%s\n' "$r" | cfgtest_drop )
+cfg_want() {
+  out=$(cfg_run) || { echo "FAIL: test-module control '$2': the module reader refused: $out"; exit 1; }
+  got=$(printf '%s\n' "$out" | bin_code | cut -d: -f2 | paste -sd' ' -)
+  [ "$got" = "$1" ] || { echo "FAIL: test-module control '$2': the floor kept line(s) '$got', not '$1'"; exit 1; }
+}
+cfg_file <<'RS'
+pub fn produce(a: A) -> Result<S, E> {
+    BinaryChangeSummary::new(a, c, r, l, "")
+}
+RS
+cfg_want "2" "a production call in a src file fires"
+cfg_file <<'RS'
+pub fn produce() {}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn fake() -> Result<S, E> {
+        if x { let _ = [1, 2]; }
+        BinaryChangeSummary::new(a, c, r, l, "")
+    }
+}
+RS
+cfg_want "" "the same call inside a #[cfg(test)] module is admitted"
+cfg_file <<'RS'
+#[cfg(test)]
+mod tests {
+    fn fake() -> Result<S, E> {
+        BinaryChangeSummary::new(a, c, r, l, "")
+    }
+}
+pub fn after() -> Result<S, E> {
+    BinaryChangeSummary::new(a, c, r, l, "")
+}
+RS
+cfg_want "8" "a call after the test module closes fires"
+cfg_file <<'RS'
+#[cfg(test)]
+fn helper() -> Result<S, E> {
+    BinaryChangeSummary::new(a, c, r, l, "")
+}
+#[cfg(test)]
+impl Fake {
+    fn f() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+}
+RS
+cfg_want "3 7" "a #[cfg(test)] on a fn or an impl opens no exclusion"
+cfg_file <<'RS'
+#[cfg(test)] mod tests {
+    fn fake() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+}
+fn after() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+RS
+cfg_want "4" "the attribute and the mod on one line: dropped inside, kept after"
+cfg_file <<'RS'
+// #[cfg(test)]
+mod not_tests {
+    fn f() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+}
+const DOC: &str = "
+#[cfg(test)]
+mod quoted { "; pub fn g() -> Result<S, E> {
+    BinaryChangeSummary::new(a, c, r, l, "")
+}
+#[cfg(not(test))]
+mod shipped {
+    fn h() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+}
+#[cfg(test)]
+
+mod spaced {
+    fn i() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+}
+RS
+cfg_want "3 8 12 17" "an attribute in a comment, in a string, negated or a line away opens nothing"
+cfg_file <<'RS'
+/*
+#[cfg(test)]
+mod commented { */ pub fn k() -> Result<S, E> {
+    BinaryChangeSummary::new(a, c, r, l, "")
+}
+RS
+cfg_want "4" "an attribute inside a block comment opens nothing"
+cfg_file <<'RS'
+#[cfg(test)]
+mod tests {
+    mod inner {
+        fn f() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+    }
+    fn g() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+}
+fn after() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+RS
+cfg_want "8" "a nested module is dropped whole, and the outer module's close is found"
+cfg_file <<'RS'
+#[cfg(test)]
+mod tests {
+    fn fake() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }
+RS
+out=$(cfg_run) && { echo "FAIL: test-module control 'a module that never closes': the module reader admitted it: $out"; exit 1; }
+while IFS= read -r cz; do
+  cz=${cz//<NL>/$'\n'}
+  printf '%s\n' '#[cfg(test)]' 'mod tests {' "$cz" '    fn fake() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }' '}' 'fn after() -> Result<S, E> { BinaryChangeSummary::new(a, c, r, l, "") }' | cfg_file
+  cfg_want "$(( $(printf '%s\n' "$cz" | grep -c '') + 5 ))" "a confuser inside the module: $cz"
+done <<'RS'
+    let _ = "{";
+    let _ = "}";
+    let _ = '{';
+    let _ = '}';
+    let _ = b'{';
+    let _ = '"'; let _ = "{";
+    let _ = '\''; let _ = '{';
+    let _ = '\u{7b}'; let _ = "}";
+    let _ = "a\"{";
+    let _ = "a\\"; let _ = '}';
+    let _ = r#"a"{"#;
+    let _ = br"}";
+    let _ = r"\"; let _ = '{';
+    let _ = cr"\"; let _ = "}";
+    let _ = br"\"; let _ = "}";
+    // {
+    /* } */
+    /* /* */ { */
+    let s = "{<NL>    }{";
+    /* {<NL>    */
+    fn f<'a>(x: &'a str) -> &'a str { x }
+RS
+rm -rf "$CFG_TMP"
 
 # ---- (9) STATUSES, HONESTLY: the four criteria carry the dated note, AC-475 its measured share, the "four of five"
 # ---- lines their correction, `s8`'s final-label bullet its note, and no line states S-BIN pending without a note.
@@ -8135,6 +8594,122 @@ done
 blk=$(acblk AC-475)
 printf '%s\n' "$blk" | grep -qF "lift share $SBIN_SHARE" || { echo "FAIL: AC-475's replacement does not state the measured lift share $SBIN_SHARE (§8i.8)"; exit 1; }
 grep -qxF "### AC-475's lift share" "$DRAFT" || { echo "FAIL: $DRAFT has no '### AC-475's lift share' section"; exit 1; }
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I; R11FIX-8i's owed (b), s8i refuting round 11's minor)* THE FINDING CARRIES ITS
+# THREE REGISTERED DISCLOSURES, read from $DRAFT against the records (4) read. D21-152 item 2: a section headed "### D21-152
+# item 2's disclosure" saying a branch-1 result reads as "sufficient given the report", not "ChangeSummary alone
+# sufficient", and that branch 2's signal is less likely. D21-152 item 3: a section headed "### Each blocking finding,
+# with D21-152 item 3's evidence-source tag" whose table rows are EXACTLY the scored records' blocking findings (every
+# finding whose evidence class is not advisory, on a record (4)'s valid_of keeps; pass, item, f<index>, AC and class
+# each the record's), each tagged `asset` or `spec/report only` once, and whose count line agrees. D21-149 item 2: a
+# section headed "### D21-149 item 2's confound, beside the false-positive outcome" stating that capture presence
+# follows asset type, that both seeds are widgets, P(seeded | capture) = k/n as fixture.json's captures give it over
+# the five items, and that clean item 1 carries a capture. Text is compared after dropping `*` and folding whitespace and
+# case, so a phrase wrapped across lines still reads. ONE snippet, shared by the real reading and its synthetic drafts.
+f43l='
+import re
+def norm(s): return " ".join(s.replace("*","").split()).lower()
+def sections(txt):
+    out={}; h=None
+    for l in txt.splitlines():
+        if l.startswith("### ") or l.startswith("## "):
+            h=l.strip(); out.setdefault(h,[]); continue
+        if h is not None: out[h].append(l)
+    return out
+def one(secs, prefix):
+    m=[h for h in secs if h.startswith(prefix)]
+    return (m[0], secs[m[0]]) if len(m)==1 else (None, None)
+def blocking(V):
+    b={}
+    for r in V:
+        fs=(r.get("digest") or {}).get("findings") or []
+        c=(r.get("policy_verdict") or {}).get("counts") or {}
+        mine=[(i,f) for i,f in enumerate(fs) if f.get("evidence")!="advisory"]
+        if len(mine)!=sum(int(v) for k,v in c.items() if k!="advisory"): return None
+        for i,f in mine: b[(int(r["pass"]),int(r["item"]),i)]=(str(f.get("ac")),str(f.get("evidence")))
+    return b
+def f43_ok(txt, V, it, seeds=(4,5)):
+    bad=[]; secs=sections(txt)
+    h,body=one(secs, "### D21-152 item 2\x27s disclosure")
+    d=norm("\n".join(body or []))
+    if h is None: bad.append("disclosure:absent")
+    else:
+        for p in ("\"sufficient given the report\"", "not \"changesummary alone sufficient\"", "branch 2", "less likely"):
+            if p not in d: bad.append("disclosure:"+p)
+    h,body=one(secs, "### Each blocking finding, with D21-152 item 3\x27s evidence-source tag")
+    want=blocking(V)
+    if want is None: bad.append("tag:premise-counts")
+    elif h is None: bad.append("tag:absent")
+    else:
+        rows={}; tags={"asset":0,"spec/report only":0}
+        for l in body:
+            c=[x.strip() for x in l.strip().strip("|").split("|")] if l.startswith("| ") else []
+            if len(c)<6 or not c[0].isdigit(): continue
+            m=re.match(r"(\d+)", c[1]); f=re.fullmatch(r"f(\d+)", c[2]); t=c[5].replace("*","").replace("`","").strip()
+            if not m or not f: bad.append("tag:row-shape:"+l[:40]); continue
+            k=(int(c[0]),int(m.group(1)),int(f.group(1)))
+            if k in rows: bad.append("tag:row-twice:"+repr(k))
+            rows[k]=(c[3],c[4])
+            if t not in tags: bad.append("tag:value:"+t)
+            else: tags[t]+=1
+        if sorted(rows)!=sorted(want): bad.append("tag:rows-not-the-blocking-findings")
+        elif any(rows[k]!=want[k] for k in want): bad.append("tag:ac-or-class")
+        s=re.search(r"(\d+) blocking findings, (\d+) asset, (\d+) spec/report only", norm("\n".join(body)).replace("`",""))
+        if not s or [int(x) for x in s.groups()]!=[len(want),tags["asset"],tags["spec/report only"]]: bad.append("tag:count-line")
+    h,body=one(secs, "### D21-149 item 2\x27s confound")
+    d=norm("\n".join(body or []))
+    cap=[i for i in (1,2,3,4,5) if (it.get(i) or {}).get("captures")]
+    pk="p(seeded | capture) = %d/%d" % (len([i for i in cap if i in seeds]), len(cap))
+    if h is None or "beside the false-positive outcome" not in h.lower(): bad.append("confound:absent")
+    else:
+        for p in ("capture presence follows asset type", "both seeds are widgets", pk, "clean item 1 carries a capture"):
+            if p not in d: bad.append("confound:"+p)
+    return bad
+'
+# Controls: a synthetic draft carrying all three passes; one missing each section, each disclosure phrase, a blocking
+# row, carrying an extra or a twice-listed row, a wrong tag, a wrong AC, a wrong count line, and a confound whose P is
+# not the fixture's, does not; nor does a row naming another finding of a blocking record, a tag outside the two
+# values or a twice-listed row each with its count line made to agree, or a confound heading not beside the outcome.
+# A record whose class counts disagree with its findings is a premise failure.
+f43ctl='
+import copy
+def R(p,i,ev): return {"pass":p,"item":i,"digest":{"findings":[{"evidence":e,"ac":a} for e,a in ev]},"policy_verdict":{"counts":{"advisory":sum(1 for e,_ in ev if e=="advisory"),"reproduced":sum(1 for e,_ in ev if e=="reproduced"),"narrowed-pin":sum(1 for e,_ in ev if e=="narrowed-pin"),"mutation-survived":0}}}
+V=[R(1,3,[("narrowed-pin","AC-006"),("advisory","AC-003")]),R(1,4,[("reproduced","AC-001"),("advisory","AC-002"),("reproduced","AC-002")]),R(1,2,[("advisory","AC-001")])]
+it={i:{"captures":([{"sha256":"a"}] if i in (1,4,5) else [])} for i in (1,2,3,4,5)}
+TAG=["### Each blocking finding, with D21-152 item 3\x27s evidence-source tag - recorded only","","| pass | item | finding | AC | class | tag | what it read |","| --- | --- | --- | --- | --- | --- | --- |",
+     "| 1 | 3 (clean) | f0 | AC-006 | narrowed-pin | **asset** | x |","| 1 | 4 (seed) | f0 | AC-001 | reproduced | **asset** | y |","| 1 | 4 (seed) | f2 | AC-002 | reproduced | **spec/report only** | z |","","**3 blocking findings, 2 `asset`, 1 `spec/report only`.** A census."]
+DIS=["### D21-152 item 2\x27s disclosure: what a branch-1 result means here","","So it reads as **\"sufficient given the","report\"**, **not \"ChangeSummary alone sufficient\"**, and branch 2\x27s signal was","less likely for the same reason."]
+CON=["### D21-149 item 2\x27s confound, beside the false-positive outcome","","**Capture presence follows asset type, and both seeds are widgets.** P(seeded | capture) = 2/3 over the five","items. Each reviewer saw only its own item, and clean item 1 carries a capture."]
+def D(tag=None,dis=None,con=None): return "\n".join(["## F9 — S-BIN x",""]+(TAG if tag is None else tag)+[""]+(DIS if dis is None else dis)+[""]+(CON if con is None else con)+["","### Limits"])
+def sub(ls,a,b): return [l.replace(a,b) for l in ls]
+itp=copy.deepcopy(it); itp[2]["captures"]=[{"sha256":"b"}]
+Vbad=copy.deepcopy(V); Vbad[0]["policy_verdict"]["counts"]["narrowed-pin"]=2
+cases=[("ok",D(),V,it),
+       ("BAD",D(dis=[]),V,it),("BAD",D(dis=sub(DIS,"sufficient given the","sufficient")),V,it),("BAD",D(dis=sub(DIS,"ChangeSummary alone","ChangeSummary")),V,it),("BAD",D(dis=sub(DIS,"less likely","likely")),V,it),
+       ("BAD",D(tag=[]),V,it),("BAD",D(tag=[l for l in TAG if "| f2 |" not in l]),V,it),("BAD",D(tag=TAG[:7]+["| 1 | 2 (clean) | f0 | AC-001 | advisory | **asset** | w |"]+TAG[7:]),V,it),
+       ("BAD",D(tag=TAG[:5]+TAG[4:]),V,it),("BAD",D(tag=sub(TAG,"**spec/report only**","**report**")),V,it),("BAD",D(tag=sub(TAG,"f0 | AC-006","f0 | AC-005")),V,it),
+       ("BAD",D(tag=sub(TAG,"**3 blocking findings, 2","**3 blocking findings, 3")),V,it),
+       ("BAD",D(con=[]),V,it),("BAD",D(con=sub(CON,"both seeds are widgets","the seeds are widgets")),V,it),("BAD",D(con=sub(CON,"clean item 1 carries","item 1 carries")),V,it),("BAD",D(),V,itp),
+       ("BAD",D(),Vbad,it),
+       ("BAD",D(tag=sub(TAG,"| f2 |","| f1 |")),V,it),
+       ("BAD",D(tag=sub(sub(TAG,"**spec/report only** | z","**report** | z"),"1 `spec/report only`","0 `spec/report only`")),V,it),
+       ("BAD",D(tag=sub(TAG[:5]+TAG[4:],"**3 blocking findings, 2","**3 blocking findings, 3")),V,it),
+       ("BAD",D(con=sub(CON,", beside the false-positive outcome","")),V,it)]
+'"$f43l"'
+bad=[str(n)+":"+w+":"+",".join(f43_ok(t,v,i)) for n,(w,t,v,i) in enumerate(cases) if ("ok" if not f43_ok(t,v,i) else "BAD")!=w]
+print("ok" if not bad else "BAD:"+" ".join(bad))'
+fcv=$(python -c "$f43ctl"); rc=$?
+[ "$rc" -eq 0 ] && [ "$fcv" = "ok" ] || { echo "FAIL: the F43 disclosure check fails its synthetic drafts (rc=$rc): $fcv — a draft with the three disclosures passes; one missing a section, a phrase, a blocking row, or carrying an extra, twice-listed, mistagged or mis-cited row, a wrong count line or a P(seeded | capture) not the fixture's does not (R11FIX-8i (b); D21-152 items 2 and 3; D21-149 item 2)"; exit 1; }
+f43p='import json,sys
+def jl(p): return [json.loads(l) for l in open(p,encoding="utf-8") if l.strip()]
+'"$holdl"'
+sb=[r for r in jl(sys.argv[2]) if r.get("spike")=="s-bin"]
+V=[r for r in valid_of(sb, rulings_of(jl(sys.argv[4]))) if not r.get("rerun")]
+it={int(k):v for k,v in json.load(open(sys.argv[3],encoding="utf-8"))["items"].items()}
+'"$f43l"'
+b=f43_ok(open(sys.argv[1],encoding="utf-8").read(), V, it)
+print("ok" if not b else "BAD:"+" ".join(b))'
+fv=$(python -c "$f43p" "$DRAFT" "$T/s-bin.jsonl" "$T/s-bin_fixture.json" "$T/s-bin_oot-shadow-rulings.jsonl"); rc=$?
+[ "$rc" -eq 0 ] && [ "$fv" = "ok" ] || { echo "FAIL: $DRAFT does not carry D21-152 item 2's disclosure, D21-152 item 3's evidence-source tag on exactly the scored blocking findings, or D21-149 item 2's confound (rc=$rc): $fv (R11FIX-8i (b))"; exit 1; }
 ff=$(grep -nF 'only item 2 is diff-free' references/2026-09-08-architecture-design.md); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: no design line carries 'only item 2 is diff-free' — the two lines were rewritten, not corrected"; exit 1; }
 [ "$(printf '%s\n' "$ff" | grep -c .)" -ge 2 ] || { echo "FAIL: fewer than the two 'four of five' design lines measured at a6349b6"; exit 1; }
@@ -8167,6 +8742,14 @@ syn=$(printf '22:| ChangeSummary | BLOCKED | S-BIN registered and unrun |\n' | g
 # ---- in (0)) plus this stage's 3 CS + NFIELDS per-field + 2 render + 2 review_input tests, less s8a's superseded
 # ---- sealed-slot test, plus NGATE (D21-48 X16: 3 `gate_request::` tests on the human-gate route, 0 on the reviewer
 # ---- route, set in (8)): 6 + NFIELDS + NGATE.
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* The floor on the human-gate route, from the RECORDED count (rule 10): 1404 + 6 +
+# NFIELDS 4 (ADR-0199, proposed) + NGATE 3 = 1417, over >= 44 result lines. Measured on the merged tree (HEAD 42a923f,
+# 88a8dbd's PRs in, plus this stage's working changes) in a private worktree under the no-dispatch wrapper, Claude
+# Code's variables unset: 1416 passed and 1 failed over 44 result lines; fmt rc 0; clippy rc 0. The failure is rk-kernel's
+# ui::trybuild_pins_the_reason_each_kernel_fixture_fails (ac020, ac032, ac050), which fails identically at 42a923f on
+# this box: with the rust-src component installed, rustc prints a $RUST/core source excerpt its committed .stderr files
+# lack. It is this box's toolchain, not this stage's code, and with it green the total is ~~exactly 1417~~ (S8I-F1-GUARDS, dated 2026-10-15: 1432 with NDE, below). The formal run
+# needs it green, which is the operator's (§8i.9's suite bullet).
 out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|panicked' | head -20; exit 1; }
 res=$(printf '%s\n' "$out" | grep -E '^test result: ')
@@ -8177,6 +8760,17 @@ total=$(printf '%s\n' "$res" | awk '{s+=$4} END{print s+0}')
 nres=$(printf '%s\n' "$res" | grep -c .)
 case "$NGATE" in 0|3) : ;; *) echo "FAIL: NGATE '$NGATE' was not set by (8)"; exit 1;; esac
 floor=$((FLOOR_8H_PASSED + 6 + NFIELDS + NGATE))
+# *(dated 2026-10-15, s8i build, S8I-F1-GUARDS; operator ruling R11)* The floor also credits the fifteen D/E-round tests
+# that (8) now names. NDE is set in (8): 15 on the human-gate route, 4 on the reviewer route. On the human-gate route
+# the floor is re-derived from the RECORDED count (rule 10): 1404 + 6 + NFIELDS 4 + NGATE 3 + NDE 15 = 1432, over
+# >= 44 result lines. Measured against 42a923f, the tree adds exactly 28 workspace tests, which is 6 + 4 + 3 + 15, so the
+# "exactly 1417" above is superseded: ~~with it green the total is exactly 1417~~. The two lines below raise the floor
+# that the next line tests, and no line above is rewritten. That line's FAIL message still prints the breakdown
+# without NDE.
+# (dated 2026-10-15, s8i build, orchestrator; a minor of s8i refuting round 22) Correction: one comment line above was edited in place, to strike "exactly 1417";
+# no code line is rewritten.
+case "$NDE" in 4|15) : ;; *) echo "FAIL: NDE '$NDE' was not set by (8)"; exit 1;; esac
+floor=$((floor + NDE))
 [ "$total" -ge "$floor" ] && [ "$nres" -ge "$FLOOR_8H_RESULTS" ] || { echo "FAIL: $total passed over $nres results — below the floor of $floor over $FLOOR_8H_RESULTS (Checkpoint 8h's $FLOOR_8H_PASSED + 6 + $NFIELDS + $NGATE)"; exit 1; }
 out=$(nodispatch cargo fmt --all --check 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo fmt --all --check rc=$rc"; printf '%s\n' "$out" | head -20; exit 1; }
@@ -8241,6 +8835,15 @@ hit=$(grep -vE '^[[:space:]]*#' "$T/ex-ctl.sh" | grep -vxF -f "$T/ex-ctl.ex" | g
 [ "$hit" -eq 1 ] || { echo "FAIL: CONTROL — with the exemptions applied the scan saw $hit launcher lines, not the one unsandboxed wrap"; exit 1; }
 grep -v '^scl=' "$T/ex-ctl.sh" > "$T/ex-ctl2.sh" || { echo "FAIL: could not write the second exemption control"; exit 1; }
 if ex8h "$T/ex-ctl2.sh" >/dev/null; then echo "FAIL: CONTROL — the exemptions admitted launcher runs with no sandbox definition"; exit 1; fi
+# *(dated 2026-10-14, s8i build, S8I-C8-CP8I)* Re-derived on the merged tree (88a8dbd), read-only, cut from these bytes with only the replay
+# line replaced by a no-op: the three blocks extract; cp8h and cp8a honour RK_CP_NESTED; ex8h holds on s8h's merged bytes
+# (E1=2, E2=1); no extracted block carries a dispatch or ignored-test shape. Statically, against the merged files: every
+# test the three blocks name passed in the merged suite (cp8h 85, cp8a 23, cp5 1) but one: cp8a (7)'s rk-ports line still
+# named the superseded sealed-slot pin (red: "did not report ok"), now amended by dated edit in s8a and green. 8h (12)'s
+# live-feature clippy reads rc 0 and 8h (7)'s listing shows the three live tests ignored; cp5's lines other than its
+# cargo build/fmt/clippy/test/corpus/audit/deny lines ran to their end. Each replay's whole-suite line meets (10)'s
+# rk-kernel trybuild failure on this box. cp5's --features corpus run needs the corpus at CORPUS_PIN and clean (§8i.5 step
+# 11; it is on main 835b122 with an untracked runner/target/), and cargo audit and deny read the network: the operator's.
 if [ "${RK_CP_NESTED:-0}" = 1 ]; then
   echo "CP8I (11) SKIPPED: this block is itself a replay (RK_CP_NESTED=1); its re-runs ran at Checkpoint 8i's own close"
 else
@@ -8325,7 +8928,7 @@ echo "CP8I-END-OF-BLOCK reached"
 - **The construction floor.** (8)'s floor matches constructor CALLS: an associated function of `BinaryChangeSummary`
   (the payload name `s8a`'s file uses), or a lower-case `binary…` constructor on the enum. If `s8a`'s record names
   the payload or its constructor otherwise, the regex takes a dated amendment first. A construction assembled by a
-  macro is invisible to it. The named tests above it are the assertion, and the floor is not.
+  macro is invisible to it. The named tests above it are the assertion, and the floor is not. *(dated 2026-10-15, s8i build, S8I-F1-GUARDS, R10)* The floor also matches a point-free use (`.map(BinaryChangeSummary::new)`) and a qualified path (`<BinaryChangeSummary>::new(`). It skips lines inside an in-source `#[cfg(test)] mod`, which it locates by counting braces with a lexer that is aware of comments, strings and chars. It still cannot see a construction a macro assembles. It also cannot see a `cr"…"` raw C string, which it reads as an escaped string, or an attribute separated from its `mod` by another attribute or a blank line. Each of those limits makes the floor fire, never admit. *(dated 2026-10-15, s8i build, orchestrator; s8i refuting round 23): the `cr"…"` limit is gone, because the lexer reads `cr` as a raw-string prefix since round 22's fix, with a confuser control (and `br`'s branch now has one too). The floor also cannot see a construction through a renaming import, a type alias or `Self::new` in a trait impl, as (8)'s Limits note lists; s8's `S8_DEF` covers the import, alias and impl forms in its own guard. The attribute-separation limit makes the floor fire; the macro-assembled construction and those three forms admit (corrected by s8i refuting round 24's minor).)*
 - **What (4) re-derives.** (4) re-derives the rule outcomes from the records' own fields, and the records' fields come
   from the driver. The raw transcripts beside them are pinned so that an adjudication can re-derive every field, and
   the finding says whether one was run. `missing-fields.jsonl` is the operator's judgement, named as one. (4) checks
@@ -8349,3 +8952,9 @@ Checkpoint 8i re-ran 8a's amended block whole (guard (11)), and it records row 5
 criterion and the F41/F42 index gap are no longer raised as owed. The revision brief assigned both here, and both
 are in the work commit. Adversarial refuting rounds
 over this file and its checkpoint continue until a round moves no code and no guard.
+
+*(dated 2026-10-14, s8i build, S8I-C2-ADR0199)* **The `Binary` record and its index entries are written, uncommitted:** `references/adr/0199-the-binary-change-summary-carries-the-four-cited-fields-and-its-item-takes-a-human-gate.md` (`proposed` *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*); `references/adr/README.md`'s index row opening `| [0199](0199-…md) |`, the preamble's record count (198 → 199), the status census (accepted 193, superseded 4, proposed 2: `0197`, `0199`), the next free number (`0200`), the forbids census (185 / 11 / 3, all 199), the contiguity line (`0001`–`0199`) and the supersession count (97 links from 65 records, 94 reciprocated; `0199` → `0165` awaits the flip commit), each by dated note and each re-measured off disk; and `BIN_ADR=0199` in Checkpoint 8i (0). The flip, and `0165`'s `superseded_by` back-link and status cell with it, are the operator's.
+
+*(dated 2026-10-15, s8i build, S8I-F2-RECORDS; s8i refuting round 21's blocker B2, operator ruling B2)* **`runbook/00-preamble.md` joins the list above.** The note's *"the preamble's record count (198 → 199)"* was the README's own Purpose line. `runbook/00-preamble.md` itself still read *"`references/adr/` (**198 records**,"* with *"`0001`–`0198` contiguous"* and *"The next free number is **`0199`**."*, so Checkpoint 8a guard (3), which Checkpoint 8i (11) replays as cp8a, stopped with *"FAIL: README or the preamble does not name 0200 as the next free number"*. Both are corrected by dated note in `s8h`'s P1-records form (the number moves and the note keeps the old reading): **199 records**, `0001`–`0199` contiguous, and **`0200`**. Red and green, read-only, from s8a's bytes (guard (2)'s id lines and guard (3), cut by `S8I-F2-RECORDS_cp8a_g3.py`): before the edit rc 1 with that FAIL line; after it rc 0, `CP8A-G3-OK`. Scripts and outputs under `D:/repos/redkiln-sev/afk-tools/sp/s8i/` (`S8I-F2-RECORDS_*`).
+
+*(dated 2026-10-15, `s8i` close, D21-154.)* **ADR-0199 and F43 flipped `accepted` on D21-154**, the operator's dated signing line this section requires before Checkpoint 8i's run (*"Sign all three as drafted"*; AC-276's two `automated-verdict-refused` rows signed `fail` on the same line). The flip moved ADR-0199's frontmatter `status` line (`date` unchanged) and not its body; ADR-0165's `superseded_by` (`[]` → `["0199"]`; it stays `accepted`, ADR-0092 rule 1); the README's two index cells, its status census (accepted 194, superseded 4, proposed 1: `0197`), its not-at-`accepted` and open-questions sentences, its supersession note (97 links from 65 records, 95 reciprocated) and partial count (93), and the Supersessions table's `0165` → `0199` row; F43's status line and its `spikes/FINDINGS.md` row; PROGRESS row 8i and the D21-154 register row; and a dated note on each prose line under `references/` and `runbook/`, outside every fence and the record files, that calls ADR-0199 or F43 `proposed` (one quotation of `s8`'s bullet in this file is left, and so are the fenced comments that say so, because a checkpoint block is its bytes). Checkpoint 8i (7), replayed read-only from this file's bytes with `BIN_ADR=0199`, `SBIN_F=F43`, `O1=branch1` and `O2=undecided-fp`, now passes its `status: accepted` line, and Checkpoint 8a guard (3) still passes. The formal Checkpoint 8i and the close commits are the operator's (D21-154: *"Not signed here"*); D21-143 stays OPEN.
