@@ -623,3 +623,6 @@
 {"t":"2026-10-16T06:00:48.099Z","sid":"32228966-cb09-450b-a244-cb893f242c93","agent":"main","event":"gate-start"}
 {"t":"2026-10-16T06:01:03.144Z","sid":"32228966-cb09-450b-a244-cb893f242c93","agent":"main","event":"stop-blocked","reason":"gate","fp":"300ae04ef47aca80","ms":15039,"cached":false}
 {"t":"2026-10-16T06:01:11.096Z","sid":"32228966-cb09-450b-a244-cb893f242c93","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-10-16T06:02:10.334Z","sid":"32228966-cb09-450b-a244-cb893f242c93","agent":"","event":"subagent-stop","type":"","msg":true,"transcript":true}
+{"t":"2026-10-16T06:02:11.605Z","sid":"32228966-cb09-450b-a244-cb893f242c93","agent":"main","event":"session-start","source":"compact"}
+{"t":"2026-10-16T06:02:22.469Z","sid":"32228966-cb09-450b-a244-cb893f242c93","agent":"main","event":"stop-declared","status":"WIP"}
