@@ -41,7 +41,7 @@
 //! multi-item store therefore over-reports its transitions and gates. Slice 3's stores hold one item,
 //! so nothing here is measured against that case. RAISED, not settled.
 
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
@@ -50,7 +50,7 @@ use rk_git::path::WorktreePath;
 use rk_kernel::workflow::fsm::{self, StageAction};
 use rk_ports::event_store::EventStore;
 use rk_types::event::Event;
-use rk_types::event_kind::EventKind;
+use rk_types::event_kind::{EventKind, ItemKey};
 
 use crate::cli::Cli;
 use crate::exit::{Exit, Halt};
@@ -168,23 +168,52 @@ pub fn run_with(
     Ok(Exit::Success)
 }
 
-/// Which item a row belongs to, or `None` for the three kinds that carry no item.
-fn item_of(event: &Event) -> Option<&str> {
-    event
-        .payload
-        .get("item")
-        .and_then(serde_json::Value::as_str)
+/// Which item a row belongs to, by ADR-0182 decision 3's classification of its kind.
+///
+/// *(dated 2026-10-17, s8j build, package S8J-P2-STATUS; issue #6.)* ~~the payload's `item`
+/// member, for every kind~~ — which read no item off a keyed row, so every keyed stage and gate row
+/// was handed to every item. A `Carried` kind is owned by its interim key ([`Event::item`]); only a
+/// row that carries NO key falls back to its payload's `item`, the producer's own statement, so a
+/// producer that does not key yet (ADR-0182's residual) is still attributed as it was. An
+/// `InPayload` kind is owned by its payload member (ADR-0163). A kind that is not item-scoped owns
+/// no item, whatever its payload says. The match is total, so a new classification is a compile
+/// error here.
+fn owner(event: &Event) -> Option<&str> {
+    let in_payload = || {
+        event
+            .payload
+            .get("item")
+            .and_then(serde_json::Value::as_str)
+    };
+    match event.kind.item_key() {
+        ItemKey::Carried => event.item().or_else(in_payload),
+        ItemKey::InPayload => in_payload(),
+        ItemKey::NotItemScoped => None,
+    }
 }
 
-/// The stage every item is folded against: the `to` of the LAST recorded `stage_transition`.
+/// Is `event` in `item`'s journal? Its own rows, and the rows of a `Carried` kind that name no
+/// owner — ADR-0182 decision 4's inclusive interim: *"read as belonging to no item in
+/// particular"*, so every item reads them. A row owned by another item never is, and an ownerless
+/// row of a kind that is not item-scoped is no item's.
+fn in_journal_of(event: &Event, item: &str) -> bool {
+    owner(event).map_or_else(
+        || event.kind.item_key() == ItemKey::Carried,
+        |owner| owner == item,
+    )
+}
+
+/// The stage `item` is folded against: the `to` of the last `stage_transition` KEYED to it.
 ///
-/// Empty when the journal records no transition — which is honest rather than a default. `fold`
-/// uses this only to seed `RunState::initial`, and `stage_action` filters by tier and nothing else.
-fn recorded_stage(events: &[Event]) -> String {
+/// *(dated 2026-10-17, s8j build, package S8J-P2-STATUS; issue #6.)* ~~the last transition in the
+/// whole journal~~, which seeded every item with whichever item moved last. Empty when the item has
+/// no keyed transition — which is honest rather than a default. `fold` uses this only to seed
+/// `RunState::initial`; the item's own transitions still replay over it.
+fn recorded_stage(events: &[Event], item: &str) -> String {
     events
         .iter()
         .rev()
-        .find(|e| e.kind == EventKind::StageTransition)
+        .find(|e| e.kind == EventKind::StageTransition && e.item() == Some(item))
         .and_then(|e| e.payload.get("to"))
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default()
@@ -194,25 +223,19 @@ fn recorded_stage(events: &[Event]) -> String {
 /// One `stage_action` per item, in item order. Empty for an empty journal — which is the whole of
 /// why the init-only repository exits `0`.
 fn roll_up(events: &[Event]) -> Vec<(String, Result<StageAction, fsm::FsmError>)> {
-    let stage = recorded_stage(events);
-    let mut per_item: BTreeMap<String, Vec<Event>> = BTreeMap::new();
-    for event in events {
-        if let Some(item) = item_of(event) {
-            per_item
-                .entry(item.to_owned())
-                .or_default()
-                .push(event.clone());
-        }
-    }
-    // The item-less tier-1 rows, handed to every item — see the header's RAISED note.
-    let shared: Vec<&Event> = events.iter().filter(|e| item_of(e).is_none()).collect();
-    per_item
+    let items: BTreeSet<&str> = events.iter().filter_map(owner).collect();
+    items
         .into_iter()
-        .map(|(item, own)| {
-            let mut slice: Vec<Event> = shared.iter().map(|e| (*e).clone()).collect();
-            slice.extend(own);
-            let folded = fsm::stage_action(&item, &stage, &slice);
-            (item, folded)
+        .map(|item| {
+            // Cloned because `stage_action` takes a contiguous `&[Event]`, and an item's journal is
+            // a filtered subset of the store's rows.
+            let journal: Vec<Event> = events
+                .iter()
+                .filter(|e| in_journal_of(e, item))
+                .cloned()
+                .collect();
+            let folded = fsm::stage_action(item, &recorded_stage(events, item), &journal);
+            (item.to_owned(), folded)
         })
         .collect()
 }
