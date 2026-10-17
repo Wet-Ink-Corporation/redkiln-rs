@@ -74,3 +74,11 @@
 {"t":"2026-10-17T02:59:20.738Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"verdict","via":"subagent-stop","verdict":"approved","fp":"c65f2cb94681be86","stale":false,"findings":3}
 {"t":"2026-10-17T03:00:11.760Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"subagent-start","type":"temper:rust-reviewer"}
 {"t":"2026-10-17T03:00:31.774Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-10-17T03:00:35.782Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"gate-start"}
+{"t":"2026-10-17T03:04:23.423Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"handback","type":"temper:rust-reviewer","reviewer":true}
+{"t":"2026-10-17T03:04:23.530Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"verdict","via":"handback","verdict":"approved","fp":"0cc2e9c7f93fcee3","stale":false,"findings":2}
+{"t":"2026-10-17T03:04:25.341Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"subagent-stop","type":"temper:rust-reviewer","msg":false,"transcript":true}
+{"t":"2026-10-17T03:04:25.493Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"verdict","via":"subagent-stop","verdict":"approved","fp":"0cc2e9c7f93fcee3","stale":false,"findings":2}
+{"t":"2026-10-17T03:09:04.167Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"session-start","source":"resume"}
+{"t":"2026-10-17T03:09:47.860Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"subagent-start","type":"temper:rust-reviewer"}
+{"t":"2026-10-17T03:09:57.425Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-declared","status":"WIP"}
