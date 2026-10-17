@@ -147,7 +147,7 @@ fn the_real_rust_smoke_gets_past_input_parsing_through_real_toolchain() {
     )
     .expect("the fixture manifest is writable");
     let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
-    let env = Env::from_map(std::env::vars().collect());
+    let env = Env::from_map(crate::inherited_env());
     let toolchain = rk_cli::verbs::run::real_toolchain(&resolved, &env, repo.path())
         .unwrap_or_else(|e| panic!("real_toolchain over the fixture: {e:?}"));
     assert_eq!(
@@ -184,7 +184,7 @@ fn the_undecorated_rust_smoke_still_refuses_the_envelope() {
         PathBuf::from(rk_adapter_toolchain_rust::DEFAULT_PROGRAM),
         std::time::Duration::from_secs(60),
         root.path(),
-        std::env::vars().collect(),
+        crate::inherited_env(),
         scratch.path().to_path_buf(),
     )
     .expect("the Rust adapter's configuration over this process's environment");
