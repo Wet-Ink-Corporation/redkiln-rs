@@ -44,3 +44,9 @@
 {"t":"2026-10-17T01:29:25.805Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-implementer","event":"subagent-start","type":"temper:rust-implementer"}
 {"t":"2026-10-17T01:29:34.693Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-declared","status":"WIP"}
 {"t":"2026-10-17T01:29:43.156Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-10-17T01:35:19.401Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"session-start","source":"resume"}
+{"t":"2026-10-17T01:35:49.879Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-implementer","event":"subagent-start","type":"temper:rust-implementer"}
+{"t":"2026-10-17T01:35:53.680Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"gate-start"}
+{"t":"2026-10-17T01:43:16.205Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"session-start","source":"resume"}
+{"t":"2026-10-17T01:43:36.562Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"skill-loaded","via":"Skill"}
+{"t":"2026-10-17T01:44:36.727Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-declared","status":"WIP"}
