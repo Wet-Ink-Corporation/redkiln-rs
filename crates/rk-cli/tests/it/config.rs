@@ -395,10 +395,13 @@ fn ac422_config_reads_the_one_denylist() {
 
 /// **Issue #11: a provider variable the test process inherited never reaches a spawned `redkiln`.**
 ///
-/// The parent's value is stood in for by an explicit `.env` on the child, so no test mutates the
-/// real process environment. The repository's configuration names an adapter this build does not
-/// ship, so the run refuses either way, and the refusal it reaches is the discriminator: the
-/// denylist refusal (checked first) if the variable got through, the adapter refusal if it did not.
+/// The child is built by the harness's own [`crate::redkiln_command`] and inherits whatever this
+/// test process carries; no test mutates the real process environment. The repository's
+/// configuration names an adapter this build does not ship, so the run refuses either way, and the
+/// refusal it reaches is the discriminator: the denylist refusal (checked first) if an inherited
+/// provider variable got through, the adapter refusal if none did. Under a shell that exports none
+/// it cannot fail; [`redkiln_command_removes_every_inherited_provider_variable`] pins the removal
+/// itself on any box.
 #[test]
 fn parent_provider_variable_leaves_the_child_launch_gate_unaffected() {
     let repo = crate::temp_repo();
@@ -409,24 +412,44 @@ fn parent_provider_variable_leaves_the_child_launch_gate_unaffected() {
     )
     .expect("the configuration installs");
     let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
-    cmd.env("ANTHROPIC_BASE_URL", "inherited-by-the-test-process");
-    for name in crate::provider_vars([std::ffi::OsString::from("ANTHROPIC_BASE_URL")]) {
-        cmd.env_remove(name);
-    }
     cmd.arg("-C").arg(repo.path()).arg("run").arg("bug-1");
 
     let out = crate::support::output_bounded(&mut cmd);
 
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(
-        !stderr.contains("ANTHROPIC_BASE_URL"),
-        "the child saw the parent's provider variable; stderr:\n{stderr}"
+        !stderr.contains("denylist") && !stderr.contains("which is refused"),
+        "the child saw an inherited provider variable; stderr:\n{stderr}"
     );
     assert_eq!(out.status.code(), Some(3), "stderr:\n{stderr}");
     assert!(
         stderr.contains("rk-adapter-linear"),
         "the run did not reach the adapter refusal the configuration earns; stderr:\n{stderr}"
     );
+}
+
+/// **Issue #11: the harness's one constructor removes every provider variable this process carries.**
+///
+/// Read off the built `Command`, so it holds on any box: each name [`crate::provider_vars`] finds in
+/// the real environment is an explicit removal on the child, whichever [`crate::Launch`] arm.
+#[test]
+fn redkiln_command_removes_every_inherited_provider_variable() {
+    let inherited: Vec<std::ffi::OsString> =
+        crate::provider_vars(std::env::vars_os().map(|(name, _)| name)).collect();
+
+    for launch in [crate::Launch::Withheld, crate::Launch::Fixture] {
+        let cmd = crate::redkiln_command(launch);
+
+        let envs: BTreeMap<&std::ffi::OsStr, Option<&std::ffi::OsStr>> = cmd.get_envs().collect();
+        for name in &inherited {
+            assert_eq!(
+                envs.get(name.as_os_str()),
+                Some(&None),
+                "{launch:?}: the inherited {} is not removed from the child",
+                name.to_string_lossy()
+            );
+        }
+    }
 }
 
 /// **Issue #11: the scrub removes what the product refuses, and the launcher's session names.**

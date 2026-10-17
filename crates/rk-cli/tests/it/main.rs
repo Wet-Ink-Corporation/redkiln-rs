@@ -312,7 +312,7 @@ const SESSION_NAMES: [&str; 2] = ["CLAUDECODE", "AI_AGENT"];
 /// A name the product refuses (`rk_adapter_claude::env_denylist`, ASCII case-insensitive as it
 /// is), or a Claude Code session or provider name ([`PROVIDER_PREFIXES`], [`SESSION_NAMES`]).
 #[must_use]
-pub fn is_provider_var(name: &str) -> bool {
+pub(crate) fn is_provider_var(name: &str) -> bool {
     rk_adapter_claude::env_denylist::is_denylisted(name)
         || PROVIDER_PREFIXES.iter().any(|p| {
             name.get(..p.len())
@@ -327,7 +327,7 @@ pub fn is_provider_var(name: &str) -> bool {
 /// spawn path's scrub, applied to a map. Names or values that are not UTF-8 are dropped, as
 /// `rk_cli::env::Env::capture` drops them.
 #[must_use]
-pub fn inherited_env() -> std::collections::BTreeMap<String, String> {
+pub(crate) fn inherited_env() -> std::collections::BTreeMap<String, String> {
     std::env::vars_os()
         .filter_map(|(k, v)| match (k.into_string(), v.into_string()) {
             (Ok(k), Ok(v)) if !is_provider_var(&k) => Some((k, v)),
@@ -340,7 +340,7 @@ pub fn inherited_env() -> std::collections::BTreeMap<String, String> {
 ///
 /// [`redkiln_command`] removes each from its child. A name that is not UTF-8 is never yielded: the
 /// product's capture drops it (`rk_cli::env::Env::capture`), so it cannot trip a refusal.
-pub fn provider_vars(
+pub(crate) fn provider_vars(
     inherited: impl IntoIterator<Item = std::ffi::OsString>,
 ) -> impl Iterator<Item = std::ffi::OsString> {
     inherited
