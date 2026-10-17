@@ -21,7 +21,6 @@
 //! **succeeds**. One `Step`, one walk, two toolchains, opposite outcomes: the only thing that moved
 //! is which adapter the port held, so the outcome is attributable to the adapter and to nothing else.
 
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -126,10 +125,7 @@ fn a_tool_step_reaches_the_rust_adapter_and_not_the_fixture() {
         "the discriminator needs an ABSOLUTE, NONEXISTENT program: {}",
         program.display()
     );
-    let mut child_env: BTreeMap<String, String> = BTreeMap::new();
-    for (k, v) in std::env::vars() {
-        child_env.insert(k, v);
-    }
+    let child_env = crate::inherited_env();
     let config = rk_adapter_toolchain_rust::Config::new(
         program,
         Duration::from_secs(60),

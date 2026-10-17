@@ -619,7 +619,7 @@ fn rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table() {
             root.to_path_buf(),
             root.join(".git"),
             config,
-            rk_cli::env::Env::from_map(std::env::vars().collect()),
+            rk_cli::env::Env::from_map(crate::inherited_env()),
             None,
             Box::new(StubProbe::read(root)),
             NOW,

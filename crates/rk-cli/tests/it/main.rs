@@ -278,6 +278,10 @@ pub fn fixture_launch_record() -> PathBuf {
 /// sets it only to the fixture record when the caller says so. Every spawn site folds into it, and
 /// `run::every_binary_spawn_withholds_or_supplies_the_launch_record` asserts that exactly one code
 /// line constructs such a `Command`, here, with the removal (mutant M26).
+///
+/// It also removes every inherited [`provider_vars`] name (issue #11), so a shell exporting a
+/// provider credential or a Claude Code session cannot turn a test red. A test that wants the
+/// child to see one sets it on the returned `Command`, which wins over the removal.
 #[expect(
     clippy::disallowed_types,
     reason = "every verb exercised AS A PROCESS goes through this one constructor (golden \
@@ -287,10 +291,61 @@ pub fn fixture_launch_record() -> PathBuf {
 pub fn redkiln_command(launch: Launch) -> std::process::Command {
     let mut cmd = std::process::Command::new(redkiln());
     cmd.env_remove(rk_cli::env::LAUNCH_RECORD);
+    for name in provider_vars(std::env::vars_os().map(|(name, _)| name)) {
+        cmd.env_remove(name);
+    }
     if launch == Launch::Fixture {
         cmd.env(rk_cli::env::LAUNCH_RECORD, fixture_launch_record());
     }
     cmd
+}
+
+/// The name prefixes a Claude Code session or a provider exports (issue #11). Wider than the
+/// product's denylist on purpose: the harness withholds them all, the product refuses its list.
+const PROVIDER_PREFIXES: [&str; 2] = ["CLAUDE_", "ANTHROPIC_"];
+
+/// The session names outside those prefixes that `s8h` §8h.7 step 2's launcher refuses.
+const SESSION_NAMES: [&str; 2] = ["CLAUDECODE", "AI_AGENT"];
+
+/// **What a test's `redkiln` must not inherit: the one source of truth** (issue #11).
+///
+/// A name the product refuses (`rk_adapter_claude::env_denylist`, ASCII case-insensitive as it
+/// is), or a Claude Code session or provider name ([`PROVIDER_PREFIXES`], [`SESSION_NAMES`]).
+#[must_use]
+pub fn is_provider_var(name: &str) -> bool {
+    rk_adapter_claude::env_denylist::is_denylisted(name)
+        || PROVIDER_PREFIXES.iter().any(|p| {
+            name.get(..p.len())
+                .is_some_and(|head| head.eq_ignore_ascii_case(p))
+        })
+        || SESSION_NAMES.iter().any(|n| n.eq_ignore_ascii_case(name))
+}
+
+/// This test process's environment minus every [`is_provider_var`] name (issue #11).
+///
+/// For the in-process tests that hand a real environment to an `Env` or an adapter `Config`: the
+/// spawn path's scrub, applied to a map. Names or values that are not UTF-8 are dropped, as
+/// `rk_cli::env::Env::capture` drops them.
+#[must_use]
+pub fn inherited_env() -> std::collections::BTreeMap<String, String> {
+    std::env::vars_os()
+        .filter_map(|(k, v)| match (k.into_string(), v.into_string()) {
+            (Ok(k), Ok(v)) if !is_provider_var(&k) => Some((k, v)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The names in `inherited` that [`is_provider_var`] matches, in order (issue #11).
+///
+/// [`redkiln_command`] removes each from its child. A name that is not UTF-8 is never yielded: the
+/// product's capture drops it (`rk_cli::env::Env::capture`), so it cannot trip a refusal.
+pub fn provider_vars(
+    inherited: impl IntoIterator<Item = std::ffi::OsString>,
+) -> impl Iterator<Item = std::ffi::OsString> {
+    inherited
+        .into_iter()
+        .filter(|name| name.to_str().is_some_and(is_provider_var))
 }
 
 /// A temp repository with one commit, and nothing else.
