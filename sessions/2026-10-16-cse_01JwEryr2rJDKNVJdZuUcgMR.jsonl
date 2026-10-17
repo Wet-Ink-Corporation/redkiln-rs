@@ -50,3 +50,7 @@
 {"t":"2026-10-17T01:43:16.205Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"session-start","source":"resume"}
 {"t":"2026-10-17T01:43:36.562Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"skill-loaded","via":"Skill"}
 {"t":"2026-10-17T01:44:36.727Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-10-17T01:44:43.030Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"gate-start"}
+{"t":"2026-10-17T01:51:38.637Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"session-start","source":"resume"}
+{"t":"2026-10-17T01:53:10.389Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-reviewer","event":"subagent-start","type":"temper:rust-reviewer"}
+{"t":"2026-10-17T01:55:18.961Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-declared","status":"WIP"}
