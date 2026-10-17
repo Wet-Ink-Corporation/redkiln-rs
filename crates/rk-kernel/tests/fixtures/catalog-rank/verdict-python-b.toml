@@ -1,0 +1,16 @@
+# Rank 7 AGAIN, python-only: ties verdict-python-a in every python context and in no other
+# (issue #7).
+[activity]
+id           = "verdict-python-b"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["toolchain:python"]
+method_rank  = 7
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"
