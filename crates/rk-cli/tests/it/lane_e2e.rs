@@ -1361,7 +1361,16 @@ fn two_items_in_one_store_do_not_fold_together() {
     // *(dated 2026-10-17, s8j build, package S8J-P2-STATUS; issue #6.)* `status`'s roll-up holds
     // the same partition: each item's line carries its OWN last transition and its OWN gates, not
     // the journal's last transition handed to every item.
-    let lines = status_lines(root);
+    let status_cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let mut out: Vec<u8> = Vec::new();
+    let exit = rk_cli::verbs::status::run_to(&status_cli, Startup::real(), &mut out)
+        .expect("`status` does not halt");
+    assert_eq!(exit, Exit::Success, "`status` exits 0");
+    let text = String::from_utf8(out).expect("`status` prints UTF-8");
+    let lines = status_lines(&text);
     let own_stage = |state: &rk_kernel::workflow::fsm::RunState| {
         state
             .stages_entered()
@@ -1369,46 +1378,38 @@ fn two_items_in_one_store_do_not_fold_together() {
             .cloned()
             .expect("PREMISE: the item entered a stage")
     };
+    let (gate_stage, through_stage) = (own_stage(&gate_state), own_stage(&through_state));
     assert_eq!(
         lines.get(GATE_ITEM),
-        Some(&(own_stage(&gate_state), "gates=1".to_owned())),
+        Some(&(gate_stage.as_str(), "gates=1")),
         "`status` on the gate item: its own last stage and its own one gate ({lines:?})"
     );
     assert_eq!(
         lines.get(THROUGH_ITEM),
-        Some(&(own_stage(&through_state), "gates=0".to_owned())),
+        Some(&(through_stage.as_str(), "gates=0")),
         "`status` on the through item: its own last stage and none of the gate item's gates \
          ({lines:?})"
     );
 }
 
-/// `status`'s roll-up lines, in process: item -> (the stage its last transition entered, its
-/// `gates=` field). Draw lines (no `gates=` field) are skipped.
-fn status_lines(root: &Path) -> std::collections::BTreeMap<String, (String, String)> {
-    let cli = rk_cli::cli::Cli {
-        cwd: Some(root.to_path_buf()),
-        command: rk_cli::cli::Command::Status,
-    };
-    let mut out: Vec<u8> = Vec::new();
-    let exit = rk_cli::verbs::status::run_to(&cli, Startup::real(), &mut out)
-        .unwrap_or_else(|halt| panic!("`status` halted: {halt:?}"));
-    assert_eq!(exit, Exit::Success, "`status` exits 0");
-    String::from_utf8(out)
-        .expect("`status` prints UTF-8")
-        .lines()
-        .filter_map(|line| match line.split('\t').collect::<Vec<_>>().as_slice() {
-            [item, transition, gates] if gates.starts_with("gates=") => Some((
-                (*item).to_owned(),
-                (
-                    transition
-                        .rsplit_once("->")
-                        .map_or(*transition, |(_, to)| to)
-                        .to_owned(),
-                    (*gates).to_owned(),
-                ),
-            )),
-            _ => None,
-        })
+/// `status`'s roll-up lines: item -> (the stage its last transition entered, its `gates=` field).
+/// Draw lines (no `gates=` field) are skipped.
+fn status_lines(text: &str) -> std::collections::BTreeMap<&str, (&str, &str)> {
+    text.lines()
+        .filter_map(
+            |line| match line.split('\t').collect::<Vec<_>>().as_slice() {
+                [item, transition, gates] if gates.starts_with("gates=") => Some((
+                    *item,
+                    (
+                        transition
+                            .rsplit_once("->")
+                            .map_or(*transition, |(_, to)| to),
+                        *gates,
+                    ),
+                )),
+                _ => None,
+            },
+        )
         .collect()
 }
 

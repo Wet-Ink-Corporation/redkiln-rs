@@ -39,7 +39,20 @@
 //! `item` — and **no record says which item they belong to.** This module hands them to every item,
 //! because the store cannot tell and inventing an owner would be worse than over-reporting; a
 //! multi-item store therefore over-reports its transitions and gates. Slice 3's stores hold one item,
-//! so nothing here is measured against that case. RAISED, not settled.
+//! so nothing here is measured against that case. ~~RAISED, not settled.~~
+//!
+//! *(dated 2026-10-17, s8j build, package S8J-P2-STATUS; issue #6.)* **SETTLED by ADR-0182
+//! (proposed), and the paragraph above is history.** `ByItem` is honoured now and the tier-1
+//! boundary keys every stage and gate row and `dag_assembled` with the interim key beside the
+//! payload, so a record does say which item they belong to: decision 3 classifies every kind, and
+//! decision 4 reads an item-less row of a `Carried` kind as belonging to no item in particular. This
+//! module follows both: each row is partitioned by its owner (the key for a `Carried` kind, falling
+//! back to the payload's `item` only on a row that carries no key; the payload member for
+//! `rate_limit_reading`; none for a kind that is not item-scoped), an item-less `Carried` row is
+//! read by every item, and each item's stage is seeded from its own keyed transitions.
+//! `lane_e2e::two_items_in_one_store_do_not_fold_together` measures the two-item case through this
+//! verb. What stays owed is ADR-0182's whole-store selector *with exclusion*; until it lands the
+//! one read below is `ByRun`.
 
 use std::collections::BTreeSet;
 use std::io::Write;

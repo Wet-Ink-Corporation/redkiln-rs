@@ -158,10 +158,10 @@ fn status_prints_no_headroom_line_for_an_item_with_no_reading() {
 
 /// A tier-1 `stage_transition` row, keyed to `item` when one is given (ADR-0182's interim key).
 fn transition(item: Option<&str>, from: Option<&str>, to: &str) -> Event {
-    let payload = match from {
-        Some(from) => serde_json::json!({ "from": from, "to": to }),
-        None => serde_json::json!({ "to": to }),
-    };
+    let payload = from.map_or_else(
+        || serde_json::json!({ "to": to }),
+        |from| serde_json::json!({ "from": from, "to": to }),
+    );
     let row = Event::new(EventKind::StageTransition, payload);
     match item {
         Some(item) => row.with_item(item),
@@ -172,7 +172,11 @@ fn transition(item: Option<&str>, from: Option<&str>, to: &str) -> Event {
 /// `status`'s roll-up lines alone (the ones whose last field is `gates=`), in print order.
 fn roll_up_lines(text: &str) -> Vec<&str> {
     text.lines()
-        .filter(|l| l.rsplit('\t').next().is_some_and(|f| f.starts_with("gates=")))
+        .filter(|l| {
+            l.rsplit('\t')
+                .next()
+                .is_some_and(|f| f.starts_with("gates="))
+        })
         .collect()
 }
 
