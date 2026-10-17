@@ -34,9 +34,9 @@
 //! SIGKILL)`), `terminate_pid` (`kill(pid, SIGKILL)`) and `is_alive` (`kill(pid, 0)`). *(Dated
 //! 2026-10-16, issue #20: the emptiness probe `kill(-pgid, 0)` was removed; it counted a zombie
 //! member, and `posix.rs`'s `Group::is_empty` reads its zombie-filtered `/proc` listing instead.)*
-//! Enumeration by pid on POSIX has no syscall; `posix.rs` reads `/proc` for it and this module carries only the signal calls. **The POSIX arm is written, not
-//! run: this box is Windows and the arm is ARMED to a recorded CI run** (`s7c` §7c.10; `ci.yml`
-//! has never run).
+//! Enumeration by pid on POSIX has no syscall; `posix.rs` reads `/proc` for it and this module
+//! carries only the signal calls. **The POSIX arm is written, not run: this box is Windows and the
+//! arm is ARMED to a recorded CI run** (`s7c` §7c.10; `ci.yml` has never run).
 //!
 //! [`CANCEL_EXIT_CODE`] is declared here because ADR-0127 decision 1 puts *"the adapter's own
 //! `TerminateProcess` exit code"* as *"a named constant in this module"*; `windows.rs` re-exports it

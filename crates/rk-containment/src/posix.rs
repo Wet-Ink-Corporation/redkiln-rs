@@ -16,10 +16,10 @@
 //! whose id is its own pid — so the group exists the instant the child does, and there is no
 //! create-before-spawn step to order: the group IS the spawn. Kill is `killpg(pgid, SIGKILL)`.
 //! Enumeration by pid has no syscall; [`Group::pids`] reads `/proc/<pid>/stat`'s fifth field (the
-//! pgrp) over every numeric entry of `/proc`, which is Linux's and is what CI runs; the
-//! emptiness probe `kill(-pgid, 0)` is the portable half and [`Group::is_empty`] exposes it.
-//! *(Dated 2026-10-16, issue #20: [`Group::is_empty`] now reads [`Group::pids`], because
-//! `kill(-pgid, 0)` counts a zombie member; the probe is gone from `ffi`.)*
+//! pgrp) over every numeric entry of `/proc`, which is Linux's and is what CI runs, and skips a
+//! zombie; [`Group::is_empty`] reads that same listing, so it needs `/proc` too.
+//! *(Dated 2026-10-16, issue #20: [`Group::is_empty`] was the probe `kill(-pgid, 0)`, which
+//! counts a zombie member; the probe is gone from `ffi`.)*
 //!
 //! **What a process group does not promise, named rather than discovered on CI:** a member can
 //! leave the group with `setpgid`/`setsid` — the POSIX analogue of Windows' `CREATE_BREAKAWAY_FROM_JOB`,
