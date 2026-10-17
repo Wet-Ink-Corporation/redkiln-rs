@@ -211,6 +211,34 @@ fn change_of(inst: &str) -> Option<&'static [&'static str]> {
     CHANGE_OF.iter().find(|(t, _)| *t == inst).map(|(_, c)| *c)
 }
 
+/// One toolchain instance of a load-time sweep: each toolchain it binds, with that toolchain's
+/// own change kinds.
+pub(crate) type SweptToolchain<'r> = Vec<(&'r str, &'static [&'static str])>;
+
+/// The toolchain/change instances a load-time sweep enumerates, derived from `registry` so no
+/// sweep keeps its own list (issue #7).
+///
+/// Each value the registry's `toolchain` facet declares is one singleton instance, in declared
+/// order; then each of `lattice.py`'s mixed rows (`node+unreal`) whose every member is declared.
+/// A toolchain's change kinds are its [`CHANGE_OF`] row (D4). A declared toolchain with no row is
+/// still swept, binding no change kinds, so a producer that reads only `toolchain` is judged there;
+/// nothing is invented for it. A registry with no `toolchain` facet yields no instances.
+pub(crate) fn toolchain_sweep(registry: &Registry) -> Vec<SweptToolchain<'_>> {
+    let Some(facet) = registry.facet("toolchain") else {
+        return Vec::new();
+    };
+    let declared: Vec<&str> = facet.values.iter().filter_map(|v| v.as_str()).collect();
+    let part = |tool| (tool, change_of(tool).unwrap_or(&[]));
+    let mut out: Vec<SweptToolchain<'_>> = declared.iter().map(|t| vec![part(t)]).collect();
+    out.extend(
+        P6_TOOLCHAINS
+            .iter()
+            .filter(|(_, tools, _)| tools.len() > 1 && tools.iter().all(|t| declared.contains(t)))
+            .map(|(_, tools, _)| tools.iter().copied().map(part).collect()),
+    );
+    out
+}
+
 // ------------------------------------------------------------------ axes
 
 /// One toolchain alternative: its name, the `toolchain` set it binds and the `change` set.

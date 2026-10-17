@@ -16,8 +16,8 @@
 //! whose id is its own pid — so the group exists the instant the child does, and there is no
 //! create-before-spawn step to order: the group IS the spawn. Kill is `killpg(pgid, SIGKILL)`.
 //! Enumeration by pid has no syscall; [`Group::pids`] reads `/proc/<pid>/stat`'s fifth field (the
-//! pgrp) over every numeric entry of `/proc`, which is Linux's and is what CI runs; the
-//! emptiness probe `kill(-pgid, 0)` is the portable half and [`Group::is_empty`] exposes it.
+//! pgrp) over every numeric entry of `/proc`, which is Linux's and is what CI runs, and skips a
+//! zombie; [`Group::is_empty`] reads that same listing, so it needs `/proc` too.
 //!
 //! **What a process group does not promise, named rather than discovered on CI:** a member can
 //! leave the group with `setpgid`/`setsid` — the POSIX analogue of Windows' `CREATE_BREAKAWAY_FROM_JOB`,
@@ -89,14 +89,14 @@ impl Group {
         ))))
     }
 
-    /// Whether any member of the group still exists (`kill(-pgid, 0)`) — the portable probe.
+    /// Whether the group has no running member: [`Group::pids`] lists none. A zombie (exited, not
+    /// yet reaped) is not a running member, so a group whose only member has exited reads empty
+    /// before its reaper runs, as [`Group::kill`]'s wait and [`is_alive`] already read it.
     ///
     /// # Errors
-    /// [`ContainError::Enumerate`] if the probe fails for a reason other than `ESRCH`/`EPERM`.
+    /// [`ContainError::Enumerate`] if `/proc` cannot be read.
     pub fn is_empty(&self) -> Result<bool, ContainError> {
-        sys::group_has_members(self.pgid)
-            .map(|has| !has)
-            .map_err(ContainError::Enumerate)
+        Ok(self.pids()?.is_empty())
     }
 
     /// The pids in the group, read from `/proc` (Linux): every `/proc/<n>/stat` whose fifth

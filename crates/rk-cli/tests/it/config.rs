@@ -393,6 +393,100 @@ fn ac422_config_reads_the_one_denylist() {
     );
 }
 
+/// **Issue #11: a provider variable the test process inherited never reaches a spawned `redkiln`.**
+///
+/// The child is built by the harness's own [`crate::redkiln_command`] and inherits whatever this
+/// test process carries; no test mutates the real process environment. The repository's
+/// configuration names an adapter this build does not ship, so the run refuses either way, and the
+/// refusal it reaches is the discriminator: the denylist refusal (checked first) if an inherited
+/// provider variable got through, the adapter refusal if none did. Under a shell that exports none
+/// it cannot fail; [`redkiln_command_removes_every_inherited_provider_variable`] pins the removal
+/// itself on any box.
+#[test]
+fn parent_provider_variable_leaves_the_child_launch_gate_unaffected() {
+    let repo = crate::temp_repo();
+    std::fs::create_dir_all(repo.path().join(".redkiln")).expect("the .redkiln dir is made");
+    std::fs::write(
+        repo.path().join(".redkiln").join("config.toml"),
+        config_fixture("unknown-adapter.toml"),
+    )
+    .expect("the configuration installs");
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
+    cmd.arg("-C").arg(repo.path()).arg("run").arg("bug-1");
+
+    let out = crate::support::output_bounded(&mut cmd);
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        !stderr.contains("denylist") && !stderr.contains("which is refused"),
+        "the child saw an inherited provider variable; stderr:\n{stderr}"
+    );
+    assert_eq!(out.status.code(), Some(3), "stderr:\n{stderr}");
+    assert!(
+        stderr.contains("rk-adapter-linear"),
+        "the run did not reach the adapter refusal the configuration earns; stderr:\n{stderr}"
+    );
+}
+
+/// **Issue #11: the harness's one constructor removes every provider variable this process carries.**
+///
+/// Read off the built `Command`, so it holds on any box: each name [`crate::provider_vars`] finds in
+/// the real environment is an explicit removal on the child, whichever [`crate::Launch`] arm.
+#[test]
+fn redkiln_command_removes_every_inherited_provider_variable() {
+    let inherited: Vec<std::ffi::OsString> =
+        crate::provider_vars(std::env::vars_os().map(|(name, _)| name)).collect();
+
+    for launch in [crate::Launch::Withheld, crate::Launch::Fixture] {
+        let cmd = crate::redkiln_command(launch);
+
+        let envs: BTreeMap<&std::ffi::OsStr, Option<&std::ffi::OsStr>> = cmd.get_envs().collect();
+        for name in &inherited {
+            assert_eq!(
+                envs.get(name.as_os_str()),
+                Some(&None),
+                "{launch:?}: the inherited {} is not removed from the child",
+                name.to_string_lossy()
+            );
+        }
+    }
+}
+
+/// **Issue #11: the scrub removes what the product refuses, and the launcher's session names.**
+///
+/// Every provider name in the view is one the product's denylist (in any ASCII case), the
+/// `CLAUDE_`/`ANTHROPIC_` prefixes, or s8h §8h.7 step 2's `CLAUDECODE`/`AI_AGENT` covers. The
+/// others share a stem with one but are none of them, so they stay.
+#[test]
+fn scrub_removes_provider_and_session_names_and_nothing_else() {
+    let provider = [
+        "ANTHROPIC_BASE_URL",
+        "anthropic_api_key",
+        "ANTHROPIC_MODEL",
+        "GH_TOKEN",
+        "GITHUB_TOKEN",
+        "CLAUDECODE",
+        "CLAUDE_PID",
+        "CLAUDE_EFFORT",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "CLAUDE_CODE_USE_BEDROCK",
+        "AI_AGENT",
+    ];
+    let kept = [
+        "PATH",
+        "CLAUDE",
+        "ANTHROPICX",
+        "MY_CLAUDE_CODE",
+        "GH_NO_UPDATE_NOTIFIER",
+    ];
+    let view = kept.iter().chain(&provider).map(std::ffi::OsString::from);
+
+    let removed: Vec<std::ffi::OsString> = crate::provider_vars(view).collect();
+
+    let expected: Vec<std::ffi::OsString> = provider.iter().map(std::ffi::OsString::from).collect();
+    assert_eq!(removed, expected);
+}
+
 /// Spawn `redkiln -C <repo> run <item>` with stdin closed (D-15), for AC-486's spawned arms.
 ///
 /// Module level: `clippy::items_after_statements` is DENIED workspace-wide.

@@ -400,3 +400,83 @@ fn a_tie_at_the_lowest_rank_is_refused_whatever_the_ids_sort_to() {
         other => panic!("expected RankTie over the rank-5 pair, got {other:?}"),
     }
 }
+
+/// Checks that `rank_lint` refuses `pair` at load, naming both activities and a context whose
+/// `toolchain` binding is exactly `{toolchain}`: the tie exists in that context and no other.
+///
+/// # Errors
+///
+/// The mismatch, described, when load succeeds or refuses with anything else.
+fn tie_only_in(pair: [(&str, &str); 2], toolchain: &str) -> Result<(), String> {
+    let Err(err) = rank_lint(&catalog(&pair), &registry(), &facets()) else {
+        return Err(format!(
+            "a tie admissible only in the `{toolchain}` context must fail load (AC-047)"
+        ));
+    };
+    let LoadError::RankTie {
+        kind,
+        context,
+        mut activities,
+    } = err
+    else {
+        return Err(format!("expected RankTie, got {err:?}"));
+    };
+    activities.sort();
+    let mut expected: Vec<String> = pair
+        .iter()
+        .map(|(file, _)| file.trim_end_matches(".toml").to_owned())
+        .collect();
+    expected.sort();
+    if kind != "ReviewVerdict" {
+        return Err(format!("the tie is over ReviewVerdict, not {kind}"));
+    }
+    if activities != expected {
+        return Err(format!(
+            "both tied activities are named: {activities:?} != {expected:?}"
+        ));
+    }
+    if !context.contains(&format!("toolchain={{{toolchain}}}")) {
+        return Err(format!(
+            "the tie is found in the `{toolchain}` context; it was reported in `{context}`"
+        ));
+    }
+    Ok(())
+}
+
+/// **Issue #7.** A rank tie that exists only where `toolchain = {rust}` fails at load. The lint's
+/// toolchain domain is the registry's declared `toolchain` values, so `rust` is enumerated; with
+/// `lattice.py`'s four hand-kept instances it never was, and this pair loaded cleanly.
+#[test]
+fn rank_tie_in_a_rust_only_context_fails_load() -> Result<(), String> {
+    tie_only_in(
+        [
+            (
+                "verdict-rust-a.toml",
+                include_str!("../fixtures/catalog-rank/verdict-rust-a.toml"),
+            ),
+            (
+                "verdict-rust-b.toml",
+                include_str!("../fixtures/catalog-rank/verdict-rust-b.toml"),
+            ),
+        ],
+        "rust",
+    )
+}
+
+/// **Issue #7.** The same for `python`, the other declared toolchain the four instances left out.
+#[test]
+fn rank_tie_in_a_python_only_context_fails_load() -> Result<(), String> {
+    tie_only_in(
+        [
+            (
+                "verdict-python-a.toml",
+                include_str!("../fixtures/catalog-rank/verdict-python-a.toml"),
+            ),
+            (
+                "verdict-python-b.toml",
+                include_str!("../fixtures/catalog-rank/verdict-python-b.toml"),
+            ),
+        ],
+        "python",
+    )
+}

@@ -1375,6 +1375,60 @@ fn two_items_in_one_store_do_not_fold_together() {
             .any(|e| answerable_tokens(std::slice::from_ref(e)).len() == 1),
         "the through item's ByItem journal returned the gate item's opening"
     );
+
+    // *(dated 2026-10-17, s8j build, package S8J-P2-STATUS; issue #6.)* `status`'s roll-up holds
+    // the same partition: each item's line carries its OWN last transition and its OWN gates, not
+    // the journal's last transition handed to every item.
+    let status_cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let mut out: Vec<u8> = Vec::new();
+    let exit = rk_cli::verbs::status::run_to(&status_cli, Startup::real(), &mut out)
+        .expect("`status` does not halt");
+    assert_eq!(exit, Exit::Success, "`status` exits 0");
+    let text = String::from_utf8(out).expect("`status` prints UTF-8");
+    let lines = status_lines(&text);
+    let own_stage = |state: &rk_kernel::workflow::fsm::RunState| {
+        state
+            .stages_entered()
+            .last()
+            .cloned()
+            .expect("PREMISE: the item entered a stage")
+    };
+    let (gate_stage, through_stage) = (own_stage(&gate_state), own_stage(&through_state));
+    assert_eq!(
+        lines.get(GATE_ITEM),
+        Some(&(gate_stage.as_str(), "gates=1")),
+        "`status` on the gate item: its own last stage and its own one gate ({lines:?})"
+    );
+    assert_eq!(
+        lines.get(THROUGH_ITEM),
+        Some(&(through_stage.as_str(), "gates=0")),
+        "`status` on the through item: its own last stage and none of the gate item's gates \
+         ({lines:?})"
+    );
+}
+
+/// `status`'s roll-up lines: item -> (the stage its last transition entered, its `gates=` field).
+/// Draw lines (no `gates=` field) are skipped.
+fn status_lines(text: &str) -> std::collections::BTreeMap<&str, (&str, &str)> {
+    text.lines()
+        .filter_map(
+            |line| match line.split('\t').collect::<Vec<_>>().as_slice() {
+                [item, transition, gates] if gates.starts_with("gates=") => Some((
+                    *item,
+                    (
+                        transition
+                            .rsplit_once("->")
+                            .map_or(*transition, |(_, to)| to),
+                        *gates,
+                    ),
+                )),
+                _ => None,
+            },
+        )
+        .collect()
 }
 
 /// **AC-518's instrument over a whole lane, with the run tree inside the checkout** (D21-44):

@@ -560,3 +560,64 @@ fn process_start_time_reads_a_live_child_and_nothing_for_an_exited_one() {
     dir.close()
         .expect("the fixture tree deletes after the kill");
 }
+
+/// Issue #20: **a group whose only member has exited but is not yet reaped is empty.** The
+/// `exit` fixture leads its own group and exits at once; the test holds its `Child` and does not
+/// `wait()` it, so the member stays a zombie (`/proc/<pid>/stat` state `Z`, read here as the
+/// precondition). `Group::is_empty` must read that group empty, as [`Group::pids`] and
+/// [`is_alive`] already read a zombie gone. Red by the `kill(-pgid, 0)` probe, which succeeds
+/// while a zombie member exists. POSIX only: the Windows `Group` has no `is_empty`.
+#[cfg(unix)]
+#[test]
+fn group_reads_empty_when_its_only_member_exited_unreaped() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let mut reaper = Reaper::new();
+    let Contained { mut child, group } =
+        spawn_into_job(fixture("exit:0", dir.path())).expect("spawn_into_job");
+    let pid = child.id();
+    reaper.track(pid);
+    assert!(wait_dead(pid, DEAD_POLLS), "the exit fixture did not exit");
+    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat"))
+        .expect("precondition: the unreaped child still has a /proc entry");
+    let state = stat
+        .rsplit_once(')')
+        .and_then(|(_, rest)| rest.split_whitespace().next());
+    assert_eq!(state, Some("Z"), "precondition: the child is a zombie");
+
+    let empty = group.is_empty().expect("the emptiness probe reads");
+
+    assert!(
+        empty,
+        "group {} read non-empty while its only member {pid} is an unreaped zombie",
+        group.pgid()
+    );
+    child.wait().expect("reap the child");
+    dir.close().expect("the fixture tree deletes");
+}
+
+/// Issue #20, the other side: **a group with a running member is not empty.** The `hold` fixture
+/// leads its own group and stays up, so `Group::is_empty` must read `false` until the group is
+/// killed. Pins that the zombie filter did not make every group read empty. POSIX only, as above.
+#[cfg(unix)]
+#[test]
+fn group_reads_non_empty_while_a_member_runs() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let mut reaper = Reaper::new();
+    let Contained { mut child, group } =
+        spawn_into_job(fixture("hold", dir.path())).expect("spawn_into_job");
+    let pid = child.id();
+    reaper.track(pid);
+    wait_for_marker(dir.path(), "hold", UP_POLLS).expect("the hold fixture came up");
+    assert!(is_alive(pid), "precondition: the child is alive");
+
+    let empty = group.is_empty().expect("the emptiness probe reads");
+
+    assert!(
+        !empty,
+        "group {} read empty while its member {pid} is running",
+        group.pgid()
+    );
+    group.kill().expect("kill through the group");
+    child.wait().expect("reap the child");
+    dir.close().expect("the fixture tree deletes");
+}

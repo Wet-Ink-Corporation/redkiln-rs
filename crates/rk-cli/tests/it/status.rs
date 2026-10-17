@@ -155,3 +155,131 @@ fn status_prints_no_headroom_line_for_an_item_with_no_reading() {
         "PREMISE: the item that owns readings gets its draws in the same journal:\n{text}"
     );
 }
+
+/// A tier-1 `stage_transition` row, keyed to `item` when one is given (ADR-0182's interim key).
+fn transition(item: Option<&str>, from: Option<&str>, to: &str) -> Event {
+    let payload = from.map_or_else(
+        || serde_json::json!({ "to": to }),
+        |from| serde_json::json!({ "from": from, "to": to }),
+    );
+    let row = Event::new(EventKind::StageTransition, payload);
+    match item {
+        Some(item) => row.with_item(item),
+        None => row,
+    }
+}
+
+/// `status`'s roll-up lines alone (the ones whose last field is `gates=`), in print order.
+fn roll_up_lines(text: &str) -> Vec<&str> {
+    text.lines()
+        .filter(|l| {
+            l.rsplit('\t')
+                .next()
+                .is_some_and(|f| f.starts_with("gates="))
+        })
+        .collect()
+}
+
+/// **Each item folds over the rows keyed to it** (issue #6; ADR-0182 decision 1). Two items'
+/// transitions, keyed by the interim key and carrying no payload `item`, give each item its own
+/// transition.
+///
+/// Red by: the pre-fix partition, which read only the payload's `item`, found no item in this
+/// journal and printed nothing; and by any partition that hands one item's keyed rows to the other.
+#[test]
+fn status_folds_each_item_over_the_rows_keyed_to_it() {
+    let rows = [
+        transition(Some("lane-a"), Some("triage"), "implement"),
+        transition(Some("lane-b"), Some("triage"), "review"),
+    ];
+    let text = status_over(&rows);
+    assert_eq!(
+        roll_up_lines(&text),
+        vec![
+            "lane-a\ttriage->implement\tgates=0",
+            "lane-b\ttriage->review\tgates=0"
+        ],
+        "each item's line carries its own transition:\n{text}"
+    );
+}
+
+/// **An item's stage is seeded from the transitions it owns**, never from the journal's last.
+/// `lane-a`'s transition names no `from`, so the fold takes it from the seed; `lane-b`'s row is the
+/// journal's last, and its stage must not reach `lane-a`'s line.
+///
+/// Red by: the pre-fix seed, the `to` of the LAST `stage_transition` in the whole journal.
+#[test]
+fn status_seeds_each_item_from_its_own_keyed_transitions() {
+    let rows = [
+        transition(Some("lane-a"), None, "implement"),
+        transition(Some("lane-b"), Some("triage"), "review"),
+    ];
+    let text = status_over(&rows);
+    assert_eq!(
+        roll_up_lines(&text),
+        vec![
+            "lane-a\timplement->implement\tgates=0",
+            "lane-b\ttriage->review\tgates=0"
+        ],
+        "lane-a's `from` comes from its own seed, never from lane-b's stage:\n{text}"
+    );
+}
+
+/// **The interim key wins over a payload `item`** (ADR-0182 decision 1): a row keyed to `lane-a`
+/// whose payload names `lane-b` is `lane-a`'s alone, and lists no `lane-b`.
+///
+/// Red by: an `owner` that reads the payload's `item` before the key.
+#[test]
+fn status_attributes_a_keyed_row_by_its_key_not_its_payload_item() {
+    let rows = [Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({ "from": "triage", "to": "implement", "item": "lane-b" }),
+    )
+    .with_item("lane-a")];
+    let text = status_over(&rows);
+    assert_eq!(
+        roll_up_lines(&text),
+        vec!["lane-a\ttriage->implement\tgates=0"],
+        "the keyed row is lane-a's, and no lane-b line appears:\n{text}"
+    );
+}
+
+/// **An item-less row of a `Carried` kind is read by every item** (ADR-0182 decision 4's inclusive
+/// interim): neither item owns it, so both fold it.
+///
+/// Red by: a partition that drops item-less rows, or hands them to one item.
+#[test]
+fn status_reads_an_item_less_row_of_a_carried_kind_on_every_item() {
+    let rows = [
+        transition(Some("lane-a"), Some("triage"), "implement"),
+        transition(Some("lane-b"), Some("triage"), "review"),
+        transition(None, Some("unowned"), "closed"),
+    ];
+    let text = status_over(&rows);
+    assert_eq!(
+        roll_up_lines(&text),
+        vec![
+            "lane-a\tunowned->closed\tgates=0",
+            "lane-b\tunowned->closed\tgates=0"
+        ],
+        "the item-less transition is folded by both items:\n{text}"
+    );
+}
+
+/// **A kind that is not item-scoped names no item** (ADR-0182 decision 3: the memo is shared
+/// across items by design), even when its payload carries an `item` member.
+///
+/// Red by: the pre-fix partition, which listed any row whose payload names an `item`.
+#[test]
+fn status_lists_no_item_for_a_kind_that_is_not_item_scoped() {
+    let rows = [
+        transition(Some("lane-a"), Some("triage"), "implement"),
+        Event::new(EventKind::MemoHit, serde_json::json!({ "item": "ghost" })),
+    ];
+    let text = status_over(&rows);
+    assert_eq!(
+        roll_up_lines(&text),
+        vec!["lane-a\ttriage->implement\tgates=0"],
+        "only the item-scoped row's item is listed:\n{text}"
+    );
+}
