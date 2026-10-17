@@ -1045,6 +1045,7 @@ fn a_shipped_lane_reaching_review_without_a_slice_is_refused_at_entry() {
             &crate::lane_e2e::args(ITEM),
             &crate::support::clean_env(),
             crate::lane_e2e::seam(&factory),
+            &rk_ports::cancel::CancelToken::new(),
         ),
         ITEM,
     );

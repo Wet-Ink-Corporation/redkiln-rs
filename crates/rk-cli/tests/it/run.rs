@@ -1624,7 +1624,8 @@ fn run_real_in_process(root: &Path, item: &str, vars: &[(&str, String)]) -> rk_c
             .map(|(k, v)| ((*k).to_owned(), v.clone()))
             .collect(),
     );
-    rk_cli::verbs::run::run(&cli, &args, &env, rk_cli::verbs::Startup::real())
+    let token = rk_ports::cancel::CancelToken::new();
+    rk_cli::verbs::run::run(&cli, &args, &env, rk_cli::verbs::Startup::real(), &token)
         .unwrap_or_else(|halt| panic!("`run {item}` halted: {halt:?}"))
 }
 
@@ -1813,6 +1814,7 @@ fn run_lane_counting(root: &Path) -> (rk_cli::exit::Exit, usize) {
             &crate::lane_e2e::args(crate::lane_e2e::THROUGH_ITEM),
             &crate::support::clean_env(),
             crate::lane_e2e::seam(&factory),
+            &rk_ports::cancel::CancelToken::new(),
         ),
         crate::lane_e2e::THROUGH_ITEM,
     );

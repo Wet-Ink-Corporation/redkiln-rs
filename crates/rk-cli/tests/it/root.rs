@@ -174,6 +174,197 @@ fn signal_handler_fires_cancel_token() {
     );
 }
 
+/// **Issue #5: the token `main` installs is the token `run` reads.** *(Added 2026-10-17, s8j
+/// build, package S8J-P1-CANCEL.)*
+///
+/// `main` used to drop `signal::install()`'s token, and `run` built a fresh `CancelToken` that
+/// nothing fired, so a signal set a flag no reader held. The binary cannot be linked (ADR-0083) and
+/// no test installs a handler or signals its own process (§7d.10), so the wiring in `main.rs` is
+/// pinned at its source, and the behaviour downstream of it at `verbs::dispatch` (the two tests
+/// below this one). Two halves:
+///
+/// 1. `main.rs` binds the token `install()` hands back exactly once, passes that binding to
+///    `dispatch`, drops no token, and builds a fresh one only in the `Err` arm's fallback.
+/// 2. Nothing under `src/verbs/` builds a `CancelToken` of its own, so the one `run` reads can only
+///    be the one it was handed.
+#[test]
+fn main_hands_the_installed_signal_token_to_dispatch() {
+    let main_rs = src_dir().join("main.rs");
+    let text = std::fs::read_to_string(&main_rs).expect("main.rs is readable");
+    crate::assert_no_block_comment(&text, "main.rs");
+    let code: Vec<String> = code_lines(&text)
+        .into_iter()
+        .map(|(_, l)| l.trim().to_owned())
+        .collect();
+
+    let installs: Vec<&String> = code
+        .iter()
+        .filter(|l| l.contains("signal::install()"))
+        .collect();
+    assert_eq!(
+        installs.len(),
+        1,
+        "main.rs must call `signal::install()` exactly once (ctrlc allows one handler per \
+         process); its code lines calling it: {installs:?}"
+    );
+    let bound = installs[0]
+        .strip_prefix("let ")
+        .and_then(|rest| rest.split_once(" = match rk_cli::signal::install()"))
+        .map(|(name, _)| name.to_owned())
+        .unwrap_or_else(|| {
+            panic!(
+                "main.rs does not bind the token `install()` returns (`let <token> = match \
+                 rk_cli::signal::install() {{ .. }}`); it read: {}",
+                installs[0]
+            )
+        });
+    // No shadowing: the binding is made once, so the name `dispatch` is handed below can only be
+    // `install()`'s token.
+    let bindings: Vec<&String> = code
+        .iter()
+        .filter(|l| l.starts_with(&format!("let {bound} =")))
+        .collect();
+    assert_eq!(
+        bindings.len(),
+        1,
+        "main.rs binds `{bound}` more than once, so the name handed to `dispatch` may not be \
+         `install()`'s token: {bindings:?}"
+    );
+    // The one fresh token is the `Err` fallback (no handler installed), not a replacement for the
+    // installed one.
+    let fresh_in_main: Vec<&String> = code
+        .iter()
+        .filter(|l| l.contains("CancelToken::new("))
+        .collect();
+    assert_eq!(
+        fresh_in_main.len(),
+        1,
+        "main.rs builds {} `CancelToken`s; exactly one is owed, the `Err` arm's fallback: \
+         {fresh_in_main:?}",
+        fresh_in_main.len()
+    );
+    let err_arm = code
+        .iter()
+        .position(|l| l.starts_with("Err(") && l.ends_with("=> {"))
+        .expect("main.rs's `install()` match has an `Err(..) => {` arm");
+    let fresh_at = code
+        .iter()
+        .position(|l| l.contains("CancelToken::new("))
+        .expect("counted above");
+    // The end of the `let .. = match .. { .. };` the `Err` arm belongs to.
+    let arm_end = code
+        .iter()
+        .skip(err_arm)
+        .position(|l| l == "};")
+        .map(|offset| err_arm + offset)
+        .expect("the `install()` match closes");
+    assert!(
+        err_arm < fresh_at && fresh_at < arm_end,
+        "main.rs's one `CancelToken::new(` (code line {fresh_at}) is not inside the `install()` \
+         `Err` arm (code lines {err_arm}..{arm_end}), so it can stand in for the installed token"
+    );
+    assert!(
+        code.iter()
+            .any(|l| *l == format!("Ok({bound}) => {bound},")),
+        "the `Ok` arm of `install()` must yield the installed token itself, so the binding \
+         `{bound}` is the token the handler fires"
+    );
+    assert!(
+        code.iter()
+            .any(|l| l.contains(&format!("rk_cli::verbs::dispatch(&cli, &env, &{bound})"))),
+        "main.rs does not hand the installed token `{bound}` to `verbs::dispatch`, so the \
+         handler fires a token no reader holds (issue #5)"
+    );
+    let drops: Vec<&String> = code
+        .iter()
+        .filter(|l| l.contains(&format!("drop({bound})")))
+        .collect();
+    assert!(
+        drops.is_empty(),
+        "main.rs drops a token, which is the orphan issue #5 removed: {drops:?}"
+    );
+
+    let fresh: Vec<String> = crate::rs_files(&src_dir().join("verbs"))
+        .into_iter()
+        .flat_map(|path| {
+            let src = std::fs::read_to_string(&path).expect("a verb source file is readable");
+            code_lines(&src)
+                .into_iter()
+                .filter(|(_, l)| l.contains("CancelToken::new("))
+                .map(|(n, l)| format!("{}:{n}: {}", path.display(), l.trim()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert!(
+        fresh.is_empty(),
+        "a verb builds its own `CancelToken`, which no signal handler fires (issue #5); the run's \
+         token is the one `dispatch` is handed:\n{}",
+        fresh.join("\n")
+    );
+}
+
+/// The command line `main` hands `verbs::dispatch` for `redkiln -C <root> run <item>`.
+fn run_cli(root: &Path, item: &str) -> rk_cli::cli::Cli {
+    rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Run(rk_cli::cli::RunArgs {
+            item: item.to_owned(),
+            lane: None,
+        }),
+    }
+}
+
+/// The `Env` a launched `run` over `pack-min`'s fixture child is handed, built explicitly (D21-47):
+/// the fixture launch record, the child's `mode` and its marker directory.
+fn fixture_run_env(mode: &str, markers: &Path) -> rk_cli::env::Env {
+    rk_cli::env::Env::from_map(std::collections::BTreeMap::from([
+        (
+            rk_cli::env::LAUNCH_RECORD.to_owned(),
+            crate::fixture_launch_record().display().to_string(),
+        ),
+        ("RK_FIXTURE_MODE".to_owned(), mode.to_owned()),
+        (
+            "RK_FIXTURE_MARKER_DIR".to_owned(),
+            markers.display().to_string(),
+        ),
+    ]))
+}
+
+/// **Issue #5 / §7d.5 — a signal outside a dispatch is seen at the next step boundary, through the
+/// entry point `main` calls.** *(Added 2026-10-17, s8j build, package S8J-P1-CANCEL.)*
+///
+/// The token is fired by `signal::on_signal`, the handler's own body, BEFORE `verbs::dispatch` is
+/// called with it, exactly as `main` calls it. `run`'s first step boundary reads it and exits `130`
+/// having spawned nothing: the fixture child writes a marker on every spawn, and none appears. The
+/// child's mode is `exit:0`, so a run that missed the token fails fast instead of holding.
+#[test]
+fn a_signal_before_run_is_seen_at_the_first_step_boundary_exit_130() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let root = repo.path();
+    let markers = tempfile::tempdir().expect("a marker directory");
+    let token = CancelToken::new();
+    signal::on_signal(&token);
+
+    let exit = rk_cli::verbs::dispatch(
+        &run_cli(root, "bug-1"),
+        &fixture_run_env("exit:0", markers.path()),
+        &token,
+    )
+    .expect("a sound lock is not a halt");
+
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::SignalOutsideDispatch,
+        "a token fired before the run must stop it at the first step boundary, not {exit:?}"
+    );
+    assert_eq!(exit.code(), 130);
+    assert_eq!(
+        crate::support::marker_pid(markers.path()),
+        None,
+        "the fixture child was spawned, so the run dispatched past a fired token"
+    );
+}
+
 /// **H-3, D-18 — the common dir is discovered from the INHERITED cwd, through the wrapper.**
 ///
 /// §7d.3, verbatim: *"spawn `redkiln status` with `Command::current_dir` set to a **subdirectory**
@@ -1335,10 +1526,27 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
 ///
 /// No test may deliver a console signal at 7d — under `cargo test` the binary is not in its own
 /// process group, so the event would reach `cargo`, libtest and the shell. The OS-delivery arm is
-/// ARMED, not run. What IS run is everything downstream of the token: the harness the test builds
-/// is the real one, the child it spawns is the real fixture child, and the only thing standing in
-/// for the signal is `token.cancel()` — which is exactly what `signal::on_signal` does and nothing
-/// more (`signal_handler_fires_cancel_token` pins that).
+/// ARMED, not run. What IS run is everything downstream of the token: the harness ~~the test
+/// builds~~ `run` builds is the real one, the child it spawns is the real fixture child, and the
+/// only thing standing in for the signal is `token.cancel()` — which is exactly what
+/// `signal::on_signal` does and nothing more (`signal_handler_fires_cancel_token` pins that).
+///
+/// # 🛑 THROUGH `verbs::dispatch`, THE ENTRY POINT `main` CALLS
+///
+/// *(dated 2026-10-17, s8j build, package S8J-P1-CANCEL; issue #5.)* This test built its own
+/// binder, harness and store and called `run::run_with` with its own token, so it stayed green
+/// while the shipped `run` read a token nothing fired. It now calls `verbs::dispatch` with the
+/// token argument `main` fills from `signal::install()`, and `run` builds the binder, the real
+/// harness and the on-disk store itself; the watcher fires through `signal::on_signal`. That
+/// `main` hands `install()`'s token to `dispatch` is pinned by
+/// `main_hands_the_installed_signal_token_to_dispatch`, because the binary cannot be linked.
+///
+/// **A regression here is SLOW, not a fast failure, and that is stated rather than bounded.** If
+/// the token `run` reads were orphaned again, the watcher's fire would reach no reader and the
+/// `hold` child would park for its full 600 s before the dispatch ends, so this test would take
+/// that long before failing on its exit and rows. No kill-on-timeout is added for it. The fast
+/// guards for that regression are `a_signal_before_run_is_seen_at_the_first_step_boundary_exit_130`
+/// and `main_hands_the_installed_signal_token_to_dispatch`, which fail at once.
 ///
 /// # 🛑 THE TOKEN IS FIRED ON THE MARKER FILE, NEVER ON A STORE POLL
 ///
@@ -1359,100 +1567,27 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
     let root = repo.path();
     let markers = tempfile::tempdir().expect("a marker directory");
-    let wt = tempfile::tempdir().expect("the spec's worktree");
-    let child = crate::support::fixture_child();
 
-    let resolved = crate::support::resolved_over_pack_min(root, "bug-1");
-
-    // The captured map the adapter hands the child. `RK_FIXTURE_MODE=hold` is what makes the child
-    // park instead of returning, which is the only way a dispatch is still running when the token
-    // fires. Neither name is on the adapter's env denylist.
-    let settings_dir = tempfile::tempdir().expect("a settings dir");
-    let mut captured = std::collections::BTreeMap::new();
-    captured.insert("RK_FIXTURE_MODE".to_owned(), "hold".to_owned());
-    captured.insert(
-        "RK_FIXTURE_MARKER_DIR".to_owned(),
-        markers.path().to_string_lossy().into_owned(),
-    );
-    let cfg = rk_adapter_claude::config::Config::new(rk_adapter_claude::config::ConfigValues {
-        captured_env: captured,
-        harness_binary: child,
-        prompt_cache_ttl: Some(resolved.extras.cache.prompt_ttl.clone()),
-        subagent_prompt_cache_ttl: Some(resolved.extras.cache.subagent_prompt_ttl.clone()),
-        margins: rk_adapter_claude::config::Margins {
-            five_hour: resolved.extras.margins.five_hour,
-            seven_day: resolved.extras.margins.seven_day,
-        },
-        on_version_mismatch: rk_adapter_claude::config::MismatchPolicy::Refuse,
-    })
-    .expect("the fixture harness configuration constructs")
-    // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The settings file's
-    // directory, outside the worktree.
-    .with_settings_dir(settings_dir.path().to_path_buf());
-
-    // Bound through the REAL binder: it is what fills the card store `dispatch` reads, and an
-    // unbound `card_digest` is a pre-spawn `Transport { Spawn }` rather than a cancellation.
-    // Read off the PACK rather than written as literals, so a pack edit moves this test with it.
-    let card_text =
-        std::fs::read_to_string(root.join(".redkiln").join("cards").join("implementer.json"))
-            .expect("the fixture card is installed");
-    let card = rk_adapter_claude::card::AuthoredCard::from_file("implementer", &card_text)
-        .expect("the fixture card loads");
-    // *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.4.)* The
-    // schema is `EXPORTED`'s `ImplReport`, as `run`'s binder reads it; it read the fixture's
-    // `.redkiln/schemas/ImplReport.json`, which no longer exists.
-    let schema_json: serde_json::Value = rk_types::registry::EXPORTED
-        .iter()
-        .find(|(name, _)| *name == "ImplReport")
-        .map(|(_, export)| export())
-        .expect("ImplReport is EXPORTED");
-    let declared = resolved
-        .extras
-        .role
-        .get("implementer")
-        .expect("pack-min declares [role.implementer]");
-    let role = rk_adapter_claude::binder::Role {
-        model: declared.model.clone(),
-        effort: declared.effort,
-    };
-    let timeout_secs = resolved
+    // PREMISE: the activity's own timeout is the pack's (see the doc comment) and outlasts the
+    // watcher's 30 s, so the adapter's timer arm cannot be what cancels the dispatch.
+    let timeout_secs = crate::support::resolved_over_pack_min(root, "bug-1")
         .extras
         .activity
         .get("emit-report")
         .expect("pack-min declares [activity.emit-report]")
         .timeout_secs;
-    let mut binder = rk_adapter_claude::binder::Binder::new(cfg);
-    let spec = binder
-        .bind(rk_adapter_claude::binder::BindRequest {
-            role_name: "implementer",
-            role: &role,
-            card: &card,
-            schema: &rk_adapter_claude::binder::Schema {
-                id: rk_types::typed::SchemaId::new("ImplReport"),
-                json: schema_json,
-            },
-            timeout_secs,
-            worktree: wt.path(),
-            inputs: vec![("item".to_owned(), serde_json::json!("bug-1"))],
-            activity_id_at_version: None,
-            // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3; ADR-0197 decision 4, proposed.)*
-            models: &resolved.extras.models,
-        })
-        .expect("pack-min's one card binds");
+    assert!(
+        timeout_secs > 30,
+        "PREMISE: `emit-report`'s timeout ({timeout_secs} s) must outlast the watcher's 30 s"
+    );
 
+    // The `Env` `main` would capture for a launched run at the fixture child.
+    // `RK_FIXTURE_MODE=hold` is what makes the child park instead of returning, which is the only
+    // way a dispatch is still running when the token fires. Neither name is on the adapter's env denylist, and the adapter
+    // `run` builds passes both to the child.
+    let env = fixture_run_env("hold", markers.path());
+    // The token `main` takes from `signal::install()` and hands to `verbs::dispatch`.
     let token = CancelToken::new();
-    let harness = rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone())
-        .expect("the harness constructs");
-    let store = crate::support::counting_store(&crate::support::Trace::new());
-    let ports = crate::support::ports(
-        Arc::new(harness) as Arc<dyn rk_ports::harness::Harness>,
-        &store,
-    );
-    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
-    let inputs = inputs.with_spec(
-        "emit-report",
-        rk_kernel::replay::RecordedSpec::supplied("emit-report@1", spec),
-    );
 
     // The watcher. A channel nobody sends on is the wait — `std::thread::sleep` is clippy-banned
     // workspace-wide, and `recv_timeout` reads no clock in our code.
@@ -1463,7 +1598,8 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         let started = std::time::Instant::now();
         while started.elapsed() < std::time::Duration::from_secs(30) {
             if let Some(pid) = crate::support::marker_pid(&marker_dir) {
-                firing.cancel();
+                // The handler's own body, so the only thing standing in for the OS is delivery.
+                signal::on_signal(&firing);
                 return Some(pid);
             }
             let _ = rx.recv_timeout(std::time::Duration::from_millis(10));
@@ -1471,18 +1607,10 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         None
     });
 
-    let mut supply = crate::support::no_spec();
-    let exit = rk_cli::verbs::run::run_with(
-        &resolved,
-        &inputs,
-        crate::support::FIXED_NOW,
-        &tree_hash,
-        ports,
-        &crate::support::clean_env(),
-        &mut supply,
-        &token,
-    )
-    .expect("a sound lock is not a halt");
+    // THE ENTRY POINT `main` CALLS, with the token `main` hands it: `run` builds the binder, the
+    // real harness (cloning this token into it), the store and the lane itself.
+    let exit = rk_cli::verbs::dispatch(&run_cli(root, "bug-1"), &env, &token)
+        .expect("a sound lock is not a halt");
     let child_pid = watcher.join().expect("the watcher thread does not panic");
 
     // (0) THE PREMISE: the child really did start and park. Without a marker the token fired on a
@@ -1500,12 +1628,8 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
     );
     assert_eq!(exit.code(), 13);
 
-    // (2) THE ROWS, read off the store the run wrote.
-    let rows = store
-        .lock()
-        .expect("the fixture store's lock is sound")
-        .query(rk_kernel::runtime::journal_query("bug-1"))
-        .expect("the journal reads");
+    // (2) THE ROWS, read off the store the run wrote (the repository's own, on disk).
+    let rows = crate::support::journal_rows(root, "bug-1");
     assert_eq!(
         rows.iter()
             .filter(|e| e.kind == rk_types::event_kind::EventKind::Dispatch)

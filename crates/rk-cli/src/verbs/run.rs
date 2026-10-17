@@ -315,9 +315,22 @@ pub const DECLARED_FILE: &str = "declared.toml";
 ///
 /// Every value this arm would need is already resolved; nothing about the stub is load-bearing.
 ///
+/// # The cancel token is the caller's
+///
+/// *(dated 2026-10-17, s8j build, package S8J-P1-CANCEL; issue #5.)* `token` is the one the
+/// signal handler fires: `main` takes it from `signal::install()` and hands it through
+/// [`crate::verbs::dispatch`]. It is cloned into each stage's harness (the adapter's polled arm,
+/// exit `13`) and read at each step boundary (exit `130`).
+///
 /// # Errors
 /// [`Halt::PoisonedLock`] from the store acquisition. Every other refusal is a value.
-pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result<Exit, Halt> {
+pub fn run(
+    cli: &Cli,
+    args: &RunArgs,
+    env: &Env,
+    startup: Startup<'_>,
+    token: &CancelToken,
+) -> Result<Exit, Halt> {
     // ---- THE LAUNCH CHECK (`s8h` §8h.7; D21-42 17a). *(dated 2026-10-02, s8h build, package
     // P6-cli-launch-gate.)* A run over the REAL harness is entered only through
     // `tools/live-run.sh run`: without a launch record it refuses here, before steps (1)-(7)
@@ -397,7 +410,6 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         }
     };
     let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(opened));
-    let token = CancelToken::new();
 
     // ---- (8) the run-owned worktree, the bindings, and ONLY THEN the real harness. -------------
     //
@@ -448,7 +460,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         resolved,
         env,
         &store,
-        &token,
+        token,
         &entered,
         startup.harness,
         &mut closed,

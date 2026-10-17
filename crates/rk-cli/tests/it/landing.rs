@@ -110,6 +110,7 @@ pub(crate) fn run(root: &Path, item: &str, factory: &ScriptedFactory) -> Exit {
             &lane_e2e::args(item),
             &support::clean_env(),
             lane_e2e::seam(factory),
+            &rk_ports::cancel::CancelToken::new(),
         ),
         item,
     )
@@ -3865,6 +3866,7 @@ fn closure_record_walks_past_audit_on_the_backlog_feed() {
             &lane_e2e::args(item),
             &toolchain_env(),
             lane_e2e::seam(&lane),
+            &rk_ports::cancel::CancelToken::new(),
         ),
         item,
     );

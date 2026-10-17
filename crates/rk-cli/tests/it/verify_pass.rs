@@ -330,6 +330,7 @@ fn run_verify(root: &Path, factory: &ScriptedFactory) -> Exit {
             &lane_e2e::args(ITEM),
             &verify_env(),
             lane_e2e::seam(factory),
+            &rk_ports::cancel::CancelToken::new(),
         ),
         ITEM,
     )
@@ -1051,6 +1052,7 @@ fn ac485_config_edit_mid_run_does_not_move_the_verify_adapter() {
                 config: &reader,
                 ..lane_e2e::seam(&factory)
             },
+            &rk_ports::cancel::CancelToken::new(),
         ),
         ITEM,
     );
