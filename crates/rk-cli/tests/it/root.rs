@@ -1481,10 +1481,19 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
 ///
 /// No test may deliver a console signal at 7d — under `cargo test` the binary is not in its own
 /// process group, so the event would reach `cargo`, libtest and the shell. The OS-delivery arm is
-/// ARMED, not run. What IS run is everything downstream of the token: the harness the test builds
-/// is the real one, the child it spawns is the real fixture child, and the only thing standing in
+/// ARMED, not run. What IS run is everything downstream of the token: the harness ~~the test
+/// builds~~ `run` builds is the real one, the child it spawns is the real fixture child, and the only thing standing in
 /// for the signal is `token.cancel()` — which is exactly what `signal::on_signal` does and nothing
 /// more (`signal_handler_fires_cancel_token` pins that).
+///
+/// # 🛑 THROUGH `verbs::dispatch`, THE ENTRY POINT `main` CALLS
+///
+/// *(dated 2026-10-17, s8j build, package S8J-P1-CANCEL; issue #5.)* This test built its own
+/// binder, harness and store and called `run::run_with` with its own token, so it stayed green while the shipped `run` read a token nothing fired. It now calls
+/// `verbs::dispatch` with the token argument `main` fills from `signal::install()`, and `run` builds
+/// the binder, the real harness and the on-disk store itself; the watcher fires through
+/// `signal::on_signal`. That `main` hands `install()`'s token to `dispatch` is pinned by
+/// `main_hands_the_installed_signal_token_to_dispatch`, because the binary cannot be linked.
 ///
 /// # 🛑 THE TOKEN IS FIRED ON THE MARKER FILE, NEVER ON A STORE POLL
 ///
@@ -1505,100 +1514,27 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
     let root = repo.path();
     let markers = tempfile::tempdir().expect("a marker directory");
-    let wt = tempfile::tempdir().expect("the spec's worktree");
-    let child = crate::support::fixture_child();
 
-    let resolved = crate::support::resolved_over_pack_min(root, "bug-1");
-
-    // The captured map the adapter hands the child. `RK_FIXTURE_MODE=hold` is what makes the child
-    // park instead of returning, which is the only way a dispatch is still running when the token
-    // fires. Neither name is on the adapter's env denylist.
-    let settings_dir = tempfile::tempdir().expect("a settings dir");
-    let mut captured = std::collections::BTreeMap::new();
-    captured.insert("RK_FIXTURE_MODE".to_owned(), "hold".to_owned());
-    captured.insert(
-        "RK_FIXTURE_MARKER_DIR".to_owned(),
-        markers.path().to_string_lossy().into_owned(),
-    );
-    let cfg = rk_adapter_claude::config::Config::new(rk_adapter_claude::config::ConfigValues {
-        captured_env: captured,
-        harness_binary: child,
-        prompt_cache_ttl: Some(resolved.extras.cache.prompt_ttl.clone()),
-        subagent_prompt_cache_ttl: Some(resolved.extras.cache.subagent_prompt_ttl.clone()),
-        margins: rk_adapter_claude::config::Margins {
-            five_hour: resolved.extras.margins.five_hour,
-            seven_day: resolved.extras.margins.seven_day,
-        },
-        on_version_mismatch: rk_adapter_claude::config::MismatchPolicy::Refuse,
-    })
-    .expect("the fixture harness configuration constructs")
-    // *(dated 2026-10-02, s8h build, package P6-cli-launch-gate; D21-137.)* The settings file's
-    // directory, outside the worktree.
-    .with_settings_dir(settings_dir.path().to_path_buf());
-
-    // Bound through the REAL binder: it is what fills the card store `dispatch` reads, and an
-    // unbound `card_digest` is a pre-spawn `Transport { Spawn }` rather than a cancellation.
-    // Read off the PACK rather than written as literals, so a pack edit moves this test with it.
-    let card_text =
-        std::fs::read_to_string(root.join(".redkiln").join("cards").join("implementer.json"))
-            .expect("the fixture card is installed");
-    let card = rk_adapter_claude::card::AuthoredCard::from_file("implementer", &card_text)
-        .expect("the fixture card loads");
-    // *(dated 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments; `s8h` §8h.4.)* The
-    // schema is `EXPORTED`'s `ImplReport`, as `run`'s binder reads it; it read the fixture's
-    // `.redkiln/schemas/ImplReport.json`, which no longer exists.
-    let schema_json: serde_json::Value = rk_types::registry::EXPORTED
-        .iter()
-        .find(|(name, _)| *name == "ImplReport")
-        .map(|(_, export)| export())
-        .expect("ImplReport is EXPORTED");
-    let declared = resolved
-        .extras
-        .role
-        .get("implementer")
-        .expect("pack-min declares [role.implementer]");
-    let role = rk_adapter_claude::binder::Role {
-        model: declared.model.clone(),
-        effort: declared.effort,
-    };
-    let timeout_secs = resolved
+    // PREMISE: the activity's own timeout is the pack's (see the doc comment) and outlasts the
+    // watcher's 30 s, so the adapter's timer arm cannot be what cancels the dispatch.
+    let timeout_secs = crate::support::resolved_over_pack_min(root, "bug-1")
         .extras
         .activity
         .get("emit-report")
         .expect("pack-min declares [activity.emit-report]")
         .timeout_secs;
-    let mut binder = rk_adapter_claude::binder::Binder::new(cfg);
-    let spec = binder
-        .bind(rk_adapter_claude::binder::BindRequest {
-            role_name: "implementer",
-            role: &role,
-            card: &card,
-            schema: &rk_adapter_claude::binder::Schema {
-                id: rk_types::typed::SchemaId::new("ImplReport"),
-                json: schema_json,
-            },
-            timeout_secs,
-            worktree: wt.path(),
-            inputs: vec![("item".to_owned(), serde_json::json!("bug-1"))],
-            activity_id_at_version: None,
-            // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.3; ADR-0197 decision 4, proposed.)*
-            models: &resolved.extras.models,
-        })
-        .expect("pack-min's one card binds");
+    assert!(
+        timeout_secs > 30,
+        "PREMISE: `emit-report`'s timeout ({timeout_secs} s) must outlast the watcher's 30 s"
+    );
 
+    // The `Env` `main` would capture for a launched run at the fixture child. `RK_FIXTURE_MODE=hold`
+    // is what makes the child park instead of returning, which is the only way a dispatch is still
+    // running when the token fires. Neither name is on the adapter's env denylist, and the adapter
+    // `run` builds passes both to the child.
+    let env = fixture_run_env("hold", markers.path());
+    // The token `main` takes from `signal::install()` and hands to `verbs::dispatch`.
     let token = CancelToken::new();
-    let harness = rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone())
-        .expect("the harness constructs");
-    let store = crate::support::counting_store(&crate::support::Trace::new());
-    let ports = crate::support::ports(
-        Arc::new(harness) as Arc<dyn rk_ports::harness::Harness>,
-        &store,
-    );
-    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
-    let inputs = inputs.with_spec(
-        "emit-report",
-        rk_kernel::replay::RecordedSpec::supplied("emit-report@1", spec),
-    );
 
     // The watcher. A channel nobody sends on is the wait — `std::thread::sleep` is clippy-banned
     // workspace-wide, and `recv_timeout` reads no clock in our code.
@@ -1609,7 +1545,8 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         let started = std::time::Instant::now();
         while started.elapsed() < std::time::Duration::from_secs(30) {
             if let Some(pid) = crate::support::marker_pid(&marker_dir) {
-                firing.cancel();
+                // The handler's own body, so the only thing standing in for the OS is delivery.
+                signal::on_signal(&firing);
                 return Some(pid);
             }
             let _ = rx.recv_timeout(std::time::Duration::from_millis(10));
@@ -1617,18 +1554,10 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         None
     });
 
-    let mut supply = crate::support::no_spec();
-    let exit = rk_cli::verbs::run::run_with(
-        &resolved,
-        &inputs,
-        crate::support::FIXED_NOW,
-        &tree_hash,
-        ports,
-        &crate::support::clean_env(),
-        &mut supply,
-        &token,
-    )
-    .expect("a sound lock is not a halt");
+    // THE ENTRY POINT `main` CALLS, with the token `main` hands it: `run` builds the binder, the
+    // real harness (cloning this token into it), the store and the lane itself.
+    let exit = rk_cli::verbs::dispatch(&run_cli(root, "bug-1"), &env, &token)
+        .expect("a sound lock is not a halt");
     let child_pid = watcher.join().expect("the watcher thread does not panic");
 
     // (0) THE PREMISE: the child really did start and park. Without a marker the token fired on a
@@ -1646,12 +1575,8 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
     );
     assert_eq!(exit.code(), 13);
 
-    // (2) THE ROWS, read off the store the run wrote.
-    let rows = store
-        .lock()
-        .expect("the fixture store's lock is sound")
-        .query(rk_kernel::runtime::journal_query("bug-1"))
-        .expect("the journal reads");
+    // (2) THE ROWS, read off the store the run wrote (the repository's own, on disk).
+    let rows = crate::support::journal_rows(root, "bug-1");
     assert_eq!(
         rows.iter()
             .filter(|e| e.kind == rk_types::event_kind::EventKind::Dispatch)

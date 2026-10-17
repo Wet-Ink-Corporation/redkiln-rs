@@ -1624,14 +1624,9 @@ fn run_real_in_process(root: &Path, item: &str, vars: &[(&str, String)]) -> rk_c
             .map(|(k, v)| ((*k).to_owned(), v.clone()))
             .collect(),
     );
-    rk_cli::verbs::run::run(
-        &cli,
-        &args,
-        &env,
-        rk_cli::verbs::Startup::real(),
-        &rk_ports::cancel::CancelToken::new(),
-    )
-    .unwrap_or_else(|halt| panic!("`run {item}` halted: {halt:?}"))
+    let token = rk_ports::cancel::CancelToken::new();
+    rk_cli::verbs::run::run(&cli, &args, &env, rk_cli::verbs::Startup::real(), &token)
+        .unwrap_or_else(|halt| panic!("`run {item}` halted: {halt:?}"))
 }
 
 /// **§8h.7: `run` over the real harness, without a launch record, refuses before any spawn.** A
