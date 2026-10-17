@@ -28,13 +28,11 @@ fn main() {
     // The signal path (ADR-0099 decision 2; D18-2). `ctrlc::set_handler` may be called once per
     // process, so this is its only call site in the workspace — no test installs one.
     //
-    // ~~The root's own copy of the token is dropped here … the flag's readers … are Slice 3's.~~
-    // *(dated 2026-10-17, s8j build, package S8J-P1-CANCEL; issue #5.)* Slice 3 built the readers
-    // but `run` built a fresh token for them, so the handler fired a token nobody read. The token
-    // `install()` returns is now handed to `verbs::dispatch` below, which hands it to `run`: the
-    // adapter each stage builds clones it (exit `13` during a dispatch) and the step-boundary check
-    // reads it (exit `130` outside one). If the handler cannot be installed, the run gets a token
-    // no handler holds, which is what every run had before this fix, and the OS default applies.
+    // *(dated 2026-10-17, s8j build, package S8J-P1-CANCEL; issue #5.)* The token `install()`
+    // returns is handed to `verbs::dispatch` below, which hands it to `run`: the adapter each stage
+    // builds clones it (exit `13` during a dispatch) and the step-boundary check reads it (exit
+    // `130` outside one). If the handler cannot be installed, the run gets a token no handler
+    // holds, so no signal reaches it and the OS default disposition applies.
     let token = match rk_cli::signal::install() {
         Ok(token) => token,
         Err(e) => {

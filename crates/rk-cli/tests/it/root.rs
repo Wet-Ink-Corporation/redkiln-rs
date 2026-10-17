@@ -183,8 +183,8 @@ fn signal_handler_fires_cancel_token() {
 /// pinned at its source, and the behaviour downstream of it at `verbs::dispatch` (the two tests
 /// below this one). Two halves:
 ///
-/// 1. `main.rs` binds the token `install()` hands back, passes that binding to `dispatch`, and drops
-///    no token.
+/// 1. `main.rs` binds the token `install()` hands back exactly once, passes that binding to
+///    `dispatch`, drops no token, and builds a fresh one only in the `Err` arm's fallback.
 /// 2. Nothing under `src/verbs/` builds a `CancelToken` of its own, so the one `run` reads can only
 ///    be the one it was handed.
 #[test]
@@ -218,6 +218,51 @@ fn main_hands_the_installed_signal_token_to_dispatch() {
                 installs[0]
             )
         });
+    // No shadowing: the binding is made once, so the name `dispatch` is handed below can only be
+    // `install()`'s token.
+    let bindings: Vec<&String> = code
+        .iter()
+        .filter(|l| l.starts_with(&format!("let {bound} =")))
+        .collect();
+    assert_eq!(
+        bindings.len(),
+        1,
+        "main.rs binds `{bound}` more than once, so the name handed to `dispatch` may not be \
+         `install()`'s token: {bindings:?}"
+    );
+    // The one fresh token is the `Err` fallback (no handler installed), not a replacement for the
+    // installed one.
+    let fresh_in_main: Vec<&String> = code
+        .iter()
+        .filter(|l| l.contains("CancelToken::new("))
+        .collect();
+    assert_eq!(
+        fresh_in_main.len(),
+        1,
+        "main.rs builds {} `CancelToken`s; exactly one is owed, the `Err` arm's fallback: \
+         {fresh_in_main:?}",
+        fresh_in_main.len()
+    );
+    let err_arm = code
+        .iter()
+        .position(|l| l.starts_with("Err(") && l.ends_with("=> {"))
+        .expect("main.rs's `install()` match has an `Err(..) => {` arm");
+    let fresh_at = code
+        .iter()
+        .position(|l| l.contains("CancelToken::new("))
+        .expect("counted above");
+    // The end of the `let .. = match .. { .. };` the `Err` arm belongs to.
+    let arm_end = code
+        .iter()
+        .skip(err_arm)
+        .position(|l| l == "};")
+        .map(|offset| err_arm + offset)
+        .expect("the `install()` match closes");
+    assert!(
+        err_arm < fresh_at && fresh_at < arm_end,
+        "main.rs's one `CancelToken::new(` (code line {fresh_at}) is not inside the `install()` \
+         `Err` arm (code lines {err_arm}..{arm_end}), so it can stand in for the installed token"
+    );
     assert!(
         code.iter()
             .any(|l| *l == format!("Ok({bound}) => {bound},")),
@@ -1482,18 +1527,26 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
 /// No test may deliver a console signal at 7d — under `cargo test` the binary is not in its own
 /// process group, so the event would reach `cargo`, libtest and the shell. The OS-delivery arm is
 /// ARMED, not run. What IS run is everything downstream of the token: the harness ~~the test
-/// builds~~ `run` builds is the real one, the child it spawns is the real fixture child, and the only thing standing in
-/// for the signal is `token.cancel()` — which is exactly what `signal::on_signal` does and nothing
-/// more (`signal_handler_fires_cancel_token` pins that).
+/// builds~~ `run` builds is the real one, the child it spawns is the real fixture child, and the
+/// only thing standing in for the signal is `token.cancel()` — which is exactly what
+/// `signal::on_signal` does and nothing more (`signal_handler_fires_cancel_token` pins that).
 ///
 /// # 🛑 THROUGH `verbs::dispatch`, THE ENTRY POINT `main` CALLS
 ///
 /// *(dated 2026-10-17, s8j build, package S8J-P1-CANCEL; issue #5.)* This test built its own
-/// binder, harness and store and called `run::run_with` with its own token, so it stayed green while the shipped `run` read a token nothing fired. It now calls
-/// `verbs::dispatch` with the token argument `main` fills from `signal::install()`, and `run` builds
-/// the binder, the real harness and the on-disk store itself; the watcher fires through
-/// `signal::on_signal`. That `main` hands `install()`'s token to `dispatch` is pinned by
+/// binder, harness and store and called `run::run_with` with its own token, so it stayed green
+/// while the shipped `run` read a token nothing fired. It now calls `verbs::dispatch` with the
+/// token argument `main` fills from `signal::install()`, and `run` builds the binder, the real
+/// harness and the on-disk store itself; the watcher fires through `signal::on_signal`. That
+/// `main` hands `install()`'s token to `dispatch` is pinned by
 /// `main_hands_the_installed_signal_token_to_dispatch`, because the binary cannot be linked.
+///
+/// **A regression here is SLOW, not a fast failure, and that is stated rather than bounded.** If
+/// the token `run` reads were orphaned again, the watcher's fire would reach no reader and the
+/// `hold` child would park for its full 600 s before the dispatch ends, so this test would take
+/// that long before failing on its exit and rows. No kill-on-timeout is added for it. The fast
+/// guards for that regression are `a_signal_before_run_is_seen_at_the_first_step_boundary_exit_130`
+/// and `main_hands_the_installed_signal_token_to_dispatch`, which fail at once.
 ///
 /// # 🛑 THE TOKEN IS FIRED ON THE MARKER FILE, NEVER ON A STORE POLL
 ///
@@ -1528,9 +1581,9 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         "PREMISE: `emit-report`'s timeout ({timeout_secs} s) must outlast the watcher's 30 s"
     );
 
-    // The `Env` `main` would capture for a launched run at the fixture child. `RK_FIXTURE_MODE=hold`
-    // is what makes the child park instead of returning, which is the only way a dispatch is still
-    // running when the token fires. Neither name is on the adapter's env denylist, and the adapter
+    // The `Env` `main` would capture for a launched run at the fixture child.
+    // `RK_FIXTURE_MODE=hold` is what makes the child park instead of returning, which is the only
+    // way a dispatch is still running when the token fires. Neither name is on the adapter's env denylist, and the adapter
     // `run` builds passes both to the child.
     let env = fixture_run_env("hold", markers.path());
     // The token `main` takes from `signal::install()` and hands to `verbs::dispatch`.

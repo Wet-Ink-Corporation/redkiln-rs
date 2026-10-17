@@ -320,8 +320,7 @@ pub const DECLARED_FILE: &str = "declared.toml";
 /// *(dated 2026-10-17, s8j build, package S8J-P1-CANCEL; issue #5.)* `token` is the one the
 /// signal handler fires: `main` takes it from `signal::install()` and hands it through
 /// [`crate::verbs::dispatch`]. It is cloned into each stage's harness (the adapter's polled arm,
-/// exit `13`) and read at each step boundary (exit `130`). This function used to build its own
-/// `CancelToken::new()`, which nothing fired, so a signal never reached either reader.
+/// exit `13`) and read at each step boundary (exit `130`).
 ///
 /// # Errors
 /// [`Halt::PoisonedLock`] from the store acquisition. Every other refusal is a value.
