@@ -27,7 +27,10 @@
 //! over an empty store is not an error; ADR-0105 c8"*. `Exit::NoRecord` = `5` is documented on the
 //! tree as AC-432's row and is **`explain`'s alone**.
 //!
-//! # 🛑 RAISED — THE ITEM PARTITION OF THE ITEM-LESS ROWS IS DECIDED BY NO RECORD
+//! # SETTLED — THE ITEM PARTITION OF THE ITEM-LESS ROWS IS ADR-0182'S
+//!
+//! *(retitled 2026-10-17, s8j build, package S8J-P2-STATUS; issue #6: ~~RAISED — THE ITEM
+//! PARTITION OF THE ITEM-LESS ROWS IS DECIDED BY NO RECORD~~. The dated note below settles it.)*
 //!
 //! The store's `query` **ignores its selector**: `SqliteStore::query`'s body is
 //! `SELECT kind, payload FROM t2_event ORDER BY id` with no `WHERE`, and the crate's own doc says
@@ -49,7 +52,7 @@
 //! module follows both: each row is partitioned by its owner (the key for a `Carried` kind, falling
 //! back to the payload's `item` only on a row that carries no key; the payload member for
 //! `rate_limit_reading`; none for a kind that is not item-scoped), an item-less `Carried` row is
-//! read by every item, and each item's stage is seeded from its own keyed transitions.
+//! read by every item, and each item's stage is seeded from the transitions it owns.
 //! `lane_e2e::two_items_in_one_store_do_not_fold_together` measures the two-item case through this
 //! verb. What stays owed is ADR-0182's whole-store selector *with exclusion*; until it lands the
 //! one read below is `ByRun`.
@@ -216,17 +219,19 @@ fn in_journal_of(event: &Event, item: &str) -> bool {
     )
 }
 
-/// The stage `item` is folded against: the `to` of the last `stage_transition` KEYED to it.
+/// The stage `item` is folded against: the `to` of the last `stage_transition` it OWNS, by the
+/// same [`owner`] the journal partition uses, so the seed and the journal never disagree about
+/// whose row a transition is.
 ///
 /// *(dated 2026-10-17, s8j build, package S8J-P2-STATUS; issue #6.)* ~~the last transition in the
-/// whole journal~~, which seeded every item with whichever item moved last. Empty when the item has
-/// no keyed transition — which is honest rather than a default. `fold` uses this only to seed
+/// whole journal~~, which seeded every item with whichever item moved last. Empty when the item owns
+/// no transition — which is honest rather than a default. `fold` uses this only to seed
 /// `RunState::initial`; the item's own transitions still replay over it.
 fn recorded_stage(events: &[Event], item: &str) -> String {
     events
         .iter()
         .rev()
-        .find(|e| e.kind == EventKind::StageTransition && e.item() == Some(item))
+        .find(|e| e.kind == EventKind::StageTransition && owner(e) == Some(item))
         .and_then(|e| e.payload.get("to"))
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default()

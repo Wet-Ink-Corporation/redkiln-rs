@@ -203,7 +203,7 @@ fn status_folds_each_item_over_the_rows_keyed_to_it() {
     );
 }
 
-/// **An item's stage is seeded from its own keyed transitions**, never from the journal's last.
+/// **An item's stage is seeded from the transitions it owns**, never from the journal's last.
 /// `lane-a`'s transition names no `from`, so the fold takes it from the seed; `lane-b`'s row is the
 /// journal's last, and its stage must not reach `lane-a`'s line.
 ///
@@ -215,14 +215,32 @@ fn status_seeds_each_item_from_its_own_keyed_transitions() {
         transition(Some("lane-b"), Some("triage"), "review"),
     ];
     let text = status_over(&rows);
-    let lane_a: Vec<&str> = roll_up_lines(&text)
-        .into_iter()
-        .filter(|l| l.starts_with("lane-a\t"))
-        .collect();
-    assert_eq!(lane_a.len(), 1, "PREMISE: lane-a has one line:\n{text}");
-    assert!(
-        lane_a.iter().all(|l| !l.contains("review")),
-        "lane-a's line names lane-b's stage:\n{text}"
+    assert_eq!(
+        roll_up_lines(&text),
+        vec![
+            "lane-a\timplement->implement\tgates=0",
+            "lane-b\ttriage->review\tgates=0"
+        ],
+        "lane-a's `from` comes from its own seed, never from lane-b's stage:\n{text}"
+    );
+}
+
+/// **The interim key wins over a payload `item`** (ADR-0182 decision 1): a row keyed to `lane-a`
+/// whose payload names `lane-b` is `lane-a`'s alone, and lists no `lane-b`.
+///
+/// Red by: an `owner` that reads the payload's `item` before the key.
+#[test]
+fn status_attributes_a_keyed_row_by_its_key_not_its_payload_item() {
+    let rows = [Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({ "from": "triage", "to": "implement", "item": "lane-b" }),
+    )
+    .with_item("lane-a")];
+    let text = status_over(&rows);
+    assert_eq!(
+        roll_up_lines(&text),
+        vec!["lane-a\ttriage->implement\tgates=0"],
+        "the keyed row is lane-a's, and no lane-b line appears:\n{text}"
     );
 }
 
