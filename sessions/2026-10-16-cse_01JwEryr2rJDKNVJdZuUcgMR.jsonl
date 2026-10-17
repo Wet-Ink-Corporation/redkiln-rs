@@ -119,3 +119,7 @@
 {"t":"2026-10-17T03:50:15.262Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-implementer","event":"subagent-stop","type":"temper:rust-implementer","msg":false,"transcript":true}
 {"t":"2026-10-17T03:50:15.369Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-implementer","event":"stop-declared","status":"WIP"}
 {"t":"2026-10-17T03:51:21.877Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-implementer","event":"subagent-start","type":"temper:rust-implementer"}
+{"t":"2026-10-17T03:56:16.911Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-implementer","event":"deny-shell-write","via":"shell-reader"}
+{"t":"2026-10-17T03:57:50.626Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"temper:rust-implementer","event":"deny-scan","file":"crates/rk-cli/src/main.rs","rules":["H-06"]}
+{"t":"2026-10-17T04:01:13.494Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"gate-start"}
+{"t":"2026-10-17T04:02:17.688Z","sid":"e156a005-5748-5ca5-8984-de0490c6aae6","ccr":"cse_01JwEryr2rJDKNVJdZuUcgMR","agent":"main","event":"stop-blocked","reason":"gate","fp":"0fdb817d09c43026","ms":64193,"cached":false}
