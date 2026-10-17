@@ -174,6 +174,152 @@ fn signal_handler_fires_cancel_token() {
     );
 }
 
+/// **Issue #5: the token `main` installs is the token `run` reads.** *(Added 2026-10-17, s8j
+/// build, package S8J-P1-CANCEL.)*
+///
+/// `main` used to drop `signal::install()`'s token, and `run` built a fresh `CancelToken` that
+/// nothing fired, so a signal set a flag no reader held. The binary cannot be linked (ADR-0083) and
+/// no test installs a handler or signals its own process (§7d.10), so the wiring in `main.rs` is
+/// pinned at its source, and the behaviour downstream of it at `verbs::dispatch` (the two tests
+/// below this one). Two halves:
+///
+/// 1. `main.rs` binds the token `install()` hands back, passes that binding to `dispatch`, and drops
+///    no token.
+/// 2. Nothing under `src/verbs/` builds a `CancelToken` of its own, so the one `run` reads can only
+///    be the one it was handed.
+#[test]
+fn main_hands_the_installed_signal_token_to_dispatch() {
+    let main_rs = src_dir().join("main.rs");
+    let text = std::fs::read_to_string(&main_rs).expect("main.rs is readable");
+    crate::assert_no_block_comment(&text, "main.rs");
+    let code: Vec<String> = code_lines(&text)
+        .into_iter()
+        .map(|(_, l)| l.trim().to_owned())
+        .collect();
+
+    let installs: Vec<&String> = code
+        .iter()
+        .filter(|l| l.contains("signal::install()"))
+        .collect();
+    assert_eq!(
+        installs.len(),
+        1,
+        "main.rs must call `signal::install()` exactly once (ctrlc allows one handler per \
+         process); its code lines calling it: {installs:?}"
+    );
+    let bound = installs[0]
+        .strip_prefix("let ")
+        .and_then(|rest| rest.split_once(" = match rk_cli::signal::install()"))
+        .map(|(name, _)| name.to_owned())
+        .unwrap_or_else(|| {
+            panic!(
+                "main.rs does not bind the token `install()` returns (`let <token> = match \
+                 rk_cli::signal::install() {{ .. }}`); it read: {}",
+                installs[0]
+            )
+        });
+    assert!(
+        code.iter()
+            .any(|l| *l == format!("Ok({bound}) => {bound},")),
+        "the `Ok` arm of `install()` must yield the installed token itself, so the binding \
+         `{bound}` is the token the handler fires"
+    );
+    assert!(
+        code.iter()
+            .any(|l| l.contains(&format!("rk_cli::verbs::dispatch(&cli, &env, &{bound})"))),
+        "main.rs does not hand the installed token `{bound}` to `verbs::dispatch`, so the \
+         handler fires a token no reader holds (issue #5)"
+    );
+    let drops: Vec<&String> = code
+        .iter()
+        .filter(|l| l.contains(&format!("drop({bound})")))
+        .collect();
+    assert!(
+        drops.is_empty(),
+        "main.rs drops a token, which is the orphan issue #5 removed: {drops:?}"
+    );
+
+    let fresh: Vec<String> = crate::rs_files(&src_dir().join("verbs"))
+        .into_iter()
+        .flat_map(|path| {
+            let src = std::fs::read_to_string(&path).expect("a verb source file is readable");
+            code_lines(&src)
+                .into_iter()
+                .filter(|(_, l)| l.contains("CancelToken::new("))
+                .map(|(n, l)| format!("{}:{n}: {}", path.display(), l.trim()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert!(
+        fresh.is_empty(),
+        "a verb builds its own `CancelToken`, which no signal handler fires (issue #5); the run's \
+         token is the one `dispatch` is handed:\n{}",
+        fresh.join("\n")
+    );
+}
+
+/// The command line `main` hands `verbs::dispatch` for `redkiln -C <root> run <item>`.
+fn run_cli(root: &Path, item: &str) -> rk_cli::cli::Cli {
+    rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Run(rk_cli::cli::RunArgs {
+            item: item.to_owned(),
+            lane: None,
+        }),
+    }
+}
+
+/// The `Env` a launched `run` over `pack-min`'s fixture child is handed, built explicitly (D21-47):
+/// the fixture launch record, the child's `mode` and its marker directory.
+fn fixture_run_env(mode: &str, markers: &Path) -> rk_cli::env::Env {
+    rk_cli::env::Env::from_map(std::collections::BTreeMap::from([
+        (
+            rk_cli::env::LAUNCH_RECORD.to_owned(),
+            crate::fixture_launch_record().display().to_string(),
+        ),
+        ("RK_FIXTURE_MODE".to_owned(), mode.to_owned()),
+        (
+            "RK_FIXTURE_MARKER_DIR".to_owned(),
+            markers.display().to_string(),
+        ),
+    ]))
+}
+
+/// **Issue #5 / §7d.5 — a signal outside a dispatch is seen at the next step boundary, through the
+/// entry point `main` calls.** *(Added 2026-10-17, s8j build, package S8J-P1-CANCEL.)*
+///
+/// The token is fired by `signal::on_signal`, the handler's own body, BEFORE `verbs::dispatch` is
+/// called with it, exactly as `main` calls it. `run`'s first step boundary reads it and exits `130`
+/// having spawned nothing: the fixture child writes a marker on every spawn, and none appears. The
+/// child's mode is `exit:0`, so a run that missed the token fails fast instead of holding.
+#[test]
+fn a_signal_before_run_is_seen_at_the_first_step_boundary_exit_130() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let root = repo.path();
+    let markers = tempfile::tempdir().expect("a marker directory");
+    let token = CancelToken::new();
+    signal::on_signal(&token);
+
+    let exit = rk_cli::verbs::dispatch(
+        &run_cli(root, "bug-1"),
+        &fixture_run_env("exit:0", markers.path()),
+        &token,
+    )
+    .expect("a sound lock is not a halt");
+
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::SignalOutsideDispatch,
+        "a token fired before the run must stop it at the first step boundary, not {exit:?}"
+    );
+    assert_eq!(exit.code(), 130);
+    assert_eq!(
+        crate::support::marker_pid(markers.path()),
+        None,
+        "the fixture child was spawned, so the run dispatched past a fired token"
+    );
+}
+
 /// **H-3, D-18 — the common dir is discovered from the INHERITED cwd, through the wrapper.**
 ///
 /// §7d.3, verbatim: *"spawn `redkiln status` with `Command::current_dir` set to a **subdirectory**

@@ -419,6 +419,7 @@ options = ["approve", { id = "vouch", attaches = "Findings" }]
                 &lane_e2e::args(item),
                 &support::clean_env(),
                 lane_e2e::seam(&ScriptedFactory::new(script)),
+                &rk_ports::cancel::CancelToken::new(),
             ),
             item,
         )

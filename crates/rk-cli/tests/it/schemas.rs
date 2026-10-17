@@ -294,6 +294,7 @@ fn bind_reads_the_schema_from_exported_by_name() {
                 harness: &factory,
                 ..rk_cli::verbs::Startup::real()
             },
+            &rk_ports::cancel::CancelToken::new(),
         ),
         lane_e2e::THROUGH_ITEM,
     );

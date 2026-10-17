@@ -220,6 +220,7 @@ pub(crate) fn walk_the_lane_through_a_void(root: &Path) {
                 &args(GATE_ITEM),
                 &support::clean_env(),
                 seam(&ScriptedFactory::new(script)),
+                &CancelToken::new(),
             ),
             GATE_ITEM,
         )
@@ -449,7 +450,8 @@ fn run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&opening)
+                seam(&opening),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -477,7 +479,8 @@ fn run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&rerun)
+                seam(&rerun),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -563,7 +566,8 @@ fn run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&first)
+                seam(&first),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -586,6 +590,7 @@ fn run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane() {
             &args(GATE_ITEM),
             &support::clean_env(),
             seam(&second),
+            &CancelToken::new(),
         ),
         GATE_ITEM,
     );
@@ -629,7 +634,8 @@ fn every_non_forbidden_stage_is_entered_and_trailered_in_declared_order() {
                 &cli(root, THROUGH_ITEM),
                 &args(THROUGH_ITEM),
                 &support::clean_env(),
-                seam(&factory)
+                seam(&factory),
+                &CancelToken::new()
             ),
             THROUGH_ITEM
         ),
@@ -660,7 +666,8 @@ fn an_empty_stage_records_stage_empty_with_its_reason() {
                 &cli(root, THROUGH_ITEM),
                 &args(THROUGH_ITEM),
                 &support::clean_env(),
-                seam(&factory)
+                seam(&factory),
+                &CancelToken::new()
             ),
             THROUGH_ITEM
         ),
@@ -768,7 +775,8 @@ fn the_stage_seeds_from_git_when_the_store_is_deleted() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
+                seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -782,6 +790,7 @@ fn the_stage_seeds_from_git_when_the_store_is_deleted() {
             &args(GATE_ITEM),
             &support::clean_env(),
             seam(&hop_two),
+            &CancelToken::new(),
         ),
         GATE_ITEM,
     );
@@ -810,6 +819,7 @@ fn the_stage_seeds_from_git_when_the_store_is_deleted() {
             &args(GATE_ITEM),
             &support::clean_env(),
             seam(&next),
+            &CancelToken::new(),
         ),
         GATE_ITEM,
     );
@@ -955,6 +965,7 @@ fn terminal_read_reports_only_an_awaited_gate() {
                 &args(BASE_GATE_ITEM),
                 &support::clean_env(),
                 seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new(),
             ),
             BASE_GATE_ITEM,
         )
@@ -1143,7 +1154,8 @@ fn the_lane_end_mints_a_terminal_closed_mark() {
                 &cli(root, THROUGH_ITEM),
                 &args(THROUGH_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(through()))
+                seam(&ScriptedFactory::new(through())),
+                &CancelToken::new()
             ),
             THROUGH_ITEM
         ),
@@ -1175,7 +1187,8 @@ fn a_closed_item_reruns_as_done_and_mints_nothing() {
                 &cli(root, THROUGH_ITEM),
                 &args(THROUGH_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(through()))
+                seam(&ScriptedFactory::new(through())),
+                &CancelToken::new()
             ),
             THROUGH_ITEM
         ),
@@ -1201,7 +1214,8 @@ fn a_closed_item_reruns_as_done_and_mints_nothing() {
                 &cli(root, THROUGH_ITEM),
                 &args(THROUGH_ITEM),
                 &support::clean_env(),
-                seam(&rerun)
+                seam(&rerun),
+                &CancelToken::new()
             ),
             THROUGH_ITEM
         ),
@@ -1237,7 +1251,8 @@ fn an_answered_gate_survives_a_deleted_store_as_answered() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
+                seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -1260,6 +1275,7 @@ fn an_answered_gate_survives_a_deleted_store_as_answered() {
             &args(GATE_ITEM),
             &support::clean_env(),
             seam(&after_delete),
+            &CancelToken::new(),
         ),
         GATE_ITEM,
     );
@@ -1303,7 +1319,8 @@ fn two_items_in_one_store_do_not_fold_together() {
                 &cli(root, THROUGH_ITEM),
                 &args(THROUGH_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(through()))
+                seam(&ScriptedFactory::new(through())),
+                &CancelToken::new()
             ),
             THROUGH_ITEM
         ),
@@ -1316,7 +1333,8 @@ fn two_items_in_one_store_do_not_fold_together() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
+                seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -1399,7 +1417,8 @@ fn the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
+                seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -1421,7 +1440,8 @@ fn the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it() {
                 &cli(root, GATE_ITEM),
                 &args(GATE_ITEM),
                 &support::clean_env(),
-                seam(&walked)
+                seam(&walked),
+                &CancelToken::new()
             ),
             GATE_ITEM
         ),
@@ -1454,7 +1474,8 @@ fn a_second_invocation_reuses_the_run_worktree() {
                 &cli(root, BASE_GATE_ITEM),
                 &args(BASE_GATE_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
+                seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new()
             ),
             BASE_GATE_ITEM
         ),
@@ -1499,7 +1520,8 @@ fn a_second_invocation_reuses_the_run_worktree() {
                 &cli(root, BASE_GATE_ITEM),
                 &args(BASE_GATE_ITEM),
                 &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
+                seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new()
             ),
             BASE_GATE_ITEM
         ),
@@ -1572,7 +1594,8 @@ fn a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one() {
                 &cli(clean_root, THROUGH_ITEM),
                 &args(THROUGH_ITEM),
                 &support::clean_env(),
-                seam(&walked)
+                seam(&walked),
+                &CancelToken::new()
             ),
             THROUGH_ITEM
         ),
@@ -1619,6 +1642,7 @@ fn a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one() {
                 &args(DIRTY_ITEM),
                 &support::clean_env(),
                 seam(&factory),
+                &CancelToken::new(),
             ),
             DIRTY_ITEM,
         );
@@ -1934,6 +1958,7 @@ fn every_tier_one_row_has_exactly_one_trailer_commit() {
                 &args(BASE_GATE_ITEM),
                 &support::clean_env(),
                 seam(&ScriptedFactory::new(Vec::new())),
+                &CancelToken::new(),
             ),
             BASE_GATE_ITEM,
         )
@@ -2143,6 +2168,7 @@ fn run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer() 
                 &args("bug-1"),
                 &toolchain_env(),
                 seam(&factory),
+                &CancelToken::new(),
             ),
             "bug-1",
         );
@@ -2223,6 +2249,7 @@ fn run_binds_the_review_routes_for_a_shallow_clone_step() {
             &args("bug-1"),
             &toolchain_env(),
             seam(&factory),
+            &CancelToken::new(),
         ),
         "bug-1",
     );
@@ -2293,6 +2320,7 @@ fn an_undeclared_slice_is_refused_at_entry_before_any_dispatch() {
             &args(THROUGH_ITEM),
             &support::clean_env(),
             seam(&factory),
+            &CancelToken::new(),
         ),
         THROUGH_ITEM,
     );
@@ -2386,6 +2414,7 @@ fn a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice(
             &args("bug-1"),
             &support::clean_env(),
             seam(&factory),
+            &CancelToken::new(),
         ),
         "bug-1",
     );

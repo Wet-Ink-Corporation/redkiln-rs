@@ -278,12 +278,16 @@ impl Startup<'static> {
 /// wildcard, so adding a tenth subcommand is `E0004` here rather than a silent fall-through (the
 /// ninth, `cost`, arrived that way: ADR-0163).
 ///
+/// `token` is the one the signal handler fires (`signal::install()`'s, handed down by `main`). Only
+/// `run` reads it, because only `run` dispatches. *(dated 2026-10-17, s8j build, package
+/// S8J-P1-CANCEL; issue #5.)*
+///
 /// # Errors
 /// A [`Halt`], when a verb stops rather than returning a code. None of Slice 1's stubs does; the
 /// first is Slice 2's poisoned-lock acquisition.
-pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
+pub fn dispatch(cli: &Cli, env: &Env, token: &rk_ports::cancel::CancelToken) -> Result<Exit, Halt> {
     match &cli.command {
-        Command::Run(args) => run::run(cli, args, env, Startup::real()),
+        Command::Run(args) => run::run(cli, args, env, Startup::real(), token),
         Command::Answer(args) => answer::run(cli, args, env, Startup::real()),
         Command::Status => status::run(cli, Startup::real()),
         Command::Explain(args) => explain::run(cli, args, Startup::real()),
