@@ -12,6 +12,8 @@ evidence: []
 consumers: []
 ---
 
+*(dated 2026-10-17, the operator's sitting before `s8j` Round A; D21-156.)* **This record's acceptance is ratified by the operator.** It flipped on the operator's standing authority (D21-134, under D21-105 item 1) while the rulings it carries were still provisional; the operator has now confirmed those rulings (D21-123 to D21-127) by D21-156. No decision sentence moves.
+
 ## Context and problem
 
 **D21-42 6a reverses D21-41's pack cuts for five demands.** It reads *"**Reversed for five demands:** SmokeResult,

@@ -12,6 +12,8 @@ evidence: []
 consumers: []
 ---
 
+*(dated 2026-10-17, the operator's sitting before `s8j` Round A; D21-156.)* **This record's acceptance is ratified by the operator.** It flipped on *"the operator has not objected in this ledger"* (D21-136); the operator has now confirmed the AFK-provisional rulings it carries (D21-119) by D21-156. No decision sentence moves.
+
 ## Context and problem
 
 **ADR-0186 keys "a review stage" on `Findings`, and nothing shipped provides it.** ADR-0186's decision 2 (as amended by
