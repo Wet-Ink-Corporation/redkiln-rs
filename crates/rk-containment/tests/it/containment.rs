@@ -594,3 +594,30 @@ fn group_reads_empty_when_its_only_member_exited_unreaped() {
     child.wait().expect("reap the child");
     dir.close().expect("the fixture tree deletes");
 }
+
+/// Issue #20, the other side: **a group with a running member is not empty.** The `hold` fixture
+/// leads its own group and stays up, so `Group::is_empty` must read `false` until the group is
+/// killed. Pins that the zombie filter did not make every group read empty. POSIX only, as above.
+#[cfg(unix)]
+#[test]
+fn group_reads_non_empty_while_a_member_runs() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let mut reaper = Reaper::new();
+    let Contained { mut child, group } =
+        spawn_into_job(fixture("hold", dir.path())).expect("spawn_into_job");
+    let pid = child.id();
+    reaper.track(pid);
+    wait_for_marker(dir.path(), "hold", UP_POLLS).expect("the hold fixture came up");
+    assert!(is_alive(pid), "precondition: the child is alive");
+
+    let empty = group.is_empty().expect("the emptiness probe reads");
+
+    assert!(
+        !empty,
+        "group {} read empty while its member {pid} is running",
+        group.pgid()
+    );
+    group.kill().expect("kill through the group");
+    child.wait().expect("reap the child");
+    dir.close().expect("the fixture tree deletes");
+}

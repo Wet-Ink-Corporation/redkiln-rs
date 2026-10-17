@@ -18,8 +18,6 @@
 //! Enumeration by pid has no syscall; [`Group::pids`] reads `/proc/<pid>/stat`'s fifth field (the
 //! pgrp) over every numeric entry of `/proc`, which is Linux's and is what CI runs, and skips a
 //! zombie; [`Group::is_empty`] reads that same listing, so it needs `/proc` too.
-//! *(Dated 2026-10-16, issue #20: [`Group::is_empty`] was the probe `kill(-pgid, 0)`, which
-//! counts a zombie member; the probe is gone from `ffi`.)*
 //!
 //! **What a process group does not promise, named rather than discovered on CI:** a member can
 //! leave the group with `setpgid`/`setsid` — the POSIX analogue of Windows' `CREATE_BREAKAWAY_FROM_JOB`,
@@ -94,9 +92,6 @@ impl Group {
     /// Whether the group has no running member: [`Group::pids`] lists none. A zombie (exited, not
     /// yet reaped) is not a running member, so a group whose only member has exited reads empty
     /// before its reaper runs, as [`Group::kill`]'s wait and [`is_alive`] already read it.
-    ///
-    /// *(Dated 2026-10-16, issue #20: this was the portable probe `kill(-pgid, 0)`, which succeeds
-    /// while any zombie member exists, so an exited, unreaped group read non-empty.)*
     ///
     /// # Errors
     /// [`ContainError::Enumerate`] if `/proc` cannot be read.

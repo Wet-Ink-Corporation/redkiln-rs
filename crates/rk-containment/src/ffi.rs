@@ -31,11 +31,9 @@
 //! | `process_start_time` | `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` + `GetExitCodeProcess == STILL_ACTIVE` + `GetProcessTimes` | the start-time half of `s8d-ii`'s run-lock liveness predicate (ADR-0180 decision 6, proposed): a lock is live only when its pid is alive AND that pid's start time equals the recorded one. A production read, spawns nothing *(dated 2026-09-27, s8d-ii build, P3)* |
 //!
 //! The POSIX arm's sites: spawn (`std`'s `CommandExt::process_group(0)`), kill (`killpg(pgid,
-//! SIGKILL)`), `terminate_pid` (`kill(pid, SIGKILL)`) and `is_alive` (`kill(pid, 0)`). *(Dated
-//! 2026-10-16, issue #20: the emptiness probe `kill(-pgid, 0)` was removed; it counted a zombie
-//! member, and `posix.rs`'s `Group::is_empty` reads its zombie-filtered `/proc` listing instead.)*
-//! Enumeration by pid on POSIX has no syscall; `posix.rs` reads `/proc` for it and this module
-//! carries only the signal calls. **The POSIX arm is written, not run: this box is Windows and the
+//! SIGKILL)`), `terminate_pid` (`kill(pid, SIGKILL)`) and `is_alive` (`kill(pid, 0)`).
+//! Enumeration by pid on POSIX has no syscall; `posix.rs` reads `/proc` for it (and
+//! `Group::is_empty` reads that listing), and this module carries only the signal calls. **The POSIX arm is written, not run: this box is Windows and the
 //! arm is ARMED to a recorded CI run** (`s7c` §7c.10; `ci.yml` has never run).
 //!
 //! [`CANCEL_EXIT_CODE`] is declared here because ADR-0127 decision 1 puts *"the adapter's own
