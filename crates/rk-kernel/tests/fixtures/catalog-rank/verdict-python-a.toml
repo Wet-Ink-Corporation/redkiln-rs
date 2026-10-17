@@ -1,0 +1,16 @@
+# Rank 7, admissible ONLY where `toolchain` contains `python`. Paired with verdict-python-b at the
+# same rank, this is a tie that exists in a python context and in no other (issue #7).
+[activity]
+id           = "verdict-python-a"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["toolchain:python"]
+method_rank  = 7
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

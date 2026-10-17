@@ -1,0 +1,15 @@
+# Rank 7 AGAIN, rust-only: ties verdict-rust-a in every rust context and in no other (issue #7).
+[activity]
+id           = "verdict-rust-b"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["toolchain:rust"]
+method_rank  = 7
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

@@ -1,0 +1,17 @@
+# Rank 7, admissible ONLY where `toolchain` contains `rust`. Paired with verdict-rust-b at the
+# same rank, this is a tie that exists in a rust context and in no other (issue #7): AC-047's
+# load lint must find it, which it can only do if its toolchain domain includes `rust`.
+[activity]
+id           = "verdict-rust-a"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["toolchain:rust"]
+method_rank  = 7
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

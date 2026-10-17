@@ -47,6 +47,7 @@ use super::artifacts::{ArtifactRegistry, Instance};
 use super::item::FacetValue;
 use super::step1::admits;
 use crate::catalog::{Activity, Catalog, Requirement};
+use crate::lattice;
 use crate::predicate::{self, Tri};
 use crate::registry::Registry;
 use crate::rigor::Rigor;
@@ -591,14 +592,6 @@ pub fn rank_lint(
     Ok(())
 }
 
-/// `lattice.py`'s four toolchain instances, with the change kinds each produces.
-const TOOLCHAIN_INSTANCES: [(&str, &[&str]); 4] = [
-    ("node", &["text"]),
-    ("unreal", &["binary"]),
-    ("dotnet", &["text"]),
-    ("node+unreal", &["text", "binary"]),
-];
-
 /// The reduced context enumeration for one producer set.
 fn enumerate_contexts(producers: &[&Activity], facets: &Registry) -> Vec<Item> {
     let mut axes: BTreeSet<String> = BTreeSet::new();
@@ -617,25 +610,19 @@ fn enumerate_contexts(producers: &[&Activity], facets: &Registry) -> Vec<Item> {
         }
     }
 
-    // `toolchain` and `change` are one axis pair, swept together over the four instances.
+    // `toolchain` and `change` are one axis pair, swept together over the instances the registry
+    // declares (issue #7), so no toolchain it names escapes the lint.
     let sweep_toolchain = axes.remove("toolchain") | axes.remove("change");
     let mut items: Vec<Item> = vec![Item::new("lint", "story")];
 
     if sweep_toolchain {
-        let mut next = Vec::new();
+        let instances = lattice::toolchain_sweep(facets);
+        let mut next = Vec::with_capacity(items.len().saturating_mul(instances.len()));
         for base in &items {
-            for (name, kinds) in TOOLCHAIN_INSTANCES {
+            for instance in &instances {
                 let mut it = base.clone();
-                for part in name.split('+') {
-                    let own: Vec<&str> = if name.contains('+') {
-                        match part {
-                            "unreal" => vec!["binary"],
-                            _ => vec!["text"],
-                        }
-                    } else {
-                        kinds.to_vec()
-                    };
-                    it = it.with_toolchain(part, own);
+                for (tool, kinds) in instance {
+                    it = it.with_toolchain(tool, kinds.iter().copied());
                 }
                 next.push(it);
             }
