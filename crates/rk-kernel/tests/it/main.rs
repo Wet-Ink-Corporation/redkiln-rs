@@ -316,6 +316,7 @@ mod gate_step;
 mod gates;
 mod grammar;
 mod guard_context;
+mod human_root;
 mod kernel_denylist;
 mod keywords;
 mod lane_order;

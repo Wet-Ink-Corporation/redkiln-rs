@@ -12,7 +12,7 @@
 //! [`gate_kind`] is the one mint, and a later human kind brings its own constant, question and rows.
 
 /// The gate-kind prefix: the one case of step 4's `NoAdmissibleProducer` an answer resolves.
-pub const PREFIX: &str = "human_root";
+const PREFIX: &str = "human_root";
 
 /// The fix lane's root: the gate the analysis stage opens when no `BugReport` is attached.
 pub const BUG_REPORT_KIND: &str = "human_root:BugReport";

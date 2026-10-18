@@ -266,7 +266,7 @@ impl Selection {
     /// `<Kind>` of a `human_root:<Kind>` gate the FSM's step 2 opens. A `ForbiddenStage`
     /// unsatisfiable and an activity-sourced kind are never in it.
     #[must_use]
-    pub fn human_roots(&self) -> &[String] {
+    pub(crate) fn human_roots(&self) -> &[String] {
         &self.human_roots
     }
 
@@ -687,6 +687,9 @@ pub(in crate::select) fn select_amended(
     skipped.dedup();
     unsatisfiable.sort_by(|a, b| a.kind.cmp(&b.kind));
     // ADR-0200 decision 2: the step-4 gate opens on a human kind's `NoAdmissibleProducer` only.
+    // The reason filter is not redundant: no load lint refuses a catalog producer of a human kind,
+    // so one whose only producer sits in a forbidden stage is `ForbiddenStage` here, and that keeps
+    // its announcement and opens no gate (`human_root::a_forbidden_stage_…` in `tests/it`).
     // Owned copies: the selection stores them beside `unsatisfiable`, which keeps its own.
     let mut human_roots: Vec<String> = unsatisfiable
         .iter()
