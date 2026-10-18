@@ -339,7 +339,10 @@ fn require_axes(pack: &str) -> BTreeSet<String> {
 /// set is derived here, and the counts are PREMISES, so a catalog change that moves the set fails
 /// by name. *(dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9)* The fourth
 /// minted kind is `automated-verdict-refused` (`GateReason::AutomatedVerdictRefused`, ADR-0199
-/// decision 3, proposed), so each count rises by one.
+/// decision 3, proposed), so each count rises by one. *(dated 2026-10-18, s8j build,
+/// S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3, proposed)* The fifth and sixth are the step-4 gates
+/// on the two human roots, `human_root:BugReport` and `human_root:IntakeRecord`
+/// (`workflow::human_root`), reachable in every pack, so the counts move ~~55 and 57~~ to 57 and 59.
 ///
 /// RED (observed 2026-10-02, before the rows were written): 0 rows in each pack.
 #[test]
@@ -355,12 +358,14 @@ fn shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class() {
         rk_kernel::workflow::fsm::DRIFT_GATE_KIND,
         rk_kernel::verify::ac_gate::AC_GATE_KIND,
         rk_kernel::workflow::gate::GateReason::AutomatedVerdictRefused.as_str(),
+        rk_kernel::workflow::human_root::BUG_REPORT_KIND,
+        rk_kernel::workflow::human_root::INTAKE_RECORD_KIND,
     ]
     .into_iter()
     .map(str::to_owned)
     .collect();
     let escalation = rk_kernel::workflow::gate::ESCALATION_CLASS;
-    for (pack, axes_want, rows_want) in [("bug-standard", 5, 55), ("story", 7, 57)] {
+    for (pack, axes_want, rows_want) in [("bug-standard", 5, 57), ("story", 7, 59)] {
         let axes = require_axes(pack);
         assert_eq!(axes.len(), axes_want, "PREMISE: {pack} reads {axes:?}");
         assert!(

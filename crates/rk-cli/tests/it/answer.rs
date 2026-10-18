@@ -1134,9 +1134,12 @@ fn ac410_unadmitted_attachment_refused_zero_events() {
 /// Option<String>` and no version field [measured]. The stage file says *"the kind's registered
 /// schema version"*; the tree registers an id. Reported as drift (§7d.18), not invented.
 ///
-/// 🛑 **The producer routing is RT-59 and is OWED a record.** That `answer` writes an
+/// ~~🛑 **The producer routing is RT-59 and is OWED a record.** That `answer` writes an
 /// `artifact.write` row at all is routed, not decided: nothing in `rk-kernel/src` writes that kind
-/// [measured], so this verb is its first producer.
+/// [measured], so this verb is its first producer.~~ *(dated 2026-10-18, `s8j` build,
+/// S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 5, proposed.)* **RT-59 is settled**: R-48's dated note
+/// on design §5's `artifact.write` row (2026-09-20) names its producers as *"every activity output,
+/// and `redkiln answer` for an admitted attachment"*, so this verb is a decided producer.
 #[test]
 fn ac410_admitted_attachment_stored_as_human_root() {
     let registry = decide_registry();

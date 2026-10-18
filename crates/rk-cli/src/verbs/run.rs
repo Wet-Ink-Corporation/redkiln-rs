@@ -1813,12 +1813,17 @@ impl std::fmt::Display for GateExpiryLint {
 /// the gate request's one reason, `automated-verdict-refused` (ADR-0199 decision 3, which any
 /// stage's walk reaches when its review input is a `Binary` summary). Every pack reaches each of
 /// them (any lane can land, drift at entry, reach verify or read a `Binary` summary), so every pack
-/// carries their rows.
-const MINTED_GATE_KINDS: [&str; 4] = [
+/// carries their rows. *(dated 2026-10-18, s8j build, S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3,
+/// proposed.)* Also the step-4 gates on the two human roots (`fsm::next_action`'s step 2), which
+/// any pack whose catalog requires the kind reaches; both packs share one catalog, so both carry
+/// their rows.
+const MINTED_GATE_KINDS: [&str; 6] = [
     rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND,
     rk_kernel::workflow::fsm::DRIFT_GATE_KIND,
     rk_kernel::verify::ac_gate::AC_GATE_KIND,
     rk_kernel::workflow::gate::GateReason::AutomatedVerdictRefused.as_str(),
+    rk_kernel::workflow::human_root::BUG_REPORT_KIND,
+    rk_kernel::workflow::human_root::INTAKE_RECORD_KIND,
 ];
 
 /// **ADR-0146's load-time lint, both halves** (`s8h` §8h.10; D21-42 21c; Record B = ADR-0198

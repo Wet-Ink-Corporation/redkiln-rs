@@ -6,6 +6,11 @@
 //! `answer` validates against the LOADED registry and never `QuestionRegistry::default()` (M16);
 //! and `run` refuses, by name and before any dispatch, a catalog gate step whose question the
 //! registry does not declare.
+//!
+//! *(dated 2026-10-18, `s8j` build, package S8J-C2-ROOT-QUESTIONS; `s8j` §8j.2; ADR-0200,
+//! proposed.)* Three more, one test each, on the two human roots: their questions load and each
+//! attaches its kind; every human kind a lane demands is attached by exactly one question; and the
+//! step-4 gate on a human kind opens as `human_root:<Kind>`, answered by its question.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -349,4 +354,437 @@ fn a_gate_kind_the_registry_does_not_declare_refuses_by_name() {
         ["probe.accept"],
         "CONTROL: the gate step's gate is open"
     );
+}
+
+// ---- s8j §8j.2: the human roots (ADR-0200, proposed) -------------------------------------------
+// *(Added 2026-10-18, `s8j` build, package S8J-C2-ROOT-QUESTIONS.)*
+
+/// `(question id, the kind its one option attaches, the gate kind it answers)`, as ADR-0200
+/// decisions 1 and 2 spell them. Literals, not the kernel's constants: the constants are under test.
+const HUMAN_ROOTS: [(&str, &str, &str); 2] = [
+    ("root.bug-report", "BugReport", "human_root:BugReport"),
+    (
+        "root.intake-record",
+        "IntakeRecord",
+        "human_root:IntakeRecord",
+    ),
+];
+
+/// **The two human-root questions load from `.redkiln/processes/`, and each one's one option
+/// attaches exactly its kind** (`s8j` §8j.2 item 1; ADR-0200 decision 1).
+///
+/// Each is declared with text, has the one option `attach` whose `attaches` names its kind and
+/// nothing else, and answers the `human_root:<Kind>` gate through the loader's `binds` (decision 2),
+/// never the default question. The kernel's two minted spellings are those gate kinds, and its one
+/// mint, `human_root::gate_kind`, spells them. `M-attach-dropped` (the BugReport option loses its
+/// `attaches`) fails the `attaches` assertion here.
+#[test]
+fn the_two_human_root_questions_load_and_each_attaches_its_kind() {
+    use rk_kernel::workflow::human_root;
+    let registry = rk_cli::processes::load(&workspace_root())
+        .unwrap_or_else(|e| panic!("the shipped .redkiln/processes/ loads: {e}"));
+    for (id, kind, gate) in HUMAN_ROOTS {
+        let question = registry.question(id).unwrap_or_else(|| {
+            panic!(
+                "`{id}` is not declared under .redkiln/processes/ (s8j §8j.2; ADR-0200 decision 1)"
+            )
+        });
+        assert!(
+            question.text().is_some_and(|t| !t.trim().is_empty()),
+            "`{id}` carries its text"
+        );
+        assert_eq!(
+            question.options(),
+            ["attach"],
+            "`{id}` has the one option `attach`"
+        );
+        assert_eq!(
+            question.attaches("attach"),
+            Some([kind.to_owned()].as_slice()),
+            "`{id}`'s `attach` option must attach exactly `{kind}` (ADR-0129 decision 4: the \
+             attachment is validated against the option, so this is what the gate admits)"
+        );
+        assert_eq!(
+            registry.question_for(gate),
+            id,
+            "the `{gate}` gate must be answered with `{id}` (ADR-0200 decision 2), not the default \
+             question, whose options attach nothing"
+        );
+        assert_eq!(
+            human_root::gate_kind(kind),
+            gate,
+            "the kernel's mint for `{kind}`"
+        );
+    }
+    assert_eq!(human_root::BUG_REPORT_KIND, "human_root:BugReport");
+    assert_eq!(human_root::INTAKE_RECORD_KIND, "human_root:IntakeRecord");
+}
+
+/// The shipped-lane fixtures the three human-root tests share (TST-14: a test helper module).
+#[cfg(test)]
+mod lanes {
+    use std::path::Path;
+
+    use super::{read_toml, workspace_root};
+
+    /// The two lanes: the shipped pack and the shipped item record each lane's real run is pointed at.
+    pub(super) const LANES: [(&str, &str); 2] = [
+        ("bug-standard", "rk-fix-doctor-test-count"),
+        ("story", "rk-story-codex-adapter"),
+    ];
+
+    /// The shipped catalog, registries and one lane's pack, read off `.redkiln/` (never a fixture copy).
+    pub(super) struct Shipped {
+        pub(super) catalog: rk_kernel::catalog::Catalog,
+        pub(super) artifacts: rk_kernel::select::ArtifactRegistry,
+        pub(super) facets: rk_kernel::registry::Registry,
+        pub(super) pack: rk_kernel::select::Pack,
+    }
+
+    fn read_text(path: &Path) -> String {
+        std::fs::read_to_string(path)
+            .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()))
+    }
+
+    /// `artifacts_src` replaces the shipped `artifacts.toml`, for a control that re-registers a kind.
+    pub(super) fn shipped(pack: &str, artifacts_src: &str) -> Shipped {
+        let redkiln = workspace_root().join(".redkiln");
+        let pack_file = format!("{pack}.toml");
+        Shipped {
+            catalog: rk_kernel::catalog::Catalog::from_dir(&redkiln.join("catalog"))
+                .unwrap_or_else(|e| panic!("the shipped catalog loads: {e:?}")),
+            artifacts: rk_kernel::select::ArtifactRegistry::from_toml(
+                "artifacts.toml",
+                artifacts_src,
+            )
+            .unwrap_or_else(|e| panic!("the artifact registry loads: {e:?}")),
+            facets: rk_kernel::registry::Registry::from_toml(&read_text(
+                &redkiln.join("facets.toml"),
+            ))
+            .unwrap_or_else(|e| panic!("the shipped facet registry loads: {e:?}")),
+            pack: rk_kernel::select::Pack::from_toml(
+                &pack_file,
+                &read_text(&redkiln.join("packs").join(&pack_file)),
+            )
+            .unwrap_or_else(|e| panic!("the shipped pack {pack_file} loads: {e}")),
+        }
+    }
+
+    pub(super) fn shipped_artifacts_src() -> String {
+        read_text(&workspace_root().join(".redkiln").join("artifacts.toml"))
+    }
+
+    /// The shipped item record past triage, bound as `rk-kernel`'s `lane_walk` binds a lane's item:
+    /// every declared facet the record does not state (save `kind` and the kernel's own) is an explicit
+    /// `null`, the record's `[facets]` are bound (an ordered facet as a member of its domain),
+    /// `toolchain` is `["rust"]`, and `change` is `text`, the triage gate's answer (D21-43 N3) that the
+    /// fix lane's analysis producers' `change:text` tag reads.
+    pub(super) fn shipped_item(
+        facets: &rk_kernel::registry::Registry,
+        id: &str,
+    ) -> rk_kernel::select::Item {
+        let record = read_toml(
+            &workspace_root()
+                .join(".redkiln")
+                .join("items")
+                .join(format!("{id}.toml")),
+        );
+        let kind = record
+            .get("kind")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_else(|| panic!("PREMISE: {id}'s record carries a `kind`"));
+        let stated = record.get("facets").and_then(toml::Value::as_table);
+        let mut item = rk_kernel::select::Item::new(id, kind);
+        for facet in facets.facets() {
+            let ours = facet.name == "kind" || facet.source == rk_kernel::registry::Source::Kernel;
+            if !ours && !stated.is_some_and(|t| t.contains_key(&facet.name)) {
+                item = item.with_facet_null(&facet.name);
+            }
+        }
+        for (name, value) in stated.into_iter().flatten() {
+            let domain: Option<Vec<&str>> = facets
+                .facet(name)
+                .filter(|f| f.ordered)
+                .map(|f| f.values.iter().filter_map(|v| v.as_str()).collect());
+            item = match (value, domain) {
+                (toml::Value::Boolean(b), _) => item.with_facet_bool(name, *b),
+                (toml::Value::String(s), Some(domain)) => item.with_facet_ordinal(name, &domain, s),
+                (toml::Value::String(s), None) => item.with_facet_str(name, s),
+                (other, _) => panic!("PREMISE: {id}'s `{name}` is a string or a bool, not {other}"),
+            };
+        }
+        item.with_facet_set("toolchain", ["rust"])
+            .with_toolchain("rust", ["text"])
+    }
+
+    /// The tree hash every journal here is folded and answered over.
+    pub(super) const TREE: &str = "tree-0";
+
+    /// The kernel's next action over a fresh journal for `item` at `stage`, and the selection it read.
+    pub(super) fn first_action(
+        s: &Shipped,
+        stage: &str,
+        item: &rk_kernel::select::Item,
+    ) -> (
+        rk_kernel::select::Selection,
+        rk_kernel::workflow::fsm::NextAction,
+    ) {
+        action_after(s, stage, item, &[])
+    }
+
+    /// The kernel's next action over `journal` for `item` at `stage`, and the selection it read.
+    pub(super) fn action_after(
+        s: &Shipped,
+        stage: &str,
+        item: &rk_kernel::select::Item,
+        journal: &[rk_types::event::Event],
+    ) -> (
+        rk_kernel::select::Selection,
+        rk_kernel::workflow::fsm::NextAction,
+    ) {
+        use rk_kernel::workflow::fsm;
+        let selection =
+            rk_kernel::select::select(&s.pack, &s.catalog, &s.artifacts, &s.facets, stage, item)
+                .unwrap_or_else(|e| panic!("PREMISE: the {stage} stage selects: {e}"));
+        let state = fsm::fold(item.id(), stage, journal).expect("the journal folds");
+        let deadline = rk_types::time::Timestamp::from_unix_seconds(1_800_000_000);
+        let ctx = fsm::FsmContext::supplied(item.id(), TREE, deadline, None);
+        let action = fsm::next_action(&selection, &state, &ctx)
+            .unwrap_or_else(|e| panic!("the next action at {stage} is computed: {e}"));
+        (selection, action)
+    }
+}
+
+use lanes::{
+    LANES, TREE, action_after, first_action, shipped, shipped_artifacts_src, shipped_item,
+};
+
+/// **Every `source = "human"` kind a selected activity of either lane requires without `?` is
+/// attached by exactly one question, and every question's `attaches` names a `source = "human"`
+/// kind** (`s8j` §8j.2's both directions; ADR-0200 decision 1).
+///
+/// The demand is MEASURED, not listed: a real `select` over each shipped pack's whole
+/// `stage_order` for the lane's shipped item, and the mandatory `requires` of every selected
+/// producer. A stage whose selection refuses selects nothing and demands nothing, so the refusing
+/// stages are a PREMISE pinned by name. A later human kind a lane demands fails here for its
+/// missing question (ADR-0200's Negative consequences), and a question that attached an activity
+/// kind fails the second half.
+#[test]
+fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
+    let registry = rk_cli::processes::load(&workspace_root())
+        .unwrap_or_else(|e| panic!("the shipped .redkiln/processes/ loads: {e}"));
+    let artifacts_src = shipped_artifacts_src();
+
+    let mut demanded: BTreeSet<String> = BTreeSet::new();
+    let mut refused: Vec<String> = Vec::new();
+    for (pack, item_id) in LANES {
+        let s = shipped(pack, &artifacts_src);
+        let item = shipped_item(&s.facets, item_id);
+        for stage in s.pack.stage_order() {
+            let selection = match rk_kernel::select::select(
+                &s.pack,
+                &s.catalog,
+                &s.artifacts,
+                &s.facets,
+                stage,
+                &item,
+            ) {
+                Ok(selection) => selection,
+                Err(e) => {
+                    println!("HUMAN_ROOTS {pack}/{stage} refuses: {e}");
+                    refused.push(format!("{pack}/{stage}"));
+                    continue;
+                }
+            };
+            for producer in selection.producers() {
+                let activity = s
+                    .catalog
+                    .activities()
+                    .iter()
+                    .find(|a| a.id == producer.activity_id)
+                    .expect("a selected producer is in the catalog");
+                demanded.extend(
+                    activity
+                        .requires
+                        .iter()
+                        .filter(|r| !r.optional && s.artifacts.is_human_sourced(&r.kind))
+                        .map(|r| r.kind.clone()),
+                );
+            }
+        }
+    }
+    println!("HUMAN_ROOTS demanded={demanded:?} refused_stages={refused:?}");
+    // *(dated 2026-10-18.)* The stages whose selection refuses are pinned by name, so a
+    // stage that newly refuses (and so silently demands nothing) fails here: `story/design`
+    // ("ordering against null at `novelty`") and `story/release` (`rolling-deploy`: unknown field
+    // `rigor`), both refusals that predate this package [measured 2026-10-18].
+    assert_eq!(
+        refused,
+        ["story/design", "story/release"],
+        "PREMISE: the stages whose selection refuses over the shipped lanes"
+    );
+    assert!(
+        demanded.contains("BugReport") && demanded.contains("IntakeRecord"),
+        "PREMISE: the fix lane's analysis demands BugReport and the story lane's specification \
+         IntakeRecord (s8j §8j.2, measured there); measured {demanded:?}"
+    );
+
+    // Every option's `attaches`, by question.
+    let artifacts =
+        rk_kernel::select::ArtifactRegistry::from_toml("artifacts.toml", &artifacts_src)
+            .expect("the shipped artifact registry loads");
+    let mut attached: Vec<(String, String)> = Vec::new();
+    for id in registry.question_ids() {
+        let question = registry.question(id).expect("a listed id is declared");
+        for option in question.options() {
+            for kind in question.attaches(option).into_iter().flatten() {
+                assert!(
+                    artifacts.is_human_sourced(kind),
+                    "`{id}`'s option `{option}` attaches `{kind}`, which .redkiln/artifacts.toml \
+                     does not declare `source = \"human\"`: an answer may supply only a human root"
+                );
+                attached.push((kind.clone(), id.to_owned()));
+            }
+        }
+    }
+    for kind in &demanded {
+        let by: Vec<&str> = attached
+            .iter()
+            .filter(|(k, _)| k == kind)
+            .map(|(_, q)| q.as_str())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        assert_eq!(
+            by.len(),
+            1,
+            "the lanes demand the human kind `{kind}`, which must be attached by exactly one \
+             question (ADR-0200 decision 1); attached by {by:?}"
+        );
+    }
+}
+
+/// **Selection's step-4 `Unsatisfiable` on a `source = "human"` kind opens a durable gate of kind
+/// `human_root:<Kind>`, and the loaded registry answers that gate with the question whose one
+/// option attaches the kind** (`s8j` §8j.2 item 2; ADR-0200 decision 2; AC-054's *"opens a gate"*).
+///
+/// Over the shipped pack, catalog and registries, the fix lane's analysis stage (whose
+/// `minimal-repro` requires `BugReport`) and the story lane's specification stage (whose
+/// `bdd-scenarios` requires `IntakeRecord`) each report the root `Unsatisfiable {
+/// NoAdmissibleProducer }`, and the kernel's next action on a fresh journal is `OpenGate` of that
+/// gate kind, before any dispatch. CONTROL (*"Not widened"*): the same stage with the kind
+/// re-registered `source = "activity"` reports the same `Unsatisfiable` and opens no
+/// `human_root:` gate, so the gate is the registry's source and not the kind's name. *(dated
+/// 2026-10-18.)* With the root attached the gate STILL opens on a fresh journal (a
+/// `requires`-edge root is not classified by step 3), and once answered it is not re-opened; that
+/// outcome is pinned as today's, and §8j.4 measures it (ADR-0200 decision 5).
+#[test]
+fn the_step_four_gate_on_a_human_kind_is_bound_to_its_question() {
+    use rk_kernel::select::UnsatReason;
+    use rk_kernel::workflow::fsm::NextAction;
+    let registry = rk_cli::processes::load(&workspace_root())
+        .unwrap_or_else(|e| panic!("the shipped .redkiln/processes/ loads: {e}"));
+    let artifacts_src = shipped_artifacts_src();
+    let stages = ["analysis", "specification"];
+    for (((pack, item_id), stage), (id, kind, gate)) in
+        LANES.into_iter().zip(stages).zip(HUMAN_ROOTS)
+    {
+        let unsat = |selection: &rk_kernel::select::Selection| {
+            selection
+                .unsatisfiable()
+                .iter()
+                .any(|u| u.kind == kind && u.reason == UnsatReason::NoAdmissibleProducer)
+        };
+        let s = shipped(pack, &artifacts_src);
+        let item = shipped_item(&s.facets, item_id);
+        let (selection, action) = first_action(&s, stage, &item);
+        assert!(
+            unsat(&selection),
+            "PREMISE: {pack}/{stage} reports `{kind}` Unsatisfiable {{ NoAdmissibleProducer }}"
+        );
+        let NextAction::OpenGate(record) = &action else {
+            panic!(
+                "{pack}/{stage}: with `{kind}` unattached the next action must open its gate \
+                 (ADR-0200 decision 2), not {action:?}"
+            );
+        };
+        assert_eq!(record.kind(), gate, "{pack}/{stage}: the gate's kind");
+        assert_eq!(record.reach(), 1, "a gate not yet reached opens at reach 1");
+        assert_eq!(
+            registry.question_for(record.kind()),
+            id,
+            "{pack}/{stage}: the `{gate}` gate is answered with `{id}`"
+        );
+        let question = registry
+            .question(id)
+            .expect("the bound question is declared");
+        assert_eq!(
+            question.attaches("attach"),
+            Some([kind.to_owned()].as_slice()),
+            "{pack}/{stage}: the gate's question admits exactly `{kind}`"
+        );
+
+        // TODAY'S BEHAVIOUR WITH THE ROOT ATTACHED (measured 2026-10-18). The control
+        // "root Present -> no gate" FAILS: step 4 pushes a `requires`-edge child (`select.rs`'s
+        // step-4 loop) with no step-3 presence check, so an attached root is still
+        // `Unsatisfiable` and a fresh journal still opens its gate at reach 1. What lets the lane
+        // move is step 2's rule: an answered gate that is not void is not re-opened. Whether a
+        // re-invocation classifies the root `Present` is NOT this package's (ADR-0200 decision 5,
+        // `s8j` §8j.2 item 3), and §8j.4's proofs measure it. These asserts pin today's outcome so
+        // that change is seen when it lands.
+        let attached = item.clone().with_artifact(
+            rk_kernel::select::ArtifactState::new(&rk_kernel::select::Instance::of(kind))
+                .exists(rk_kernel::select::digest_of(b"root")),
+        );
+        let (selection, with_root) = first_action(&s, stage, &attached);
+        assert!(
+            unsat(&selection),
+            "today an attached `{kind}` reached through `requires` is still Unsatisfiable"
+        );
+        let NextAction::OpenGate(again) = &with_root else {
+            panic!(
+                "today a fresh journal opens `{gate}` even with the root attached: {with_root:?}"
+            );
+        };
+        assert_eq!((again.kind(), again.reach()), (gate, 1));
+        let journal = [
+            rk_kernel::runtime::gate_opened_event(again),
+            rk_kernel::workflow::gate::gate_answered_event(again.token(), TREE, "attach"),
+        ];
+        let (_, answered) = action_after(&s, stage, &attached, &journal);
+        assert!(
+            !matches!(&answered, NextAction::OpenGate(r) if r.kind() == gate),
+            "an answered `{gate}` gate that is not void is not re-opened (ADR-0200 decision 2); \
+             got {answered:?}"
+        );
+        assert!(
+            matches!(&answered, NextAction::Dispatch { .. }),
+            "with its root gate answered the stage dispatches; got {answered:?}"
+        );
+
+        // CONTROL: the kind registered `source = "activity"` is unsatisfiable the same way and
+        // opens no `human_root:` gate.
+        let human = format!("[artifact.{kind}]\nsource = \"human\"");
+        assert_eq!(
+            artifacts_src.matches(&human).count(),
+            1,
+            "PREMISE: artifacts.toml registers `{kind}` human"
+        );
+        let as_activity = artifacts_src.replacen(
+            &human,
+            &format!("[artifact.{kind}]\nsource = \"activity\""),
+            1,
+        );
+        let control = shipped(pack, &as_activity);
+        let (selection, action) = first_action(&control, stage, &item);
+        assert!(
+            unsat(&selection),
+            "PREMISE (control): `{kind}` stays Unsatisfiable when registered `activity`"
+        );
+        assert!(
+            !matches!(&action, NextAction::OpenGate(r) if r.kind().starts_with("human_root:")),
+            "CONTROL: an activity-sourced Unsatisfiable must open no human_root gate (ADR-0200 \
+             decision 2, not widened); got {action:?}"
+        );
+    }
 }
