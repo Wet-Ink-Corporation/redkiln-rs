@@ -35,7 +35,12 @@
 //! (`s7c` §7c.10; the readings are in the commit body: `ResumeThread`'s previous suspend count
 //! and `IsProcessInJob(child, our_job)` before the resume, the orphaned holder reaped via the
 //! job, the breakaway attempt refused, the cargo-`KILL_ON_JOB_CLOSE`-job fact beside them). The
-//! POSIX arm is written and **ARMED to a recorded CI run** that has never executed.
+//! POSIX arm runs in CI's `gates (ubuntu-latest)` leg.
+//!
+//! *(Corrected 2026-10-18, issue #23; `references/adr/ERRATA.md` E-0127-1.)* This paragraph
+//! said the POSIX arm was armed to a CI run that had not yet run. `ci.yml` first ran on
+//! 2026-10-02, `9959b2f` changed this arm's kill during those first runs, and both OS legs are
+//! green at PR #81's head (ci run `38858372622`).
 //!
 //! **Two `#[doc(hidden)]` test-support functions** sit outside decision 2's enumerated surface and
 //! are named as such (`s7c` §7c.10): [`terminate_pid`] — AC-225's external kill with the same
