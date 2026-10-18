@@ -1110,6 +1110,25 @@ pub fn emit_binding_of<'a>(
         })
 }
 
+/// **The human-attached root of `kind` for `item`** (ADR-0202, proposed; *added 2026-10-18, `s8j`
+/// build, package S8J-C4-FIX D1*): the item's latest attach row of the kind, as `rk-store`'s typed
+/// reader [`rk_store::vouched::attached`] names it (an `artifact.write` carrying `attached_path`,
+/// which only `answer` writes, ADR-0189 decision 8), served as that row's reference: `kind`,
+/// `attached_path` and `digest`. A later attach of the kind replaces an earlier one, in journal
+/// order. The root's bytes are not read here; its `attached_path` names them.
+fn attached_root_of(events: &[Event], item: &str, kind: &str) -> Option<Json> {
+    rk_store::vouched::attached(events, item)
+        .into_iter()
+        .find(|root| root.kind == kind)
+        .map(|root| {
+            serde_json::json!({
+                "kind": root.kind,
+                "attached_path": root.attached_path,
+                "digest": root.vouched.as_str(),
+            })
+        })
+}
+
 /// **The one call site of the read seam** (N12; R2 decision 8).
 ///
 /// ~~It serves the committed `emit` binding of the activation that produced `kind` for this item,
@@ -1123,8 +1142,14 @@ pub fn emit_binding_of<'a>(
 /// resolves. An optional input that resolves `null` makes no call, and neither does a refused
 /// one. **It appends no row, at this stage or later**: the seam is the emitter.
 ///
+/// *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D1; ADR-0202, proposed, superseding
+/// ADR-0173's `artifact:` row and decision 8 in part.)* With no binding, the item's human-attached
+/// root of the kind (`attached_root_of`) gates presence instead and is the value served, with no
+/// seam call. A binding, when there is one, still wins.
+///
 /// # Errors
-/// [`RefError`] for a mandatory input with no binding or no such field, or the seam's refusal.
+/// [`RefError`] for a mandatory input with no binding and no attached root, or no such field, or
+/// the seam's refusal.
 pub fn read_artifact_input(env: &Env<'_>, input: &ArtifactInput<'_>) -> Result<Json, RefError> {
     let site = Site {
         step: input.step,
@@ -1139,10 +1164,26 @@ pub fn read_artifact_input(env: &Env<'_>, input: &ArtifactInput<'_>) -> Result<J
         }
     };
     let Some((bound, producer)) = emit_binding_of(env.events, env.item, input.kind) else {
-        return absent(format!(
-            "no committed `emit` binding of `{}` for the item `{}` is in the journal",
-            input.kind, env.item
-        ));
+        // *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D1; ADR-0202, proposed.)* With no
+        // emit binding, the item's human-attached root of the kind resolves the input. No seam
+        // call: the store's seam serves `<Kind>.json` sidecars, and a root has none.
+        let Some(root) = attached_root_of(env.events, env.item, input.kind) else {
+            return absent(format!(
+                "no committed `emit` binding of `{}` for the item `{}` is in the journal, and no \
+                 human-attached root of it",
+                input.kind, env.item
+            ));
+        };
+        return at_path(&root, input.path).cloned().map_or_else(
+            || {
+                absent(format!(
+                    "the attached `{}` root has no field `{}`",
+                    input.kind,
+                    render_path(input.path)
+                ))
+            },
+            Ok,
+        );
     };
     let Some(value) = at_path(bound, input.path) else {
         return absent(format!(

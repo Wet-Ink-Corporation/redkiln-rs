@@ -188,8 +188,9 @@ store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
 test -f "$store" || { echo "FAIL: no shipped store at $store"; exit 1; }
 # *(dated 2026-10-18, s8j build, S8J-D1-REPOINT; s8j section 8j.1(c); s8e: "s8j re-points 7h and 7i when it mints the fresh item")* The item with dispatches is the named fixture item, no longer the environment's FIX_ITEM, which s8 sets to the item s8j section 8j.5 reserves. Was: test -n on that variable, with a FAIL asking the operator to set it. The loop below still asserts the item file exists.
 FIXTURE_ITEM=rk-fix-doctor-test-count
+# *(dated 2026-10-18, s8j build, S8J-C1-ITEMS; s8j section 8j.1(b) and (c); D21-41 (f))* The empty case moves to `rk-cost-empty-case`, a dedicated item nobody dispatches, in the commit that deletes the retired Codex item. Was: `rk-story-codex-adapter`, in seven places in this block. The PRECONDITION guard keeps its shape and names the new item.
 # `cost` renders the empty case for ANY string, a misspelling included, so the items must be real.
-for it in rk-story-codex-adapter "$FIXTURE_ITEM"; do
+for it in rk-cost-empty-case "$FIXTURE_ITEM"; do
   test -f ".redkiln/items/$it.toml" || { echo "FAIL: .redkiln/items/$it.toml does not exist — the empty case would be asserted over a misspelling"; exit 1; }
 done
 probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); t2=c.execute("SELECT COUNT(*) FROM t2_event").fetchone()[0]; rl=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("rate_limit_reading",))]; print(t2,len(rl),sum(1 for r in rl if r.get("item")==sys.argv[2]))'
@@ -221,19 +222,19 @@ for bad in 'breakdown rk-x: dispatch_completed rows owned: 0' 'activity emit-rep
   if printf '%s\n' "$bad" | grep -qE "$BREAKDOWN_RE"; then echo "FAIL (control): the breakdown grammar accepts an ungrammatical line: $bad"; exit 1; fi
 done
 GRAMMAR="$GRAMMAR|$BREAKDOWN_RE"
-pre=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
+pre=$(python -c "$probe" "$store" rk-cost-empty-case); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pre" ] || { echo "FAIL: the read-only store probe did not run (rc=$rc)"; exit 1; }
 read -r t2_before _ owned <<< "$pre"
-[ "$owned" = "0" ] || { echo "FAIL (PRECONDITION): rk-story-codex-adapter owns $owned readings — re-point the empty case at an item that owns none; this guard does not change case silently"; exit 1; }
-empty=$("$RK" cost rk-story-codex-adapter 2>&1); erc=$?
+[ "$owned" = "0" ] || { echo "FAIL (PRECONDITION): rk-cost-empty-case owns $owned readings — re-point the empty case at an item that owns none; this guard does not change case silently"; exit 1; }
+empty=$("$RK" cost rk-cost-empty-case 2>&1); erc=$?
 # ⚠️ Git Bash's grep ignores a trailing CR, so a CRLF-terminated line would pass every regex below (found by this
 # stage's second adversarial round). The CR cannot be refused from `$empty` itself: Git Bash strips it inside `$(…)`,
 # and `grep -q $'\r'` also matched nothing on a CRLF line when probed. So the RAW bytes are read through `od -c`.
-if "$RK" cost rk-story-codex-adapter 2>&1 | od -c | grep -qF '\r'; then echo "FAIL: cost's empty output carries a CR byte"; exit 1; fi
+if "$RK" cost rk-cost-empty-case 2>&1 | od -c | grep -qF '\r'; then echo "FAIL: cost's empty output carries a CR byte"; exit 1; fi
 [ "$erc" -eq 0 ] || { echo "FAIL: cost exited $erc on an item with no readings"; printf '%s\n' "$empty"; exit 1; }
 test -n "$empty" || { echo "FAIL: cost printed NOTHING — silence is not the empty rendering (Halt 8)"; exit 1; }
 [ "$(printf '%s\n' "$empty" | grep -c .)" -eq 1 ] || { echo "FAIL: the empty case printed more than one line — anything beside the empty line is a rendering over n = 0"; printf '%s\n' "$empty"; exit 1; }
-printf '%s\n' "$empty" | grep -qE "^cost rk-story-codex-adapter:$EMPTY_TAIL" || { echo "FAIL: the empty case is not the one empty line (§7i.2's vacuous green)"; printf '%s\n' "$empty"; exit 1; }
+printf '%s\n' "$empty" | grep -qE "^cost rk-cost-empty-case:$EMPTY_TAIL" || { echo "FAIL: the empty case is not the one empty line (§7i.2's vacuous green)"; printf '%s\n' "$empty"; exit 1; }
 fx=$(python -c "$probe" "$store" "$FIXTURE_ITEM"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$fx" ] || { echo "FAIL: the store probe did not run for $FIXTURE_ITEM (rc=$rc)"; exit 1; }
 read -r _ _ fx_owned <<< "$fx"
@@ -255,7 +256,7 @@ bad=$(printf '%s\n' "$fout" | grep -vE "$GRAMMAR" | grep .)
 if [ "$fx_owned" = "0" ] && [ "$fx_dc" = "0" ]; then
   [ "$(printf '%s\n' "$fout" | grep -c .)" -eq 1 ] && printf '%s\n' "$fout" | grep -qE "^cost $FIXTURE_ITEM:$EMPTY_TAIL" || { echo "FAIL: $FIXTURE_ITEM owns no reading and cost does not print exactly the empty line"; printf '%s\n' "$fout"; exit 1; }
 fi
-post=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
+post=$(python -c "$probe" "$store" rk-cost-empty-case); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$post" ] || { echo "FAIL: the post-run store probe did not run (rc=$rc)"; exit 1; }
 read -r t2_after _ _ <<< "$post"
 [ "$t2_after" = "$t2_before" ] || { echo "FAIL: cost appended to the store ($t2_before -> $t2_after rows) — a read that writes, or a dispatch (AC-395)"; exit 1; }

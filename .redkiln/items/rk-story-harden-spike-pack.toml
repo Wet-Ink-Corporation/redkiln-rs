@@ -1,0 +1,33 @@
+# Step 8 criterion (1b), AC-521: the story-lane self-hosting item. A REAL Phase-2 story.
+# *(dated 2026-10-18, s8j build, package S8J-C1-ITEMS; s8j section 8j.1(a); D21-41 (f), D21-43 N2.)*
+#
+# The intent, and only the intent: bring `spikes/p9/packs/spike.toml` up to the contract the two
+# shipped packs were brought to at Step 7e, so that it loads through the kernel's pack loader and
+# could carry a lane -- without installing it. The acceptance criteria are the lane's own
+# `specification` stage's to author (the Spec it selects), not this record's.
+#
+# It is not installed: ADR-0011 ships exactly two process packs, and E7 rejected installing more.
+# Landing a `spikes/p9/` edit under a story lane is a reading of ADR-0011/E7, which the ledger row
+# states. This record and its stage do not touch `spike.toml`; Checkpoint 8j asserts its bytes are
+# unchanged since `ca8f387`.
+#
+# `kind = "story"` derives the lane as `story` -> pack `story` (ADR-0128 decision 3). The slice is
+# the declared one `s8e` section 8e.8 requires: not the id, the project or a stage, no whitespace.
+# The facets are low because that is the candidate's real profile (the packet's (f) option A
+# measured what `external_dep = true` and `blast_radius = "med"` would add), not to make the run
+# cheap. `[trial] activity = "tag-release"` is ADR-0195 decision 4's spelling (s8j section 8j.1(e);
+# D21-46 R4: two trials, each one run of one activity).
+id    = "rk-story-harden-spike-pack"
+kind  = "story"
+stage = "triage"
+slice = "harden-spike-pack"
+
+[facets]
+cos          = "standard"
+criticality  = "low"
+blast_radius = "low"
+size         = "low"
+external_dep = false
+
+[trial]
+activity = "tag-release"

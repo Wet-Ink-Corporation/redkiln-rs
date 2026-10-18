@@ -287,6 +287,8 @@
 
 mod adapter_edge;
 mod advisory;
+#[cfg(test)]
+mod baseline_range;
 mod breaker;
 mod budget;
 mod catalog_diagnostic;
@@ -346,6 +348,7 @@ mod retry;
 mod review;
 mod review_confirm;
 mod rigor;
+mod root_input;
 mod runtime;
 mod second_agent;
 mod selection;

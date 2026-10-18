@@ -6,6 +6,12 @@
 # into this stage; it is the smallest true defect on the tree that a fix lane can be pointed at, and
 # it is verifiable by counting rather than by opinion.
 #
+# *(dated 2026-10-18, s8j build, package S8J-C1-ITEMS; s8j section 8j.1(d); D21-42 18.)* The first
+# line above is no longer true. This is now the FIXTURE item that Checkpoints 7h and 7i read. Step 8
+# criterion (1)'s item is the one s8j section 8j.5 reserves, `rk-fix-doctor-margin`. Neither this
+# item nor `rk-run/rk-fix-doctor-test-count` (at `73c087a`) is to be run, rebased or pruned. It
+# stays untouched, prose defect included: only `#` lines of this file may change.
+#
 # The schema is `ItemRecord` (`crates/rk-cli/src/verbs/run.rs`): `id`, `kind`, `stage`, `[facets]`.
 # The file name must be `<id>.toml` and `<id>` is what `redkiln run` is given. `kind = "bug"` makes
 # the lane DERIVABLE as `fix` -> pack `bug-standard` (ADR-0128 decisions 2 and 3); `--lane fix` is
