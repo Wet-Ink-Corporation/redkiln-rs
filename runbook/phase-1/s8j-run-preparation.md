@@ -2669,6 +2669,10 @@ for l in code:
 if re.search(r"grep\s+-r\S*\s[^\n]*four questions on twenty items", jc): bad.append("the doc screen still walks the tree (A5.3)")
 for need in ("git grep -n","%(trailers:key=Story,valueonly=true)","stage_order","verify_completed","VC_ORIGIN_KEY","observed_model","artifact.write","git cat-file -e","dispatch_completed","gh run view","* text=auto eol=lf","STORE_BAK","${rebuilt% *}","tools/live-run.sh run","ac184_rebuild_differential_over_anchored_tier_one_rows","taskkill //T //F","ITEM=\"$FIX_ITEM\""):
     if need not in jc: bad.append("absent from code lines: "+need)
+# (dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; section 8j.8 A13) the widened S8_BIN arm landed, by fixed string, and its controls with it.
+a13="S8_BIN=\"$S8_BIN|\""+chr(39)+r"\b[A-Za-z_]*BinaryChangeSummary>?[[:space:]]*::[[:space:]]*[A-Za-z_][A-Za-z0-9_]*"+chr(39)
+if a13 not in cs: bad.append("A13: the widened S8_BIN arm is absent from code lines")
+if "widened S8_BIN is vacuous for" not in jc or "pre=$(S8_BIN=${S8_BIN%|*};" not in jc: bad.append("A13: the widened S8_BIN controls are absent")
 if "Those nineteen are not read, they are run." not in t: bad.append("the bullet count sentence")
 if "After Checkpoint 8 passes: AC-114" not in t: bad.append("A9: the post-Checkpoint-8 step is unnamed")
 print("; ".join(bad) if bad else "ok")

@@ -927,6 +927,16 @@ nd_check "sections (1) to (6)" || exit 1
 # optional r# prefix. Controls 23, 24 and 25 fire.
 S8_DEF='\b(struct|enum|type|trait|union)[[:space:]]+(r#)?[A-Za-z0-9_]*ChangeSummary\b|\btype[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[^=]*=.*\b[A-Za-z_]*ChangeSummary\b|\bimpl\b.*\bfor[[:space:]]+.*\b[A-Za-z0-9_]*ChangeSummary\b|\bimpl(<[^>]*>)?[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*ChangeSummary\b|\b[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Z_]|\buse\b[^;]*\b[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Za-z_]|^[^:]+:[0-9]+:[[:space:]]*([A-Za-z_][A-Za-z0-9_:]*([[:space:]]+as[[:space:]]+[A-Za-z_][A-Za-z0-9_]*)?[[:space:]]*,[[:space:]]*)*([A-Za-z_][A-Za-z0-9_]*::)*[{]?[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(,.*)?$'
 S8_BIN='\b[A-Za-z_]*BinaryChangeSummary[[:space:]]*[({]|\b[A-Za-z_]*BinaryChangeSummary::[A-Za-z_]+[[:space:]]*\('
+# *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A13; D21-155's owed item; s8j section 8j.0 item 7)*
+# S8_BIN SEES THE POINT-FREE AND THE QUALIFIED CONSTRUCTION. The line above needs `(` straight after the associated name
+# and nothing between the type name and `::`, so it admitted `parts.map(BinaryChangeSummary::new)` and
+# `<BinaryChangeSummary>::new(…)`, both constructions; s8i widened its own BIN_RE for the same two forms (s8i 8i.9 (8),
+# operator ruling R10). The line above is not rewritten: the one line below widens its second arm in BIN_RE's form, and
+# appends it after the last `|`, so `${S8_BIN%|*}` is the line above again (the controls after the test-module controls
+# read it so). S8_CTOR and the in-source test-module blank still turn the recorded `BinaryChangeSummary::new(` into `_(`
+# before S8_BIN reads the line, so the admitted test sites stay admitted; a point-free or qualified use in a test path is
+# not blanked and fires, which is the safe side.
+S8_BIN="$S8_BIN|"'\b[A-Za-z_]*BinaryChangeSummary>?[[:space:]]*::[[:space:]]*[A-Za-z_][A-Za-z0-9_]*'
 S8_UNCON='s/(->|@)([[:space:]]*)([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*BinaryChangeSummary\b/\1\2_/g; s/\b([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*BinaryChangeSummary[[:space:]]*\{[[:space:]]*\.\.[[:space:]]*\}/_/g'
 # [amended 2026-09-25, s8a fix round 5] The string blank was `s/"([^"\]|\.)*"/""/g`: in ERE a backslash inside a
 # bracket is literal and `\.` is a literal dot, so a string holding a backslash escape ("a\n") was never blanked and
@@ -1190,6 +1200,20 @@ done <<'RS'
     fn f<'a>(x: &'a str) -> &'a str { x }
 RS
 rm -rf "$S8C_TMP"
+# *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A13)* The widened S8_BIN's controls, two each way,
+# on a crates/x/src/y.rs path: the point-free and the qualified construction fire, and each fails under the line S8_BIN
+# had before A13 (`${S8_BIN%|*}`, read in a subshell), so the widening is load-bearing; an import and a reference return
+# type are admitted.
+for ctl in 'F|crates/x/src/y.rs:1:    let v = x.map(BinaryChangeSummary::new);' 'F|crates/x/src/y.rs:2:    let b = <BinaryChangeSummary>::new(a);' 'P|crates/x/src/y.rs:3:use rk_ports::toolchain::BinaryChangeSummary;' 'P|crates/x/src/y.rs:4:    pub fn summary(&self) -> &BinaryChangeSummary {'; do
+  want=${ctl%%|*}; got=$(printf '%s\n' "${ctl#*|}" | s8_cs)
+  if [ "$want" = F ]; then
+    [ -n "$got" ] || { echo "FAIL: CONTROL must FIRE and did not -- A13's widened S8_BIN is vacuous for: ${ctl#*|}"; exit 1; }
+    pre=$(S8_BIN=${S8_BIN%|*}; printf '%s\n' "${ctl#*|}" | s8_cs)
+    [ -z "$pre" ] || { echo "FAIL: CONTROL fires under the pre-A13 S8_BIN too -- it does not prove the widening: ${ctl#*|}"; exit 1; }
+  else
+    [ -z "$got" ] || { echo "FAIL: CONTROL must be ADMITTED and fired -- A13's widened S8_BIN blocks what ADR-0165 licenses: ${ctl#*|}"; exit 1; }
+  fi
+done
 
 # card append route never defaulted on; no quality-shorthand default or terminal condition
 # *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS)* s8j §8j.8 A5.5: --exclude-dir=worktrees after -rnE. Was:
