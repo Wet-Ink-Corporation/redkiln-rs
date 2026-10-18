@@ -2402,8 +2402,9 @@ v=$(python -c "$ge" "$tdir/ge-ctl.toml" a b); rc=$?
 [ "$rc" -eq 0 ] && [ "$v" = "a=1 b=0" ] || { echo "FAIL: the gate-row reader read '$v' (rc=$rc) over one row for a and none for b — it is vacuous"; exit 1; }
 # This stage's two records (§8j.2, §8j.3), located by the ids written HERE by dated edit when each is written (D21-47;
 # the final consistency pass's convention). A re-runner supplies no id; an unwritten one refuses.
-S8J_Q_ADR=
-S8J_HOLD_ADR=
+# (dated 2026-10-18, s8j build, S8J-B1-ROOT-QUESTIONS / S8J-B2-HOLD: both records written at `proposed`)
+S8J_Q_ADR=0200
+S8J_HOLD_ADR=0201
 for r in "$S8J_Q_ADR" "$S8J_HOLD_ADR"; do
   printf '%s\n' "$r" | grep -qxE '0[0-9]{3}' || { echo "FAIL: a record id of this stage (S8J_Q_ADR, S8J_HOLD_ADR; §8j.2, §8j.3) is not written into (3): '$r'"; exit 1; }
   set -- references/adr/"$r"-*.md
