@@ -674,6 +674,117 @@ fn package_digests_only_the_declared_binaries_of_a_locked_release_build() {
     );
 }
 
+/// A committed workspace whose `HEAD` is one commit past the `sha` returned first: `change` edits
+/// the tree before that second commit. Returns `(root, sha, head)`.
+fn committed_past(
+    tmp: &Path,
+    change: impl FnOnce(&Path) -> std::io::Result<()>,
+) -> std::io::Result<(PathBuf, String, String)> {
+    let (root, sha) = committed_workspace(tmp);
+    let home = tmp.join("gh");
+    change(&root)?;
+    crate::support::git_cli(&home, &root, &["add", "-A"]);
+    crate::support::git_cli(
+        &home,
+        &root,
+        &[
+            "commit",
+            "--quiet",
+            "--allow-empty",
+            "-m",
+            "after the changeset",
+        ],
+    );
+    let head = crate::support::git_cli(&home, &root, &["rev-parse", "HEAD"]);
+    Ok((root, sha, head))
+}
+
+/// Write `text` at `rel` under `root`, creating its parents.
+fn write_at(root: &Path, rel: &str, text: &str) -> std::io::Result<()> {
+    let path = root.join(rel);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(path, text)
+}
+
+/// **ADR-0203 (proposed): a `HEAD` whose tree is the `sha` commit's is packaged**, and the
+/// artifact still records both commits. *(Added 2026-10-18, `s8j` build, package S8J-C4-FIX D4.)*
+#[test]
+fn package_accepts_a_head_whose_tree_is_the_shas() {
+    let tmp = crate::support::repo_tempdir();
+    let (root, sha, head) = committed_past(tmp.path(), |_| Ok(())).expect("the fixture commits");
+    let scratch = tmp.path().join("scratch");
+    let tc = workspace_adapter(&root, &scratch);
+
+    let out = run_verb(
+        &tc,
+        "package",
+        &serde_json::json!({ "sha": sha, "binaries": ["wsbin"] }),
+    )
+    .expect("an identical tree is that sha's artifact");
+
+    let artifact: BuildArtifact = serde_json::from_value(out.value).expect("decodes");
+    assert_ne!(sha, head, "PREMISE: HEAD is a later commit");
+    assert_eq!((artifact.sha, artifact.head), (sha, head));
+}
+
+/// **ADR-0203 (proposed): a `HEAD` that differs from the `sha` commit only under `.redkiln/` is
+/// packaged**: the run's bookkeeping is not product. *(Added 2026-10-18, `s8j` build, package
+/// S8J-C4-FIX D4.)*
+#[test]
+fn package_accepts_a_head_that_differs_only_under_dot_redkiln() {
+    let tmp = crate::support::repo_tempdir();
+    let (root, sha, head) = committed_past(tmp.path(), |root| {
+        write_at(root, ".redkiln/artifacts/ITEM-1/Changeset.json", "{}\n")
+    })
+    .expect("the fixture commits");
+    let scratch = tmp.path().join("scratch");
+    let tc = workspace_adapter(&root, &scratch);
+
+    let out = run_verb(
+        &tc,
+        "package",
+        &serde_json::json!({ "sha": sha, "binaries": ["wsbin"] }),
+    )
+    .expect("a bookkeeping-only difference is still that sha's artifact");
+
+    let artifact: BuildArtifact = serde_json::from_value(out.value).expect("decodes");
+    assert_eq!((artifact.sha, artifact.head), (sha, head));
+}
+
+/// **ADR-0203 (proposed): a product difference between the `sha` commit and `HEAD` is refused**,
+/// naming the differing path, even beside a `.redkiln/` change. *(Added 2026-10-18, `s8j` build,
+/// package S8J-C4-FIX D4.)*
+#[test]
+fn package_refuses_a_product_difference_naming_its_path() {
+    let tmp = crate::support::repo_tempdir();
+    let (root, sha, head) = committed_past(tmp.path(), |root| {
+        write_at(root, ".redkiln/artifacts/ITEM-1/Changeset.json", "{}\n")?;
+        write_at(
+            root,
+            "src/after.rs",
+            "// a product change after the changeset\n",
+        )
+    })
+    .expect("the fixture commits");
+    let scratch = tmp.path().join("scratch");
+    let tc = workspace_adapter(&root, &scratch);
+
+    let err = run_verb(
+        &tc,
+        "package",
+        &serde_json::json!({ "sha": sha, "binaries": ["wsbin"] }),
+    )
+    .expect_err("a product difference is not that sha's artifact");
+
+    refused_naming(
+        &err,
+        &["sha-head-mismatch", "src/after.rs", &sha, &head],
+        "a product path that differs",
+    );
+}
+
 /// **A built binary outside the adapter's target directory is refused by name**
 /// (`package-binary-outside-target`), never recorded as an absolute path (record V decision 6:
 /// `BuildArtifact`'s paths are relative to the target directory). Asserted over the path function
