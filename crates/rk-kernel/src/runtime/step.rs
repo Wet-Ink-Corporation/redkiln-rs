@@ -246,13 +246,35 @@ pub struct ToolRouting {
     /// the `toolchain:test` arm journals, opaque (AC-487). Unbound: the row reads
     /// [`UNBOUND_IDENTITY`] for each, which names the absence rather than guessing an adapter.
     verify_identity: Option<crate::verify::runner::VerifyIdentity>,
+    /// *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D2; the operator's ruling A.)* The
+    /// commit the run tree was cut from, as its `RK_BASE` records it (ADR-0180), bound by the
+    /// composition root. A tool step's `inputs.range` endpoint [`BASELINE`] is rewritten to it.
+    /// Unbound: such a range refuses by name.
+    fork_point: Option<String>,
 }
 
 /// What a `verify_completed` row's `adapter`, `range.base` and `range.head` read when no
 /// composition root bound an identity (a lone kernel walk): the absence, named.
 pub const UNBOUND_IDENTITY: &str = "unbound";
 
+/// The word a catalog range names the run's fork point by (`range = "baseline..HEAD"`). It is no
+/// git ref: the kernel rewrites it to [`ToolRouting::fork_point`] before any port is called.
+pub(crate) const BASELINE: &str = "baseline";
+
 impl ToolRouting {
+    /// Bind the run's fork point: the commit the run tree was cut from (`RK_BASE`'s `fork`).
+    #[must_use]
+    pub fn with_fork_point(mut self, fork: impl Into<String>) -> Self {
+        self.fork_point = Some(fork.into());
+        self
+    }
+
+    /// The bound fork point, if any.
+    #[must_use]
+    pub(crate) fn fork_point(&self) -> Option<&str> {
+        self.fork_point.as_deref()
+    }
+
     /// Bind the identity carried onto every `verify_completed` row (R1 = ADR-0191 decision 8).
     #[must_use]
     pub fn with_verify_identity(mut self, identity: crate::verify::runner::VerifyIdentity) -> Self {
@@ -290,6 +312,7 @@ impl ToolRouting {
             store_route: StoreRouteSlot(None),
             git_route: GitRouteSlot(None),
             verify_identity: None,
+            fork_point: None,
         }
     }
 
@@ -740,6 +763,56 @@ fn selection_refusal(step: &Step, e: &super::reference::RefError) -> StepError {
             step.id
         ),
     }
+}
+
+/// **`baseline` in a tool step's range is the run's fork point** (*added 2026-10-18, `s8j` build,
+/// package S8J-C4-FIX D2; the operator's ruling A*). `Ok(None)`: `inputs` has no string `range`
+/// with a [`BASELINE`] endpoint, so it is handed on unchanged. `Ok(Some(..))`: `inputs` with each
+/// such endpoint replaced by `fork`. An endpoint is what `..` separates; a `...` range keeps its
+/// third dot on the head side (`baseline...HEAD` becomes `<fork>...HEAD`, `HEAD...baseline`
+/// becomes `HEAD...<fork>`). **Only the bare word `baseline` is an endpoint to rewrite**: a
+/// revision built on it (`baseline~1`, `baseline^`, `baseline@{1}`) or a ref that merely contains
+/// it (`baselines`, `origin/baseline`) is handed on unchanged, and git then reads it as written.
+///
+/// # Errors
+/// [`StepError::Unsupported`] naming the step and the range, when the range names [`BASELINE`] and
+/// no fork point is bound: the port is not called.
+fn rebase_range(
+    inputs: &BTreeMap<String, serde_json::Value>,
+    fork: Option<&str>,
+    step_id: &str,
+) -> Result<Option<BTreeMap<String, serde_json::Value>>, StepError> {
+    let is_baseline = |end: &str| end.trim_start_matches('.').trim() == BASELINE;
+    let Some(range) = inputs
+        .get("range")
+        .and_then(serde_json::Value::as_str)
+        .filter(|range| range.split("..").any(is_baseline))
+    else {
+        return Ok(None);
+    };
+    let Some(fork) = fork else {
+        return Err(StepError::Unsupported {
+            capability: format!(
+                "the `tool` step `{step_id}` declares the range `{range}`, whose `{BASELINE}` is \
+                 the run's fork point, and no fork point is bound for this run (the composition \
+                 root binds the run tree's `RK_BASE` fork, ADR-0180), so the port is not called"
+            ),
+        });
+    };
+    let rebased = range
+        .split("..")
+        .map(|end| {
+            if is_baseline(end) {
+                end.replacen(BASELINE, fork, 1)
+            } else {
+                end.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("..");
+    let mut out = inputs.clone();
+    out.insert("range".to_owned(), serde_json::Value::String(rebased));
+    Ok(Some(out))
 }
 
 /// *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decision 5, proposed.)* What the
@@ -1271,6 +1344,11 @@ impl super::Runtime {
         } else {
             inputs
         };
+        // *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D2; the operator's ruling A.)* A
+        // `baseline` endpoint of `inputs.range` is the run's fork point, rewritten before any route
+        // is taken; with none bound it refuses by name rather than hand git a name that is no ref.
+        let rebased = rebase_range(inputs, routing.fork_point(), &step.id)?;
+        let inputs = rebased.as_ref().unwrap_or(inputs);
         // ---- (3) THE ROUTE AND INPUT CHECKS. The match is exhaustive with NO wildcard: a route
         // is added by record, and a fifth is `E0004` here (ADR-0170 decision 1). --------------------
         let call = match entry.route {

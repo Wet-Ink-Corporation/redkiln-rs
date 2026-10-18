@@ -53,7 +53,11 @@
 //!
 //! **`package`** (decision 6). The input `sha` must equal the project root's `HEAD`, read through
 //! the same shared `rk_git::head` read (Checkpoint 8a guard (6)'s allowlist admits it by a dated
-//! amendment in `s8a`). Then `cargo build --release --locked --message-format=json`, and the plain
+//! amendment in `s8a`). *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D4; ADR-0203,
+//! proposed.)* ~~must equal~~: a `HEAD` that is not `sha` is accepted when `sha..HEAD`, read
+//! through `rk_git::diff::range_diff`, changes only paths under `.redkiln/`, the run's own
+//! bookkeeping; any other changed path is `sha-head-mismatch`, naming it. Then
+//! `cargo build --release --locked --message-format=json`, and the plain
 //! `rk_types::digest::sha256` of each DECLARED binary (`binaries`, a non-empty list of target
 //! names), never a glob. Refused by name: `undeclared-binary-set`, `sha-head-mismatch`,
 //! `head-unreadable`, `binary-not-built`. Each binary's path is recorded relative to the target
@@ -858,6 +862,48 @@ pub fn binary_path(target: &Path, exe: &Path) -> Result<String, StepError> {
     Ok(relative.to_string_lossy().replace('\\', "/"))
 }
 
+/// The directory a run commits its own bookkeeping under: never product (ADR-0203).
+const BOOKKEEPING_DIR: &str = ".redkiln/";
+
+/// **`package`'s tree rule** (ADR-0203, proposed; *added 2026-10-18, `s8j` build, package
+/// S8J-C4-FIX D4*): with `sha` not `head`, the two commits' trees must agree at every path outside
+/// [`BOOKKEEPING_DIR`], read through `rk-git`'s gix range read.
+///
+/// # Errors
+/// `sha-head-mismatch`, naming both commits and either the first differing path outside
+/// `.redkiln/` (in path order), that `sha` is not the full commit id it resolves to, or why the
+/// range could not be read.
+fn same_product_tree(root: &Path, sha: &str, head: &str) -> Result<(), StepError> {
+    let mismatch = |why: &str| {
+        refuse(
+            "package",
+            "sha-head-mismatch",
+            &format!(
+                "the input sha {sha} is not the project root's HEAD {head}, and {why}: a package built from another tree is not that sha's artifact (ADR-0203)"
+            ),
+        )
+    };
+    let read = rk_git::diff::range_diff(root, &format!("{sha}..{head}"))
+        .map_err(|e| mismatch(&format!("their trees could not be compared: {e}")))?;
+    // `sha` is recorded as `BuildArtifact.sha`, so it must be the full commit id the range's base
+    // resolved to, never a revision name or an abbreviation (review of PR #106, N1).
+    if read.base != sha {
+        return Err(mismatch(&format!(
+            "`{sha}` is not a commit id: it resolves to {}",
+            read.base
+        )));
+    }
+    read.entries
+        .iter()
+        .find(|entry| !entry.path.starts_with(BOOKKEEPING_DIR))
+        .map_or(Ok(()), |entry| {
+            Err(mismatch(&format!(
+                "their trees differ outside `{BOOKKEEPING_DIR}` at `{}`",
+                entry.path
+            )))
+        })
+}
+
 fn package(
     tc: &RustToolchain,
     cfg: &Config,
@@ -879,13 +925,7 @@ fn package(
     let head = rk_git::head::head_commit(root)
         .map_err(|e| refuse("package", "head-unreadable", &e.to_string()))?;
     if head != sha {
-        return Err(refuse(
-            "package",
-            "sha-head-mismatch",
-            &format!(
-                "the input sha {sha} is not the project root's HEAD {head}: a package built from another tree is not that sha's artifact"
-            ),
-        ));
+        same_product_tree(root, &sha, &head)?;
     }
     let dir = tc.run_dir()?;
     let (report, stream) = RustToolchain::json_build(cfg, &dir, "package", &PACKAGE_BUILD)?;
