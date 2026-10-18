@@ -1,0 +1,16 @@
+//! The fixture's stand-in for the `redkiln-migrate` binary (`s8j` §8j.4), for the same reason as
+//! `redkiln.rs`: the byte-copied smoke checklist runs it. With no argument it exits 2, as clap's
+//! usage error does.
+
+use std::io::Write as _;
+use std::process::ExitCode;
+
+fn main() -> ExitCode {
+    match std::env::args().nth(1).as_deref() {
+        Some("--version") => match std::io::stdout().lock().write_all(b"redkiln-migrate 0.0.0\n") {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(_) => ExitCode::from(1),
+        },
+        _ => ExitCode::from(2),
+    }
+}
