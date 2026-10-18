@@ -190,27 +190,29 @@ cd D:/repos/redkiln-rs
 # because its PIPE-STATUS branch is gated on `not asserted(line)` and every guarded pipeline is
 # "asserted" (carried finding (15)).
 
-test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM to the item the lane ran — a bare <placeholder> is a bash redirect, not an argument"; exit 1; }
-git rev-parse --verify --quiet "refs/heads/rk-run/$FIX_ITEM" >/dev/null || { echo "FAIL: no rk-run/$FIX_ITEM ref — the lane produced no run-owned branch"; exit 1; }
+# *(dated 2026-10-18, s8j build, S8J-D1-REPOINT; s8j section 8j.1(c); s8e: "s8j re-points 7h and 7i when it mints the fresh item")* This checkpoint no longer reads the environment's FIX_ITEM, which s8 sets to the item s8j section 8j.5 reserves: it names the fixture item it was built over. Was: test -n on that variable, with a FAIL asking the operator to set it.
+FIXTURE_ITEM=rk-fix-doctor-test-count
+test -f ".redkiln/items/$FIXTURE_ITEM.toml" || { echo "FAIL: .redkiln/items/$FIXTURE_ITEM.toml does not exist — the fixture item this checkpoint reads is gone (s8j section 8j.1(d) keeps it)"; exit 1; }
+git rev-parse --verify --quiet "refs/heads/rk-run/$FIXTURE_ITEM" >/dev/null || { echo "FAIL: no rk-run/$FIXTURE_ITEM ref — the lane produced no run-owned branch"; exit 1; }
 
 # ---- (1) THE BRANCH IS THE RUN'S OWN WORK, not a stale ref. This is the BEFORE assertion: it was
 # ---- FALSE at fc45eeb, where the ref existed and was 0 commits ahead.
-base=$(git merge-base HEAD "rk-run/$FIX_ITEM") || { echo "FAIL: rk-run/$FIX_ITEM shares no history with HEAD"; exit 1; }
-ahead=$(git rev-list --count "$base..rk-run/$FIX_ITEM")
-[ "$ahead" -ge 1 ] || { echo "FAIL: rk-run/$FIX_ITEM is $ahead commits ahead of the merge base — a stale ref is not a run"; exit 1; }
+base=$(git merge-base HEAD "rk-run/$FIXTURE_ITEM") || { echo "FAIL: rk-run/$FIXTURE_ITEM shares no history with HEAD"; exit 1; }
+ahead=$(git rev-list --count "$base..rk-run/$FIXTURE_ITEM")
+[ "$ahead" -ge 1 ] || { echo "FAIL: rk-run/$FIXTURE_ITEM is $ahead commits ahead of the merge base — a stale ref is not a run"; exit 1; }
 
 # ---- (2) THE `Story:` TRAILER, read by GIT'S OWN PARSER and scoped to the run's own commits.
 # ---- `grep '^Story:'` is not used: it matches wrapped prose in a commit BODY, which is how this
 # ---- guard's `Slice-Verdict:` twin was green on an untouched tree.
-story=$(git log "$base..rk-run/$FIX_ITEM" --format='%(trailers:key=Story,valueonly=true)' | grep -c .)
+story=$(git log "$base..rk-run/$FIXTURE_ITEM" --format='%(trailers:key=Story,valueonly=true)' | grep -c .)
 [ "$story" -eq 1 ] || { echo "FAIL: the run's own commits carry $story real Story: trailers, expected exactly 1 — 0 means the stage boundary minted none, >1 is duplicate-story-trailer DRIFT (ADR-0155)"; exit 1; }
 
 # ---- (3) AND THE VALUE PARSES. A trailer that appears and does not parse records nothing:
 # ---- `Story: /item` is a BareStory, counted into bare_story_ids, never a transition (ADR-0159).
-val=$(git log "$base..rk-run/$FIX_ITEM" --format='%(trailers:key=Story,valueonly=true)' | grep . | head -1)
+val=$(git log "$base..rk-run/$FIXTURE_ITEM" --format='%(trailers:key=Story,valueonly=true)' | grep . | head -1)
 proj=${val%%/*}; slug=${val#*/}
 [ -n "$proj" ] && [ "$proj" != "$val" ] || { echo "FAIL: the Story: value '$val' has no non-empty <project>/ prefix — split_qualified returns None and the mark is a bare story id"; exit 1; }
-[ "$slug" = "$FIX_ITEM" ] || { echo "FAIL: the Story: slug is '$slug', not '$FIX_ITEM' — doctor --rebuild resolves the stage from .redkiln/items/<slug>.toml and reports unresolvable otherwise"; exit 1; }
+[ "$slug" = "$FIXTURE_ITEM" ] || { echo "FAIL: the Story: slug is '$slug', not '$FIXTURE_ITEM' — doctor --rebuild resolves the stage from .redkiln/items/<slug>.toml and reports unresolvable otherwise"; exit 1; }
 
 # ---- (4) THE STAGE BOUNDARY IS IN THE JOURNAL, and is not a self-transition (ADR-0157).
 runs=$(ls -d .git/redkiln/runs/* 2>/dev/null | grep -c .)
