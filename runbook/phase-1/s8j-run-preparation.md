@@ -1128,6 +1128,13 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    mutant. The pre-spend checks (§8j.8 A1) and Checkpoint 8j (6) and (7) read those lines. They require the proofs'
    code to be the code CI ran, and every paid run's launch record to carry it. **Spend: none.**
 
+   *(dated 2026-10-18, s8j build, S8J-C5-MUTANT-DRIVER)* The driver is `runbook/tools/s8j-mutants.py` (stdlib
+   Python; this file named no path, so the path is the build's choice). It is run before the block below, over the
+   same clean HEAD, inside the same wrapper: `. runbook/tools/nodispatch.sh && nd_setup "$PWD/target/s8j-mutants/nd"`,
+   then `nodispatch python runbook/tools/s8j-mutants.py`, then `nd_check "the s8j mutants"`. It refuses while any
+   mutant's anchor is still `TBD-after-C4`. Its synthetic controls are `python runbook/tools/s8j-mutants.py
+   --self-test` and `python -m unittest runbook/tools/test_s8j_mutants.py`, and neither runs cargo.
+
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
