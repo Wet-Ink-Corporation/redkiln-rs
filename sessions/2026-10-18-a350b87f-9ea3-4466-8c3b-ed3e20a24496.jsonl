@@ -72,3 +72,4 @@
 {"t":"2026-10-18T20:05:16.655Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"deny-shell-write","file":"state-dir"}
 {"t":"2026-10-18T20:05:30.304Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"gate-start"}
 {"t":"2026-10-18T20:05:32.997Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-blocked","reason":"gate","fp":"99d4d4c505cbf75a","ms":2687,"cached":true}
+{"t":"2026-10-18T20:06:55.058Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-declared","status":"BLOCKED"}
