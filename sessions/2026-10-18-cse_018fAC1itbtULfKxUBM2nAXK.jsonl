@@ -99,3 +99,4 @@
 {"t":"2026-10-18T08:37:45.246Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"verdict","via":"handback","verdict":"approved","fp":"ab1d8a5d5b8879f4","stale":false,"findings":7}
 {"t":"2026-10-18T08:37:47.227Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"subagent-stop","type":"temper:rust-reviewer","msg":false,"transcript":true}
 {"t":"2026-10-18T08:37:47.336Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"verdict","via":"subagent-stop","verdict":"approved","fp":"ab1d8a5d5b8879f4","stale":false,"findings":7}
+{"t":"2026-10-18T08:54:47.096Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"session-start","source":"resume"}
