@@ -2427,9 +2427,10 @@ rk_test() {      # <pkg> <test-name> <what> [<extra cargo flags>]
   echo "PASS: $2 — $3"
 }
 SRC_SCOPE="crates/rk-adapter-claude/src crates/rk-adapter-sqlite/src crates/rk-adapter-toolchain-node/src crates/rk-adapter-toolchain-rust/src crates/rk-containment/src"
+# *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A12; s8h finding 20)* rk_absent reads with -H (-rnHE, was -rnE), so a single-file scope prints its file name and the comment filter can drop a // line.
 rk_absent() {    # <pattern> <what> [<scope dirs, default SRC_SCOPE>] [<module-path filter regex>] [<exclusion regex>]
   scope=${3:-$SRC_SCOPE}
-  raw=$(grep -rnE "$1" $scope --include=*.rs); rc=$?
+  raw=$(grep -rnHE "$1" $scope --include=*.rs); rc=$?
   [ "$rc" -le 1 ] || { echo "FAIL: the search for '$1' could not run (grep rc=$rc; 2 = a scope path is missing) — a 0 here would be a fake 0 (Halt 8): $2"; exit 1; }
   if [ -n "${4:-}" ]; then
     # ADMISSION before filtering: a module-path filter that admits no file makes the ban vacuous (a `ticks.rs`
