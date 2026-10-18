@@ -271,7 +271,7 @@ pub struct Resolved {
     pub trial: Option<String>,
     /// *(dated 2026-10-18, `s8j` build, S8J-C3-HOLD; ADR-0201 decision 1, proposed.)* The item
     /// record's `hold_before`, read verbatim and checked against the pack's order at load: supplied
-    /// to the kernel beside the successor ([`base_inputs`]), or `None`.
+    /// to the kernel beside the successor (`base_inputs`), or `None`.
     pub hold_before: Option<String>,
 }
 
@@ -4043,10 +4043,9 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
         .and_then(|state| state.awaiting_gate().map(|t| t.as_str().to_owned()));
     let Some(token_hex) = awaited else {
         // *(dated 2026-10-18, `s8j` build, package S8J-C3-HOLD; ADR-0201 decision 3, proposed.)*
-        return match held_at_boundary(resolved, recorded) {
-            Some(line) => told(&mut std::io::stdout().lock(), &line, Exit::Success),
-            None => Exit::Success,
-        };
+        return held_at_boundary(resolved, recorded).map_or(Exit::Success, |line| {
+            told(&mut std::io::stdout().lock(), &line, Exit::Success)
+        });
     };
 
     // **`run` NEVER WAITS** (golden constraint 2). The gate is an EXIT, and exit 0 at that

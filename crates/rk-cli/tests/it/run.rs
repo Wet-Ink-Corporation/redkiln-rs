@@ -1895,24 +1895,32 @@ fn a_gate_expiry_row_naming_no_reachable_class_is_refused() {
 // `triage, discovery, implement, review` (discovery forbidden) and so does not order
 // `specification`.
 
-/// `lane-2`'s record with `hold_before = "<stage>"` written as a top-level key.
-fn hold_lane_item(root: &Path, stage: &str) {
-    let path = root
-        .join(".redkiln")
-        .join("items")
-        .join(format!("{}.toml", crate::lane_e2e::THROUGH_ITEM));
-    let src = std::fs::read_to_string(&path).expect("the lane item record reads");
-    assert_eq!(
-        src.matches("\n[facets]").count(),
-        1,
-        "PREMISE: one [facets]"
-    );
-    let out = src.replace(
-        "\n[facets]",
-        &format!("hold_before = \"{stage}\"\n\n[facets]"),
-    );
-    std::fs::write(&path, out).expect("the lane item record writes");
+/// The hold's item-record edit (TST-14: a test helper module).
+#[cfg(test)]
+mod hold_fixture {
+    use std::path::Path;
+
+    /// `lane-2`'s record with `hold_before = "<stage>"` written as a top-level key.
+    pub(super) fn hold_lane_item(root: &Path, stage: &str) {
+        let path = root
+            .join(".redkiln")
+            .join("items")
+            .join(format!("{}.toml", crate::lane_e2e::THROUGH_ITEM));
+        let src = std::fs::read_to_string(&path).expect("the lane item record reads");
+        assert_eq!(
+            src.matches("\n[facets]").count(),
+            1,
+            "PREMISE: one [facets]"
+        );
+        let out = src.replace(
+            "\n[facets]",
+            &format!("hold_before = \"{stage}\"\n\n[facets]"),
+        );
+        std::fs::write(&path, out).expect("the lane item record writes");
+    }
 }
+
+use hold_fixture::hold_lane_item;
 
 /// **ADR-0201 decision 4: a hold naming a stage the item's pack does not order is refused at load,
 /// by name.** `lane-2` holds `specification`, which the fixture lane's pack does not order: `run`

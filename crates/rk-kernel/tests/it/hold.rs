@@ -95,10 +95,7 @@ mod fixture {
             Timestamp::from_unix_seconds(DEADLINE),
             Some(HELD),
         );
-        let ctx = match hold {
-            Some(stage) => ctx.with_hold_before(stage),
-            None => ctx,
-        };
+        let ctx = hold.map_or(ctx, |stage| ctx.with_hold_before(stage));
         next_action(&selection, &state, &ctx).expect("the next action computes")
     }
 
@@ -109,18 +106,20 @@ mod fixture {
             to: HELD.to_owned(),
         }
     }
-}
 
-use fixture::{act, advance, selection};
-
-/// The hold's gate, opened on a fresh journal (asserted, so a caller never builds a journal over
-/// some other action).
-fn opened_hold() -> rk_kernel::workflow::fsm::GateRecord {
-    match act(&[], Some(HELD)) {
-        NextAction::OpenGate(record) => record,
-        other => panic!("a fresh journal with the hold supplied must open its gate: {other:?}"),
+    /// The hold's gate, opened on a fresh journal (asserted, so a caller never builds a journal
+    /// over some other action).
+    pub(super) fn opened_hold() -> rk_kernel::workflow::fsm::GateRecord {
+        match act(&[], Some(HELD)) {
+            NextAction::OpenGate(record) => record,
+            other => {
+                panic!("a fresh journal with the hold supplied must open its gate: {other:?}")
+            }
+        }
     }
 }
+
+use fixture::{act, advance, opened_hold, selection};
 
 /// **ADR-0201 decision 2: the advance into the held stage opens `hold:<stage>` instead.** The
 /// controls: with no hold, and with a hold on a stage the successor is not, the same journal

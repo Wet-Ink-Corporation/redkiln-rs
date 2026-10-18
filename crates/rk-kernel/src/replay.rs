@@ -1786,10 +1786,10 @@ fn fsm_context<'a>(
         runtime.successor.as_deref(),
     )
     .with_activations(activations);
-    match runtime.hold_before.as_deref() {
-        Some(stage) => ctx.with_hold_before(stage),
-        None => ctx,
-    }
+    runtime
+        .hold_before
+        .as_deref()
+        .map_or(ctx, |stage| ctx.with_hold_before(stage))
 }
 
 /// The stage entry, as an event.
@@ -2619,7 +2619,7 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         if let Some(to) = value["successor"].as_str() {
             runtime = runtime.advances_to(to);
         }
-        if let Some(held) = value["hold_before"].as_str() {
+        if let Some(held) = value.get("hold_before").and_then(serde_json::Value::as_str) {
             runtime = runtime.holds_before(held);
         }
         if let Some(at) = value["results_at"].as_i64() {

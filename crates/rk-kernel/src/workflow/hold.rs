@@ -30,9 +30,11 @@ pub fn gate_kind(stage: &str) -> String {
     format!("{PREFIX}:{stage}")
 }
 
-/// The answer to the hold before `stage` that **stands** on the item: the latest reach of its gate,
-/// answered and not void. `None` while it was never opened, is open, expired unanswered, or its
-/// latest reach was voided (a void is not an answer that stood, ADR-0201 decision 3).
+/// The answer to the hold before `stage` that **stands** on the item.
+///
+/// That is the latest reach of its gate, answered and not void. `None` while it was never opened,
+/// is open, expired unanswered, or its latest reach was voided (a void is not an answer that
+/// stood, ADR-0201 decision 3).
 #[must_use]
 pub fn standing<'s>(state: &'s RunState, stage: &str) -> Option<&'s GateAnswer> {
     let latest = state.latest_gate(&gate_kind(stage))?;
