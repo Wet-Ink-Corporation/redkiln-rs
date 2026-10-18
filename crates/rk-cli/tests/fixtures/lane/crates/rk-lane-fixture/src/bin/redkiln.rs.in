@@ -1,0 +1,34 @@
+//! The fixture's stand-in for the `redkiln` binary (`s8j` §8j.4). The byte-copied
+//! `.redkiln/checklists/smoke.toml` and `registry.toml`'s `package_binaries` name the repository's
+//! own release binaries, so the fixture crate builds two binaries under those names whose output
+//! meets the checklist's predicates. It is not redkiln.
+
+use std::io::Write as _;
+use std::process::ExitCode;
+
+const VERBS: [&str; 9] = [
+    "run", "answer", "status", "explain", "cost", "doctor", "init", "catalog", "lint",
+];
+
+fn main() -> ExitCode {
+    let first = std::env::args().nth(1);
+    let mut text = String::new();
+    let code = match first.as_deref() {
+        Some("--version") => {
+            text.push_str("redkiln 0.0.0\n");
+            0
+        }
+        Some("--help") => {
+            text.push_str("Usage: redkiln <COMMAND>\n\nCommands:\n");
+            for verb in VERBS {
+                text.push_str(&format!("  {verb:<9}the fixture's {verb}\n"));
+            }
+            0
+        }
+        _ => 2,
+    };
+    match std::io::stdout().lock().write_all(text.as_bytes()) {
+        Ok(()) => ExitCode::from(code),
+        Err(_) => ExitCode::from(1),
+    }
+}

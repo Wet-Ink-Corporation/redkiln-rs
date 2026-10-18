@@ -1,0 +1,13 @@
+# The lane proofs' one crate (`s8j` §8j.4). No dependency, so no registry is read. Stored as
+# `Cargo.toml.in` and renamed to `Cargo.toml` when `lane_proof`'s rig materialises the fixture, so
+# no manifest is checked in under the repository.
+[package]
+name = "rk-lane-fixture"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+
+[lib]
+doctest = false

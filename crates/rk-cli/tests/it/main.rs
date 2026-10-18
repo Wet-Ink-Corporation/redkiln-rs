@@ -81,6 +81,7 @@ mod init;
 mod item_create;
 mod landing;
 mod lane_e2e;
+mod lane_proof;
 mod lint;
 mod processes;
 mod reconcile;
