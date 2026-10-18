@@ -2484,7 +2484,7 @@ compiled fake `claude`, which cargo's toolchain provides.
 *(dated 2026-10-02, s8h build, package P8-launcher-checkpoint-edits-and-packet)* **The literal inputs, confirmed, and no FLIP_PENDING form.**
 - **The inputs are confirmed to have landed as dated literals.** These are:
   - `REC_A=0197` and `REC_B=0198`;
-  - `MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"`;
+  - `MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"`; *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS: seven since, by dated edits in the block: `s8i`'s `automated-verdict-refused` and `s8j`'s `human_root:BugReport`, `human_root:IntakeRecord` and `hold:specification`)*
   - `A_SUPERSEDES` and `TOKENS_APPETITE`, as drafted;
   - in (12), `BASE_8G=1337` with `FLOOR` at 1337 + 54 + 9. *(dated 2026-10-02, s8h build, package F1-D21137-loc)*
     Now 1337 + 54 + 9 + 1: D21-137 item 2's survival guard (§8h.6).
@@ -2534,7 +2534,13 @@ TOKENS_APPETITE=24000000
 # change that mints it (§8h.10): automated-verdict-refused, gate::GateReason's one spelling, read from its &str constant
 # AUTOMATED_VERDICT_REFUSED_KIND in crates/rk-kernel/src/workflow/gate.rs (ADR-0199 decision 3, proposed). Was:
 # ~~MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"~~
-MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates automated-verdict-refused"
+# *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.0 item 3; ADR-0200 decisions 2 and 3 and ADR-0201
+# decision 5, proposed)* s8j's three kernel-minted classes join, in the change that mints them (section 8h.10's table):
+# human_root:BugReport and human_root:IntakeRecord (the step-4 human-root gates) and hold:specification (the boundary
+# hold), each a &str constant under crates/*/src. (8)'s expected [[gate_expiry]] rows are derived from this list
+# (51 + 7 and 53 + 7), so they move from 55 / 57 to 58 / 60 with it, as section 8h.10's dated note states. Was:
+# ~~MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates automated-verdict-refused"~~
+MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates automated-verdict-refused human_root:BugReport human_root:IntakeRecord hold:specification"
 printf '%s\n' "$REC_A" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_A (Record A's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 printf '%s\n' "$REC_B" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_B (Record B's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 [ "$REC_A" != "$REC_B" ] || { echo "FAIL: REC_A and REC_B record the same id ($REC_A)"; exit 1; }

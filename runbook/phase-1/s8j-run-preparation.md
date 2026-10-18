@@ -2078,7 +2078,7 @@ because `s8h`'s bytes were still moving during this pass:
 
 (10)'s stale-entry check refuses an entry that no longer matches a code line of 8h's block, so a reshaped `s8h` line
 re-opens its entry rather than passing silently. With those three entries in an exemption file, the screen found
-zero hits on all twenty blocks [measured 2026-09-24, final consistency pass] *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2: with four entries since 7d's amendment, zero hits on all twenty, re-measured 2026-10-02)*. The following lines are inserted after 7f's `dag_assembled` guard:
+zero hits on all twenty blocks [measured 2026-09-24, final consistency pass] *(dated 2026-10-02, s8h build, package R2FIX-8h; s8h refuting round 2: with four entries since 7d's amendment, zero hits on all twenty, re-measured 2026-10-02)* *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS: re-measured after A10 landed in 7f, by (10)'s own `xblk` and `screen`, cut from this file's bytes, over the twenty blocks as they now stand, `s8i`'s among them for the first time: with an empty list, exactly 7f's fixture-route line, 8h's three and 7d's one, and `s8i`'s block clean; with the five entries in `runbook/phase-1/s8j-screen-exempt.txt` (7f's taken from 7f's block, 8h's three by the substrings above, 7d's byte for byte), zero hits on all twenty; (10)'s own exemption checks, its stale-entry check and its controls pass; and the 7d entry with one byte changed is refused)*. The following lines are inserted after 7f's `dag_assembled` guard:
 
 ```bash
 s8j_nm=$(find "$s8j_mk" -name '*.marker' | grep -c .)
@@ -2670,6 +2670,10 @@ for l in code:
 if re.search(r"grep\s+-r\S*\s[^\n]*four questions on twenty items", jc): bad.append("the doc screen still walks the tree (A5.3)")
 for need in ("git grep -n","%(trailers:key=Story,valueonly=true)","stage_order","verify_completed","VC_ORIGIN_KEY","observed_model","artifact.write","git cat-file -e","dispatch_completed","gh run view","* text=auto eol=lf","STORE_BAK","${rebuilt% *}","tools/live-run.sh run","ac184_rebuild_differential_over_anchored_tier_one_rows","taskkill //T //F","ITEM=\"$FIX_ITEM\""):
     if need not in jc: bad.append("absent from code lines: "+need)
+# (dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; section 8j.8 A13) the widened S8_BIN arm landed, by fixed string, and its controls with it.
+a13="S8_BIN=\"$S8_BIN|\""+chr(39)+r"\b[A-Za-z_]*BinaryChangeSummary>?[[:space:]]*::[[:space:]]*[A-Za-z_][A-Za-z0-9_]*"+chr(39)
+if a13 not in cs: bad.append("A13: the widened S8_BIN arm is absent from code lines")
+if "widened S8_BIN is vacuous for" not in jc or "pre=$(S8_BIN=${S8_BIN%|*};" not in jc: bad.append("A13: the widened S8_BIN controls are absent")
 if "Those nineteen are not read, they are run." not in t: bad.append("the bullet count sentence")
 if "After Checkpoint 8 passes: AC-114" not in t: bad.append("A9: the post-Checkpoint-8 step is unnamed")
 print("; ".join(bad) if bad else "ok")

@@ -217,6 +217,8 @@ The checkpoint's assertions about the run (it executes, it gets past catalog loa
 `dag_assembled`) are unchanged; they read the clone's run record. `s8e`'s literal for the discharged `Slice-Verdict`
 lint stays `s8e`'s (§8e.13), and `s8j` §8j.8 amends this arm further, taking the clone as `$clone`.
 
+*(dated 2026-10-18, `s8j` build, S8J-D2-S8-AMENDMENTS; `s8j` §8j.8 A10; D21-47's time-bound rule; `s8h` §8h.14.)* **The run arm reaches the fixture child, never a real CLI.** From `s8h` on, the arm's `run` has no launch record and refuses before `reconcile_started` (`s8h` §8h.7), so its `dag_assembled` guard would go red; given a real one it would reach the real CLI. So, inside the clone and nothing outside it, the block now writes `harness_binary` into the **clone's** `.redkiln/config.toml`, pointing at `target/debug/rk-fixture-child-claude`, and reads it back; writes a fixture launch record file under `target/`; runs the clone's `run` with `REDKILN_LAUNCH_RECORD` at that file, `RK_FIXTURE_MODE=exit:0` and an empty `RK_FIXTURE_MARKER_DIR`, on the one line `runbook/phase-1/s8j-screen-exempt.txt` admits; and, after the `dag_assembled` guard, counts the spawn markers against the `"kind":"dispatch"` events. The shipped config is never edited. This checkpoint is provisional until Checkpoint 8j (10) re-runs it whole by this route.
+
 ```bash
 cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
@@ -283,7 +285,22 @@ git clone --quiet --no-local . "$clone" || { echo "FAIL: git clone --no-local of
 out=$(cd "$clone" && "$rk_bin" init 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: init in the clone exited $rc"; printf '%s\n' "$out" | head -5; rm -rf "$c7f"; exit 1; }
 runs_before=$(ls "$clone/.git/redkiln/runs" 2>/dev/null | wc -l)
-out=$(cd "$clone" && "$rk_bin" run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?
+# *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A10; D21-47's time-bound rule)* the lines below are inserted after init and
+# immediately above the run line, and the run line gains the fixture prefix before the binary. Was:
+# ~~out=$(cd "$clone" && "$rk_bin" run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?~~
+# AMENDED at s8j (s8j §8j.8 A10; s8h §8h.14; D21-47): the clone's run reaches the fixture child, never a real CLI. The
+# launch record is a FILE, supplied on the one line s8j-screen-exempt.txt admits; the spawn markers are counted below.
+s8j_root=D:/repos/redkiln-rs   # the product repository, whatever directory the clone arm has cd-ed into
+s8j_fx="$s8j_root/target/debug/rk-fixture-child-claude.exe"; [ -f "$s8j_fx" ] || s8j_fx="$s8j_root/target/debug/rk-fixture-child-claude"
+test -f "$s8j_fx" || { echo "FAIL: the fixture child is not built — cargo build --workspace first (D21-47)"; exit 1; }
+cfg='import sys; p=sys.argv[1]; t=open(p,encoding="utf-8").read(); assert t.count("[adapters]\n")==1, "one [adapters] table"; open(p,"w",encoding="utf-8",newline="\n").write(t.replace("[adapters]\n","[adapters]\nharness_binary = \""+sys.argv[2]+"\"\n",1))'
+python -c "$cfg" "$clone/.redkiln/config.toml" "$s8j_fx" || { echo "FAIL: could not point the clone's harness_binary at the fixture child"; exit 1; }
+got=$(python -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["adapters"].get("harness_binary",""))' "$clone/.redkiln/config.toml") || { echo "FAIL: the clone's config does not parse after the edit"; exit 1; }
+[ "$got" = "$s8j_fx" ] || { echo "FAIL: the clone's harness_binary reads '$got', not the fixture child"; exit 1; }
+s8j_mk="$s8j_root/target/s7f-markers"; rm -rf "$s8j_mk"; mkdir -p "$s8j_mk" || { echo "FAIL: cannot create $s8j_mk"; exit 1; }
+s8j_lr="$s8j_root/target/s7f-fixture-launch-record.txt"
+printf 'MODE=fixture\nNOTE=Checkpoint 7f fixture route (s8j A10); no real CLI is reachable from this run\n' > "$s8j_lr" || { echo "FAIL: cannot write the fixture launch record"; exit 1; }
+out=$(cd "$clone" && env REDKILN_LAUNCH_RECORD="$s8j_lr" RK_FIXTURE_MODE=exit:0 RK_FIXTURE_MARKER_DIR="$s8j_mk" "$rk_bin" run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?
 [ "$rc" -ne 127 ] || { echo "FAIL: the run did not execute (rc=127)"; rm -rf "$c7f"; exit 1; }
 # [amended 2026-09-28, s8d-ii build, package R1FIX-8dii; s8d-ii refuting round 1] The catalog-LOAD failure line removes
 # the throwaway directory before it exits, as every other failure line after the clone does; it left the clone, its
@@ -299,6 +316,12 @@ runs_after=$(ls "$clone/.git/redkiln/runs" 2>/dev/null | wc -l)
 [ "$runs_after" -gt "$runs_before" ] || { echo "FAIL: the run opened no run record in the clone ($runs_before -> $runs_after) — it did not get as far as selection"; rm -rf "$c7f"; exit 1; }
 newest=$(ls -1dt "$clone"/.git/redkiln/runs/*/ 2>/dev/null | head -1)
 grep -q 'dag_assembled' "${newest}events.jsonl" || { echo "FAIL: $newest carries no dag_assembled — the pack did not load, whatever the refusal text said"; rm -rf "$c7f"; exit 1; }
+# *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A10; D21-47's time-bound rule)* the spawn markers: as many fixture-child
+# markers as dispatch events, each mode=exit; a dispatch with no marker reached something other than the fixture child. Inserted.
+s8j_nm=$(find "$s8j_mk" -name '*.marker' | grep -c .)
+s8j_nd=$(grep -c '"kind":"dispatch"' "${newest}events.jsonl")
+[ "$s8j_nm" -eq "$s8j_nd" ] || { echo "FAIL: $s8j_nm fixture-child spawn markers for $s8j_nd dispatch events — a dispatch reached something other than the fixture child (D21-47)"; exit 1; }
+if [ "$s8j_nm" -gt 0 ]; then s8j_bad=$(grep -L '^mode=exit$' "$s8j_mk"/*.marker); [ -z "$s8j_bad" ] || { echo "FAIL: a spawn marker without mode=exit: $s8j_bad"; exit 1; }; fi
 printf '%s\n' "$out" | head -3   # → READ: the run gets past load. A later refusal (schemas, cards, roles) is s7g's and is not this checkpoint's subject.
 # [amended 2026-09-27, s8d-ii build, P6; s8d-ii 8d-ii.7 amendments 2 and 3; ADR-0180, proposed] THE HAZARD IS
 # DISARMED BY WHERE THE RUN RAN, NOT BY A REMOVAL HERE. The run tree is the clone's, so `rm -rf` of the throwaway
