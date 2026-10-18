@@ -48,6 +48,7 @@
 //! | `orphan` | **three-level** (§7c.10): spawn an intermediate (`orphan-mid`) that spawns the **holder** (`orphan-holder`, which writes its marker and holds) and exits; wait for the intermediate to exit and for the holder's marker to appear; print `READY holder_pid=<n>` and **hold** — so the direct child is alive when the token fires and the holder's parent is dead: a PID walk from the live child finds nothing, only the job holds the holder (AC-224's positive control) |
 //! | `breakaway` | the bin's OWN attempt to leave containment: spawn a holder with `creation_flags(0x0100_0000)` (`CREATE_BREAKAWAY_FROM_JOB`, a plain `u32` `std` takes); print `BREAKAWAY spawn=ok pid=<n>` or `BREAKAWAY spawn=err os=<code>`, record the same in the marker, and hold. Under a job that never grants `BREAKAWAY_OK` the attempt must fail at spawn or land inside the job (AC-224's negative control, O-2). On POSIX the analogue is `process_group(0)` — a new group `killpg` cannot reach — which the group cannot refuse; the POSIX line is a measurement of that, not a control |
 //! | `echo-env` | print every environment variable as `KEY=VALUE` in sorted order, then `CWD=<dir>` (AC-509; RT-21) |
+//! | `script:<dir>` | ONE SCRIPTED DISPATCH PER INVOCATION (`s8j` §8j.4's binary arm, added 2026-10-18): drain stdin to EOF; take the next ordinal `n` from `<dir>/next` (absent reads `0`) and write `n + 1` back; copy the tree `<dir>/<n>.files/`, if present, into the current directory (the run-owned worktree the adapter spawns in); then print an init frame built from the child's OWN argv (`--agent`, `--model`, and the `--agents` JSON's `tools` and `permissionMode`, so the adapter's adoption and isolation checks read what it asked for) and a success result whose `structured_output` is `<dir>/<n>.json` verbatim (one line), and exit 0. A missing `<n>.json` exits 4, so a run past its script fails by name |
 //!
 //! The intermediate and holder modes (`orphan-mid[:<n>]`, `orphan-holder`) are this bin's own;
 //! `orphan` spawns `orphan-mid` (one holder), and `ac278_no_descendant_survives_exit` spawns
@@ -134,6 +135,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }),
         "echo-env" => echo_env(),
+        "script" => script(arg.as_deref(), &argv),
         other => {
             eprintln!("rk-fixture-child: unknown RK_FIXTURE_MODE {other:?}");
             Ok(ExitCode::from(2))
@@ -301,6 +303,115 @@ fn echo_env() -> io::Result<ExitCode> {
     writeln!(out, "CWD={}", cwd.display())?;
     out.flush()?;
     Ok(ExitCode::SUCCESS)
+}
+
+/// `script:<dir>`: one scripted dispatch (the module table's row).
+fn script(dir: Option<&str>, argv: &[String]) -> io::Result<ExitCode> {
+    let dir = PathBuf::from(dir.ok_or_else(|| io::Error::other("script needs a directory"))?);
+    let mut sink = Vec::new();
+    io::stdin().lock().read_to_end(&mut sink)?;
+    let counter = dir.join("next");
+    let n: u32 = match fs::read_to_string(&counter) {
+        Ok(text) => text
+            .trim()
+            .parse()
+            .map_err(|e| io::Error::other(format!("{}: {e}", counter.display())))?,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => 0,
+        Err(e) => return Err(e),
+    };
+    fs::write(&counter, format!("{}\n", n.saturating_add(1)))?;
+    let Ok(output) = fs::read_to_string(dir.join(format!("{n}.json"))) else {
+        writeln!(
+            io::stderr().lock(),
+            "rk-fixture-child: script: no dispatch {n} in {}",
+            dir.display()
+        )?;
+        return Ok(ExitCode::from(4));
+    };
+    let files = dir.join(format!("{n}.files"));
+    if files.is_dir() {
+        copy_tree(&files, &env::current_dir()?)?;
+    }
+    let flag = |name: &str| {
+        argv.iter()
+            .position(|a| a == name)
+            .and_then(|i| argv.get(i + 1))
+            .map_or("", String::as_str)
+    };
+    let agents = flag("--agents");
+    let tools = json_member(agents, "\"tools\":", b']').unwrap_or("[]");
+    let mode = json_member(agents, "\"permissionMode\":", b'"').unwrap_or("\"\"");
+    let mut out = io::stdout().lock();
+    writeln!(
+        out,
+        "{{\"agent\":{agent},\"apiKeySource\":\"none\",\"claude_code_version\":\"2.1.278\",\
+         \"cwd\":\"<worktree>\",\"mcp_servers\":[],\"model\":{model},\"permissionMode\":{mode},\
+         \"session_id\":\"script\",\"slash_commands\":[],\"subtype\":\"init\",\"tools\":{tools},\
+         \"type\":\"system\",\"uuid\":\"script-init-{n}\"}}",
+        agent = json_string(flag("--agent")),
+        model = json_string(flag("--model")),
+    )?;
+    writeln!(
+        out,
+        "{{\"duration_api_ms\":1000,\"duration_ms\":1234,\"is_error\":false,\"num_turns\":1,\
+         \"result\":\"scripted\",\"session_id\":\"script\",\"structured_output\":{},\
+         \"subtype\":\"success\",\"total_cost_usd\":0.0031,\"type\":\"result\",\"usage\":\
+         {{\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"input_tokens\":10,\
+         \"output_tokens\":20}},\"uuid\":\"script-result-{n}\"}}",
+        output.trim()
+    )?;
+    out.flush()?;
+    Ok(ExitCode::SUCCESS)
+}
+
+/// Copy every file under `from` to the same relative path under `to`, creating directories.
+fn copy_tree(from: &Path, to: &Path) -> io::Result<()> {
+    for entry in fs::read_dir(from)? {
+        let path = entry?.path();
+        let Some(name) = path.file_name() else {
+            continue;
+        };
+        let target = to.join(name);
+        if path.is_dir() {
+            fs::create_dir_all(&target)?;
+            copy_tree(&path, &target)?;
+        } else {
+            fs::copy(&path, &target)?;
+        }
+    }
+    Ok(())
+}
+
+/// The raw JSON text of the value after `key` in `json`, through its closing `close` byte: an
+/// array of plain strings (`]`) or a string (`"`, the value's own opening quote skipped). A
+/// `key` cannot occur inside a JSON string, whose quotes are escaped.
+fn json_member<'a>(json: &'a str, key: &str, close: u8) -> Option<&'a str> {
+    let start = json.find(key)? + key.len();
+    let rest = json.get(start..)?;
+    let from = usize::from(close == b'"');
+    let end = rest.bytes().skip(from).position(|b| b == close)? + from + 1;
+    rest.get(..end)
+}
+
+/// `s` as a JSON string literal (quotes, backslashes and control characters escaped).
+fn json_string(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            c if u32::from(c) < 0x20 => {
+                out.push_str("\\u00");
+                for nibble in [u32::from(c) >> 4, u32::from(c) & 0xf] {
+                    out.extend(char::from_digit(nibble, 16));
+                }
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
 }
 
 /// Poll the marker directory (bounded parks, no sleep) until a marker with `mode=<mode>` appears,

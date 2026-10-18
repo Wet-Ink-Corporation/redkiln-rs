@@ -20,6 +20,7 @@ mod rig;
 
 use std::collections::BTreeMap;
 
+use rk_cli::exit::Exit;
 use rk_types::acceptance::AcceptanceCriterion;
 use rk_types::artifact::lane;
 use rk_types::text::Text;
@@ -541,4 +542,308 @@ fn story_lane_trailers_every_non_forbidden_stage_in_order() {
 
 fn walk_fix_lane(root: &std::path::Path) -> rig::Walk {
     walk(root, FIX_ITEM, fix_script())
+}
+
+/// **The human root is attached through the pack question on both lanes** (s8j §8j.2; ADR-0200):
+/// the invocation that reaches the root's step-4 gate exits 0 awaiting it; `answer --attach`
+/// with that question's first option, which attaches exactly the root kind, applies; and the
+/// re-invocation journals the attached root as the kind's write and never re-opens the gate.
+#[test]
+fn human_root_is_attached_through_the_pack_question_on_both_lanes() {
+    let repo = rig::fixture();
+    let root = repo.path();
+    for (item, kind, script) in [
+        (FIX_ITEM, "BugReport", fix_script()),
+        (STORY_ITEM, "IntakeRecord", story_script()),
+    ] {
+        let harness = rig::ScriptedLane::new(root, item, script);
+        let gate = format!("human_root:{kind}");
+        // triage's `unknown_facet` gate for `change` comes first (D21-43 N3); answer it.
+        assert_eq!(rig::run_once(root, item, &harness), Exit::Success);
+        let facet = rig::awaited_kind(root, item);
+        assert_eq!(facet, "unknown_facet:change", "{item}'s first gate");
+        let (option, attach) = rig::first_option(root, item, &facet);
+        assert_eq!(rig::answer(root, item, &option, attach), Exit::Success);
+
+        // The invocation that reaches the root stops at its gate and exits 0.
+        assert_eq!(
+            rig::run_once(root, item, &harness),
+            Exit::Success,
+            "the invocation stopping at the `{gate}` gate exits 0"
+        );
+        assert_eq!(
+            rig::awaited_kind(root, item),
+            gate,
+            "{item} awaits its root"
+        );
+        let (option, attach) = rig::first_option(root, item, &gate);
+        assert_eq!(
+            attach.iter().map(|a| a.kind.as_str()).collect::<Vec<_>>(),
+            vec![kind],
+            "the `{gate}` question's first option `{option}` attaches exactly `{kind}`"
+        );
+        assert_eq!(
+            rig::answer(root, item, &option, attach),
+            Exit::Success,
+            "`answer {item} {option} --attach {kind}=..` applies"
+        );
+
+        // The re-invocation reads the attached root and does not ask again.
+        assert_eq!(
+            rig::run_once(root, item, &harness),
+            Exit::Success,
+            "the re-invocation after the attach exits 0; unscripted {:?}; journal tail:\n{}",
+            harness.unscripted(),
+            rig::journal_tail(root, item, 8)
+        );
+        let opened = crate::support::journal_rows(root, item)
+            .iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::GateOpened)
+            .filter(|e| e.payload.get("kind").and_then(serde_json::Value::as_str) == Some(&gate))
+            .count();
+        assert_eq!(opened, 1, "the `{gate}` gate re-opened after its attach");
+        let expected = rig::root_file(item, kind);
+        let writes = rig::artifact_writes(root, item, kind);
+        let attached = writes.iter().find(|w| {
+            w.get("attached_path")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|p| std::path::Path::new(p) == expected)
+        });
+        let Some(digest) = attached.and_then(|w| w.get("digest")?.as_str()) else {
+            panic!(
+                "no `{kind}` write names the attached root {}: {writes:?}",
+                expected.display()
+            );
+        };
+        // Present: the re-invocation dispatched a step that declares `artifact:<kind>` with the
+        // root BOUND (a missing root never reaches the port; a null binding is not a read).
+        let reads = harness.reads_of(kind);
+        assert!(
+            !reads.is_empty() && reads.iter().all(|(_, v)| !v.is_null()),
+            "the re-invocation did not read the attached `{kind}` (digest {digest}) as present; \
+             its reads of `artifact:{kind}`: {reads:?}; visited {:?}",
+            harness.visited()
+        );
+    }
+}
+
+/// **The multi-process arm** (D21-41 (a); `s8h` §8h.7): the built `redkiln`, with
+/// `[adapters] harness_binary` naming the fixture child (`support::fixture_child()`) in its
+/// per-dispatch `script` mode and the fixture launch record passed through `s8h`'s one spawn
+/// helper. Each `run` stops at a gate, the gate is answered by a `redkiln answer` process, and the
+/// next `run` is a new process that continues from the stage-bearing trailer. The gates come in
+/// the lane's order and include triage's `unknown_facet` gate, the human-root gate and the §8j.3
+/// hold; at least five `run` processes; the last reaches the landing; and the final trailer
+/// sequence equals the in-process arm's.
+#[test]
+fn gate_then_answer_then_second_process_continues_binary_arm() {
+    // The in-process arm over its own fixture: the dispatch order the child's script follows, and
+    // the gates and trailers the binary arm must reproduce.
+    let reference = rig::fixture();
+    let harness = rig::ScriptedLane::new(reference.path(), FIX_ITEM, fix_script());
+    let in_process = rig::walk_to_close(reference.path(), FIX_ITEM, &harness, 16);
+    assert!(
+        harness.unscripted().is_empty() && harness.unconsumed().is_empty(),
+        "PREMISE: the in-process arm dispatched exactly the script"
+    );
+    let in_process_stages = rig::stages_since_fork(reference.path(), FIX_ITEM);
+
+    let repo = rig::binary_fixture();
+    let root = repo.path();
+    let mut script = fix_script();
+    let visited = harness.visited();
+    let ordered = visited
+        .iter()
+        .map(|k| {
+            script
+                .remove(k)
+                .unwrap_or_else(|| panic!("PREMISE: {k:?} is scripted once"))
+        })
+        .collect();
+    rig::write_child_script(root, ordered);
+    let walk = rig::walk_binary_to_close(root, FIX_ITEM, 16);
+
+    assert!(
+        walk.runs >= 5,
+        "the lane crossed only {} `run` processes",
+        walk.runs
+    );
+    assert_eq!(
+        rig::children_spawned(root),
+        visited.len(),
+        "one fixture child per scripted dispatch"
+    );
+    let kinds: Vec<&str> = walk.gates.iter().map(|(k, _)| k.as_str()).collect();
+    let reference_kinds: Vec<&str> = in_process.gates.iter().map(|(k, _)| k.as_str()).collect();
+    assert_eq!(
+        kinds, reference_kinds,
+        "the binary arm's gates are not the in-process arm's, in order"
+    );
+    let position = |kind: &str| kinds.iter().position(|k| *k == kind);
+    let (facet, human, hold) = (
+        position("unknown_facet:change"),
+        position("human_root:BugReport"),
+        position("hold:specification"),
+    );
+    assert!(
+        matches!((facet, human, hold), (Some(f), Some(h), Some(s)) if f < h && h < s),
+        "the gates do not include triage's facet gate, the human root and the hold, in that \
+         order: {kinds:?}"
+    );
+    assert_eq!(
+        rig::stages_since_fork(root, FIX_ITEM),
+        in_process_stages,
+        "the binary arm's trailer sequence is not the in-process arm's"
+    );
+    let src = format!("{}/src", rig::CRATE_DIR);
+    assert!(
+        !rig::commits_touching(root, FIX_ITEM, &src).is_empty(),
+        "the last `run` process did not reach the landing: no commit touches `{src}`"
+    );
+}
+
+/// The §8j.3 hold's gate kind on the fix item (`hold_before = "specification"`).
+const HOLD: &str = "hold:specification";
+
+/// Walk the fix lane in process to the run that stops at the hold, asserting the stop: the run
+/// exits 0 awaiting [`HOLD`], the last `Story:` mark is `analysis`, nothing of `specification`
+/// dispatched, and exactly one hold gate is open.
+fn stop_at_the_hold(root: &std::path::Path) -> std::sync::Arc<rig::ScriptedLane> {
+    let harness = rig::ScriptedLane::new(root, FIX_ITEM, fix_script());
+    rig::walk_to_gate(root, FIX_ITEM, &harness, HOLD);
+    let stages = rig::story_stages(root, FIX_ITEM);
+    assert_eq!(
+        stages.last().map(String::as_str),
+        Some("analysis"),
+        "the lane did not stop at analysis -> specification; marks {stages:?}"
+    );
+    assert!(
+        harness.visited().iter().all(|(a, _, _)| a != "fix-spec@2"),
+        "a specification dispatch ran before the hold was answered: {:?}",
+        harness.visited()
+    );
+    assert_eq!(
+        rig::gate_tokens(root, FIX_ITEM, HOLD).len(),
+        1,
+        "one hold gate opens"
+    );
+    harness
+}
+
+/// **§8j.3 (2)-(3): the hold stops the lane at analysis -> specification**: the run that would
+/// enter `specification` opens the default question's gate instead and exits 0 (C-01 D-01).
+#[test]
+fn boundary_hold_stops_the_lane_at_analysis_to_specification() {
+    let repo = rig::fixture();
+    let root = repo.path();
+    stop_at_the_hold(root);
+    let registry = rk_cli::processes::load(root).expect("the fixture's questions load");
+    assert_eq!(
+        registry.question_for(HOLD),
+        rk_kernel::workflow::question::DEFAULT_QUESTION,
+        "the hold is answered with the default question (ADR-0129 decision 3)"
+    );
+    // A second run without an answer stays put, and does not open a second gate.
+    let again = rig::ScriptedLane::new(root, FIX_ITEM, BTreeMap::new());
+    assert_eq!(rig::run_once(root, FIX_ITEM, &again), Exit::Success);
+    assert!(again.visited().is_empty(), "an unanswered hold dispatched");
+    assert_eq!(rig::gate_tokens(root, FIX_ITEM, HOLD).len(), 1);
+    assert_eq!(
+        rig::story_stages(root, FIX_ITEM).last().map(String::as_str),
+        Some("analysis")
+    );
+}
+
+/// **§8j.3 (5)-(6): `approve` lets the next `redkiln run` PROCESS enter `specification`**, across
+/// the process boundary from the stage-bearing trailer (D21-41 (a)), and the answered hold never
+/// re-fires.
+#[test]
+fn boundary_hold_answered_lets_the_next_process_enter_specification() {
+    // The in-process reference walk: the dispatch order after the hold.
+    let reference = rig::fixture();
+    let full = rig::ScriptedLane::new(reference.path(), FIX_ITEM, fix_script());
+    rig::walk_to_close(reference.path(), FIX_ITEM, &full, 16);
+
+    let repo = rig::binary_fixture();
+    let root = repo.path();
+    let held = stop_at_the_hold(root);
+    let token = rig::gate_tokens(root, FIX_ITEM, HOLD)
+        .pop()
+        .expect("the hold's token");
+    let answered = rig::spawn_answer(root, FIX_ITEM, "approve", &[]);
+    assert_eq!(
+        answered.status.code(),
+        Some(0),
+        "`redkiln answer {FIX_ITEM} approve` applies; stderr:\n{}",
+        String::from_utf8_lossy(&answered.stderr)
+    );
+    let before = held.visited();
+    let mut script = fix_script();
+    let ordered = full
+        .visited()
+        .iter()
+        .filter(|k| !before.contains(k))
+        .map(|k| script.remove(k).expect("a reference key is scripted"))
+        .collect();
+    rig::write_child_script(root, ordered);
+
+    let out = rig::spawn_run(root, FIX_ITEM);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "the next `redkiln run` process exits 0; stderr:\n{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stages = rig::story_stages(root, FIX_ITEM);
+    let at = |s: &str| stages.iter().position(|x| x == s);
+    assert!(
+        matches!((at("analysis"), at("specification")), (Some(a), Some(s)) if a < s),
+        "the next process did not enter `specification` after `analysis`; marks {stages:?}"
+    );
+    assert!(
+        rig::children_spawned(root) > 0,
+        "the next process dispatched nothing in `specification`"
+    );
+    assert_eq!(
+        rig::gate_tokens(root, FIX_ITEM, HOLD),
+        vec![token],
+        "the answered hold re-fired"
+    );
+}
+
+/// **§8j.3 (7): `changes-requested` does not advance the lane** (D21-40 decision 2): the next runs
+/// exit 0, dispatch nothing, mint no `specification` mark and open no second hold gate.
+#[test]
+fn boundary_hold_changes_requested_does_not_advance() {
+    let repo = rig::fixture();
+    let root = repo.path();
+    stop_at_the_hold(root);
+    assert_eq!(
+        rig::answer(root, FIX_ITEM, "changes-requested", Vec::new()),
+        Exit::Success,
+        "`changes-requested` answers the hold"
+    );
+    for n in 0..2 {
+        let rerun = rig::ScriptedLane::new(root, FIX_ITEM, BTreeMap::new());
+        assert_eq!(
+            rig::run_once(root, FIX_ITEM, &rerun),
+            Exit::Success,
+            "rerun {n} exits 0"
+        );
+        assert!(
+            rerun.visited().is_empty(),
+            "rerun {n} dispatched {:?}",
+            rerun.visited()
+        );
+    }
+    let stages = rig::story_stages(root, FIX_ITEM);
+    assert!(
+        !stages.iter().any(|s| s == "specification"),
+        "`changes-requested` advanced the lane; marks {stages:?}"
+    );
+    assert_eq!(
+        rig::gate_tokens(root, FIX_ITEM, HOLD).len(),
+        1,
+        "the answered hold re-fired"
+    );
 }

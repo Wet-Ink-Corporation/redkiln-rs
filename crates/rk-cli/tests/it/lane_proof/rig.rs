@@ -234,12 +234,48 @@ pub(super) fn root_file(item: &str, kind: &str) -> PathBuf {
 /// byte copy of the tracked `.redkiln/` and the two lane items, committed, then initialised through
 /// the product's own `init` (so `info/exclude` carries the `# redkiln-runtime` block).
 pub(super) fn fixture() -> tempfile::TempDir {
+    fixture_with(|_| {})
+}
+
+/// [`fixture`] for the binary arm: the copied `.redkiln/config.toml` also names the built fixture
+/// child as `[adapters] harness_binary`, by absolute path (`support::fixture_child()`, the sibling
+/// of `redkiln`; the pack-min fixture's rule), before the fixture's commit.
+pub(super) fn binary_fixture() -> tempfile::TempDir {
+    fixture_with(|root| {
+        let path = root.join(".redkiln").join("config.toml");
+        let src = std::fs::read_to_string(&path).expect("the copied config reads");
+        let child = crate::support::fixture_child();
+        let row = format!(
+            "harness_binary = \"{}\"",
+            child.display().to_string().replace('\\', "\\\\")
+        );
+        let mut out = String::with_capacity(src.len() + row.len() + 1);
+        let mut placed = false;
+        for line in src.lines() {
+            out.push_str(line);
+            out.push('\n');
+            if line.trim() == "[adapters]" {
+                out.push_str(&row);
+                out.push('\n');
+                placed = true;
+            }
+        }
+        assert!(
+            placed,
+            "PREMISE: the copied config has an `[adapters]` table to name the harness binary in"
+        );
+        std::fs::write(&path, out).expect("the config writes");
+    })
+}
+
+fn fixture_with(prepare: impl FnOnce(&Path)) -> tempfile::TempDir {
     let repo = crate::temp_repo();
     let root = repo.path();
     materialise_crate(root);
     copy_tracked_redkiln(root);
     copy_setup_projects(root);
     write_items(root);
+    prepare(root);
     crate::git(root, &["add", "-A"]);
     crate::git(root, &["commit", "--quiet", "-m", "the lane fixture"]);
     let init = crate::run_init(root);
@@ -381,6 +417,8 @@ impl Response {
 struct Seen {
     visited: Vec<Key>,
     unscripted: Vec<Key>,
+    /// Each dispatch's inputs whose catalog source is `artifact:<Kind>`, as `(key, source, value)`.
+    artifact_inputs: Vec<(Key, String, serde_json::Value)>,
 }
 
 /// **The scripted harness**: a response per key, **no default response**. An unscripted dispatch
@@ -415,6 +453,44 @@ impl ScriptedLane {
     /// Every key dispatched, in order.
     pub(super) fn visited(&self) -> Vec<Key> {
         self.seen.lock().expect("unpoisoned").visited.clone()
+    }
+
+    /// Every dispatched input bound from `artifact:<kind>` (by the step's catalog source), as
+    /// `(key, value)`: the dispatches that READ `kind`.
+    pub(super) fn reads_of(&self, kind: &str) -> Vec<(Key, serde_json::Value)> {
+        let source = format!("artifact:{kind}");
+        self.seen
+            .lock()
+            .expect("unpoisoned")
+            .artifact_inputs
+            .iter()
+            .filter(|(_, s, _)| *s == source)
+            .map(|(k, _, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+
+    /// The inputs of `spec` that `key`'s catalog step binds from an `artifact:<Kind>` source.
+    fn artifact_inputs(
+        &self,
+        key: &Key,
+        spec: &ActivitySpec,
+    ) -> Vec<(Key, String, serde_json::Value)> {
+        let Some(step) = self
+            .catalog
+            .get(&key.0)
+            .and_then(|steps| steps.iter().find(|s| s.id == key.1))
+        else {
+            return Vec::new();
+        };
+        spec.inputs
+            .iter()
+            .filter_map(|(name, value)| {
+                let source = step.sources.get(name)?;
+                source
+                    .starts_with("artifact:")
+                    .then(|| (key.clone(), source.clone(), value.clone()))
+            })
+            .collect()
     }
 
     /// Every scripted key no dispatch reached.
@@ -492,11 +568,13 @@ impl ScriptedLane {
     }
 }
 
-/// One agent step of a catalog activity: its id, its `value:<Kind>` output, its input names.
+/// One agent step of a catalog activity: its id, its `value:<Kind>` output, its input names, and
+/// each input's declared source string.
 struct AgentStep {
     id: String,
     kind: String,
     inputs: Vec<String>,
+    sources: BTreeMap<String, String>,
 }
 
 /// Every activity's agent steps, by `<id>@<version>`, read from the fixture's catalog and
@@ -551,6 +629,17 @@ fn agent_steps(root: &Path) -> BTreeMap<String, Vec<AgentStep>> {
                                 .and_then(toml::Value::as_table)
                                 .map(|t| t.keys().cloned().collect())
                                 .unwrap_or_default(),
+                            sources: s
+                                .get("inputs")
+                                .and_then(toml::Value::as_table)
+                                .map(|t| {
+                                    t.iter()
+                                        .filter_map(|(k, v)| {
+                                            Some((k.clone(), v.as_str()?.to_owned()))
+                                        })
+                                        .collect()
+                                })
+                                .unwrap_or_default(),
                         })
                         .collect()
                 })
@@ -565,11 +654,12 @@ impl Harness for ScriptedLane {
     fn dispatch(&self, spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
         let key = self.key_of(spec, store);
         let response = self.script.lock().expect("unpoisoned").remove(&key);
-        self.seen
-            .lock()
-            .expect("unpoisoned")
-            .visited
-            .push(key.clone());
+        let inputs = self.artifact_inputs(&key, spec);
+        {
+            let mut seen = self.seen.lock().expect("unpoisoned");
+            seen.artifact_inputs.extend(inputs);
+            seen.visited.push(key.clone());
+        }
         let result = match response {
             Some(r) => {
                 for (path, contents) in &r.writes {
@@ -645,6 +735,19 @@ pub(super) fn awaited_gate(root: &Path, item: &str) -> Option<(String, String)> 
         .unwrap_or_default()
         .to_owned();
     Some((token, kind))
+}
+
+/// The kind of the gate `item` awaits now, or the proof fails naming the journal's tail.
+pub(super) fn awaited_kind(root: &Path, item: &str) -> String {
+    awaited_gate(root, item).map_or_else(
+        || {
+            panic!(
+                "{item} awaits no gate; journal tail:\n{}",
+                journal_tail(root, item, 8)
+            )
+        },
+        |(_, kind)| kind,
+    )
 }
 
 /// The gate's question's FIRST option (as `s8d`'s walk answers), with the item's root file attached
@@ -752,6 +855,27 @@ pub(super) fn walk_to_close(
     harness: &Arc<ScriptedLane>,
     max_runs: usize,
 ) -> Walk {
+    walk_until(root, item, harness, max_runs, None)
+}
+
+/// [`walk_to_close`], stopping instead at the first run that exits awaiting a gate of kind
+/// `stop_at` (left unanswered).
+pub(super) fn walk_to_gate(
+    root: &Path,
+    item: &str,
+    harness: &Arc<ScriptedLane>,
+    stop_at: &str,
+) -> Walk {
+    walk_until(root, item, harness, 16, Some(stop_at))
+}
+
+fn walk_until(
+    root: &Path,
+    item: &str,
+    harness: &Arc<ScriptedLane>,
+    max_runs: usize,
+    stop_at: Option<&str>,
+) -> Walk {
     let mut walk = Walk {
         gates: Vec::new(),
         runs: 0,
@@ -787,6 +911,9 @@ pub(super) fn walk_to_close(
                 story_stages(root, item)
             );
         };
+        if stop_at == Some(kind.as_str()) {
+            return walk;
+        }
         let (option, attach) = first_option(root, item, &kind);
         assert_eq!(
             answer(root, item, &option, attach),
@@ -796,10 +923,23 @@ pub(super) fn walk_to_close(
         walk.gates.push((kind, option));
     }
     panic!(
-        "the lane did not close within {max_runs} runs; stages {:?}; gates {:?}",
+        "the lane did not reach {} within {max_runs} runs; stages {:?}; gates {:?}",
+        stop_at.unwrap_or("`closed`"),
         story_stages(root, item),
         walk.gates
     );
+}
+
+/// The `gate_opened` rows of `kind` the item journalled, as their tokens (the runtime's rows,
+/// which carry one).
+pub(super) fn gate_tokens(root: &Path, item: &str, kind: &str) -> Vec<String> {
+    crate::support::journal_rows(root, item)
+        .iter()
+        .filter(|e| e.kind == EventKind::GateOpened)
+        .filter(|e| e.payload.get("kind").and_then(serde_json::Value::as_str) == Some(kind))
+        .filter_map(|e| e.payload.get("token").and_then(serde_json::Value::as_str))
+        .map(str::to_owned)
+        .collect()
 }
 
 /// The item journal's last `n` rows, one per line, for a failure message.
@@ -1066,4 +1206,141 @@ pub(super) fn committed_producers(root: &Path, item: &str, kind: &str) -> Vec<St
                 .map(str::to_owned)
         })
         .collect()
+}
+
+// ------------------------------------------------------------------------------- the binary arm
+
+/// The fixture child's per-dispatch script directory (`RK_FIXTURE_MODE=script:<dir>`), under the
+/// common dir so the checkout `git status` reads stays clean.
+pub(super) fn child_script_dir(root: &Path) -> PathBuf {
+    crate::common_dir(root).join("lane-proof-script")
+}
+
+fn marker_dir(root: &Path) -> PathBuf {
+    crate::common_dir(root).join("lane-proof-markers")
+}
+
+/// **Lay the fixture child's script**: dispatch `n` answers `ordered[n]`'s value (`<n>.json`, one
+/// line) after copying its writes (`<n>.files/<path>`) into the worktree it is spawned in.
+pub(super) fn write_child_script(root: &Path, ordered: Vec<Response>) {
+    let dir = child_script_dir(root);
+    std::fs::create_dir_all(&dir).expect("the script directory is created");
+    for (n, response) in ordered.into_iter().enumerate() {
+        let line = serde_json::to_string(&response.value).expect("a response serialises");
+        std::fs::write(dir.join(format!("{n}.json")), line).expect("a dispatch's output writes");
+        for (path, contents) in &response.writes {
+            let to = dir.join(format!("{n}.files")).join(path);
+            if let Some(parent) = to.parent() {
+                std::fs::create_dir_all(parent).expect("a write's directory is created");
+            }
+            std::fs::write(&to, contents).expect("a dispatch's write is laid");
+        }
+    }
+    std::fs::create_dir_all(marker_dir(root)).expect("the marker directory is created");
+}
+
+/// How many fixture children have run (one marker each, `s7c` §7c.17).
+pub(super) fn children_spawned(root: &Path) -> usize {
+    std::fs::read_dir(marker_dir(root)).map_or(0, |dir| {
+        dir.filter_map(Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|x| x == "marker"))
+            .count()
+    })
+}
+
+/// One generous bound for a lane `run` process: it builds and tests the fixture crate.
+const RUN_BOUND: std::time::Duration = std::time::Duration::from_secs(600);
+
+/// **`redkiln -C <root> run <item>`, a process**, through `s8h`'s one spawn helper with the
+/// fixture launch record passed explicitly, the fixture child in `script` mode, and the
+/// fixture's `CARGO_HOME`.
+pub(super) fn spawn_run(root: &Path, item: &str) -> std::process::Output {
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
+    cmd.arg("-C")
+        .arg(root)
+        .arg("run")
+        .arg(item)
+        .env(
+            "RK_FIXTURE_MODE",
+            format!("script:{}", child_script_dir(root).display()),
+        )
+        .env("RK_FIXTURE_MARKER_DIR", marker_dir(root))
+        .env("CARGO_HOME", cargo_home(root));
+    crate::support::try_output_within(&mut cmd, RUN_BOUND).unwrap_or_else(|t| {
+        panic!(
+            "`redkiln run {item}` outlived {RUN_BOUND:?}; stderr:\n{}",
+            String::from_utf8_lossy(&t.stderr)
+        )
+    })
+}
+
+/// **`redkiln -C <root> answer <item> <option> [--attach K=P].. --explain-sufficed yes
+/// --toml-opened no`, a process** (ADR-0129 decision 1's grammar).
+pub(super) fn spawn_answer(
+    root: &Path,
+    item: &str,
+    option: &str,
+    attach: &[rk_cli::cli::Attachment],
+) -> std::process::Output {
+    let mut cmd = crate::redkiln_command(crate::Launch::Fixture);
+    cmd.arg("-C").arg(root).arg("answer").arg(item).arg(option);
+    for a in attach {
+        cmd.arg("--attach")
+            .arg(format!("{}={}", a.kind, a.path.display()));
+    }
+    cmd.args(["--explain-sufficed", "yes", "--toml-opened", "no"])
+        .env("RK_FIXTURE_MODE", "exit:0")
+        .env("RK_FIXTURE_MARKER_DIR", marker_dir(root));
+    crate::support::output_bounded(&mut cmd)
+}
+
+/// [`walk_to_close`] with every `run` and every `answer` a separate `redkiln` process.
+pub(super) fn walk_binary_to_close(root: &Path, item: &str, max_runs: usize) -> Walk {
+    let mut walk = Walk {
+        gates: Vec::new(),
+        runs: 0,
+        trees: Vec::new(),
+    };
+    while walk.runs < max_runs {
+        let out = spawn_run(root, item);
+        walk.runs += 1;
+        assert_eq!(
+            out.status.code(),
+            Some(0),
+            "`redkiln run {item}` process #{} exited {:?}; stages so far {:?}; gates answered \
+             {:?}; children {}; stderr:\n{}\nthe journal's last rows:\n{}",
+            walk.runs,
+            out.status.code(),
+            story_stages(root, item),
+            walk.gates,
+            children_spawned(root),
+            String::from_utf8_lossy(&out.stderr),
+            journal_tail(root, item, 12)
+        );
+        if story_stages(root, item).last().map(String::as_str) == Some("closed") {
+            return walk;
+        }
+        let Some((_, kind)) = awaited_gate(root, item) else {
+            panic!(
+                "`redkiln run {item}` process #{} exited 0 at no awaited gate and before \
+                 `closed`; stages {:?}",
+                walk.runs,
+                story_stages(root, item)
+            );
+        };
+        let (option, attach) = first_option(root, item, &kind);
+        let answered = spawn_answer(root, item, &option, &attach);
+        assert_eq!(
+            answered.status.code(),
+            Some(0),
+            "`redkiln answer {item} {option}` for the `{kind}` gate applies; stderr:\n{}",
+            String::from_utf8_lossy(&answered.stderr)
+        );
+        walk.gates.push((kind, option));
+    }
+    panic!(
+        "the lane did not close within {max_runs} processes; stages {:?}; gates {:?}",
+        story_stages(root, item),
+        walk.gates
+    );
 }
