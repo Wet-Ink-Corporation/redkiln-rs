@@ -5,3 +5,7 @@
 {"t":"2026-10-18T18:27:37.755Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"gate-start"}
 {"t":"2026-10-18T18:27:40.638Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-blocked","reason":"gate","fp":"5ed61b39dcf14f10","ms":2879,"cached":true}
 {"t":"2026-10-18T18:27:55.309Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-declared","status":"BLOCKED"}
+{"t":"2026-10-18T18:31:57.070Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"skill-loaded","via":"Skill"}
+{"t":"2026-10-18T18:34:34.276Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"deny-shell-write","via":"shell-reader"}
+{"t":"2026-10-18T18:35:15.063Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"gate-start"}
+{"t":"2026-10-18T18:36:03.706Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-blocked","reason":"gate","fp":"d82a4a0939971d34","ms":48633,"cached":false}
