@@ -343,6 +343,9 @@ fn require_axes(pack: &str) -> BTreeSet<String> {
 /// S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3, proposed)* The fifth and sixth are the step-4 gates
 /// on the two human roots, `human_root:BugReport` and `human_root:IntakeRecord`
 /// (`workflow::human_root`), reachable in every pack, so the counts move ~~55 and 57~~ to 57 and 59.
+/// *(dated 2026-10-18, s8j build, S8J-C3-HOLD; ADR-0201 decision 5, proposed)* The seventh is the
+/// boundary hold, `hold:specification` (`workflow::hold`), whose row lands in both packs, so the
+/// counts move ~~57 and 59~~ to 58 and 60 (`s8h` §8h.10's count sentence).
 ///
 /// RED (observed 2026-10-02, before the rows were written): 0 rows in each pack.
 #[test]
@@ -360,12 +363,13 @@ fn shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class() {
         rk_kernel::workflow::gate::GateReason::AutomatedVerdictRefused.as_str(),
         rk_kernel::workflow::human_root::BUG_REPORT_KIND,
         rk_kernel::workflow::human_root::INTAKE_RECORD_KIND,
+        rk_kernel::workflow::hold::SPECIFICATION_KIND,
     ]
     .into_iter()
     .map(str::to_owned)
     .collect();
     let escalation = rk_kernel::workflow::gate::ESCALATION_CLASS;
-    for (pack, axes_want, rows_want) in [("bug-standard", 5, 57), ("story", 7, 59)] {
+    for (pack, axes_want, rows_want) in [("bug-standard", 5, 58), ("story", 7, 60)] {
         let axes = require_axes(pack);
         assert_eq!(axes.len(), axes_want, "PREMISE: {pack} reads {axes:?}");
         assert!(

@@ -264,6 +264,12 @@ pub mod fsm;
 /// build, S8J-C2-ROOT-QUESTIONS.)*
 pub mod human_root;
 
+/// **ADR-0201 decisions 2 and 3.** The boundary hold's gate.
+///
+/// `hold:<stage>`, opened instead of the advance into a held stage, and the Phase-1 spelling as a
+/// constant. *(Added 2026-10-18, `s8j` build, S8J-C3-HOLD.)*
+pub mod hold;
+
 /// **AC-010–AC-012.** The idempotency key's validator and the dispatch that cannot be constructed
 /// without one. A child of this module, for [`budget`]'s reason — and pointedly so: a key is a pure
 /// function of `(item, activity_id@version, attempt)`, and a key minted from a clock or a random

@@ -828,6 +828,9 @@ pub struct FsmContext<'a> {
     tree_hash: &'a str,
     deadline: Timestamp,
     successor: Option<&'a str>,
+    /// *(dated 2026-10-18, `s8j` build, S8J-C3-HOLD; ADR-0201 decision 2, proposed.)* The stage the
+    /// item record holds the lane before (`hold_before`), supplied beside the successor.
+    hold_before: Option<&'a str>,
     /// `(node id, activity_id@version)`, supplied by the caller — the header's fifth value.
     /// **Empty is the ARMED state and not a default**: with no activation for a node the key
     /// carries the bare `activity_id` and AC-010's validator refuses it at the boundary.
@@ -848,8 +851,17 @@ impl<'a> FsmContext<'a> {
             tree_hash,
             deadline,
             successor,
+            hold_before: None,
             activations: &[],
         }
+    }
+
+    /// Supply the item record's `hold_before` (ADR-0201 decision 2): step 5 opens `hold:<stage>`
+    /// instead of advancing into `stage` while no answer to that hold stands.
+    #[must_use]
+    pub const fn with_hold_before(mut self, stage: &'a str) -> Self {
+        self.hold_before = Some(stage);
+        self
     }
 
     /// Supply the `(node id, activity_id@version)` activations — the header's fifth value.
@@ -1079,6 +1091,12 @@ impl RunState {
     #[must_use]
     pub fn is_answered(&self, token: &Digest) -> bool {
         self.gates_answered.contains_key(token)
+    }
+
+    /// The answer folded for `token`, if one stands in the answered set (a void one never does).
+    #[must_use]
+    pub(crate) fn answer(&self, token: &Digest) -> Option<&GateAnswer> {
+        self.gates_answered.get(token)
     }
 
     #[must_use]
@@ -1803,6 +1821,9 @@ fn gate_to_open(
 ///    halt outranks a supplied successor**, so a refused run is never reported as advancing;
 /// 5. the plan exhausted, a successor supplied, **and that successor is not the stage the fold is
 ///    already in** → [`NextAction::AdvanceStage`] (ADR-0157: a stage does not advance into itself);
+///    **unless that successor is the held stage** (ADR-0201 decision 2, proposed): then the hold's
+///    gate opens ([`NextAction::OpenGate`]) while no answer to it stands, a standing `approve`
+///    advances, and any other standing verdict is [`NextAction::Done`];
 /// 6. otherwise [`NextAction::Done`].
 ///
 /// # Errors
@@ -1921,10 +1942,26 @@ pub fn next_action(
     //    `stages_entered` is the state that answers the real question, and it already existed: the
     //    same `StageTransition` arm pushes every target onto it. A stage the lane has entered is not
     //    entered again.
+    //
+    //    *(dated 2026-10-18, `s8j` build, package S8J-C3-HOLD; ADR-0201 decisions 2 and 3,
+    //    proposed.)* **The hold is read HERE, by the arm that decides the advance**, because
+    //    `replay::resume` writes the `stage_transition` row and the `Story:` mark as soon as this
+    //    arm answers (ADR-0152, ADR-0183). Into the held stage: the hold's gate opens by step 2's
+    //    one rule ([`gate_to_open`], so a void re-opens fresh); a standing `approve` releases the
+    //    advance; any other standing verdict holds the lane at the boundary, and nothing re-fires.
     if let Some(to) = ctx.successor
         && !state.stages_entered.iter().any(|s| s == to)
         && to != state.stage
     {
+        if ctx.hold_before == Some(to) {
+            let kind = super::hold::gate_kind(to);
+            if let Some(record) = gate_to_open(state, &kind, ctx)? {
+                return Ok(NextAction::OpenGate(record));
+            }
+            if !super::hold::standing(state, &kind).is_some_and(super::hold::releases) {
+                return Ok(NextAction::Done);
+            }
+        }
         return Ok(NextAction::AdvanceStage {
             from: state.stage.clone(),
             to: to.to_owned(),

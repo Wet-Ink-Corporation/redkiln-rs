@@ -352,6 +352,74 @@ fn write_run_and_read_run_round_trip_every_recorded_input() {
     );
 }
 
+/// **A recorded hold round-trips through `inputs/runtime.json`** (ADR-0201 decision 2, proposed).
+/// *(Added 2026-10-18, `s8j` build, package S8J-C3-HOLD, review finding F2.)*
+///
+/// The committed log's runtime context, rebuilt from its own `runtime.json` (premise: rebuilt
+/// without a hold it hashes to the committed `run_id`), is given
+/// `holds_before("specification")`; the hold moves the `run_id` (premise: it is in the preimage),
+/// and the record written and read back hashes to the held `run_id`. Without the read-back, the
+/// hold is dropped on read and `replay()` would refuse every held record as re-derived to another
+/// id.
+///
+/// RED (observed 2026-10-18, the `hold_before` read-back in `read_run` deleted): the read-back
+/// input set hashed to the unheld `run_id`.
+#[test]
+fn a_recorded_hold_before_round_trips_through_runtime_json() {
+    let dir = copy_into_scratch("hold-before");
+    let mut run = read_run(&dir).expect("the committed log reads back");
+    let committed = run.inputs.run_id().expect("the committed input set hashes");
+
+    let recorded: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.join("inputs/runtime.json")).expect("runtime.json reads"),
+    )
+    .expect("runtime.json parses");
+    let text = |k: &str| recorded.get(k).and_then(serde_json::Value::as_str);
+    let int = |k: &str| recorded.get(k).and_then(serde_json::Value::as_i64);
+    let rebuilt = rk_kernel::replay::RuntimeContext::supplied(
+        text("tree_hash").expect("PREMISE: a tree hash"),
+        int("deadline").expect("PREMISE: a deadline"),
+    )
+    .entered_from(text("entered_from").expect("PREMISE: an entered_from"))
+    .advances_to(text("successor").expect("PREMISE: a successor"))
+    .results_at(int("results_at").expect("PREMISE: a results_at"));
+    assert!(
+        recorded.get("hold_before").is_none(),
+        "PREMISE: the committed log carries no hold"
+    );
+
+    run.inputs = run.inputs.clone().with_runtime(rebuilt.clone());
+    assert_eq!(
+        run.inputs.run_id().expect("hashes"),
+        committed,
+        "PREMISE: the rebuilt runtime context is the committed one"
+    );
+    run.inputs = run
+        .inputs
+        .clone()
+        .with_runtime(rebuilt.holds_before("specification"));
+    let held = run.inputs.run_id().expect("the held input set hashes");
+    assert_ne!(
+        held, committed,
+        "PREMISE: the hold is in the run_id's preimage"
+    );
+
+    let root =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/golden-log-scratch/hold-rt");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).expect("the scratch root is removable");
+    }
+    let written = rk_kernel::replay::write_run(&root, &run).expect("the record writes");
+    let back = read_run(&written).expect("the written record reads back");
+    assert_eq!(
+        back.inputs
+            .run_id()
+            .expect("the read-back input set hashes"),
+        held,
+        "the hold did not come back from inputs/runtime.json"
+    );
+}
+
 /// **`read_run` refuses a present-but-invalid `inputs/config.json`** — ADR-0130 decision 6's
 /// positive control.
 ///

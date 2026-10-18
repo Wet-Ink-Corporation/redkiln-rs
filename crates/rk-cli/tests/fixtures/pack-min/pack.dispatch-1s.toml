@@ -136,6 +136,13 @@ action = "fail"
 class = "human_root:IntakeRecord"
 action = "fail"
 
+# (dated 2026-10-18, s8j build, S8J-C3-HOLD; ADR-0201 decision 5, proposed) The boundary hold's
+# kind (workflow::hold) is minted for every pack, so the lint requires its row here too. Drafted
+# `fail`, as the installed packs' is.
+[[gate_expiry]]
+class = "hold:specification"
+action = "fail"
+
 # `timeout_secs` on EVERY activity (`BindRequest.timeout_secs`).
 # 🛑 ONE SECOND, AND IT IS THE DISPATCH'S BOUND RATHER THAN THE GATE'S.
 # `gate_deadline_secs` above still reads 900: it feeds `GateToken::derive` and the expiry
