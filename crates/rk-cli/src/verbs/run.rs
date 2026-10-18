@@ -1948,7 +1948,10 @@ fn unordered_hold(
     pack_src: &str,
 ) -> Option<String> {
     let stage = hold?;
-    let pack = rk_kernel::select::Pack::from_toml(&format!("{pack_name}.toml"), pack_src).ok()?;
+    let Ok(pack) = rk_kernel::select::Pack::from_toml(&format!("{pack_name}.toml"), pack_src)
+    else {
+        return None;
+    };
     let order = pack.stage_order();
     if order.iter().any(|s| s == stage) {
         return None;

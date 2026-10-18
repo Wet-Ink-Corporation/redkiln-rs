@@ -864,12 +864,6 @@ impl<'a> FsmContext<'a> {
         self
     }
 
-    /// The held stage, when one was supplied.
-    #[must_use]
-    pub const fn hold_before(&self) -> Option<&'a str> {
-        self.hold_before
-    }
-
     /// Supply the `(node id, activity_id@version)` activations — the header's fifth value.
     ///
     /// **Transcribed, never derived here.** The list is a caller's; `crate::replay` reads it out of
