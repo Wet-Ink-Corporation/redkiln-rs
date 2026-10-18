@@ -1694,7 +1694,7 @@ the lint ignored, with `test result: ok. 2 passed; 0 failed; 1 ignored` (`s8a` �
 
 The arm still cannot dispatch at this stage, because 0 shipped cards carry `permission_mode`. Checkpoint 8e asserts
 that before it re-runs 7f. From `s8h` on, the brief's no-accidental-dispatch rule applies: 7f's arm runs only through
-`s8h`'s fixture-child route, and Checkpoint 8e **refuses** to re-run 7f once a card carries `permission_mode`.
+`s8h`'s fixture-child route, and Checkpoint 8e **refuses** to re-run 7f once a card carries `permission_mode`. *(dated 2026-10-18, `s8j` build, S8J-D2-S8-AMENDMENTS; `s8j` §8j.8 A10's dependent amendments: no longer. A10 routes 7f's run arm to the fixture child, so the card-mode stop is replaced by a reading that 7f's code names `rk-fixture-child-claude`, and this checkpoint is provisional until Checkpoint 8j (10) re-runs it whole.)*
 
 *(dated 2026-09-28, s8e build, package R2FIX-8e)* **Checkpoint 7c is amended, dated, and re-run at `s8j`, not
 here.** ADR-0185's three kinds move `EventKind::ALL` from 38 to 41, the premise of 7c's ALL-count guard, so that line
@@ -2496,9 +2496,16 @@ else
   # dispatch. Refused outright once a shipped card carries permission_mode (s8h has landed; no-accidental-dispatch).
   cards=$(ls .redkiln/cards/*.json 2>/dev/null)
   [ -n "$cards" ] || { echo "FAIL: no shipped card under .redkiln/cards — the dispatch precondition would be about nothing (Halt 8)"; exit 1; }
-  raw=$(grep -l 'permission_mode' .redkiln/cards/*.json); rc=$?
-  [ "$rc" -eq 1 ] || { echo "FAIL: a shipped card carries permission_mode (grep rc=$rc) — 7f's run arm could reach a real dispatch; re-run 7f only through s8h's fixture-child route, not from this block"; printf '%s\n' "$raw"; exit 1; }
+  # *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A10's dependent amendments; s8h finding 27)* The card-mode stop is replaced: after A10,
+  # 7f's run arm reaches only the fixture child, so the premise is A10's marker in 7f's code, read over the extracted copy
+  # just below its extraction. The card-count lines above stay. Was:
+  # ~~raw=$(grep -l 'permission_mode' .redkiln/cards/*.json); rc=$?~~
+  # ~~[ "$rc" -eq 1 ] || { echo "FAIL: a shipped card carries permission_mode (grep rc=$rc) — 7f's run arm could reach a real dispatch; re-run 7f only through s8h's fixture-child route, not from this block"; printf '%s\n' "$raw"; exit 1; }~~
   ext runbook/phase-1/s7f-conformance-and-records.md 'echo "CP7F-END-OF-BLOCK reached"' "$scratch/cp7f.sh"
+  # AMENDED at s8j (s8j §8j.8 A10; D21-47 time-bound rule): 7f's run arm reaches the fixture child, never a real CLI,
+  # so a shipped card's permission_mode no longer bears on this replay. The premise is A10's marker in 7f's CODE.
+  n=$(grep -vE '^[[:space:]]*#' "$scratch/cp7f.sh" | grep -cF 'rk-fixture-child-claude')
+  [ "$n" -ge 1 ] || { echo "FAIL: Checkpoint 7f's code does not route its run arm to rk-fixture-child-claude (s8j A10 has not landed) — its run could reach a real dispatch; stop"; exit 1; }
   # The clone is read from CODE lines: a comment naming a clone does not re-point the arm.
   SHCOMMENT='^[[:space:]]*#'
   CLONE='(^|[^[:alnum:]_./-])git[[:space:]]([^#]*[[:space:]])?clone([[:space:]]|$)'

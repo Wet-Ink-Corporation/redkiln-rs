@@ -957,7 +957,7 @@ whole runs: this repository's worktree path set and run-record count are unchang
 8d-ii (7b) and (8)).
 
 **The arm still cannot dispatch here.** 0 shipped cards carry `permission_mode`, and `card::lint_card` refuses a blank
-one at bind. Checkpoint 8d-ii asserts that before it re-runs 7f, and refuses to re-run 7f once a card carries one.
+one at bind. Checkpoint 8d-ii asserts that before it re-runs 7f, and refuses to re-run 7f once a card carries one. *(dated 2026-10-18, `s8j` build, S8J-D2-S8-AMENDMENTS; `s8j` §8j.8 A10's dependent amendments: no longer. A10 routes 7f's run arm to the fixture child, so the card-mode stop is replaced by a reading that 7f's code names `rk-fixture-child-claude`, and this checkpoint is provisional until Checkpoint 8j (10) re-runs it whole.)*
 
 *(dated 2026-09-27, s8d-ii build, package P6-RKCLI-ROOT-MOVE.)* **The three amendments are made**, each dated in
 `s7f` §7f.5 (a prose note above the block, and dated comment lines in it): the arm makes `c7f=$(mktemp -d)` in
@@ -2689,12 +2689,26 @@ else
   ncards=0
   for c in .redkiln/cards/*.json; do [ -f "$c" ] && ncards=$((ncards + 1)); done
   [ "$ncards" -gt 0 ] || { echo "FAIL: no card files under .redkiln/cards — the precondition would hold over nothing (Halt 8)"; exit 1; }
-  moded=$(grep -lF '"permission_mode"' .redkiln/cards/*.json); rc=$?
-  [ "$rc" -le 1 ] || { echo "FAIL: the card-mode precondition could not run (grep rc=$rc)"; exit 1; }
-  [ -z "$moded" ] || { echo "FAIL (PRECONDITION): a shipped card carries permission_mode, so s8h has landed — re-run 7f only through s8h's fixture-child route, not from this block:"; printf '%s\n' "$moded"; exit 1; }
-  # SYNTHETIC CONTROL: the probe sees a planted mode.
-  printf '{"permission_mode": "default"}\n' > "$scratch/card.json" || { echo "FAIL: the card control could not be written"; exit 1; }
-  grep -qF '"permission_mode"' "$scratch/card.json" || { echo "FAIL: CONTROL — the card-mode probe cannot see a planted permission_mode"; exit 1; }
+  # *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A10's dependent amendments; s8h finding 27)* The card-mode stop is replaced: after A10,
+  # 7f's run arm reaches only the fixture child, so the premise is A10's marker in 7f's code. The extraction of 7f moves
+  # up from (7b) to here, above the reading, and the planted-mode control is re-pointed to a 7f copy without the marker.
+  # The card-count lines above stay. Was:
+  # ~~moded=$(grep -lF '"permission_mode"' .redkiln/cards/*.json); rc=$?~~
+  # ~~[ "$rc" -le 1 ] || { echo "FAIL: the card-mode precondition could not run (grep rc=$rc)"; exit 1; }~~
+  # ~~[ -z "$moded" ] || { echo "FAIL (PRECONDITION): a shipped card carries permission_mode, so s8h has landed — re-run 7f only through s8h's fixture-child route, not from this block:"; printf '%s\n' "$moded"; exit 1; }~~
+  # ~~# SYNTHETIC CONTROL: the probe sees a planted mode.~~
+  # ~~printf '{"permission_mode": "default"}\n' > "$scratch/card.json" || { echo "FAIL: the card control could not be written"; exit 1; }~~
+  # ~~grep -qF '"permission_mode"' "$scratch/card.json" || { echo "FAIL: CONTROL — the card-mode probe cannot see a planted permission_mode"; exit 1; }~~
+  ext runbook/phase-1/s7f-conformance-and-records.md 'echo "CP7F-END-OF-BLOCK reached"' "$scratch/cp7f.sh"
+  # AMENDED at s8j (s8j §8j.8 A10; D21-47 time-bound rule): 7f's run arm reaches the fixture child, never a real CLI,
+  # so a shipped card's permission_mode no longer bears on this replay. The premise is A10's marker in 7f's CODE.
+  n=$(grep -vE '^[[:space:]]*#' "$scratch/cp7f.sh" | grep -cF 'rk-fixture-child-claude')
+  [ "$n" -ge 1 ] || { echo "FAIL: Checkpoint 7f's code does not route its run arm to rk-fixture-child-claude (s8j A10 has not landed) — its run could reach a real dispatch; stop"; exit 1; }
+  # SYNTHETIC CONTROL (re-pointed by A10): a copy of 7f without the marker must be refused by the same reading.
+  grep -vF 'rk-fixture-child-claude' "$scratch/cp7f.sh" > "$scratch/cp7f-unmarked.sh"; rc=$?
+  [ "$rc" -le 1 ] && test -s "$scratch/cp7f-unmarked.sh" || { echo "FAIL: the unmarked 7f control could not be written (grep rc=$rc)"; exit 1; }
+  n=$(grep -vE '^[[:space:]]*#' "$scratch/cp7f-unmarked.sh" | grep -cF 'rk-fixture-child-claude')
+  [ "$n" -eq 0 ] || { echo "FAIL: CONTROL — the A10 reading cannot refuse a 7f copy without the fixture-child marker"; exit 1; }
   replay() {
     out=$(nodispatch env RK_CP_NESTED=1 "$@" 2>&1); rc=$?
   }
@@ -2710,7 +2724,9 @@ else
   # (7b) CHECKPOINT 7f whole, AS AMENDED (section 8d-ii.7). Its CODE lines (comments stripped, so a comment naming a
   # clone satisfies nothing) clone into a mktemp directory outside this repository, and remove or prune no worktree
   # of this repository in any spelling. Then the replay is judged by what it did not change here.
-  ext runbook/phase-1/s7f-conformance-and-records.md 'echo "CP7F-END-OF-BLOCK reached"' "$scratch/cp7f.sh"
+  # *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS; s8j section 8j.8 A10's dependent amendments; s8h finding 27)* the extraction that stood here moved above
+  # the card-mode reading (A10); it is not repeated. Was:
+  # ~~ext runbook/phase-1/s7f-conformance-and-records.md 'echo "CP7F-END-OF-BLOCK reached"' "$scratch/cp7f.sh"~~
   code7f=$(grep -vE '^[[:space:]]*#' "$scratch/cp7f.sh")
   test -n "$code7f" || { echo "FAIL: Checkpoint 7f's block has no code lines"; exit 1; }
   printf '%s\n' "$code7f" | grep -qE 'git clone .*--no-local' || { echo "FAIL: no code line in 7f clones this repository (git clone --no-local) — its run arm would create a run tree in the product repository"; exit 1; }

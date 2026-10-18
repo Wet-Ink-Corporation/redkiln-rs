@@ -186,9 +186,10 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo
 # ---- passed both. `mode=ro` and NOT `immutable=1`: immutable ignores the WAL and could under-count.
 store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
 test -f "$store" || { echo "FAIL: no shipped store at $store"; exit 1; }
-test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM (rk-fix-doctor-test-count at this pin) — a bare <placeholder> is a bash redirect, not an argument"; exit 1; }
+# *(dated 2026-10-18, s8j build, S8J-D1-REPOINT; s8j section 8j.1(c); s8e: "s8j re-points 7h and 7i when it mints the fresh item")* The item with dispatches is the named fixture item, no longer the environment's FIX_ITEM, which s8 sets to the item s8j section 8j.5 reserves. Was: test -n on that variable, with a FAIL asking the operator to set it. The loop below still asserts the item file exists.
+FIXTURE_ITEM=rk-fix-doctor-test-count
 # `cost` renders the empty case for ANY string, a misspelling included, so the items must be real.
-for it in rk-story-codex-adapter "$FIX_ITEM"; do
+for it in rk-story-codex-adapter "$FIXTURE_ITEM"; do
   test -f ".redkiln/items/$it.toml" || { echo "FAIL: .redkiln/items/$it.toml does not exist — the empty case would be asserted over a misspelling"; exit 1; }
 done
 probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); t2=c.execute("SELECT COUNT(*) FROM t2_event").fetchone()[0]; rl=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("rate_limit_reading",))]; print(t2,len(rl),sum(1 for r in rl if r.get("item")==sys.argv[2]))'
@@ -233,17 +234,17 @@ if "$RK" cost rk-story-codex-adapter 2>&1 | od -c | grep -qF '\r'; then echo "FA
 test -n "$empty" || { echo "FAIL: cost printed NOTHING — silence is not the empty rendering (Halt 8)"; exit 1; }
 [ "$(printf '%s\n' "$empty" | grep -c .)" -eq 1 ] || { echo "FAIL: the empty case printed more than one line — anything beside the empty line is a rendering over n = 0"; printf '%s\n' "$empty"; exit 1; }
 printf '%s\n' "$empty" | grep -qE "^cost rk-story-codex-adapter:$EMPTY_TAIL" || { echo "FAIL: the empty case is not the one empty line (§7i.2's vacuous green)"; printf '%s\n' "$empty"; exit 1; }
-fx=$(python -c "$probe" "$store" "$FIX_ITEM"); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$fx" ] || { echo "FAIL: the store probe did not run for $FIX_ITEM (rc=$rc)"; exit 1; }
+fx=$(python -c "$probe" "$store" "$FIXTURE_ITEM"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$fx" ] || { echo "FAIL: the store probe did not run for $FIXTURE_ITEM (rc=$rc)"; exit 1; }
 read -r _ _ fx_owned <<< "$fx"
-fx_dc=$(python -c "$dc_probe" "$store" "$FIX_ITEM"); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$fx_dc" ] || { echo "FAIL: the dispatch_completed ownership probe did not run for $FIX_ITEM (rc=$rc)"; exit 1; }
-fout=$("$RK" cost "$FIX_ITEM" 2>&1); frc=$?
-if "$RK" cost "$FIX_ITEM" 2>&1 | od -c | grep -qF '\r'; then echo "FAIL: cost $FIX_ITEM's output carries a CR byte"; exit 1; fi
-[ "$frc" -eq 0 ] || { echo "FAIL: cost $FIX_ITEM exited $frc"; printf '%s\n' "$fout"; exit 1; }
-test -n "$fout" || { echo "FAIL: cost $FIX_ITEM printed nothing"; exit 1; }
+fx_dc=$(python -c "$dc_probe" "$store" "$FIXTURE_ITEM"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$fx_dc" ] || { echo "FAIL: the dispatch_completed ownership probe did not run for $FIXTURE_ITEM (rc=$rc)"; exit 1; }
+fout=$("$RK" cost "$FIXTURE_ITEM" 2>&1); frc=$?
+if "$RK" cost "$FIXTURE_ITEM" 2>&1 | od -c | grep -qF '\r'; then echo "FAIL: cost $FIXTURE_ITEM's output carries a CR byte"; exit 1; fi
+[ "$frc" -eq 0 ] || { echo "FAIL: cost $FIXTURE_ITEM exited $frc"; printf '%s\n' "$fout"; exit 1; }
+test -n "$fout" || { echo "FAIL: cost $FIXTURE_ITEM printed nothing"; exit 1; }
 # EVERY line against the closed grammar — not only window lines: a per-run figure on its own line or in the header is
-# what the grammar exists to refuse. ⚠️ At this pin the shipped store holds ZERO readings, so `$FIX_ITEM` renders the
+# what the grammar exists to refuse. ⚠️ At this pin the shipped store holds ZERO readings, so `$FIXTURE_ITEM` renders the
 # empty case too and the sampled branch of this grammar has never run against the SHIPPED store; the sampled case is
 # asserted by (3) over the fixture corpus, whose `cost_output_grammar_is_closed` applies the same forms to every line.
 bad=$(printf '%s\n' "$fout" | grep -vE "$GRAMMAR" | grep .)
@@ -252,7 +253,7 @@ bad=$(printf '%s\n' "$fout" | grep -vE "$GRAMMAR" | grep .)
 # ADR-0190 decision 4 an item that owns `dispatch_completed` rows and no reading prints the empty line AND a breakdown, so
 # the one-line assertion holds only when the item owns NEITHER. The widened GRAMMAR above still checks every line.
 if [ "$fx_owned" = "0" ] && [ "$fx_dc" = "0" ]; then
-  [ "$(printf '%s\n' "$fout" | grep -c .)" -eq 1 ] && printf '%s\n' "$fout" | grep -qE "^cost $FIX_ITEM:$EMPTY_TAIL" || { echo "FAIL: $FIX_ITEM owns no reading and cost does not print exactly the empty line"; printf '%s\n' "$fout"; exit 1; }
+  [ "$(printf '%s\n' "$fout" | grep -c .)" -eq 1 ] && printf '%s\n' "$fout" | grep -qE "^cost $FIXTURE_ITEM:$EMPTY_TAIL" || { echo "FAIL: $FIXTURE_ITEM owns no reading and cost does not print exactly the empty line"; printf '%s\n' "$fout"; exit 1; }
 fi
 post=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$post" ] || { echo "FAIL: the post-run store probe did not run (rc=$rc)"; exit 1; }
