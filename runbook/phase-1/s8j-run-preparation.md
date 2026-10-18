@@ -259,6 +259,20 @@ new tests and ten mutants, because the launch-record lint and its mutant are `s8
   and `s8i` adds 6 + N + G (G = 3 on its human-gate route, 0 on its reviewer route, D21-48 X16). So (11)'s chain is
   8h **1243**, 8i lower bound **1249**, and this block's floor **1263 + N + G**. The line above is superseded.
 
+*Stage open, 2026-10-18 (s8j build, an AFK session, package S8J-A1-DRIFT; entry HEAD `3fa69db`).* Each line below is
+a dated note under the build plan `spikes/plans/s8j-build-plan-2026-10-16.md`, approved on 2026-10-16 with its
+recommendations D2–D11 (D21-158). The measurements sit in §8j.0 and the sections named, and nothing here is a
+go-ahead, a push or a dispatch.
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **§8j.0 is written**: what this file's brief said that the tree does not, measured at `3fa69db` (D21-157).
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **Batch 1 has merged** (D2; #74, closed): the pre-m5 run-path fixes #7, #11, #20, #6 and #5, one PR each
+  (#83 … #87), merged into `build/phase-0-to-1` on 2026-10-17, before the entry chain's run (§8j.10, S8J-A2). The
+  chain and the fixture proofs run over them (§8j.0 item 9).
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **The floor** (Checkpoint 8j (11)): row 8i records no passed count, so the literal is not readable from it; the lower bound moves from 1249 to Checkpoint 8i's documented floor 1432 (§8j.0 item 4). The 1263 + N + G chain above is superseded.
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **CI** has run green, and §8j.7's loop is the PR head run (D9; §8j.0 item 2).
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **One real dispatch before the freeze** (D3; #62) joins §8j.6 as step 1a, on a throwaway item in a scratch clone; its order against step 1b is open (§8j.0 item 12).
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **Human-only closure** of verify-stage ACs is accepted for `s8`'s exit runs (D4; #33; D21-159), with an M5 scope note in `runbook/INDEX.md`; the mutation-pin wiring is Phase 2's.
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **`s8` gains A13** (§8j.8), D21-155's owed `S8_BIN` widening (§8j.0 item 7).
+
 ---
 
 **Why this stage exists.** `s8a`…`s8i`, with `s8d-ii` (D21-46 R1), build what criterion (1) and (1b) need. Nothing before this stage proves the
@@ -322,6 +336,106 @@ entries in `spikes/DECISIONS-2026-09-21.md`, the file that D21-40…D21-42 exten
 - the (g) flip, which is the operator's.
 
 ---
+
+### 8j.0 What this file's brief said that the tree does not — measured 2026-10-18 at `3fa69db`
+
+*(dated 2026-10-18, s8j build, S8J-A1-DRIFT.)* This file was last edited at `d24d15a` (2026-10-02, `s8h`'s R3FIX-8h),
+and nothing `s8i` built or recorded since then had been read into it [measured: `git log -- runbook/phase-1/s8j-run-preparation.md`].
+The entry commit is `3fa69db` (`origin/build/phase-0-to-1`, the merge of PR #89), which sits after `s8i`'s close
+(`0a86274`, PR #81), the build plan (`4625b0e`, PR #82; `spikes/plans/s8j-build-plan-2026-10-16.md`, approved
+2026-10-16 with D2–D11, D21-158) and batch 1 (PRs #83–#87). The plan's §2 table is the starting list; every item was
+measured again here, and items 4, 6 and 9 no longer read as the plan wrote them. Eleven things the brief says or implies
+are not what the tree holds, and one more was found in the re-measure (item 12). D21-157 records the stage open.
+
+1. **The pin and S-BIN's `cli_version` differ, and the new version has no `--help` capture.** §8j.6 step 1 requires
+   *"The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`"*. S-BIN's pins block reads
+   `cli_version=2.1.289` (`spikes/F43-DRAFT.md`:261; `s8i`:6997). `TESTED_CLI_VERSION` is `"2.1.278"`
+   (`crates/rk-adapter-claude/src/config.rs`:124), and `RUNBOOK-instrument.txt` reads `2.1.278 (Claude Code)`.
+   `PERMISSION_MODE_ARGV` holds a `2.1.278` and a `2.1.287` row and `LIVE_WARRANTED` is `["2.1.278"]`
+   (`crates/rk-adapter-claude/src/command.rs`:133-139), and `crates/rk-adapter-claude/tests/fixtures/cli-help/` holds
+   only `2.1.287.permission-mode.txt` [measured]. So the pin-move commit needs a 2.1.289 capture first, by `s8h`
+   §8h.0 item 6's rule, which §8j.6 step 1 already cites; the capture is the operator's (it runs the installed CLI), and
+   its one row replaces both old rows (D21-48 X12). Unchanged since the plan.
+2. **CI has run, and is green; the pnpm step is in `ci.yml`.** §8j.7 says *"The branch has never been pushed … and
+   `ci.yml` has never run"* and gives a *"known missing step"*. At the entry commit `ci.yml`:94-102 carries the pnpm
+   step (pnpm 10.33.0, `--frozen-lockfile`) [measured], and its comment at :86-90 counts **fourteen**
+   `rk-adapter-toolchain-node` tests at the preflight, not §8j.7's ten [measured]. The `ci` run on the push of
+   `3fa69db` (run 39082895979) concluded `success` in all four jobs, `gates (ubuntu-latest)`, `gates
+   (windows-latest)`, `no egress (AC-498)` and `structural assertions`, and `temper` (run 39082895960) succeeded
+   [documented: GitHub Actions API, fetched 2026-10-18]. Every push of `build/phase-0-to-1` since `0a86274` reads
+   `success` [documented: the same listing, 0a86274 … 3fa69db]. Work reaches the branch by PR (#81 … #89), not by the
+   direct push §8j.7's loop step 1 names. §8j.7 takes dated lines, and its loop becomes the PR head run of D9
+   (D21-158). `ci.yml`'s own "never run" comments (:215, :579) are issue #23's and S8J-D4's, and `.github/` is not
+   edited by an agent.
+3. **Checkpoint 8h's `MINTED_CLASSES` literal has four entries, not three.** `s8i` added
+   `automated-verdict-refused` by dated edit (`s8h`:2537), and the packs carry 55 (`bug-standard`) and 57 (`story`)
+   `[[gate_expiry]]` rows [measured: `grep -c '^\[\[gate_expiry\]\]'`]; `cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class`
+   pins 55 and 57 (`crates/rk-cli/tests/it/cards.rs`:363). This stage's three classes therefore make seven entries and
+   58 / 60 rows, which `s8h`:1572's dated note already states. §8j.2 item 4 takes a dated line.
+4. **Checkpoint 8j (11)'s floor cannot be read from row 8i as drafted.** (11) requires `CP8I_PASSED` to appear in
+   `PROGRESS.md` row 8i and sets it to the drafted `1249`. Row 8i records the pass (`b3c746e`, block sha256
+   `8a3beba7…1f1e`, `CP8I-END-OF-BLOCK reached`) and **no passed count**, and neither does D21-155 [measured: the
+   row's text and the entry's], because Checkpoint 8i (10) prints a count only when it fails. What is recorded is
+   8i's floor on its human-gate route: 1404 + 6 + NFIELDS 4 + NGATE 3 + NDE 15 = **1432**, with the s8i tree measured to
+   add exactly those 28 tests (`s8i`:8763-8767) [measured]. Batch 1 adds 14 `#[test]` functions, two of them
+   `#[cfg(unix)]` (`rk-containment`'s zombie pair), so 12 on the operator's Windows box [measured: `git diff 0a86274
+   3fa69db -- crates`; inferred: that no batch-1 test is filtered out on Windows otherwise]. The CI logs that would
+   give the entry commit's count are not readable from this container (the proxy refuses the log blob host). (11) is
+   amended by a dated edit: its lower bound moves from 1249 to 1432, and the literal stays refusing until a count is
+   recorded (item 4's dated line in (11) says how).
+5. **RT-57's record is accepted, and it is ADR-0198.** §8j.6's entry condition requires `s8h`'s Record B
+   `accepted` before any paid step. `references/adr/0198-rt-57-pack-scalars-the-per-item-envelope-and-gate-expiry-are-recorded-fail-closed.md`
+   reads `status: accepted` (D21-139) [measured]. The evidence file's `record-rt57` line is `record-rt57 0198`. §8j.6
+   takes a dated line.
+6. **The (g) flip now waits only on the probes.** ADR-0197 (Record A) is `proposed` [measured]. Its decision 7 table,
+   which also needed the operator's signature (#73), was signed as drafted on D21-156 item 3, and #73 is closed
+   [measured: D21-156; documented: issue #73, fetched 2026-10-18]. D21-156 states the remaining condition: *"decision
+   13's other condition, both `s8h` §8h.11 probes passed at `s8j`, is still owed, and the (g) flip is the operator's
+   line"*. §8j.6 item 6 stands as written.
+7. **`s8`'s `S8_BIN` misses two construction forms Checkpoint 8i (8)'s `BIN_RE` catches.** D21-155 owes it to `s8`:
+   *"s8's own `S8_BIN` does not see the point-free `.map(BinaryChangeSummary::new)` or the qualified
+   `<BinaryChangeSummary>::new(` forms"*. Re-run here: `S8_BIN` (`s8-exit-criterion.md`:438) matches neither
+   `x.map(BinaryChangeSummary::new)` nor `let b = <BinaryChangeSummary>::new(a);`, and the widened `BIN_RE`
+   (`s8i`:8338) matches both [measured: `grep -cE` over the two lines, 0 and 1 each]. §8j.8 gains **A13**, applied with
+   A1–A12 (S8J-D2).
+8. **The lane proofs walk a review path `s8i` changed.** `crates/rk-cli/src/review_input.rs` (`review_input::route`)
+   and `crates/rk-cli/src/verbs/run/kept_refusal.rs` are on `redkiln run`'s review path [measured]. A `Binary` summary
+   takes the `automated-verdict-refused` gate (ADR-0199 decision 3), and what an answered one does is unbuilt and
+   Phase 2's (#80, open) [documented: issue #80, fetched 2026-10-18]. So the fixture lanes produce `Text` summaries only,
+   and `lane_proof` asserts the gate set, so a stray `Binary` route fails by name (§8j.4). No dated edit; #80 stays out.
+9. **The pre-m5 run-path fixes have merged, ahead of the chain run.** `docs/BACKLOG.md`:41 holds them until *"just
+   before s8j re-runs its entry chain through Checkpoint 8i"*. They merged on 2026-10-17 as batch 1, one PR each:
+   #83 (#7, `d086370`), #84 (#11, `02ce3b4`), #85 (#20, `35d0702`), #86 (#6, `9b6a202`) and #87 (#5, `99a3753`)
+   [measured: `git log --first-parent`]. Issues #5, #6, #7, #11, #20, the epic #41 and #74 are closed as completed
+   [documented: GitHub issues API, fetched 2026-10-18]. The chain run (§8j.10, S8J-A2) therefore runs over them, as
+   D2 intended. The plan's *"None … has a PR yet"* is superseded.
+10. **§8j.5's candidates were read at `ca8f387`, and the call graph has grown since.** `s8i` added
+    `crates/rk-ports/src/toolchain/binary.rs`, `crates/rk-store/src/render/binary.rs`, the gate request in
+    `crates/rk-kernel/src/workflow/gate.rs`, `rk-cli`'s `review_input` and `kept_refusal` [measured], and batch 1
+    moved `rk-cli`'s `main.rs`, `verbs/run.rs` and `verbs/status.rs`, `rk-kernel`'s `select/step4.rs` and `lattice.rs`,
+    and `rk-containment`'s `posix.rs` [measured: `git diff --name-only 0a86274 3fa69db`]. The four presented
+    candidates' quoted lines are still present, at `redkiln-migrate/src/legacy/fence.rs`:42 (C1),
+    `rk-cli/src/verbs/explain.rs`:702 (C3), `rk-cli/src/doctor/rules.rs`:849 (C4) and `rk-types/src/schema/lint.rs`:102
+    (C5), and none of their files changed since `0a86274` [measured]. Rule 1's exclusion walk is re-run over the new
+    call graph, and rule 2 is re-checked against the open issues, before any candidate is presented (S8J-A3). §8j.5
+    takes a dated line.
+11. **The legacy checkout is not measurable from here.** §8j.1(d)'s reads 1-3 run against
+    `.git/redkiln/worktrees/rk-fix-doctor-test-count` on the operator's box; this measurement ran in a cloud clone,
+    which has no such checkout [inferred: a fresh clone carries no linked worktrees]. The five reads are the
+    operator's, at the re-point (Round E).
+12. **Three plan decisions change this file, and one of them conflicts with D21-47.** D3 (#62) adds one real
+    dispatch on a throwaway item in a scratch clone *"right after the pin move and before step 1b"*. D21-47's fix for
+    review finding 7 requires every paid run to be dated on or after the `fixture-proofs` line, which step 1b writes,
+    and Checkpoint 8j (6) reads that order [measured: §8j.6 step 1b; the stage header's finding 7]. As placed, the
+    dispatch precedes the recorded proofs. §8j.6 takes D3's step by a dated line that names the conflict, and the
+    order is the operator's to settle before it runs (D21-158). D4 (#33) is recorded in D21-159 and an M5 scope note;
+    D9 is §8j.7's dated loop.
+
+What the brief got right, re-measured: the entry gate is Checkpoint 8i, which passed whole (row 8i; D21-155), and #30
+is closed as not planned (D10); `.redkiln/packs/` carries both packs; `spikes/p9/packs/spike.toml` is unchanged since
+`ca8f387` [measured: `git diff --quiet ca8f387 HEAD --`]; ADR-0199 is `accepted` and the fixture lanes need no
+`Binary` producer; and the `s8d` question loader and `.redkiln/processes/questions.toml` are where §8j.2's two
+questions go.
 
 ### 8j.1 The items: the story, the Codex item retired, 7i's empty case moved, the fixture item noted and its checkout re-pointed
 
@@ -593,7 +707,12 @@ loader."*
    them"*. Both spellings are added so, in this stage's work commit. Each is a `&str` constant on a code line, because
    8h's premise reads it there (`s8h` §8h.0 item 7: *"Each minted spelling must be a `&str` constant, or a member of a
    constant `&[&str]` table, on a code line under `crates/*/src`"*). Checkpoint 8j (3) asserts one row per class per
-   pack.
+   pack. *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* The literal has **four** entries at the entry commit, not the three this item was drafted
+   against: `s8i` added `automated-verdict-refused` (`s8h`:2537), and the packs carry 55 and 57 rows
+   (§8j.0 item 3). This stage's edit appends its three spellings to the four, in the same struck-and-replaced form
+   `s8i` used, and the rows move to **58** (`bug-standard`) and **60** (`story`), as `s8h`:1572's dated note states.
+   `cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class`'s `55` / `57` premises move to 58 /
+   60 in the same change, by dated line.
 5. *(dated 2026-09-29, forward pointer from `s8f`'s build (R1FIX-8f-B-RECORDS), D21-110, TAKEN PROVISIONALLY under
    D21-105)* **The reader's and the resolver's root arm, owed here.** `s8f` did not build ADR-0189 decision 9's
    last sentence: `rk-kernel`'s `read_artifact_input` resolves an `artifact:` input only from a committed `emit`
@@ -885,7 +1004,13 @@ the ledger, and a fresh item is minted."*
 5. **Present at least three to the operator.** For each, give the file, the quoted code, the contract it breaks
    (quoted from its own doc, an ADR or the register), the red output from step 3, and why it is outside the run.
 
-**Candidates found by reading the code at `ca8f387`.** These are **candidates only**. Each was checked by tracing the
+**Candidates found by reading the code at `ca8f387`.** *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* *Re-measured at `3fa69db` (§8j.0 item 10): the
+four presented candidates' quoted lines are still present and their files are unchanged since `0a86274`, but `s8i`
+and batch 1 grew the run's call graph (`rk-ports` `toolchain/binary`, `rk-store` `render/binary`, `rk-kernel`
+`workflow/gate`, `rk-cli` `review_input` and `kept_refusal`; `main.rs`, `verbs/run.rs`, `verbs/status.rs`,
+`select/step4.rs`, `lattice.rs`, `posix.rs`). Step 1's exclusion walk is re-run over that graph, and step 2's
+scheduled-work check also reads the open GitHub issues (a candidate an open issue schedules fails it), before any
+candidate is presented (S8J-A3).* These are **candidates only**. Each was checked by tracing the
 code, and none has yet been run red. Step 3 runs each one before it is presented.
 
 | # | crate · function | the defect (quoted code) | the contract it breaks | repro test (proposed) | caveat |
@@ -936,7 +1061,8 @@ writes the `fixture-proofs` line and one `mutant` line per mutant, over a clean 
 moved pin (D21-47; review finding 7). D21-40 decision 2 authorises the spend *"once the sub-stages' fixture proofs
 pass, and not before."* RT-57's record, `s8h`'s Record B, is `accepted` before any step here. Its id goes on the
 evidence file's `record-rt57` line, because D21-47 names it among the pre-spend checks and Checkpoint 8j (6) reads
-it.
+it. *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* Record B is **ADR-0198**, `accepted` on D21-139 [measured: its frontmatter at `3fa69db`], so the
+line is `record-rt57 0198` (§8j.0 item 5). It is written when the evidence file is opened, in the work commit.
 
 🛑 **Who runs it, and where.** The operator runs every step below in one sitting, the probe session. They run from a
 plain terminal, never from a Claude Code session or a shell an agent spawned. The operator's own `! python …` line is
@@ -983,6 +1109,16 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    (`crates/rk-cli/src/verbs/run.rs` [measured]). That is why the pin moves before any dispatch. Under D17-11's
    amendment, *"the adapter refused all three dispatches at the init line"*.
    **Spend: none.**
+1a. *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **One real dispatch on a throwaway item, before the freeze** (the build plan's D3, approved
+   2026-10-16; #62; D21-158). One time-boxed real `redkiln run` dispatch, through the launcher, on a throwaway item
+   minted **in a scratch clone**, never on `rk-fix-doctor-test-count` (D21-42 18 keeps that item and its ref unrun,
+   and after §8j.1(d)'s re-point `s8d-ii` refuses it by design). Its purpose is the audit's: a first-contact surprise
+   lands in this stage, not at Step 8. **Spend: one dispatch** (its model and cap are written on its own spend line
+   before it runs), on its **own go-ahead**. It is not in the spend table's six until that line is written.
+   **Order, open:** D3 places it *"right after the pin move and before step 1b"*, but D21-47 (review finding 7)
+   requires every paid run to be dated on or after step 1b's `fixture-proofs` line, and Checkpoint 8j (6) reads that
+   order (§8j.0 item 12). It does not run until the operator settles the order: after step 1b, or before it with its
+   launch record kept out of (6)'s read by a recorded reason.
 1b. **The recorded fixture proofs, after the pin move and before any paid step** *(added 2026-09-24, D21-47; review
    finding 7).* The draft's entry condition was a sentence, and nothing mechanical stood between it and the first
    dispatch. The block below writes the gate's evidence. It runs over a clean commit that carries the moved pin, so
@@ -1179,7 +1315,16 @@ is confirmed with the operator."* The branch has never been pushed (`git branch 
 `ci.yml` has never run. Its own comments say so: *"ARMED, NOT DISCHARGED … this workflow is authored and has never
 run."*
 
-**The known missing step.** In the `gates` job, before `test`, add the step below. The warrant is `992d257`'s message,
+*(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **Superseded at the entry commit (§8j.0 item 2).** The two sentences above are stale and are kept as written.
+The branch is on `origin` and work reaches it by PR (#81 … #89). `ci.yml` has run green on every push of
+`build/phase-0-to-1` since `0a86274`; at `3fa69db` the `ci` run 39082895979 passed all four jobs, both `gates` legs
+included, and `temper` passed [documented: GitHub Actions API, fetched 2026-10-18]. What this section still owes is the
+**recorded** run over the frozen code (the stage close's step 4), taken by the loop below as D9 amends it. The ARMED
+comments' dated corrections are S8J-D4's (#23), and an agent does not edit `.github/`.
+
+**The known missing step.** *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* *Landed before this stage: `ci.yml`:94-102 carries this step, pnpm 10.33.0 with
+`--frozen-lockfile`, and its comment counts fourteen preflight tests, not ten (§8j.0 item 2). Nothing below is added,
+and the YAML is kept as the record of what was drafted.* In the `gates` job, before `test`, add the step below. The warrant is `992d257`'s message,
 *"the first fresh run failed 10 rk-adapter-toolchain-node tests on the documented pnpm preflight (node_modules is
 git-ignored), and ci.yml has no pnpm step at all"*.
 
@@ -1218,6 +1363,12 @@ git-ignored), and ci.yml has no pnpm step at all"*.
    fails on one OS and not the other is a **finding**, never a `#[cfg_attr(…, ignore)]`: AC-121's cross-OS half is
    the reason the matrix has two legs.
 4. 🛑 Get the operator's go-ahead, then push again.
+
+*(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **The loop under D9** (the build plan's D9, approved 2026-10-16; D21-158). Work merges into
+`build/phase-0-to-1` by PR, so step 1's direct push is replaced: the `s8j` branch is pushed (each push its own
+go-ahead) and a PR is opened against `build/phase-0-to-1`, and the run over the PR's head commit is the run that
+the `ci` line records. Step 2 reads that run. **No other code PR merges into `build/phase-0-to-1` from the freeze
+until Checkpoint 8**, and the `s8j` PR merges after the tracker commit, by a merge commit that changes no code path.
 
 The ARMED comments in `ci.yml` get dated, comment-only corrections once their job has run green. The history of the
 ARMED reading is kept, not deleted.
@@ -1976,6 +2127,28 @@ prints file names [measured 2026-09-24 over the bans' scope arguments]. The fix 
 single-file scope would give. It lands in the work commit, before §8j.6 step 1b, so 7c's split run and (10)'s 7d
 re-run both run it. §8j.6 step 2's block asserts it over 7c's suite portion, and Checkpoint 8j (10) over 7d's block.
 
+**A13 — `S8_BIN` sees the point-free and the qualified construction** *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* *(added 2026-10-18 at stage
+open; D21-155's owed item; §8j.0 item 7).* `s8`'s Checkpoint 8 block line `S8_BIN=…` (`s8-exit-criterion.md`:438)
+needs `(` straight after the associated name and nothing between the type name and `::`, so it admits
+`parts.map(BinaryChangeSummary::new)` and `<BinaryChangeSummary>::new(…)`, both constructions; `s8i` widened its own
+`BIN_RE` for the same two forms (`s8i`:8330-8338, operator ruling R10). The line is not rewritten. A dated `#` comment
+and one new line go immediately below it, widening its second arm in `BIN_RE`'s form:
+
+```
+S8_BIN="$S8_BIN|"'\b[A-Za-z_]*BinaryChangeSummary>?[[:space:]]*::[[:space:]]*[A-Za-z_][A-Za-z0-9_]*'
+```
+
+`S8_CTOR` and the in-source test-module blank still turn the recorded constructor `BinaryChangeSummary::new(` into
+`_(` before `S8_BIN` reads the line, so the two admitted test sites at the entry commit
+(`crates/rk-cli/tests/it/review_input.rs`:85 and `crates/rk-cli/src/verbs/run/kept_refusal.rs`:116, both followed by
+`(`) stay admitted; a point-free or qualified use in a test path is not blanked and fires, which is the safe side.
+Two synthetic controls each way follow the block's existing controls: `x.map(BinaryChangeSummary::new)` and
+`let b = <BinaryChangeSummary>::new(a);` on a `crates/x/src/y.rs` path must fire, and each must fail under the line
+above alone; `use rk_ports::toolchain::BinaryChangeSummary;` and `-> &BinaryChangeSummary {` must not [measured 2026-10-18 through `s8`'s own `S8_DEF`, `S8_UNCON`, `S8_CTOR` and
+`s8_cs` lines, cut from its file: the widened line fires on the first two and the original on neither; neither fires on
+the last two or on `review_input.rs`:85]. It is applied
+with A1–A12 (S8J-D2), and Checkpoint 8j (8) asserts it landed by fixed string, by the same dated edit.
+
 ### 8j.9 Acceptance set
 
 **Claimed.**
@@ -2733,11 +2906,20 @@ fi
 # (D21-48 2026-09-24: 8h was 51, so 1222 / 1228 / 1242; X12 adds three s8h tests. D21-48 floor propagation,
 # 2026-09-24: was 1225 / 1231 / 1245 + N, before s8c 78, s8d 62, s8d-ii 50 and s8f 85.) Edit the literal, by a dated line, to the count PROGRESS.md row 8i records: the guard
 # below refuses a literal that row does not carry (review finding 22).
+# *(dated 2026-10-18, s8j build, S8J-A1-DRIFT; s8j section 8j.0 item 4)* RECOMPUTED ONCE, at the entry commit 3fa69db. Row 8i
+# records Checkpoint 8i's pass (b3c746e, CP8I-END-OF-BLOCK reached) and NO passed count, and D21-155 records none, because
+# 8i's (10) prints its total only on a FAIL. What is recorded is 8i's floor on its human-gate route: 1404 + 6 + NFIELDS 4
+# + NGATE 3 + NDE 15 = 1432 (s8i's (10) dated note). The drafted 1243 + 6 = 1249 bound and the 1263 + N + G chain above are
+# struck. The literal below is left as drafted, so the row guard refuses it, until the count Checkpoint 8i's tree passed
+# (or the entry commit's whole-suite count, taken on the operator's box, which also carries batch 1's tests: 14 #[test],
+# 12 off unix) is recorded in row 8i by a dated line; then it is edited to that count, by a dated line here. The lower-bound
+# line moves from 1249 to 1432. Was:
+# ~~[ "$CP8I_PASSED" -ge 1249 ] || { echo "FAIL: CP8I_PASSED=$CP8I_PASSED is below the authoring lower bound 1243 + 6"; exit 1; }~~
 CP8I_PASSED=1249
 r8i=$(grep -E '^\| *(Step )?8i\b' runbook/PROGRESS.md)
 test -n "$r8i" || { echo "FAIL: PROGRESS.md has no row 8i — Checkpoint 8i's recorded count cannot be read"; exit 1; }
 printf '%s\n' "$r8i" | grep -qwF "$CP8I_PASSED" || { echo "FAIL: CP8I_PASSED=$CP8I_PASSED does not appear in PROGRESS.md row 8i — edit the literal to the count that row records"; exit 1; }
-[ "$CP8I_PASSED" -ge 1249 ] || { echo "FAIL: CP8I_PASSED=$CP8I_PASSED is below the authoring lower bound 1243 + 6"; exit 1; }
+[ "$CP8I_PASSED" -ge 1432 ] || { echo "FAIL: CP8I_PASSED=$CP8I_PASSED is below Checkpoint 8i's recorded floor 1432 (1404 + 6 + 4 + 3 + 15)"; exit 1; }
 floor=$((CP8I_PASSED + 14))
 out=$(wrapped cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|test result:' | tail -30; exit 1; }

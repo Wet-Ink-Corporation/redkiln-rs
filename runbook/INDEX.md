@@ -97,7 +97,7 @@ the same change, so the order resolves. The rows are numbered 19–29, and Step 
 | **M2 — state is durable** | Checkpoint 6 passed | git is the tier-1 store and the store's contract is rules, not lists |
 | **M3 — the kernel decides** — **REACHED 2026-09-17** (Checkpoint 7b `ddc57be`; Checkpoint 7b-ii `164e212`) | **Checkpoint 7b-ii passed** (after Checkpoint 7b) | selection, gates and lints exist and fail closed — **and the milestone needs both checkpoints, which is why it names the later one**: Checkpoint 7b attests the selection engine, the grammar, the three registry/facet lints and the golden-log replay; Checkpoint 7b-ii attests the human, review and verify gates. *(This row read "Checkpoint 7b passed" until 2026-09-13, when the gates were split into `s7b-ii`; the row's meaning is unchanged and the gate that carries it moved.)* **ADR-0101 clause 5 bounds what this row may be read as**: until S-SUBTLE-CB runs, no document may claim the review gate is guarded against false approval |
 | **M4 — the system runs** | Checkpoint 7e passed (after 7c, 7d) | four adapters, a CLI, a migrator and a loadable pack set |
-| **M5 — Phase 1 exits** | Checkpoint 8 passed | Redkiln-RS ran its own fix lane and authored a Phase-2 story |
+| **M5 — Phase 1 exits** | Checkpoint 8 passed | Redkiln-RS ran its own fix lane and authored a Phase-2 story. *(dated 2026-10-18, s8j build, S8J-A1-DRIFT; D21-159; #33)* **Scope note:** in `s8`'s exit runs a verify-stage AC closes on the human `verify.ac-discriminates` answer alone; the mutation-pinned state (AC-334, ARMED) is not reachable through the real harness, and M5 does not claim it. Its wiring is Phase 2's |
 
 ## Where the human is needed
 
