@@ -517,6 +517,9 @@ mod lanes {
             .with_toolchain("rust", ["text"])
     }
 
+    /// The tree hash every journal here is folded and answered over.
+    pub(super) const TREE: &str = "tree-0";
+
     /// The kernel's next action over a fresh journal for `item` at `stage`, and the selection it read.
     pub(super) fn first_action(
         s: &Shipped,
@@ -526,20 +529,35 @@ mod lanes {
         rk_kernel::select::Selection,
         rk_kernel::workflow::fsm::NextAction,
     ) {
+        action_after(s, stage, item, &[])
+    }
+
+    /// The kernel's next action over `journal` for `item` at `stage`, and the selection it read.
+    pub(super) fn action_after(
+        s: &Shipped,
+        stage: &str,
+        item: &rk_kernel::select::Item,
+        journal: &[rk_types::event::Event],
+    ) -> (
+        rk_kernel::select::Selection,
+        rk_kernel::workflow::fsm::NextAction,
+    ) {
         use rk_kernel::workflow::fsm;
         let selection =
             rk_kernel::select::select(&s.pack, &s.catalog, &s.artifacts, &s.facets, stage, item)
                 .unwrap_or_else(|e| panic!("PREMISE: the {stage} stage selects: {e}"));
-        let state = fsm::fold(item.id(), stage, &[]).expect("an empty journal folds");
+        let state = fsm::fold(item.id(), stage, journal).expect("the journal folds");
         let deadline = rk_types::time::Timestamp::from_unix_seconds(1_800_000_000);
-        let ctx = fsm::FsmContext::supplied(item.id(), "tree-0", deadline, None);
+        let ctx = fsm::FsmContext::supplied(item.id(), TREE, deadline, None);
         let action = fsm::next_action(&selection, &state, &ctx)
             .unwrap_or_else(|e| panic!("the next action at {stage} is computed: {e}"));
         (selection, action)
     }
 }
 
-use lanes::{LANES, first_action, shipped, shipped_artifacts_src, shipped_item};
+use lanes::{
+    LANES, TREE, action_after, first_action, shipped, shipped_artifacts_src, shipped_item,
+};
 
 /// **Every `source = "human"` kind a selected activity of either lane requires without `?` is
 /// attached by exactly one question, and every question's `attaches` names a `source = "human"`
@@ -547,8 +565,8 @@ use lanes::{LANES, first_action, shipped, shipped_artifacts_src, shipped_item};
 ///
 /// The demand is MEASURED, not listed: a real `select` over each shipped pack's whole
 /// `stage_order` for the lane's shipped item, and the mandatory `requires` of every selected
-/// producer. A stage whose selection refuses selects nothing and demands nothing; the count is
-/// printed. A later human kind a lane demands fails here for its missing question (ADR-0200's
+/// producer. A stage whose selection refuses selects nothing and demands nothing, so the refusing
+/// stages are a PREMISE pinned by name. A later human kind a lane demands fails here for its missing question (ADR-0200's
 /// Negative consequences), and a question that attached an activity kind fails the second half.
 #[test]
 fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
@@ -557,7 +575,7 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
     let artifacts_src = shipped_artifacts_src();
 
     let mut demanded: BTreeSet<String> = BTreeSet::new();
-    let mut refused = 0_usize;
+    let mut refused: Vec<String> = Vec::new();
     for (pack, item_id) in LANES {
         let s = shipped(pack, &artifacts_src);
         let item = shipped_item(&s.facets, item_id);
@@ -573,7 +591,7 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
                 Ok(selection) => selection,
                 Err(e) => {
                     println!("HUMAN_ROOTS {pack}/{stage} refuses: {e}");
-                    refused += 1;
+                    refused.push(format!("{pack}/{stage}"));
                     continue;
                 }
             };
@@ -594,7 +612,16 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
             }
         }
     }
-    println!("HUMAN_ROOTS demanded={demanded:?} refused_stages={refused}");
+    println!("HUMAN_ROOTS demanded={demanded:?} refused_stages={refused:?}");
+    // *(dated 2026-10-18, review F4.)* The stages whose selection refuses are pinned by name, so a
+    // stage that newly refuses (and so silently demands nothing) fails here: `story/design`
+    // ("ordering against null at `novelty`") and `story/release` (`rolling-deploy`: unknown field
+    // `rigor`), both refusals that predate this package [measured 2026-10-18].
+    assert_eq!(
+        refused,
+        ["story/design", "story/release"],
+        "PREMISE: the stages whose selection refuses over the shipped lanes"
+    );
     assert!(
         demanded.contains("BugReport") && demanded.contains("IntakeRecord"),
         "PREMISE: the fix lane's analysis demands BugReport and the story lane's specification \
@@ -646,7 +673,10 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
 /// NoAdmissibleProducer }`, and the kernel's next action on a fresh journal is `OpenGate` of that
 /// gate kind, before any dispatch. CONTROL (*"Not widened"*): the same stage with the kind
 /// re-registered `source = "activity"` reports the same `Unsatisfiable` and opens no
-/// `human_root:` gate, so the gate is the registry's source and not the kind's name.
+/// `human_root:` gate, so the gate is the registry's source and not the kind's name. *(dated
+/// 2026-10-18, review F1.)* With the root attached the gate STILL opens on a fresh journal (a
+/// `requires`-edge root is not classified by step 3), and once answered it is not re-opened; that
+/// outcome is pinned as today's, and §8j.4 measures it (ADR-0200 decision 5).
 #[test]
 fn the_step_four_gate_on_a_human_kind_is_bound_to_its_question() {
     use rk_kernel::select::UnsatReason;
@@ -691,6 +721,44 @@ fn the_step_four_gate_on_a_human_kind_is_bound_to_its_question() {
             question.attaches("attach"),
             Some([kind.to_owned()].as_slice()),
             "{pack}/{stage}: the gate's question admits exactly `{kind}`"
+        );
+
+        // TODAY'S BEHAVIOUR WITH THE ROOT ATTACHED (review F1, measured 2026-10-18). The control
+        // "root Present -> no gate" FAILS: step 4 pushes a `requires`-edge child (`select.rs`'s
+        // step-4 loop) with no step-3 presence check, so an attached root is still
+        // `Unsatisfiable` and a fresh journal still opens its gate at reach 1. What lets the lane
+        // move is step 2's rule: an answered gate that is not void is not re-opened. Whether a
+        // re-invocation classifies the root `Present` is NOT this package's (ADR-0200 decision 5,
+        // `s8j` §8j.2 item 3), and §8j.4's proofs measure it. These asserts pin today's outcome so
+        // that change is seen when it lands.
+        let attached = item.clone().with_artifact(
+            rk_kernel::select::ArtifactState::new(&rk_kernel::select::Instance::of(kind))
+                .exists(rk_kernel::select::digest_of(b"root")),
+        );
+        let (selection, with_root) = first_action(&s, stage, &attached);
+        assert!(
+            unsat(&selection),
+            "today an attached `{kind}` reached through `requires` is still Unsatisfiable"
+        );
+        let NextAction::OpenGate(again) = &with_root else {
+            panic!(
+                "today a fresh journal opens `{gate}` even with the root attached: {with_root:?}"
+            );
+        };
+        assert_eq!((again.kind(), again.reach()), (gate, 1));
+        let journal = [
+            rk_kernel::runtime::gate_opened_event(again),
+            rk_kernel::workflow::gate::gate_answered_event(again.token(), TREE, "attach"),
+        ];
+        let (_, answered) = action_after(&s, stage, &attached, &journal);
+        assert!(
+            !matches!(&answered, NextAction::OpenGate(r) if r.kind() == gate),
+            "an answered `{gate}` gate that is not void is not re-opened (ADR-0200 decision 2); \
+             got {answered:?}"
+        );
+        assert!(
+            matches!(&answered, NextAction::Dispatch { .. }),
+            "with its root gate answered the stage dispatches; got {answered:?}"
         );
 
         // CONTROL: the kind registered `source = "activity"` is unsatisfiable the same way and
