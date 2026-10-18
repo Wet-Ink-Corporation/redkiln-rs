@@ -114,8 +114,8 @@ human-authored before the run and is never written by any `redkiln` verb (AC-518
   for `gate_opened` [measured], and the kernel's `workflow::gate::GateReason` is the gate request's set, which the hold
   does not use. ADR-0116 decision 5's same-change rule, applied by analogy in §8j.3, therefore has nothing to move.
 - **The question.** No file binds `hold:<stage>`, so the gate is answered by the default question, `approve` /
-  `changes-requested` (ADR-0129 decision 3). A pack file that binds a `hold:` kind is refused by the loader as any
-  doubly-bound kind is not; this record forbids it instead (below).
+  `changes-requested` (ADR-0129 decision 3). The loader today would accept a pack file that binds a `hold:` kind, so
+  this record forbids it (below) rather than leaving it to the loader.
 - **What `run` does.** No `stage_transition` row and no stage-bearing `Story:` mark is written for the held stage; the
   run stops at the open gate and exits 0 without waiting (AC-403), as any run that stops at a gate does.
 
