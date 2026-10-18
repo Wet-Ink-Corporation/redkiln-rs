@@ -400,3 +400,178 @@ fn the_two_human_root_questions_load_and_each_attaches_its_kind() {
     assert_eq!(human_root::BUG_REPORT_KIND, "human_root:BugReport");
     assert_eq!(human_root::INTAKE_RECORD_KIND, "human_root:IntakeRecord");
 }
+
+/// The two lanes: the shipped pack and the shipped item record each lane's real run is pointed at.
+const LANES: [(&str, &str); 2] = [
+    ("bug-standard", "rk-fix-doctor-test-count"),
+    ("story", "rk-story-codex-adapter"),
+];
+
+/// The shipped catalog, registries and one lane's pack, read off `.redkiln/` (never a fixture copy).
+struct Shipped {
+    catalog: rk_kernel::catalog::Catalog,
+    artifacts: rk_kernel::select::ArtifactRegistry,
+    facets: rk_kernel::registry::Registry,
+    pack: rk_kernel::select::Pack,
+}
+
+fn read_text(path: &Path) -> String {
+    std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()))
+}
+
+/// `artifacts_src` replaces the shipped `artifacts.toml`, for a control that re-registers a kind.
+fn shipped(pack: &str, artifacts_src: &str) -> Shipped {
+    let redkiln = workspace_root().join(".redkiln");
+    let pack_file = format!("{pack}.toml");
+    Shipped {
+        catalog: rk_kernel::catalog::Catalog::from_dir(&redkiln.join("catalog"))
+            .unwrap_or_else(|e| panic!("the shipped catalog loads: {e:?}")),
+        artifacts: rk_kernel::select::ArtifactRegistry::from_toml("artifacts.toml", artifacts_src)
+            .unwrap_or_else(|e| panic!("the artifact registry loads: {e:?}")),
+        facets: rk_kernel::registry::Registry::from_toml(&read_text(&redkiln.join("facets.toml")))
+            .unwrap_or_else(|e| panic!("the shipped facet registry loads: {e:?}")),
+        pack: rk_kernel::select::Pack::from_toml(
+            &pack_file,
+            &read_text(&redkiln.join("packs").join(&pack_file)),
+        )
+        .unwrap_or_else(|e| panic!("the shipped pack {pack_file} loads: {e}")),
+    }
+}
+
+fn shipped_artifacts_src() -> String {
+    read_text(&workspace_root().join(".redkiln").join("artifacts.toml"))
+}
+
+/// The shipped item record past triage, bound as `rk-kernel`'s `lane_walk` binds a lane's item:
+/// every declared facet the record does not state (save `kind` and the kernel's own) is an explicit
+/// `null`, the record's `[facets]` are bound (an ordered facet as a member of its domain),
+/// `toolchain` is `["rust"]`, and `change` is `text`, the triage gate's answer (D21-43 N3) that the
+/// fix lane's analysis producers' `change:text` tag reads.
+fn shipped_item(facets: &rk_kernel::registry::Registry, id: &str) -> rk_kernel::select::Item {
+    let record = read_toml(
+        &workspace_root()
+            .join(".redkiln")
+            .join("items")
+            .join(format!("{id}.toml")),
+    );
+    let kind = record
+        .get("kind")
+        .and_then(toml::Value::as_str)
+        .unwrap_or_else(|| panic!("PREMISE: {id}'s record carries a `kind`"));
+    let stated = record.get("facets").and_then(toml::Value::as_table);
+    let mut item = rk_kernel::select::Item::new(id, kind);
+    for facet in facets.facets() {
+        let ours = facet.name == "kind" || facet.source == rk_kernel::registry::Source::Kernel;
+        if !ours && !stated.is_some_and(|t| t.contains_key(&facet.name)) {
+            item = item.with_facet_null(&facet.name);
+        }
+    }
+    for (name, value) in stated.into_iter().flatten() {
+        let domain: Option<Vec<&str>> = facets
+            .facet(name)
+            .filter(|f| f.ordered)
+            .map(|f| f.values.iter().filter_map(|v| v.as_str()).collect());
+        item = match (value, domain) {
+            (toml::Value::Boolean(b), _) => item.with_facet_bool(name, *b),
+            (toml::Value::String(s), Some(domain)) => item.with_facet_ordinal(name, &domain, s),
+            (toml::Value::String(s), None) => item.with_facet_str(name, s),
+            (other, _) => panic!("PREMISE: {id}'s `{name}` is a string or a bool, not {other}"),
+        };
+    }
+    item.with_facet_set("toolchain", ["rust"])
+        .with_toolchain("rust", ["text"])
+}
+
+/// **Every `source = "human"` kind a selected activity of either lane requires without `?` is
+/// attached by exactly one question, and every question's `attaches` names a `source = "human"`
+/// kind** (`s8j` §8j.2's both directions; ADR-0200 decision 1).
+///
+/// The demand is MEASURED, not listed: a real `select` over each shipped pack's whole
+/// `stage_order` for the lane's shipped item, and the mandatory `requires` of every selected
+/// producer. A stage whose selection refuses selects nothing and demands nothing; the count is
+/// printed. A later human kind a lane demands fails here for its missing question (ADR-0200's
+/// Negative consequences), and a question that attached an activity kind fails the second half.
+#[test]
+fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
+    let registry = rk_cli::processes::load(&workspace_root())
+        .unwrap_or_else(|e| panic!("the shipped .redkiln/processes/ loads: {e}"));
+    let artifacts_src = shipped_artifacts_src();
+
+    let mut demanded: BTreeSet<String> = BTreeSet::new();
+    let mut refused = 0_usize;
+    for (pack, item_id) in LANES {
+        let s = shipped(pack, &artifacts_src);
+        let item = shipped_item(&s.facets, item_id);
+        for stage in s.pack.stage_order() {
+            let selection = match rk_kernel::select::select(
+                &s.pack,
+                &s.catalog,
+                &s.artifacts,
+                &s.facets,
+                stage,
+                &item,
+            ) {
+                Ok(selection) => selection,
+                Err(e) => {
+                    println!("HUMAN_ROOTS {pack}/{stage} refuses: {e}");
+                    refused += 1;
+                    continue;
+                }
+            };
+            for producer in selection.producers() {
+                let activity = s
+                    .catalog
+                    .activities()
+                    .iter()
+                    .find(|a| a.id == producer.activity_id)
+                    .unwrap_or_else(|| panic!("a selected producer is in the catalog"));
+                demanded.extend(
+                    activity
+                        .requires
+                        .iter()
+                        .filter(|r| !r.optional && s.artifacts.is_human_sourced(&r.kind))
+                        .map(|r| r.kind.clone()),
+                );
+            }
+        }
+    }
+    println!("HUMAN_ROOTS demanded={demanded:?} refused_stages={refused}");
+    assert!(
+        demanded.contains("BugReport") && demanded.contains("IntakeRecord"),
+        "PREMISE: the fix lane's analysis demands BugReport and the story lane's specification \
+         IntakeRecord (s8j §8j.2, measured there); measured {demanded:?}"
+    );
+
+    // Every option's `attaches`, by question.
+    let artifacts = rk_kernel::select::ArtifactRegistry::from_toml("artifacts.toml", &artifacts_src)
+        .expect("the shipped artifact registry loads");
+    let mut attached: Vec<(String, String)> = Vec::new();
+    for id in registry.question_ids() {
+        let question = registry.question(id).expect("a listed id is declared");
+        for option in question.options() {
+            for kind in question.attaches(option).into_iter().flatten() {
+                assert!(
+                    artifacts.is_human_sourced(kind),
+                    "`{id}`'s option `{option}` attaches `{kind}`, which .redkiln/artifacts.toml \
+                     does not declare `source = \"human\"`: an answer may supply only a human root"
+                );
+                attached.push((kind.clone(), id.to_owned()));
+            }
+        }
+    }
+    for kind in &demanded {
+        let by: Vec<&str> = attached
+            .iter()
+            .filter(|(k, _)| k == kind)
+            .map(|(_, q)| q.as_str())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        assert_eq!(
+            by.len(),
+            1,
+            "the lanes demand the human kind `{kind}`, which must be attached by exactly one \
+             question (ADR-0200 decision 1); attached by {by:?}"
+        );
+    }
+}
