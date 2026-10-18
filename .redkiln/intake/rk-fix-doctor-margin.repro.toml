@@ -1,0 +1,8 @@
+# s8j section 8j.5 step 3: the reserved fix item's repro pair. `kind = "it"` appends the paired
+# repro file to `crates/<crate>/tests/it/<module>.rs` in a throwaway tree, never in the crate, and
+# selects `<module>::<test>` under `--test it`. `expect` is a substring of the red failure.
+kind   = "it"
+crate  = "rk-cli"
+module = "doctor"
+test   = "s8j_repro_a_pack_missing_a_margin_window_is_a_doctor_error"
+expect = "AC-377: a fixture config with no margin must fail (no default)"

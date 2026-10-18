@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-159), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-160), and what they license
+
+*(Title moved 2026-10-18 during `s8j`, package S8J-C1-ITEMS: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-159)"**; `D21-160` is appended with this move.)*
 
 *(Title moved 2026-10-18 at `s8j`'s open, package S8J-A1-DRIFT: it read **"2026-09-21 … 2026-10-17 (D21-1 … D21-156)"**; `D21-157` … `D21-159` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 156 before the append, the last `D21-156`; 159 after.)*
 
@@ -7472,3 +7474,37 @@ closure.
 **Owed to Phase 2:** a port that reports the named assertion, and the assertion map passed at `run.rs`'s
 `compute_ledger` call. Filed as a Feature under the Phase 2 initiative when that initiative is broken down (#33's
 reconciliation note); nothing is filed here.
+
+## D21-160 · The fix item: Ryan's pick of the shortlist's C4, reserved as `rk-fix-doctor-margin` (D5; D21-42 18)
+
+**Recorded 2026-10-18 by an agent session, package S8J-C1-ITEMS.** Ryan picked C4 on 2026-10-18 through the AFK
+batch's decision card, the option labelled *"C4 doctor margin"*. This entry records that pick and the reservation
+`s8j` §8j.5 step 2 requires; it takes no ruling of its own. *C4* is the candidate's id in S8J-A3's shortlist, not
+the package S8J-C4-LANE-PROOF.
+
+**The pick.** Candidate C4 of `spikes/plans/s8j-fix-shortlist-2026-10-18.md`, surveyed at `3fa69db`: `rk-cli`
+`doctor::rules::margin` (`RK-D-MARGIN`, `crates/rk-cli/src/doctor/rules.rs`:849-853). A pack with no `[margins]`,
+with a window missing, or with a non-integer margin produces no finding, while the run's loader refuses the same pack
+(`verbs/run.rs`'s `Margins`, both members required). The contract is AC-377's *"`redkiln doctor` reaches the same
+verdict"* and its Verified-by's *"a fixture config with no margin that must fail (no default)"*. The shortlist's
+out-of-run argument and its rule-2 checks stand as written there. It recommended C4, with C1 as the fallback.
+
+**The reservation.**
+
+reserved-fix-item: rk-fix-doctor-margin rk-cli:doctor::rules::margin
+
+🛑 **The defect is not fixed by hand, or in any stage, before `s8`.** The fix-lane run of `rk-fix-doctor-margin`
+fixes it. A fix landed earlier leaves Checkpoint 8j (4)'s repro green and the lane with nothing to repair.
+
+**The item, minted with it** (`s8j` §8j.5 step 3): `.redkiln/items/rk-fix-doctor-margin.toml`, `kind = "bug"`,
+`stage = "triage"`, `hold_before = "specification"` (§8j.3 item 1; ADR-0201, proposed), `slice = "doctor-margin"`,
+`[trial] activity = "tag-release"` (§8j.1(e); ADR-0195 decision 4), and `[facets]` `cos = "standard"`,
+`has_repro = true`, low `criticality`, `blast_radius` and `size`. Its BugReport and repro pair (§8j.5 steps 3 and 4)
+are `.redkiln/intake/rk-fix-doctor-margin.BugReport.md`, `.repro.rs` and `.repro.toml`, committed with it.
+
+**Owed before Checkpoint 8j, and not done here:**
+- rule 1's dynamic half: all ten `lane_proof` tests stay green with the repro added (§8j.5 step 1). `lane_proof` is
+  S8J-C4-LANE-PROOF's output and does not exist at this entry's base;
+- the `fix-item rk-fix-doctor-margin <frozen sha>` evidence line, appended by the frozen-record commit (§8j.7);
+- `rk-run/rk-fix-doctor-margin` and `.redkiln/worktrees/rk-fix-doctor-margin` must not exist at `s8j`'s close
+  (§8j.5 step 5).

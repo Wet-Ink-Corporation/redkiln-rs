@@ -1,0 +1,5 @@
+# Dedicated to Checkpoint 7i's empty case; nobody dispatches it; the PRECONDITION guard in
+# Checkpoint 7i is what protects that case.
+id    = "rk-cost-empty-case"
+kind  = "docs"
+stage = "triage"
