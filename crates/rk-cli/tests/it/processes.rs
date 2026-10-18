@@ -566,8 +566,9 @@ use lanes::{
 /// The demand is MEASURED, not listed: a real `select` over each shipped pack's whole
 /// `stage_order` for the lane's shipped item, and the mandatory `requires` of every selected
 /// producer. A stage whose selection refuses selects nothing and demands nothing, so the refusing
-/// stages are a PREMISE pinned by name. A later human kind a lane demands fails here for its missing question (ADR-0200's
-/// Negative consequences), and a question that attached an activity kind fails the second half.
+/// stages are a PREMISE pinned by name. A later human kind a lane demands fails here for its
+/// missing question (ADR-0200's Negative consequences), and a question that attached an activity
+/// kind fails the second half.
 #[test]
 fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
     let registry = rk_cli::processes::load(&workspace_root())
@@ -613,7 +614,7 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
         }
     }
     println!("HUMAN_ROOTS demanded={demanded:?} refused_stages={refused:?}");
-    // *(dated 2026-10-18, review F4.)* The stages whose selection refuses are pinned by name, so a
+    // *(dated 2026-10-18.)* The stages whose selection refuses are pinned by name, so a
     // stage that newly refuses (and so silently demands nothing) fails here: `story/design`
     // ("ordering against null at `novelty`") and `story/release` (`rolling-deploy`: unknown field
     // `rigor`), both refusals that predate this package [measured 2026-10-18].
@@ -674,7 +675,7 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
 /// gate kind, before any dispatch. CONTROL (*"Not widened"*): the same stage with the kind
 /// re-registered `source = "activity"` reports the same `Unsatisfiable` and opens no
 /// `human_root:` gate, so the gate is the registry's source and not the kind's name. *(dated
-/// 2026-10-18, review F1.)* With the root attached the gate STILL opens on a fresh journal (a
+/// 2026-10-18.)* With the root attached the gate STILL opens on a fresh journal (a
 /// `requires`-edge root is not classified by step 3), and once answered it is not re-opened; that
 /// outcome is pinned as today's, and §8j.4 measures it (ADR-0200 decision 5).
 #[test]
@@ -723,7 +724,7 @@ fn the_step_four_gate_on_a_human_kind_is_bound_to_its_question() {
             "{pack}/{stage}: the gate's question admits exactly `{kind}`"
         );
 
-        // TODAY'S BEHAVIOUR WITH THE ROOT ATTACHED (review F1, measured 2026-10-18). The control
+        // TODAY'S BEHAVIOUR WITH THE ROOT ATTACHED (measured 2026-10-18). The control
         // "root Present -> no gate" FAILS: step 4 pushes a `requires`-edge child (`select.rs`'s
         // step-4 loop) with no step-3 presence check, so an attached root is still
         // `Unsatisfiable` and a fresh journal still opens its gate at reach 1. What lets the lane

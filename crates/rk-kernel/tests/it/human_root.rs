@@ -1,6 +1,6 @@
 //! **The step-4 gate on a human-sourced kind** — `src/workflow/human_root.rs` and `fsm::next_action`'s
 //! step 2 (`s8j` §8j.2; ADR-0200 decision 2, proposed). *(Added 2026-10-18, `s8j` build, package
-//! S8J-C2-ROOT-QUESTIONS, review finding F2/F3.)*
+//! S8J-C2-ROOT-QUESTIONS.)*
 //!
 //! A minimal pack, catalog and registry, inline: one `analysis` activity (`repro`) providing
 //! `ReproCase` and requiring the human kind `BugReport`, and one `discovery` activity (`intake`)

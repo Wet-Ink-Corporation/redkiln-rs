@@ -1769,9 +1769,6 @@ fn gate_to_open(
     kind: &str,
     ctx: &FsmContext<'_>,
 ) -> Result<Option<GateRecord>, FsmError> {
-    // Until 2026-09-17 this derived `(kind, ctx.tree_hash, ctx.deadline)` and looked the token up —
-    // so a tree that moved after an answer would have re-opened an answered gate on every call, and
-    // a void token could never re-open at all.
     let reaches = state.reaches(kind);
     if reaches == 0 {
         return Ok(Some(GateRecord::derive_reach(
