@@ -7508,3 +7508,23 @@ are `.redkiln/intake/rk-fix-doctor-margin.BugReport.md`, `.repro.rs` and `.repro
 - the `fix-item rk-fix-doctor-margin <frozen sha>` evidence line, appended by the frozen-record commit (§8j.7);
 - `rk-run/rk-fix-doctor-margin` and `.redkiln/worktrees/rk-fix-doctor-margin` must not exist at `s8j`'s close
   (§8j.5 step 5).
+
+## D21-161 · Ryan's rulings on D3's dispatch order and on the lane proofs' defects D1, D2 and D4
+
+**Recorded 2026-10-18 by an agent session.** Ryan answered four decision cards in the project thread on 2026-10-18
+(14:31-14:32Z), each by tapping an option. This entry records those answers; it takes no ruling of its own.
+
+1. **D3's real dispatch runs after step 1b** (card option *"A: Move D3 after step 1b"*). §8j.6 step 1a runs once
+   step 1b's `fixture-proofs` line is written, so D21-47's review finding 7 holds unwaived and Checkpoint 8j (6)
+   reads the order unchanged. This settles the order D21-158 left open.
+2. **D1: a new record partly supersedes ADR-0173** (*"A: New record, read attached roots"*). A human-attached root
+   is read by the next activity through `read_artifact_input`
+   (`crates/rk-kernel/src/runtime/reference.rs`:1141), not only through an `emit` binding. The record is ADR-0202,
+   written `proposed`.
+3. **D2: the kernel resolves `baseline`** (*"A: Kernel resolves baseline"*). `baseline` in the twelve catalog
+   activities' `baseline..HEAD` is read as the run's fork point; the catalog rows are not rewritten.
+4. **D4: `package` compares trees outside `.redkiln/`** (*"A: Compare trees outside .redkiln/"*). Release's package
+   check accepts HEAD when its tree matches the Changeset's outside `.redkiln/`, and still refuses a difference
+   anywhere else (`crates/rk-adapter-toolchain-rust/src/verbs.rs`:881).
+
+D1, D2 and D4 are S8J-C4-LANE-PROOF's findings; their fixes land before its lane proofs merge.
