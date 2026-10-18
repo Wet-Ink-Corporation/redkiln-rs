@@ -1393,4 +1393,59 @@ nd_check "Checkpoint 8's mechanical block" || exit 1
 > the backfill decision for the 102 shipped activities. That commit is pushed on the operator's go-ahead, and CI is
 > made green on it. Checkpoint 8's recorded pass stands for the commit it ran over and is not re-run over this one.
 
+*(dated 2026-10-18, s8j build, package S8J-D3-RECOVERY; issues #61 and #25, audit O-9 option (a))* *Prose, not a
+checkpoint line: no block below is fenced, and nothing in it runs without the operator's go-ahead for that act.*
+
+🛑 **DRAFT: AWAITING THE OPERATOR'S APPROVAL OF THIS TEXT BEFORE THE `s8j` FREEZE (#61's second criterion).** Until
+the operator approves it by a dated line under it, this section is not a procedure and nothing here may be run. An
+agent drafted it. It changes no Checkpoint 8j assertion, no ADR decision sentence and no ledger entry.
+
+> **After a failed first real run of the fix item.** Checkpoint 8j is one-shot (`s8j` §8j.10): its (3) refuses an
+> existing `rk-run/<fix item>`, which the first launch creates. This section is the route back when that first run
+> fails: (1) launch exits non-zero, or (1)'s check block refuses a run that did launch. D21-40 decision 2 still
+> governs the moment of failure: *"stop and report, not spend again"*. Nothing below is a retry. Each step is its
+> own operator go-ahead, and the old item's run is archived, never resumed, rebased or repaired in place.
+>
+> 1. **Stop and record.** `PROGRESS.md` row 8 records the failure, the launch record's basename, the failing line's
+>    output, and `git rev-parse rk-run/<old item>`. The run ref is not merged, and the defect is not fixed by hand
+>    (the `reserved-fix-item:` entry forbids it).
+> 2. **Archive the ref, outside `refs/heads/rk-run/`.** `git update-ref refs/archive/s8-failed-<yyyy-mm-dd>/<old item>
+>    rk-run/<old item>` first. Then the run's checkout `.redkiln/worktrees/<old item>` is copied whole into the
+>    archive directory of step 3 (`tar -cf <dir>/worktree.tar -C .redkiln/worktrees <old item>`), and only then
+>    removed (`git worktree remove --force .redkiln/worktrees/<old item>`, then `git branch -D rk-run/<old item>`).
+>    The commits stay reachable from the archive ref. `git worktree prune --dry-run -v` must then print nothing, as
+>    Checkpoint 8j (12) asserts.
+> 3. **Archive the store, and leave it in place.** A copy of `$(git rev-parse --git-common-dir)/redkiln/store.sqlite3`
+>    is taken with SQLite's own backup API (`sqlite3.connect(src).backup(sqlite3.connect(dst))`, which carries the
+>    WAL; a plain `cp` of a WAL-mode file can drop it) into
+>    `$(git rev-parse --git-common-dir)/redkiln/archive/<yyyy-mm-dd>-<old item>/store.sqlite3`, with a
+>    `counts.txt` of Checkpoint 8j (0)'s `rows` reading over both copies, which must agree. The live store is not
+>    deleted, truncated or edited: Checkpoint 7i and `s8`'s (2) read it, and the old item's rows are keyed to the
+>    old id, which the fresh item does not share.
+> 4. **Mint a fresh item by `s8j` §8j.5's route, steps 1-5 of "Reservation and mint".** The operator picks the
+>    defect: the same one under a new id, or another presented candidate. Its new `reserved-fix-item: <new id>
+>    <crate>:<function>` line is a dated ledger entry in the operator's voice, never an agent's. The new
+>    `.redkiln/items/<new id>.toml`, its BugReport and its repro pair are committed together. The old item's file
+>    gains one dated `#` line naming the archive ref and directory; its other lines do not change.
+> 5. **Re-freeze.** The mint changes `.redkiln/`, which is in `CODE_PATHS`, so `prespend()` refuses the next launch
+>    until the frozen records are re-recorded over the new commit: a `fixture-proofs` line (`s8j` §8j.6 step 1b; no
+>    spend), CI green on the pushed head with a new `ci` line (§8j.7), and a new `fix-item <new id> <40-hex frozen
+>    sha>` line, appended so that `tail -1` reads it. If the failure needed a repair under any other `CODE_PATHS`
+>    entry, that repair re-opens step 1b and the paid steps (`s8j` §8j.10's stage close), and this section does not
+>    shorten that.
+> 6. **Re-run Checkpoint 8j's (3) and (12) against the fresh item.** They are run from the block as it stands, with
+>    its (0), because (12) compares against (0)'s readings, under the same `nodispatch` wrapper, from a plain
+>    terminal. (3) then reads the new `fix-item` line, the new reservation, and the absence of `rk-run/<new id>`
+>    and `.redkiln/worktrees/<new id>`. (12) shows that the re-run moved nothing. The pass is recorded in
+>    `PROGRESS.md` row 8j as a dated line naming the archive ref. `s8`'s (1) then launches `<new id>` under a new
+>    `S8_GO`.
+>
+> **Open for the operator's approval** (each one decides a line above):
+> - **Whether the live store stays in place** (step 3) or is replaced by a fresh one. Replacing it would move
+>   Checkpoint 7i's shipped-store readings and `s8`'s (2).
+> - **Whether `s8`'s (2) treats `refs/archive/` as reachable.** A2/A8's projection reads rows whose anchor is
+>   reachable from the refs, and the old run's rows anchor on archived commits.
+> - **Whether a failed story-item run (1b) follows the same route.** Checkpoint 8j (3) does not read
+>   `rk-run/rk-story-harden-spike-pack`, and no fresh story item is minted by `s8j` §8j.5.
+
 ---
