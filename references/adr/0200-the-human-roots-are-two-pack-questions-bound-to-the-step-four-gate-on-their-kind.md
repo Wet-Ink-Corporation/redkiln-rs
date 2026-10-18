@@ -1,7 +1,7 @@
 ---
 id: "0200"
 title: "**The two human roots are supplied through two pack-declared questions, each bound to the step-4 gate on its kind** (`s8j`'s human-root record; D21-41 f; D21-43's integration call; ADR-0129 decisions 3 and 4; ADR-0177 decision 7): `root.bug-report` and `root.intake-record` are entries in `.redkiln/processes/questions.toml`, each with one option `attach` whose `attaches` names its kind (`BugReport`, `IntakeRecord`); selection's step-4 `Unsatisfiable { reason: NoAdmissibleProducer }` on a `source = \"human\"` kind opens a gate of kind `human_root:<Kind>`, which each question answers through the loader's `binds`; each class carries a fail-closed `[[gate_expiry]]` row in both packs and is a `&str` constant on a code line; a root file a run attaches is committed at `.redkiln/intake/<item-id>.<Kind>.md`, a directory no reader scans. Supersedes nothing"
-status: proposed
+status: accepted
 date: 2026-10-18
 legacy_id: none
 source: runbook/phase-1/s8j-run-preparation.md §8j.2 (the record's three decisions) and §8j.10 Checkpoint 8j (3); spikes/plans/s8j-build-plan-2026-10-16.md Round B (S8J-B1-ROOT-QUESTIONS) and Round C (S8J-C2-ROOT-QUESTIONS); spikes/DECISIONS-2026-09-21.md D21-41 (f), D21-42 21a, D21-43's integration calls, D21-110 ruling 2; references/adr/0063, 0116 decision 1, 0129 decisions 3 and 4, 0145, 0173, 0177 decisions 7 and 8, 0189 decisions 8 and 9, 0198 decisions 6 and 7; references/2026-09-08-acceptance-criteria.md AC-054, AC-276, AC-410; references/2026-09-08-architecture-design.md §5's `artifact.write` row and its R-48 note (RT-59)

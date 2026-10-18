@@ -6,7 +6,7 @@ date: 2026-09-26
 legacy_id: none
 source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R2's row), §8d.3 (the resolver's table, iteration, the `[*]` projection, *Which forward refs are licensed*, the census, the four removals, `check` evaluation, `emit` binding, `artifact.read`, test selection) and §8d.10; spikes/DECISIONS-2026-09-21.md D21-11 (*"It does **not** license a partial resolver"*), D21-41 (d), D21-42 4a and 4c, D21-43 N12, N13 and N14, D21-47 (the read seam's one emitter), D21-48 X5, X6 and X8, D21-57 (AC-303's rule moves onto this record's carrier), D21-60 (D59b), D21-64 ruling 10 (this record's flip condition), D21-74 ruling 2 (decision 9's dated amendment, 9a, 2026-09-27); references/adr/0042 (Decision and first forbids bullet), 0136 clause 4 and forbids, 0142 clause 4, 0148 decisions 1, 3 and 4 and forbids; crates/rk-kernel/src/catalog.rs (`Step::inputs`, `forward_ref_lint`), crates/rk-kernel/src/select/lints.rs (`load_lints`) and crates/rk-kernel/src/rigor.rs (`confirm_step_monotonicity_rule`) at `s8d`'s build
 supersedes: ["0042", "0148"]
-superseded_by: ["0189"]
+superseded_by: ["0189", "0202"]
 related: ["0032", "0034", "0035", "0040", "0043", "0045", "0055", "0072", "0103", "0136", "0142", "0172"]
 evidence: []
 consumers: []
