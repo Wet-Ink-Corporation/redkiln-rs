@@ -269,7 +269,7 @@ go-ahead, a push or a dispatch.
   chain and the fixture proofs run over them (§8j.0 item 9).
 - *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **The floor** (Checkpoint 8j (11)): row 8i records no passed count, so the literal is not readable from it; the lower bound moves from 1249 to Checkpoint 8i's documented floor 1432 (§8j.0 item 4). The 1263 + N + G chain above is superseded.
 - *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **CI** has run green, and §8j.7's loop is the PR head run (D9; §8j.0 item 2).
-- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **One real dispatch before the freeze** (D3; #62) joins §8j.6 as step 1a, on a throwaway item in a scratch clone; its order against step 1b is open (§8j.0 item 12).
+- *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **One real dispatch before the freeze** (D3; #62) joins §8j.6 as step 1a, on a throwaway item in a scratch clone; it runs after step 1b (D21-161; §8j.0 item 12).
 - *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **Human-only closure** of verify-stage ACs is accepted for `s8`'s exit runs (D4; #33; D21-159), with an M5 scope note in `runbook/INDEX.md`; the mutation-pin wiring is Phase 2's.
 - *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* **`s8` gains A13** (§8j.8), D21-155's owed `S8_BIN` widening (§8j.0 item 7).
 
@@ -428,7 +428,7 @@ are not what the tree holds, and one more was found in the re-measure (item 12).
     review finding 7 requires every paid run to be dated on or after the `fixture-proofs` line, which step 1b writes,
     and Checkpoint 8j (6) reads that order [measured: §8j.6 step 1b; the stage header's finding 7]. As placed, the
     dispatch precedes the recorded proofs. §8j.6 takes D3's step by a dated line that names the conflict, and the
-    order is the operator's to settle before it runs (D21-158). D4 (#33) is recorded in D21-159 and an M5 scope note;
+    order is the operator's to settle before it runs (D21-158). *(Settled 2026-10-18, D21-161: after step 1b.)* D4 (#33) is recorded in D21-159 and an M5 scope note;
     D9 is §8j.7's dated loop.
 
 What the brief got right, re-measured: the entry gate is Checkpoint 8i, which passed whole (row 8i; D21-155), and #30
@@ -1117,10 +1117,10 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    and after §8j.1(d)'s re-point `s8d-ii` refuses it by design). Its purpose is the audit's: a first-contact surprise
    lands in this stage, not at Step 8. **Spend: one dispatch** (its model and cap are written on its own spend line
    before it runs), on its **own go-ahead**. It is not in the spend table's six until that line is written.
-   **Order, open:** D3 places it *"right after the pin move and before step 1b"*, but D21-47 (review finding 7)
-   requires every paid run to be dated on or after step 1b's `fixture-proofs` line, and Checkpoint 8j (6) reads that
-   order (§8j.0 item 12). It does not run until the operator settles the order: after step 1b, or before it with its
-   launch record kept out of (6)'s read by a recorded reason.
+   **Order, settled 2026-10-18 (D21-161): after step 1b.** D3 placed it *"right after the pin move and before step
+   1b"*, but D21-47 (review finding 7) requires every paid run to be dated on or after step 1b's `fixture-proofs`
+   line, and Checkpoint 8j (6) reads that order (§8j.0 item 12). Ryan ruled that it moves after step 1b, so D21-47
+   finding 7 holds unwaived. It keeps the label 1a; it runs once step 1b's `fixture-proofs` line is written.
 1b. **The recorded fixture proofs, after the pin move and before any paid step** *(added 2026-09-24, D21-47; review
    finding 7).* The draft's entry condition was a sentence, and nothing mechanical stood between it and the first
    dispatch. The block below writes the gate's evidence. It runs over a clean commit that carries the moved pin, so

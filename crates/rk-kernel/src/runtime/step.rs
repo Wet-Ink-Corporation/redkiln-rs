@@ -259,7 +259,7 @@ pub const UNBOUND_IDENTITY: &str = "unbound";
 
 /// The word a catalog range names the run's fork point by (`range = "baseline..HEAD"`). It is no
 /// git ref: the kernel rewrites it to [`ToolRouting::fork_point`] before any port is called.
-pub const BASELINE: &str = "baseline";
+pub(crate) const BASELINE: &str = "baseline";
 
 impl ToolRouting {
     /// Bind the run's fork point: the commit the run tree was cut from (`RK_BASE`'s `fork`).
@@ -271,7 +271,7 @@ impl ToolRouting {
 
     /// The bound fork point, if any.
     #[must_use]
-    pub fn fork_point(&self) -> Option<&str> {
+    pub(crate) fn fork_point(&self) -> Option<&str> {
         self.fork_point.as_deref()
     }
 
@@ -769,7 +769,10 @@ fn selection_refusal(step: &Step, e: &super::reference::RefError) -> StepError {
 /// package S8J-C4-FIX D2; the operator's ruling A*). `Ok(None)`: `inputs` has no string `range`
 /// with a [`BASELINE`] endpoint, so it is handed on unchanged. `Ok(Some(..))`: `inputs` with each
 /// such endpoint replaced by `fork`. An endpoint is what `..` separates; a `...` range keeps its
-/// third dot on the head side.
+/// third dot on the head side (`baseline...HEAD` becomes `<fork>...HEAD`, `HEAD...baseline`
+/// becomes `HEAD...<fork>`). **Only the bare word `baseline` is an endpoint to rewrite**: a
+/// revision built on it (`baseline~1`, `baseline^`, `baseline@{1}`) or a ref that merely contains
+/// it (`baselines`, `origin/baseline`) is handed on unchanged, and git then reads it as written.
 ///
 /// # Errors
 /// [`StepError::Unsupported`] naming the step and the range, when the range names [`BASELINE`] and

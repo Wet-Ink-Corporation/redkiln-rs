@@ -184,9 +184,10 @@ pub struct BuildArtifact {
     pub argv: Vec<String>,
     /// The toolchain's detected version string.
     pub toolchain_version: String,
-    /// The input `sha` the call named.
+    /// The input `sha` the call named: a full commit id, never a revision name (ADR-0203).
     pub sha: String,
-    /// The project root's `HEAD`, read through `rk-git`; it must equal `sha`.
+    /// The project root's `HEAD`, read through `rk-git`. It may differ from `sha` only by paths
+    /// under `.redkiln/`, the run's bookkeeping (ADR-0203, proposed; amended 2026-10-18).
     pub head: String,
 }
 

@@ -1,10 +1,10 @@
 ---
 id: "0202"
-title: "**An `artifact:` input reads a human-attached root when the item has no `emit` binding of the kind** (`s8j`'s root-read record; D21-110 ruling 2's conditional record; the operator's ruling A on the S8J-C4 lane-proof defect D1, 2026-10-18): with no committed `emit` binding of `Kind` for the item, the item's latest attach row of `Kind` (an `artifact.write` carrying `attached_path`, read through `rk-store`'s typed reader `vouched::attached`) resolves the input to that row's reference `{kind, attached_path, digest}`, with no read-seam call; an `emit` binding, when there is one, still wins and still goes through the seam once; another item's row is never read. Supersedes ADR-0173 in part: decision 1's `artifact:` row and decision 8, for the root arm only"
+title: "**An `artifact:` input reads a human-attached root when the item has no `emit` binding of the kind** (`s8j`'s root-read record; D21-110 ruling 2's conditional record; the operator's ruling A on the S8J-C4 lane-proof defect D1, 2026-10-18): with no committed `emit` binding of `Kind` for the item, the vouched pass's stored copy of the item's latest attach row of `Kind` (`<Kind>.root<ext>` in the item's managed directory, named through `rk-store`'s typed reader `vouched::stored`) resolves the input to its reference `{kind, path, digest}`, with no read-seam call, and an attached root with no stored copy under its vouched digest is refused by name; an `emit` binding, when there is one, still wins and still goes through the seam once; another item's row is never read. Supersedes ADR-0173 in part: decision 1's `artifact:` row and decision 8, for the root arm only"
 status: proposed
 date: 2026-10-18
 legacy_id: none
-source: the S8J-C4 lane proofs (`crates/rk-cli/tests/it/lane_proof.rs` on `claude/s8j-afk-batch-2-tg23uw-c4`, PR #103), whose fix lane's first activity `minimal-repro` refused its mandatory `report = "artifact:BugReport"` input after the root was attached; the operator's ruling A on that defect (D1), 2026-10-18; spikes/DECISIONS-2026-09-21.md D21-110 rulings 1-3; references/adr/0173 decisions 1 and 8, 0189 decisions 8 and 9 (its dated correction), 0200 decisions 2, 4 and 5; crates/rk-kernel/src/runtime/reference.rs (`read_artifact_input`, `emit_binding_of`), crates/rk-store/src/vouched.rs (`attached`, `ATTACHED_PATH`), crates/rk-cli/src/verbs/answer.rs (`store_attachments`)
+source: the S8J-C4 lane proofs (`crates/rk-cli/tests/it/lane_proof.rs` on `claude/s8j-afk-batch-2-tg23uw-c4`, PR #103), whose fix lane's first activity `minimal-repro` refused its mandatory `report = "artifact:BugReport"` input after the root was attached; the operator's ruling A on that defect (D1), 2026-10-18; spikes/DECISIONS-2026-09-21.md D21-110 rulings 1-3; references/adr/0173 decisions 1 and 8, 0189 decisions 8 and 9 (its dated correction), 0200 decisions 2, 4 and 5; crates/rk-kernel/src/runtime/reference.rs (`read_artifact_input`, `emit_binding_of`), crates/rk-store/src/vouched.rs (`attached`, `stored`, `ATTACHED_PATH`), crates/rk-cli/src/verbs/answer.rs (`store_attachments`)
 supersedes: ["0173"]
 superseded_by: []
 related: ["0040", "0129", "0189", "0200"]
@@ -38,7 +38,11 @@ This is that record.
 - **An `emit` binding stays the first and strongest source.** A kind an activity produced for the item is read as
   before, through the seam, so D21-113's served-value rule and Halt 4 do not move.
 - **One reader of attach rows.** `rk-store`'s `vouched::attached` already names the item's roots for the vouched
-  pass (ADR-0189 decision 10). A second, ad-hoc reader of the same rows could come to disagree with it.
+  pass (ADR-0189 decision 10), and `vouched::stored` shares the pass's own test of "stored". A second, ad-hoc reader
+  of the same rows could come to disagree with them.
+- **Serve what the store vouches for, where the agent runs.** The attach row's `attached_path` is relative to the
+  invoking checkout and names a file the operator may still edit; the agent runs in the run tree, and the vouched
+  pass's stored copy is the one whose bytes were checked against the vouched digest.
 - **Deterministic.** Two attaches of one kind for one item must resolve the same way on every read and on replay.
 - **Typed by the declared source, not by the bytes** (D21-110 ruling 2). A root's value is its reference, whatever
   its bytes are.
@@ -52,7 +56,8 @@ This is that record.
 ### Option — The attach row resolves the input when no emit binding exists (taken)
 
 With no committed `emit` binding of `Kind` for the item, the item's latest attach row of `Kind` resolves the input to
-its reference. Taken: the operator's ruling A on D1 (2026-10-18).
+a reference to its stored copy. Taken: the operator's ruling A on D1 (2026-10-18), with the stored copy, not
+`attached_path`, as the served path (review of PR #106, finding F1, 2026-10-18).
 
 ### Option — Serve the root's bytes through a new reader arm in `rk-store`
 
@@ -76,11 +81,24 @@ is none**, the item's human-attached root of `Kind` resolves the input:
   in journal order, as `rk_store::vouched::attached(events, item)` names it. Only `answer` writes such a row (ADR-0189
   decision 8; R-48's dated note on design §5's `artifact.write` row), so a row of this shape is human-sourced by
   construction; a writer row (no `attached_path`) is never a root.
-- *The value* is the row's reference, `{ "kind": <Kind>, "attached_path": <path>, "digest": <sha256 hex> }`, the attach
-  row's own members. A field reference (`artifact:Kind.attached_path`) reads its field of that value; a field the
-  value does not have is absent, so a mandatory one refuses by name and a `?` one is `null`.
+- *The value* is a reference to the vouched pass's **stored copy** of that root (ADR-0189 decision 10), as
+  `rk_store::vouched::stored(events, item, kind)` names it: `{ "kind": <Kind>, "path": <managed path>, "digest":
+  <sha256 hex> }`, where `path` is `<Kind>.root<ext>` in the item's managed directory and `digest` is the vouched
+  digest, the digest the bytes had when the vouched pass stored them there. A later edit of the stored copy is
+  AC-127's advisory drift (ADR-0189 decision 10): the root is never restored, so the bytes at `path` may no longer
+  hash to `digest`, and the advisory row records that. The attach row's `attached_path` is never served. A field reference
+  (`artifact:Kind.path`) reads its field of that value; a field the value does not have is absent, so a mandatory one
+  refuses by name and a `?` one is `null`.
+- *Stored* means a writer row (no `attached_path`) after the attach row names that managed path under the vouched
+  digest, the same test the vouched pass uses to decide whether to store. **An attached root with no stored copy is
+  refused by name** (a mandatory input names the kind, the item and that the root is not stored yet; a `?` input is
+  `null`). It never falls back to `attached_path`: that path is relative to the invoking checkout, not the run tree
+  the agent runs in, and its bytes may have changed since they were vouched. The vouched pass stores every attached
+  root at the next `run`'s entry, before any step resolves an input, so on a lane the refusal is reached only when
+  that store itself refused (ADR-0189's `VouchedUnreadable`, `VouchedMismatch`).
 - *Several attaches of one kind* resolve to the **latest** in journal order: a re-attach replaces the root, as it moves
-  the vouched digest (ADR-0189 decision 10).
+  the vouched digest (ADR-0189 decision 10), and is served once its own bytes are stored; an earlier stored copy under
+  the earlier digest is not the root.
 - *Another item's row* is never read; the reader filters on the row's `item`.
 - *No root and no binding:* the interim behaviour stands, by name: a mandatory input refuses naming the kind and the
   item, and a `?` input is `null`.
@@ -109,14 +127,17 @@ this record's.
 
 - Both lanes' first activities resolve their mandatory root input once the root is attached, through the one route
   ADR-0200 fixes.
-- The resolver and the vouched pass read roots through one function, so they name the same root.
+- The resolver and the vouched pass read roots through one function and one test of "stored", so they name the same
+  root.
+- The served path is inside the run's managed directory, and its bytes were the vouched ones when the pass stored
+  them; a later edit there is recorded as advisory drift, never served silently as a new digest.
 - The value is deterministic and replays: it is read from the journal alone.
 
 **Negative**
 
 - **A root read leaves no `artifact.read` row.** `doctor`'s `unread` rule therefore cannot see that a root was read,
   exactly as before this record; the reader's root arm (decision 4) is what would change that.
-- **The agent gets a reference, not the bytes.** A step that needs the root's text reads the file `attached_path`
+- **The agent gets a reference, not the bytes.** A step that needs the root's text reads the stored copy `path`
   names; an `artifact:Kind.<field>` reference into the root's content (for example `tech-debt-assessment`'s
   `artifact:IntakeRecord.body`) is absent and refuses by name until the reader's root arm exists.
 - **"Human-sourced" is read from the row's shape, not from `artifacts.toml`.** A kind registered `source = "agent"`
@@ -129,7 +150,9 @@ this record's.
 - Forbids reading another item's attach row, or a writer row with no `attached_path`, as a root.
 - Forbids choosing among several attach rows of one kind by anything but journal order, latest first.
 - Forbids a read-seam call, or any appended row, for a root-resolved input, and forbids a second reader of attach rows
-  beside `rk_store::vouched::attached`.
+  beside `rk_store::vouched::attached` and `rk_store::vouched::stored`.
+- Forbids serving an attach row's `attached_path`, or a stored copy under any digest but the vouched one, as a root's
+  path.
 - Forbids typing a root's value by whether its bytes parse (D21-110 ruling 2).
 
 ## Evidence and confidence
@@ -137,13 +160,14 @@ this record's.
 - [measured 2026-10-18, S8J-C4's lane proof on PR #103] the fix lane stopped at `minimal-repro`'s `report` input with
   the refusal quoted in Context, after `answer --attach BugReport=…` had written its attach row; a probe that served
   the attach row past `emit_binding_of` carried the lane on.
-- [measured 2026-10-18, `s8j` build, package S8J-C4-FIX] `rk-kernel`'s `root_input::` tests:
-  `a_human_attached_root_resolves_an_artifact_input_with_no_emit_binding` and
-  `the_latest_attach_row_of_the_kind_is_the_root_served`, each red on the base with the refusal above and then green;
-  `an_emit_binding_of_the_kind_wins_over_an_attached_root` and `another_items_attached_root_is_not_read`, the two
-  controls, green on both.
+- [measured 2026-10-18, `s8j` build, package S8J-C4-FIX, as amended by PR #106's review F1] `rk-kernel`'s
+  `root_input::` tests: `a_stored_human_root_resolves_an_artifact_input_with_no_emit_binding`,
+  `an_attached_root_the_vouched_pass_has_not_stored_is_refused_by_name`,
+  `a_stored_copy_under_another_digest_is_not_the_root` and `the_latest_attach_rows_stored_copy_is_the_root_served`,
+  each red before the stored-copy arm and then green; `an_emit_binding_of_the_kind_wins_over_an_attached_root` and
+  `another_items_attached_root_is_not_read`, the two controls, green on both.
 - [documented] ADR-0173 decisions 1 and 8, D21-110 rulings 1-3 and ADR-0200 decision 5, each quoted above; ADR-0189
   decision 9's dated correction, which names this record's deferral.
 - **Confidence.** High that the arm resolves the lanes' root inputs and leaves emit-bound reads unchanged: four tests
-  pin it. Moderate in the value's shape: a reference is what D21-110's *"typed by the kind's declared source"* reads
+  pin it, two of them the unstored refusal. Moderate in the value's shape: a reference is what D21-110's *"typed by the kind's declared source"* reads
   as for a source with no schema, and the first consumer of a root's bytes may want more.

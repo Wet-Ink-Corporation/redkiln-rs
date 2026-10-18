@@ -38,8 +38,12 @@ struct RangeRecorder {
 }
 
 impl RangeRecorder {
-    fn ranges(&self) -> Vec<String> {
-        self.ranges.lock().expect("not poisoned").clone()
+    /// Every range recorded so far; `Err` only when the recorder's lock is poisoned.
+    fn ranges(&self) -> Result<Vec<String>, String> {
+        self.ranges
+            .lock()
+            .map(|ranges| ranges.clone())
+            .map_err(|e| format!("the range recorder's lock is poisoned: {e}"))
     }
 }
 
@@ -119,7 +123,10 @@ fn a_baseline_range_reaches_change_summary_from_the_runs_fork_point() {
     rt.execute_step(&ranged("change_summary", "baseline..HEAD"), &Context::new())
         .expect("a value");
 
-    assert_eq!(tc.ranges(), vec![format!("{FORK}..HEAD")]);
+    assert_eq!(
+        tc.ranges().expect("recorded"),
+        vec![format!("{FORK}..HEAD")]
+    );
 }
 
 #[test]
@@ -139,7 +146,11 @@ fn a_baseline_range_is_refused_by_name_when_no_fork_point_is_bound() {
             && capability.contains("fork point"),
         "the refusal names the step, the range and the missing fork point: {capability}"
     );
-    assert_eq!(tc.ranges(), Vec::<String>::new(), "the port is not called");
+    assert_eq!(
+        tc.ranges().expect("recorded"),
+        Vec::<String>::new(),
+        "the port is not called"
+    );
 }
 
 #[test]
@@ -149,7 +160,10 @@ fn a_range_without_baseline_reaches_the_port_unchanged() {
     rt.execute_step(&ranged("change_summary", "abc123..HEAD"), &Context::new())
         .expect("a value");
 
-    assert_eq!(tc.ranges(), vec!["abc123..HEAD".to_owned()]);
+    assert_eq!(
+        tc.ranges().expect("recorded"),
+        vec!["abc123..HEAD".to_owned()]
+    );
 }
 
 #[test]
@@ -168,5 +182,54 @@ fn a_toolchain_verbs_baseline_range_input_is_handed_the_fork_point() {
         seen.first().and_then(|inputs| inputs.get("range")).cloned(),
         Some(serde_json::json!(format!("{FORK}..HEAD"))),
         "the verb is handed the rewritten range: {seen:?}"
+    );
+}
+
+#[test]
+fn a_three_dot_baseline_base_keeps_its_symmetric_difference() {
+    let (rt, tc) = recording("baseline-three-dot-base", routing().with_fork_point(FORK));
+
+    rt.execute_step(
+        &ranged("change_summary", "baseline...HEAD"),
+        &Context::new(),
+    )
+    .expect("a value");
+
+    assert_eq!(
+        tc.ranges().expect("recorded"),
+        vec![format!("{FORK}...HEAD")]
+    );
+}
+
+#[test]
+fn a_three_dot_baseline_head_keeps_its_symmetric_difference() {
+    let (rt, tc) = recording("baseline-three-dot-head", routing().with_fork_point(FORK));
+
+    rt.execute_step(
+        &ranged("change_summary", "HEAD...baseline"),
+        &Context::new(),
+    )
+    .expect("a value");
+
+    assert_eq!(
+        tc.ranges().expect("recorded"),
+        vec![format!("HEAD...{FORK}")]
+    );
+}
+
+#[test]
+fn only_the_bare_word_baseline_is_rewritten() {
+    let (rt, tc) = recording("baseline-suffixed", routing().with_fork_point(FORK));
+
+    rt.execute_step(
+        &ranged("change_summary", "baseline~1..HEAD"),
+        &Context::new(),
+    )
+    .expect("a value");
+
+    assert_eq!(
+        tc.ranges().expect("recorded"),
+        vec!["baseline~1..HEAD".to_owned()],
+        "a revision built on `baseline` is handed on as written"
     );
 }

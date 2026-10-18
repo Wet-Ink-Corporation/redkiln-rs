@@ -871,7 +871,8 @@ const BOOKKEEPING_DIR: &str = ".redkiln/";
 ///
 /// # Errors
 /// `sha-head-mismatch`, naming both commits and either the first differing path outside
-/// `.redkiln/` (in path order) or why the range could not be read.
+/// `.redkiln/` (in path order), that `sha` is not the full commit id it resolves to, or why the
+/// range could not be read.
 fn same_product_tree(root: &Path, sha: &str, head: &str) -> Result<(), StepError> {
     let mismatch = |why: &str| {
         refuse(
@@ -884,6 +885,14 @@ fn same_product_tree(root: &Path, sha: &str, head: &str) -> Result<(), StepError
     };
     let read = rk_git::diff::range_diff(root, &format!("{sha}..{head}"))
         .map_err(|e| mismatch(&format!("their trees could not be compared: {e}")))?;
+    // `sha` is recorded as `BuildArtifact.sha`, so it must be the full commit id the range's base
+    // resolved to, never a revision name or an abbreviation (review of PR #106, N1).
+    if read.base != sha {
+        return Err(mismatch(&format!(
+            "`{sha}` is not a commit id: it resolves to {}",
+            read.base
+        )));
+    }
     read.entries
         .iter()
         .find(|entry| !entry.path.starts_with(BOOKKEEPING_DIR))

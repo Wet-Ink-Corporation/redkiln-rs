@@ -429,6 +429,63 @@ fn the_attached_root_is_stored_at_the_next_entry_under_its_vouched_digest() {
     assert_eq!(root_bytes(&f), None, "nothing is stored");
 }
 
+/// **`vouched::stored` names the copy the pass stored** (ADR-0202, proposed): `None` while only
+/// the attach row is in the journal, then, after a real pass over that row, the managed path and
+/// the vouched digest; and `None` again for the kind once a re-attach moves the vouched digest
+/// until the next pass stores it. *(Added 2026-10-18, `s8j` build, package S8J-C4-FIX; review of
+/// PR #106 N4.)*
+#[test]
+fn stored_names_the_copy_a_real_pass_stored_from_the_attach_row() {
+    let f = fixture();
+    let rows_now = |f: &Fixture| f.rows.lock().expect("not poisoned").clone();
+    assert_eq!(
+        vouched::stored(&rows_now(&f), ITEM, KIND),
+        None,
+        "an attach row alone is not stored"
+    );
+
+    Run::default().pass(&f).expect("the root is stored");
+
+    assert_eq!(
+        vouched::stored(&rows_now(&f), ITEM, KIND),
+        Some(vouched::Stored {
+            kind: KIND.to_owned(),
+            path: root_rel(),
+            digest: sha256(VOUCHED),
+        }),
+        "the managed path the pass wrote, under the vouched digest"
+    );
+    assert_eq!(
+        vouched::stored(&rows_now(&f), ITEM, "Spec"),
+        None,
+        "another kind"
+    );
+    assert_eq!(
+        vouched::stored(&rows_now(&f), "item-2", KIND),
+        None,
+        "another item"
+    );
+
+    std::fs::write(f.checkout.path().join(ATTACHED), EDITED).expect("the file is re-attached");
+    f.rows
+        .lock()
+        .expect("not poisoned")
+        .push(attach_row(&sha256(EDITED)));
+    assert_eq!(
+        vouched::stored(&rows_now(&f), ITEM, KIND),
+        None,
+        "a re-attach is not stored until the next pass"
+    );
+    Run::default()
+        .pass(&f)
+        .expect("the re-attached root is stored");
+    assert_eq!(
+        vouched::stored(&rows_now(&f), ITEM, KIND).map(|s| s.digest),
+        Some(sha256(EDITED)),
+        "the next pass stores the re-attached bytes"
+    );
+}
+
 /// **A changed root is never restored, rewritten or gated** (ADR-0025's forbids: *"Blocking or
 /// re-running work on a human-supplied artifact"*). Over three runs of the pass with the root
 /// edited after its store: the file keeps the edited bytes every time, no `artifact.write` follows
