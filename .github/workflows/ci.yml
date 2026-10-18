@@ -143,18 +143,21 @@ jobs:
       # AC-104's family totality through lattice::p6_validate_over_the_shipped_pack, a second asserted --exact run. The
       # installed pair's AC-101/AC-102 figures are REPORTED and not thresholded (D21-47 V3). No CI step thresholds
       # AC-101 or AC-102: the registered-set kill lines are read by Checkpoint 8b section (7) over the Python golden.
+      # (dated 2026-10-18, s8j build) The ok-line check reads a here-string, not `printf | grep -q`: under
+      # pipefail, `grep -q` exits on the first match and printf can then die of SIGPIPE, failing a test that
+      # passed (seen on PR #104's Windows leg).
       - name: P6 lattice and validate over the shipped pack (AC-103, AC-104; AC-101/AC-102 reported, V3)
         shell: bash
         run: |
           out=$(cargo test -p rk-kernel --test it -- lattice::p6_lattice_over_the_shipped_pack --exact 2>&1); rc=$?
           printf '%s\n' "$out" | tail -5
           test "$rc" -eq 0 || { echo "FAIL: the shipped-pack lattice exited $rc"; exit 1; }
-          printf '%s\n' "$out" | grep -qxF 'test lattice::p6_lattice_over_the_shipped_pack ... ok' \
+          grep -qxF 'test lattice::p6_lattice_over_the_shipped_pack ... ok' <<<"$out" \
             || { echo "FAIL: lattice::p6_lattice_over_the_shipped_pack did not run and pass -- the filter matched nothing"; exit 1; }
           out=$(cargo test -p rk-kernel --test it -- lattice::p6_validate_over_the_shipped_pack --exact 2>&1); rc=$?
           printf '%s\n' "$out" | tail -5
           test "$rc" -eq 0 || { echo "FAIL: the shipped-pack validate exited $rc"; exit 1; }
-          printf '%s\n' "$out" | grep -qxF 'test lattice::p6_validate_over_the_shipped_pack ... ok' \
+          grep -qxF 'test lattice::p6_validate_over_the_shipped_pack ... ok' <<<"$out" \
             || { echo "FAIL: lattice::p6_validate_over_the_shipped_pack did not run and pass -- the filter matched nothing"; exit 1; }
 
       # Against the committed Cargo.lock, watching the gix-* advisory cluster specifically.
@@ -213,7 +216,9 @@ jobs:
   # image's). Nothing in the tested step may reach the network, and that is the property asserted.
   #
   # ARMED, NOT DISCHARGED, and recorded as such: PROGRESS.md:330 records that this workflow is
-  # authored and has never run. `ac498_no_egress_dispatch_zero` asserts this job is PRESENT; that it
+  # authored and has never run. (corrected 2026-10-18, s8j build, issue #23) Historical: this workflow has run since
+  # 2026-10-02, and this job was green at PR #81's head `6c8f99e` (ci 38858372622); PROGRESS's
+  # "Armed, not discharged" row holds the run ids. `ac498_no_egress_dispatch_zero` asserts this job is PRESENT; that it
   # has PASSED is claimed nowhere.
   no-egress:
     name: no egress (AC-498)
@@ -354,6 +359,9 @@ jobs:
       # 7c, so this grep matches nothing today and passes vacuously. It is here from the first
       # commit so the rule is in force BEFORE the code it governs exists — not as evidence that the
       # criterion is met.
+      # (corrected 2026-10-18, s8j build, issue #23) Historical: `rk-adapter-claude` landed in Step 7c, so the grep now
+      # reads real call sites and is no longer vacuous; it has run on every ci.yml run since
+      # 2026-10-02. The step name keeps its original wording.
       - name: usage fields are not laundered (AC-362 — armed, vacuous until 7c)
         run: |
           # Pathspec narrowed 2026-09-17 (Step 7c stage-open, runbook s7c §7c.1 RT-13): `crates/rk-adapter-claude/*`
@@ -578,6 +586,9 @@ jobs:
       #
       # ARMED, NOT DISCHARGED, and recorded as such: PROGRESS.md:330 records that this workflow is
       # authored and has never run, so a row added here is armed and nothing more.
+      # (corrected 2026-10-18, s8j build, issue #23) Historical: this workflow has run since 2026-10-02, and this job was
+      # green at PR #81's head `6c8f99e` (ci 38858372622); PROGRESS's "Armed, not discharged" row
+      # holds the run ids.
       #
       # Each rule is COMMENT-FILTERED and ANCHORED, and carries the TRACKED-FILE POSITIVE CONTROL.
       # All three properties were paid for: `grep -vE '^\s*//'` can never match, because grep prints
