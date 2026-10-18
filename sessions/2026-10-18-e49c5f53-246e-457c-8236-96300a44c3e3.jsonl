@@ -1,1 +1,3 @@
 {"t":"2026-10-18T18:00:37.592Z","sid":"e49c5f53-246e-457c-8236-96300a44c3e3","agent":"main","event":"session-start","source":"startup"}
+{"t":"2026-10-18T18:06:43.246Z","sid":"e49c5f53-246e-457c-8236-96300a44c3e3","agent":"main","event":"gate-start"}
+{"t":"2026-10-18T18:07:27.077Z","sid":"e49c5f53-246e-457c-8236-96300a44c3e3","agent":"main","event":"stop-blocked","reason":"gate","fp":"5cb69b986fd45623","ms":43827,"cached":false}
