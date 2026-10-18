@@ -812,6 +812,55 @@ fn package_refuses_a_difference_under_a_dot_redkiln_lookalike() {
     );
 }
 
+/// **ADR-0203 (proposed): `sha` is a commit id, not a revision name**: `HEAD` on a later commit
+/// whose tree is the earlier one's is refused as `sha-head-mismatch`, saying `sha` is not a commit
+/// id, so `BuildArtifact.sha` never records a name. *(Added 2026-10-18, `s8j` build, package
+/// S8J-C4-FIX; review of PR #106 N1.)*
+#[test]
+fn package_refuses_a_sha_that_is_a_revision_name() {
+    let tmp = crate::support::repo_tempdir();
+    let (root, _sha, head) = committed_past(tmp.path(), |_| Ok(())).expect("the fixture commits");
+    let scratch = tmp.path().join("scratch");
+    let tc = workspace_adapter(&root, &scratch);
+
+    let err = run_verb(
+        &tc,
+        "package",
+        &serde_json::json!({ "sha": "HEAD", "binaries": ["wsbin"] }),
+    )
+    .expect_err("`HEAD` names a commit; it is not one");
+
+    refused_naming(
+        &err,
+        &["sha-head-mismatch", "not a commit id", "HEAD", &head],
+        "a revision name as `sha`",
+    );
+}
+
+/// **ADR-0203 (proposed): an abbreviated commit id is not `sha`** either, even when its tree is
+/// `HEAD`'s. *(Added 2026-10-18, `s8j` build, package S8J-C4-FIX; review of PR #106 N1.)*
+#[test]
+fn package_refuses_an_abbreviated_sha() {
+    let tmp = crate::support::repo_tempdir();
+    let (root, sha, _head) = committed_past(tmp.path(), |_| Ok(())).expect("the fixture commits");
+    let scratch = tmp.path().join("scratch");
+    let tc = workspace_adapter(&root, &scratch);
+    let short = sha.get(..12).expect("a 40-hex id");
+
+    let err = run_verb(
+        &tc,
+        "package",
+        &serde_json::json!({ "sha": short, "binaries": ["wsbin"] }),
+    )
+    .expect_err("an abbreviated id is not the commit id");
+
+    refused_naming(
+        &err,
+        &["sha-head-mismatch", "not a commit id", short],
+        "an abbreviated `sha`",
+    );
+}
+
 /// **A built binary outside the adapter's target directory is refused by name**
 /// (`package-binary-outside-target`), never recorded as an absolute path (record V decision 6:
 /// `BuildArtifact`'s paths are relative to the target directory). Asserted over the path function

@@ -1115,8 +1115,10 @@ pub fn emit_binding_of<'a>(
 /// F1*). The item's latest attach row of the kind (an `artifact.write` carrying `attached_path`,
 /// which only `answer` writes, ADR-0189 decision 8), served as the vouched pass's STORED copy,
 /// as [`rk_store::vouched::stored`] names it: `kind`, `path` (`<Kind>.root<ext>` in the item's
-/// managed directory, in the run tree) and `digest`, the digest of the bytes at `path`. A later
-/// attach replaces an earlier one, in journal order. ~~`attached_path`~~ is never served: it is
+/// managed directory, in the run tree) and `digest`, the vouched digest the bytes at `path` had
+/// when the pass stored them. A later edit of the stored copy is AC-127's advisory drift, so the
+/// bytes there need not hash to it now. A later attach replaces an earlier one, in journal order.
+/// `attached_path` is never served: it is
 /// relative to the invoking checkout and names a file that can move after it was vouched.
 ///
 /// `Err` is why the root is absent, for the caller's refusal (or `null` on a `?` input): no attach

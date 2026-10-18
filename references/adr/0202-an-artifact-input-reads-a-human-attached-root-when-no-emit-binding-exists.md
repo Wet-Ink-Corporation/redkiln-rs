@@ -84,7 +84,9 @@ is none**, the item's human-attached root of `Kind` resolves the input:
 - *The value* is a reference to the vouched pass's **stored copy** of that root (ADR-0189 decision 10), as
   `rk_store::vouched::stored(events, item, kind)` names it: `{ "kind": <Kind>, "path": <managed path>, "digest":
   <sha256 hex> }`, where `path` is `<Kind>.root<ext>` in the item's managed directory and `digest` is the vouched
-  digest, the digest of the bytes stored there. The attach row's `attached_path` is never served. A field reference
+  digest, the digest the bytes had when the vouched pass stored them there. A later edit of the stored copy is
+  AC-127's advisory drift (ADR-0189 decision 10): the root is never restored, so the bytes at `path` may no longer
+  hash to `digest`, and the advisory row records that. The attach row's `attached_path` is never served. A field reference
   (`artifact:Kind.path`) reads its field of that value; a field the value does not have is absent, so a mandatory one
   refuses by name and a `?` one is `null`.
 - *Stored* means a writer row (no `attached_path`) after the attach row names that managed path under the vouched
@@ -127,7 +129,8 @@ this record's.
   ADR-0200 fixes.
 - The resolver and the vouched pass read roots through one function and one test of "stored", so they name the same
   root.
-- The served path is inside the run's managed directory and its bytes are the vouched ones.
+- The served path is inside the run's managed directory, and its bytes were the vouched ones when the pass stored
+  them; a later edit there is recorded as advisory drift, never served silently as a new digest.
 - The value is deterministic and replays: it is read from the journal alone.
 
 **Negative**

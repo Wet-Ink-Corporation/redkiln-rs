@@ -121,7 +121,9 @@ pub struct Stored {
     pub kind: String,
     /// The stored copy's repo-relative path, `<ARTIFACTS_DIR>/<item>/<Kind>.root<ext>`.
     pub path: String,
-    /// The vouched digest, which is the digest of the bytes stored at `path`.
+    /// The vouched digest: what the bytes at `path` hashed to when the pass stored them. A later
+    /// edit of the stored copy is advisory drift (AC-127), so the bytes there may no longer hash
+    /// to it.
     pub digest: Digest,
 }
 

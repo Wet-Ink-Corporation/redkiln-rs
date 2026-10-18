@@ -6,8 +6,9 @@
 //! The root is the item's latest attach row of the kind (an `artifact.write` carrying
 //! `attached_path`, which only `answer` writes, ADR-0189 decision 8). What is served is the vouched
 //! pass's STORED copy of it, `<Kind>.root<ext>` in the item's managed directory, as `rk-store`'s
-//! typed reader `vouched::stored` names it: `{kind, path, digest}`, the digest being the bytes at
-//! `path`. An attached root with no stored copy under its vouched digest is refused by name (a `?`
+//! typed reader `vouched::stored` names it: `{kind, path, digest}`, the digest being the vouched
+//! digest the bytes at `path` had when the pass stored them (a later edit of the stored copy is
+//! AC-127's advisory drift, not a new digest here). An attached root with no stored copy under its vouched digest is refused by name (a `?`
 //! input is `null`), never read from `attached_path`. No read-seam call is made for a root. An
 //! `emit` binding, when there is one, still wins and still goes through the seam.
 
@@ -26,6 +27,9 @@ type Json = serde_json::Value;
 const ATTACHED: &str = ".redkiln/intake/INC-1.BugReport.md";
 /// Where the vouched pass stores it in the item's managed directory.
 const STORED: &str = ".redkiln/artifacts/INC-1/BugReport.root.md";
+/// The `schema` `.redkiln/artifacts.toml` registers for `BugReport`: what `answer` records as an
+/// attach row's `schema_version`, and what the writer's `write_root` records on the stored row.
+const SCHEMA: &str = "BugReport";
 
 /// The digest an attach row records for `bytes`.
 fn digest_of(bytes: &[u8]) -> String {
@@ -40,7 +44,7 @@ fn attach_row(item: &str, kind: &str, path: &str, bytes: &[u8]) -> Event {
         serde_json::json!({
             "kind": kind,
             "item": item,
-            "schema_version": 1,
+            "schema_version": SCHEMA,
             "digest": digest_of(bytes),
             "stage": "analysis",
             "run": "analysis-run",
@@ -57,7 +61,7 @@ fn stored_row(item: &str, kind: &str, path: &str, bytes: &[u8]) -> Event {
         serde_json::json!({
             "kind": kind,
             "item": item,
-            "schema_version": kind,
+            "schema_version": SCHEMA,
             "digest": digest_of(bytes),
             "stage": "analysis",
             "run": "analysis-run",

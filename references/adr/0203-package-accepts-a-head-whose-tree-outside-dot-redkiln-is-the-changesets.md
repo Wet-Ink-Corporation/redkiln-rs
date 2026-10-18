@@ -62,7 +62,10 @@ spawns nothing) and:
 - **refuses** as `sha-head-mismatch` when any changed path lies outside `.redkiln/`, naming the first such path in
   path order, the input `sha` and `HEAD`;
 - **refuses** as `sha-head-mismatch` when the range cannot be read (a `sha` that does not resolve, or a store fault),
-  naming `HEAD` and the read's error.
+  naming `HEAD` and the read's error;
+- **refuses** as `sha-head-mismatch` when `sha` is not the full commit id the range's base resolves to (a revision
+  name such as `HEAD` or a branch, or an abbreviated id), saying `sha` is not a commit id and naming what it resolves
+  to, because `BuildArtifact.sha` records it *(added 2026-10-18, review of PR #106, finding N1)*.
 
 **2. What `BuildArtifact` carries does not move.** It records the input `sha` and the project root's `head`, as
 ADR-0170 decision 6 fixes; after this record they may differ, by bookkeeping only.
@@ -98,6 +101,8 @@ binary set, the relative paths, the refusals by name) and ADR-0170's forbids sta
 
 - Forbids accepting a `HEAD` whose tree differs from the `sha` commit's at any path outside `.redkiln/`.
 - Forbids accepting a `sha` that does not resolve, or a range that cannot be read.
+- Forbids accepting, and so recording as `BuildArtifact.sha`, a `sha` that is not the full commit id it resolves to: a
+  revision name (`HEAD`, a branch) or an abbreviated id is refused.
 - Forbids a refusal of a product difference that does not name the differing path.
 - Forbids reading the trees through anything but `rk-git` (ADR-0077, ADR-0098), and forbids a git spawn in the adapter.
 
@@ -111,5 +116,7 @@ binary set, the relative paths, the refusals by name) and ADR-0170's forbids sta
   `sha-head-mismatch`, then green; the existing `package_digests_only_the_declared_binaries_of_a_locked_release_build`
   still refuses an unresolvable `sha` as `sha-head-mismatch` naming `HEAD`;
   `verbs::package_refuses_a_difference_under_a_dot_redkiln_lookalike` (added at PR #106's review, F4) pins that
-  `.redkilnx/foo` is refused by name, green as written because the prefix carries its slash.
+  `.redkilnx/foo` is refused by name, green as written because the prefix carries its slash;
+  `verbs::package_refuses_a_sha_that_is_a_revision_name` and `verbs::package_refuses_an_abbreviated_sha` (added at
+  PR #106's re-review, N1), each red before the full-id check (`HEAD` and a 12-hex prefix were packaged), then green.
 - **Confidence.** High: the rule is a filter over the one range read the adapter already makes for `change_summary`.
