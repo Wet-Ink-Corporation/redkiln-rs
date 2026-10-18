@@ -362,6 +362,22 @@ is a citation of **E-0520-1** at register :1322, in the form the register alread
 (`ERRATA E-0089-2` at :1296, `ERRATA E-0056-1` at :790). That edit is **owed and not made here**: this erratum was
 written under a task that names this file alone.)*
 
+## ADR-0127 — `rk-containment` owns process containment
+
+**E-0127-1 (2026-10-18, `s8j` build, package S8J-D4-STALE-CI-RECORDS; issue #23).** Line 178-179 at `76352bb`, in
+`**Negative**`: *"The Windows arm is the live arm on this box and the POSIX arm is ARMED to a CI run that has never
+executed (`ci.yml` unrun); this record does not change that and the checkpoint says so."* — **What is true:** it was
+true when written (2026-09-17) and is no longer. `ci.yml` first ran on 2026-10-02 (run `37078680392` at `d24d15a`,
+red). During the first runs `9959b2f` changed the POSIX arm: *"kill waits for its members, and an exited (zombie)
+process reads dead"* [documented: the commit's subject; audit appendix B6], and `ci.yml` has been green since
+`aab766c` (2026-10-03). At
+PR #81's head `6c8f99e` (2026-10-16), ci runs `38858372622` (push) and `38858393065` (pull_request) are green on every
+job, `gates (ubuntu-latest)` and `gates (windows-latest)` included, so the POSIX arm has executed in CI and passed.
+[measured, GitHub Actions API, fetched 2026-10-18] **What this does not change:** every `## Decision` sentence and
+every `**What this forbids**` bullet; the Windows arm is still the arm this operator's box runs; the record's
+other Negative bullets. The full run list is `runbook/PROGRESS.md`'s *"Armed, not discharged"* row, dated
+2026-10-18. Decision unchanged.
+
 ## ADR-0132 — `ImplReport` is the sixth toolchain-keyed kind
 
 **E-0132-1 (2026-09-21, `s7f`'s own adversarial pass).** `## Context and problem`: *"because **every activity that provides `Changeset` also provides `ImplReport`**, and `Changeset` is keyed while `ImplReport` is not"*, restated in `## Decision drivers` as *"`ImplReport` and `Changeset` are produced by the same activities"* and in Context as *"The two kinds are the same activities' two outputs"*. — **What is true:** the universal holds in the OTHER direction only. Over the shipped catalog at this record's own pin there are **10** `Changeset` providers and **9** `ImplReport` providers; the difference is `docs-update`, which provides `["Docs", "Changeset"]` and does not name `ImplReport` anywhere in its file. So: **every activity that provides `ImplReport` also provides `Changeset`**, and the set difference in that direction is empty. [measured 2026-09-21, `comm -23` over `grep -l` on `.redkiln/catalog/*.toml`, cross-checked by an independent TOML parser] **What this does not change:** the conclusion the sentence was offered as warrant for, which is measured separately and independently — the two `ImplReport` equal-rank sets and the two `Changeset` ones have **identical membership** at both ranks (`dependency-update`/`hotfix`/`implement-ue`/`test-after` at 10, `bdd-outside-in`/`walking-skeleton` at 30), because `docs-update` sits at `method_rank = 5` and is therefore in neither tied set. The Decision, both supersession sites, the pack change and every forbids bullet stand as written. **Why it matters even though the conclusion survives:** a reader who trusted the sentence as written would conclude that `docs-update` must emit an `ImplReport`, which the catalog does not ask of it.
