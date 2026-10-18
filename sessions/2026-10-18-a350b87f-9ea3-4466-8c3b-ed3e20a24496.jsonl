@@ -67,3 +67,5 @@
 {"t":"2026-10-18T19:00:20.100Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"gate-start"}
 {"t":"2026-10-18T19:00:58.998Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-blocked","reason":"gate","fp":"99d4d4c505cbf75a","ms":38893,"cached":false}
 {"t":"2026-10-18T19:57:16.356Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-10-18T19:58:20.684Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"gate-start"}
+{"t":"2026-10-18T19:58:23.511Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-blocked","reason":"gate","fp":"99d4d4c505cbf75a","ms":2823,"cached":true}
