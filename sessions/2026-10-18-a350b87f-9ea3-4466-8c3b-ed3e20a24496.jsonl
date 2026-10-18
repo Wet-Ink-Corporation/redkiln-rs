@@ -4,3 +4,4 @@
 {"t":"2026-10-18T18:14:59.639Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-declared","status":"BLOCKED"}
 {"t":"2026-10-18T18:27:37.755Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"gate-start"}
 {"t":"2026-10-18T18:27:40.638Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-blocked","reason":"gate","fp":"5ed61b39dcf14f10","ms":2879,"cached":true}
+{"t":"2026-10-18T18:27:55.309Z","sid":"a350b87f-9ea3-4466-8c3b-ed3e20a24496","agent":"main","event":"stop-declared","status":"BLOCKED"}
