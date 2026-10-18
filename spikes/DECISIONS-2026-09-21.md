@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-17 (D21-1 … D21-156), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-159), and what they license
+
+*(Title moved 2026-10-18 at `s8j`'s open, package S8J-A1-DRIFT: it read **"2026-09-21 … 2026-10-17 (D21-1 … D21-156)"**; `D21-157` … `D21-159` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 156 before the append, the last `D21-156`; 159 after.)*
 
 *(Title moved 2026-10-17 during `s8j`, in the operator's sitting: it read **"2026-09-21 … 2026-10-15 (D21-1 … D21-155)"**; `D21-156` is appended with this move.)*
 
@@ -7384,3 +7386,89 @@ other condition, both `s8h` §8h.11 probes passed at `s8j`, is still owed, and t
 
 **What this closes.** #28 and #73 have their acceptance criteria met by this entry and the dated lines it names
 (`runbook/PROGRESS.md` §2 rows; ADR-0189, ADR-0191, ADR-0194, ADR-0196 and ADR-0197). Nothing stays owed from either.
+
+## D21-157 · `s8j` opens: what its brief said that the tree does not, measured at `3fa69db`
+
+**Recorded 2026-10-18 by an agent session, package S8J-A1-DRIFT of the approved build plan
+(`spikes/plans/s8j-build-plan-2026-10-16.md` §3 Round A; D21-158).** This entry records measurements and the dated
+edits they required. It takes no ruling, and no record flips on it.
+
+**The entry commit** is `3fa69db` (`origin/build/phase-0-to-1`, the merge of PR #89), after `s8i`'s close (`0a86274`),
+the build plan (`4625b0e`) and batch 1 (`d086370`, `35d0702`, `02ce3b4`, `9b6a202`, `99a3753`). `s8j` §8j.0 holds the
+twelve items, each tagged. In short:
+1. The pin (`TESTED_CLI_VERSION` `2.1.278`) differs from S-BIN's `cli_version=2.1.289`, and there is no 2.1.289
+   `--help` capture; the capture is the operator's, before the pin-move commit.
+2. CI has run green (the `ci` run over `3fa69db` passed all four jobs, and `temper` passed), and `ci.yml` already carries
+   the pnpm step: §8j.7 takes dated lines and its loop becomes D9's PR head run.
+3. Checkpoint 8h's `MINTED_CLASSES` holds four classes and the packs 55 / 57 rows; this stage's three make seven and
+   58 / 60 (§8j.2 item 4, dated).
+4. `PROGRESS.md` row 8i records no passed count, so Checkpoint 8j (11)'s literal cannot be read from it as drafted. The
+   lower bound moves from 1249 to Checkpoint 8i's floor, 1432, by dated edit; the literal stays refusing until a count
+   is recorded in row 8i. **Owed:** that count (Checkpoint 8i's tree, or the entry commit's whole suite on the
+   operator's box), recorded by a dated line, before Checkpoint 8j can pass.
+5. RT-57's record is ADR-0198, `accepted` (D21-139): the evidence file's line is `record-rt57 0198` (§8j.6, dated).
+6. ADR-0197 stays `proposed`; with decision 7's table signed on D21-156, the (g) flip waits only on probes 1 and 2.
+7. `s8`'s `S8_BIN` misses the point-free and qualified constructions D21-155 names: §8j.8 gains **A13**, applied with
+   A1–A12 by S8J-D2.
+8. The fixture lanes stay `Text`-only (#80 open).
+9. Batch 1 (#5, #6, #7, #11, #20) merged on 2026-10-17, before the chain run; #41 and #74 are closed.
+10. §8j.5's survey is re-run over the grown call graph and the open issues before candidates are presented (S8J-A3);
+    C1, C3, C4 and C5's quoted lines are still present and their files unchanged since `0a86274`.
+11. The legacy checkout's reads are the operator's, on the box.
+12. D3's dispatch is added as §8j.6 step 1a, and its placement before step 1b conflicts with D21-47's review finding 7
+    (every paid run dated on or after the `fixture-proofs` line): see D21-158 item 2.
+
+**Edits made with this entry:** `s8j` §8j.0 and its stage-open list; dated lines in §8j.2 item 4, §8j.5, §8j.6
+(entry condition and step 1a), §8j.7, §8j.8 (A13) and Checkpoint 8j (11); `runbook/INDEX.md`'s M5 row (D21-159);
+`runbook/PROGRESS.md` row 8j and §2's rows for D21-157 … D21-159. No Rust, no ADR decision sentence and no `.github/`
+file is changed.
+
+## D21-158 · The `s8j` build plan and its recommendations, as approved on 2026-10-16
+
+**Recorded 2026-10-18 by an agent session, package S8J-A1-DRIFT.** This entry records an approval given in the project
+thread on 2026-10-16 and its traces on GitHub (comments of 2026-10-16T20:46Z on #74, #62, #33 and #30; #30 closed as
+not planned; #74 closed as completed on 2026-10-17). It is not the operator's own line, takes no ruling of its own, and
+restates each decision as the plan worded its recommendation (`spikes/plans/s8j-build-plan-2026-10-16.md` §4, merged in
+PR #82 as `4625b0e`).
+
+**1. Approved (D1):** the plan, as the execution order for `s8j`. Its precedence clause stands: the ADRs, the AC and SM
+registers, the spike files and the stage file outrank it.
+
+**2. Taken, each as recommended:**
+- **D2 (#74):** #5, #6, #7 and #11, with #20, land as batch 1, one PR each, before the neutralised chain run. Done:
+  PRs #83 … #87, merged 2026-10-17 (D21-157 item 9).
+- **D3 (#62):** one real dispatch before the freeze, on a throwaway item in a scratch clone, never on
+  `rk-fix-doctor-test-count`, right after the pin move and before §8j.6 step 1b, with its own spend line and go-ahead.
+  Written as §8j.6 step 1a. **Found at writing:** D21-47's fix for review finding 7 requires every paid run to be dated
+  on or after step 1b's `fixture-proofs` line, which Checkpoint 8j (6) reads. The step does not run until the operator
+  settles that order (after step 1b, or before it with a recorded reason for (6)).
+- **D4 (#33):** option (c): human-only closure of verify-stage ACs is accepted for `s8`'s exit runs now, and the
+  mutation-pin wiring is scheduled for Phase 2 (D21-159).
+- **D9:** the `s8j` branch is pushed and a PR opened against `build/phase-0-to-1`; its head-commit run is the recorded
+  `ci` run; no other code PR merges into `build/phase-0-to-1` from the freeze until Checkpoint 8; the `s8j` PR merges
+  after the tracker commit by a merge commit that changes no code path (§8j.7, dated).
+- **D10 (#30):** closed as not planned; Checkpoint 8i passed (D21-155), so the entry gate's re-point is moot.
+- **D11 (#26):** left to `s8`'s close; not on `s8j`'s path.
+
+**3. Still the operator's, not taken here:** D5 (the fix item, after S8J-A3), D6 (accepting `s8j`'s records), D7 (the
+three `[[gate_expiry]]` rows' signatures), the order question in item 2's D3, and every push, paid dispatch and
+checkpoint run, each on its own go-ahead. D8 was answered on D21-156.
+
+## D21-159 · Human-only closure of verify-stage ACs for `s8`'s exit runs (D4; #33)
+
+**Recorded 2026-10-18 by an agent session, package S8J-A1-DRIFT, under D21-158 item 2 (D4, option (c)).** This entry
+records the approved decision and the scope note it asked for. It takes no ruling of its own.
+
+**What is accepted.** In `s8`'s exit runs a verify-stage AC closes on the human answer to `verify.ac-discriminates`
+(`s8g` §8g.6) alone. The mutation-pinned state is not reachable through the real harness at `3fa69db`:
+`crates/rk-cli/src/verify_pass.rs`:667 and :707 set `assertion_flipped: None`, and `crates/rk-cli/src/verbs/run.rs`:4369
+passes an empty `BTreeMap` as `compute_ledger`'s assertions [measured]. AC-334 stays ARMED, and nothing here
+discharges it. Each Spec AC in the exit runs therefore costs one human answer and one relaunch (audit 2026-10-06
+§14), and the S-SUBTLE-CB disclaimer (ADR-0101 clause 5) still bounds what the review gate may be said to guard.
+
+**The M5 scope note** is written on `runbook/INDEX.md`'s M5 row by dated line: M5 does not claim mutation-pinned
+closure.
+
+**Owed to Phase 2:** a port that reports the named assertion, and the assertion map passed at `run.rs`'s
+`compute_ledger` call. Filed as a Feature under the Phase 2 initiative when that initiative is broken down (#33's
+reconciliation note); nothing is filed here.
