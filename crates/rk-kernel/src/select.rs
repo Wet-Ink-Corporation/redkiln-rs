@@ -690,7 +690,7 @@ pub(in crate::select) fn select_amended(
     // Owned copies: the selection stores them beside `unsatisfiable`, which keeps its own.
     let mut human_roots: Vec<String> = unsatisfiable
         .iter()
-        .filter(|u| u.reason == step4::UnsatReason::NoAdmissibleProducer)
+        .filter(|u| u.reason == UnsatReason::NoAdmissibleProducer)
         .filter(|u| artifacts.is_human_sourced(&u.kind))
         .map(|u| u.kind.clone())
         .collect();
