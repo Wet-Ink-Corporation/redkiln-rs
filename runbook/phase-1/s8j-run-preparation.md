@@ -1036,6 +1036,8 @@ lower-confidence caveat, and C4 carries its re-check against `s8f`'s file.
 
 **Reservation and mint.**
 
+*(dated 2026-10-18, s8j build, S8J-C1-ITEMS)* Ryan picked C4 of S8J-A3's shortlist (`spikes/plans/s8j-fix-shortlist-2026-10-18.md`) on 2026-10-18 through the AFK batch's decision card. D21-160 reserves it as `rk-fix-doctor-margin` (`rk-cli:doctor::rules::margin`), and steps 3 and 4 are done: `.redkiln/items/rk-fix-doctor-margin.toml`, with `.redkiln/intake/rk-fix-doctor-margin.BugReport.md` and its repro pair, run red in a throwaway tree at `8ac5685`. Step 1's dynamic half (the ten `lane_proof` tests green with the repro added) is owed once S8J-C4-LANE-PROOF lands.
+
 1. The operator picks one candidate.
 2. The pick is reserved by a dated ledger entry. The entry carries one machine-readable line,
    `reserved-fix-item: <id> <crate>:<function>`, and it forbids fixing the defect by hand or in any stage before

@@ -1,0 +1,33 @@
+# Step 8 criterion (1), AC-473: the fix-lane self-hosting item. A REAL defect on this tree.
+# *(dated 2026-10-18, s8j build, package S8J-C1-ITEMS; s8j section 8j.5; D21-42 18; D21-160.)*
+#
+# Ryan picked candidate C4 of S8J-A3's shortlist (`spikes/plans/s8j-fix-shortlist-2026-10-18.md`)
+# on 2026-10-18 through the AFK batch's decision card, and D21-160 reserves it:
+# `rk-cli` `doctor::rules::margin` (`RK-D-MARGIN`). A pack with no `[margins]`, with a window
+# missing, or with a non-integer margin produces no finding, while the run's loader refuses the
+# same pack (`verbs/run.rs`'s `Margins` has both members required). AC-377 asks that `redkiln
+# doctor` reach the same verdict as the load, and its Verified-by names "a fixture config with no
+# margin that must fail (no default)". 🛑 D21-160 forbids fixing it by hand or in any stage before
+# `s8`: the lane fixes it. Its BugReport and repro pair are `.redkiln/intake/rk-fix-doctor-margin.*`.
+#
+# `kind = "bug"` derives the lane as `fix` -> pack `bug-standard` (ADR-0128 decisions 2 and 3).
+# `hold_before = "specification"` is s8j section 8j.3's boundary hold (D21-42 19b; ADR-0201,
+# proposed): the first real invocation stops at analysis -> specification for the operator's review.
+# `slice` is the id without its `rk-fix-` prefix (s8e section 8e.8). `[trial] activity` is
+# ADR-0195 decision 4's spelling (s8j section 8j.1(e)). `cos = "standard"` is stated because
+# `bug-standard`'s `applies` reads it.
+id          = "rk-fix-doctor-margin"
+kind        = "bug"
+stage       = "triage"
+hold_before = "specification"
+slice       = "doctor-margin"
+
+[facets]
+cos          = "standard"
+has_repro    = true
+criticality  = "low"
+blast_radius = "low"
+size         = "low"
+
+[trial]
+activity = "tag-release"
