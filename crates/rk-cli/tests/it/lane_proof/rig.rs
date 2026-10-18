@@ -53,7 +53,8 @@ fn files_under(dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(at) = stack.pop() {
-        for entry in std::fs::read_dir(&at).unwrap_or_else(|e| panic!("{} reads: {e}", at.display()))
+        for entry in
+            std::fs::read_dir(&at).unwrap_or_else(|e| panic!("{} reads: {e}", at.display()))
         {
             let path = entry.expect("a directory entry").path();
             if path.is_dir() {
@@ -80,7 +81,11 @@ fn materialised_name(rel: &Path) -> PathBuf {
     let stem = name
         .strip_suffix(".in")
         .unwrap_or_else(|| panic!("the fixture file {} is not stored as `*.in`", rel.display()));
-    let stem = if stem == "gitignore" { ".gitignore" } else { stem };
+    let stem = if stem == "gitignore" {
+        ".gitignore"
+    } else {
+        stem
+    };
     rel.with_file_name(stem)
 }
 
@@ -252,21 +257,74 @@ pub(crate) fn fixture() -> tempfile::TempDir {
             .any(|l| l == rk_cli::verbs::init::EXCLUDE_BEGIN),
         "PREMISE: `init` wrote its `# redkiln-runtime` block (D21-45 W4)"
     );
+    lay_advisory_databases(root);
     repo
+}
+
+/// The fixture's `CARGO_HOME`: inside the repository's common directory, so it is outside the
+/// checkout `git status` reads (AC-518) and is removed with the fixture.
+pub(crate) fn cargo_home(root: &Path) -> PathBuf {
+    crate::common_dir(root).join("lane-proof-cargo-home")
+}
+
+/// **The two advisory databases `sca_scan` reads, at the tools' default locations under the
+/// fixture's `CARGO_HOME`** (judgement call J5): `rk-adapter-toolchain-rust`'s scan fixture
+/// database, git-initialised twice, as `<CARGO_HOME>/advisory-db` (`cargo audit --db`) and
+/// `<CARGO_HOME>/advisory-dbs/<deny's child>` (`cargo deny`'s `db-path`), the paths `rk-cli`'s
+/// `advisory_db_row_inputs` binds. The fixture crate has no dependency, so the scan is clean.
+fn lay_advisory_databases(root: &Path) {
+    let src = workspace_root()
+        .join("crates")
+        .join("rk-adapter-toolchain-rust")
+        .join("tests")
+        .join("fixtures")
+        .join("advisory-db")
+        .join("db");
+    let home = cargo_home(root);
+    for to in [
+        home.join("advisory-db"),
+        home.join("advisory-dbs")
+            .join("advisory-db-3157b0e258782691"),
+    ] {
+        for rel in files_under(&src) {
+            let dest = to.join(&rel);
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent).expect("the database directory is created");
+            }
+            std::fs::copy(src.join(&rel), &dest).expect("the database file copies");
+        }
+        crate::git(&to, &["init", "--quiet"]);
+        crate::git(&to, &["add", "-A"]);
+        crate::git(
+            &to,
+            &[
+                "-c",
+                "user.email=test@example.invalid",
+                "-c",
+                "user.name=Test",
+                "commit",
+                "--quiet",
+                "-m",
+                "the scan fixture database",
+            ],
+        );
+    }
 }
 
 /// The environment the in-process proofs hand `run`: built key by key from this process, never
 /// `Env::capture()` and never a provider name (issue #11). The real Rust adapter's `cargo` needs a
-/// `PATH`, a home and rustup's toolchain selection.
-pub(crate) fn lane_env() -> rk_cli::env::Env {
-    let mut map = BTreeMap::new();
+/// `PATH`, a home and rustup's toolchain selection; `CARGO_HOME` is the fixture's own.
+pub(crate) fn lane_env(root: &Path) -> rk_cli::env::Env {
+    let mut map = BTreeMap::from([(
+        "CARGO_HOME".to_owned(),
+        cargo_home(root).display().to_string(),
+    )]);
     for key in [
         "PATH",
         "Path",
         "PATHEXT",
         "HOME",
         "USERPROFILE",
-        "CARGO_HOME",
         "RUSTUP_HOME",
         "RUSTUP_TOOLCHAIN",
         "SystemRoot",
@@ -334,6 +392,7 @@ pub(crate) struct ScriptedLane {
     // build through an `Arc` (OWN-11: the script is consumed, so it is shared AND mutable).
     script: Mutex<BTreeMap<Key, Response>>,
     seen: Mutex<Seen>,
+    catalog: BTreeMap<String, Vec<AgentStep>>,
 }
 
 impl ScriptedLane {
@@ -344,6 +403,7 @@ impl ScriptedLane {
             tree: crate::run_tree(root, item).path,
             script: Mutex::new(script),
             seen: Mutex::new(Seen::default()),
+            catalog: agent_steps(root),
         })
     }
 
@@ -367,41 +427,143 @@ impl ScriptedLane {
             .collect()
     }
 
-    fn key_of(&self, store: &dyn EventStore) -> Key {
+    /// This dispatch's key. The activity is the `dispatch` row's (the kernel appends it before the
+    /// port); the row's `step_id` is the DAG node's, so the STEP is the one agent step of that
+    /// activity whose declared output kind is the spec's schema and whose declared input names are
+    /// the spec's resolved inputs (read from the copied catalog). The visit is how many rows of
+    /// that step the item has COMMITTED, so a retry keeps its visit and a loop-back takes the next.
+    fn key_of(&self, spec: &ActivitySpec, store: &dyn EventStore) -> Key {
         let rows = store
             .query(rk_kernel::runtime::journal_query(&self.item))
             .expect("the journal reads inside a dispatch");
-        let pair = |e: &Event| {
-            (
-                e.payload
-                    .get("activity_id_at_version")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or_default()
-                    .to_owned(),
-                e.payload
-                    .get("step_id")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or_default()
-                    .to_owned(),
-            )
+        let str_of = |e: &Event, member: &str| {
+            e.payload
+                .get(member)
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_owned()
         };
-        let dispatches: Vec<(String, String)> = rows
+        let activity = rows
             .iter()
-            .filter(|e| e.kind == EventKind::Dispatch)
-            .map(pair)
-            .collect();
-        let last = dispatches
-            .last()
-            .cloned()
+            .rev()
+            .find(|e| e.kind == EventKind::Dispatch)
+            .map(|e| str_of(e, "activity_id_at_version"))
             .expect("the kernel appends a `dispatch` row before the port");
-        let visit = dispatches.iter().filter(|p| **p == last).count() - 1;
-        (last.0, last.1, visit)
+        let names: std::collections::BTreeSet<&str> = spec
+            .inputs
+            .iter()
+            .map(|(name, _)| name.as_str())
+            // The binder's own keys (`item`, `worktree`), which no catalog step declares.
+            .filter(|name| !matches!(*name, "item" | "worktree"))
+            .collect();
+        let candidates: Vec<&AgentStep> = self
+            .catalog
+            .get(&activity)
+            .map(|steps| {
+                steps
+                    .iter()
+                    .filter(|s| s.kind == spec.schema.as_str())
+                    .filter(|s| {
+                        s.inputs
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<std::collections::BTreeSet<_>>()
+                            == names
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let step = match candidates.as_slice() {
+            [one] => one.id.clone(),
+            _ => format!(
+                "<{} steps of {activity} match {} {names:?}>",
+                candidates.len(),
+                spec.schema.as_str()
+            ),
+        };
+        let visit = rows
+            .iter()
+            .filter(|e| e.kind == EventKind::ActivityCommitted)
+            .filter(|e| {
+                str_of(e, "activity_id_at_version") == activity && str_of(e, "step_id") == step
+            })
+            .count();
+        (activity, step, visit)
     }
+}
+
+/// One agent step of a catalog activity: its id, its `value:<Kind>` output, its input names.
+struct AgentStep {
+    id: String,
+    kind: String,
+    inputs: Vec<String>,
+}
+
+/// Every activity's agent steps, by `<id>@<version>`, read from the fixture's catalog and
+/// extended catalog.
+fn agent_steps(root: &Path) -> BTreeMap<String, Vec<AgentStep>> {
+    let mut out = BTreeMap::new();
+    for dir in ["catalog", rk_kernel::catalog::EXTENDED_DIR] {
+        let Ok(entries) = std::fs::read_dir(root.join(".redkiln").join(dir)) else {
+            continue;
+        };
+        for path in entries.filter_map(|e| e.ok().map(|e| e.path())) {
+            if path.extension().is_none_or(|x| x != "toml") {
+                continue;
+            }
+            let src = std::fs::read_to_string(&path).expect("a catalog file reads");
+            let parsed: toml::Value = toml::from_str(&src).expect("a catalog file parses");
+            let Some(activity) = parsed.get("activity") else {
+                continue;
+            };
+            let id = format!(
+                "{}@{}",
+                activity
+                    .get("id")
+                    .and_then(toml::Value::as_str)
+                    .unwrap_or_default(),
+                activity
+                    .get("version")
+                    .and_then(toml::Value::as_integer)
+                    .unwrap_or_default()
+            );
+            let steps = parsed
+                .get("step")
+                .and_then(toml::Value::as_array)
+                .map(|steps| {
+                    steps
+                        .iter()
+                        .filter(|s| s.get("kind").and_then(toml::Value::as_str) == Some("agent"))
+                        .map(|s| AgentStep {
+                            id: s
+                                .get("id")
+                                .and_then(toml::Value::as_str)
+                                .unwrap_or_default()
+                                .to_owned(),
+                            kind: s
+                                .get("outputs")
+                                .and_then(toml::Value::as_str)
+                                .and_then(|o| o.strip_prefix("value:"))
+                                .unwrap_or_default()
+                                .to_owned(),
+                            inputs: s
+                                .get("inputs")
+                                .and_then(toml::Value::as_table)
+                                .map(|t| t.keys().cloned().collect())
+                                .unwrap_or_default(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            out.insert(id, steps);
+        }
+    }
+    out
 }
 
 impl Harness for ScriptedLane {
     fn dispatch(&self, spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
-        let key = self.key_of(store);
+        let key = self.key_of(spec, store);
         let response = self.script.lock().expect("unpoisoned").remove(&key);
         let result = {
             let mut seen = self.seen.lock().expect("unpoisoned");
@@ -454,7 +616,7 @@ pub(crate) fn run_once(root: &Path, item: &str, harness: &Arc<ScriptedLane>) -> 
     rk_cli::verbs::run::run(
         &crate::lane_e2e::cli(root, item),
         &crate::lane_e2e::args(item),
-        &lane_env(),
+        &lane_env(root),
         Startup {
             harness: &factory,
             ..Startup::real()
@@ -485,12 +647,16 @@ pub(crate) fn awaited_gate(root: &Path, item: &str) -> Option<(String, String)> 
 
 /// The gate's question's FIRST option (as `s8d`'s walk answers), with the item's root file attached
 /// when that option attaches a kind.
-pub(crate) fn first_option(root: &Path, item: &str, kind: &str) -> (String, Vec<rk_cli::cli::Attachment>) {
+pub(crate) fn first_option(
+    root: &Path,
+    item: &str,
+    kind: &str,
+) -> (String, Vec<rk_cli::cli::Attachment>) {
     let registry = rk_cli::processes::load(root).expect("the fixture's questions load");
     let question_id = registry.question_for(kind).to_owned();
-    let question = registry
-        .question(&question_id)
-        .unwrap_or_else(|| panic!("the gate kind `{kind}` resolves to no question `{question_id}`"));
+    let question = registry.question(&question_id).unwrap_or_else(|| {
+        panic!("the gate kind `{kind}` resolves to no question `{question_id}`")
+    });
     // The DECLARED first option: `Question::options` is sorted, so the order is read from the
     // question's own `options` array (the built-in default's is `DEFAULT_OPTIONS`).
     let option = declared_first_option(root, &question_id).unwrap_or_else(|| {
@@ -542,7 +708,12 @@ fn declared_first_option(root: &Path, question_id: &str) -> Option<String> {
 }
 
 /// `answer <item> <option> [--attach ..] --explain-sufficed yes --toml-opened no`, in process.
-pub(crate) fn answer(root: &Path, item: &str, option: &str, attach: Vec<rk_cli::cli::Attachment>) -> Exit {
+pub(crate) fn answer(
+    root: &Path,
+    item: &str,
+    option: &str,
+    attach: Vec<rk_cli::cli::Attachment>,
+) -> Exit {
     let cli = rk_cli::cli::Cli {
         cwd: Some(root.to_path_buf()),
         command: rk_cli::cli::Command::Status,
@@ -554,26 +725,44 @@ pub(crate) fn answer(root: &Path, item: &str, option: &str, attach: Vec<rk_cli::
         explain_sufficed: rk_cli::cli::YesNo::Yes,
         toml_opened: rk_cli::cli::YesNo::No,
     };
-    rk_cli::verbs::answer::run(&cli, &args, &crate::support::launched_env(), Startup::real())
-        .unwrap_or_else(|halt| panic!("`answer {item}` halted: {halt:?}"))
+    rk_cli::verbs::answer::run(
+        &cli,
+        &args,
+        &crate::support::launched_env(),
+        Startup::real(),
+    )
+    .unwrap_or_else(|halt| panic!("`answer {item}` halted: {halt:?}"))
 }
 
-/// What a walk saw: each gate it answered, as `(kind, option)`, and how many `run`s it took.
+/// What a walk saw: each gate it answered, as `(kind, option)`, how many `run`s it took, and every
+/// worktree git knew after any `run` (the run tree is removed at close, so it is read on the way).
 pub(crate) struct Walk {
     pub(crate) gates: Vec<(String, String)>,
     pub(crate) runs: usize,
+    pub(crate) trees: Vec<PathBuf>,
 }
 
 /// **Walk the lane to its `closed` mark**: run; while a gate is awaited, answer its question's
 /// first option and run again. Each `run` must exit 0, and the walk stops at `max_runs`.
-pub(crate) fn walk_to_close(root: &Path, item: &str, harness: &Arc<ScriptedLane>, max_runs: usize) -> Walk {
+pub(crate) fn walk_to_close(
+    root: &Path,
+    item: &str,
+    harness: &Arc<ScriptedLane>,
+    max_runs: usize,
+) -> Walk {
     let mut walk = Walk {
         gates: Vec::new(),
         runs: 0,
+        trees: Vec::new(),
     };
     while walk.runs < max_runs {
         let exit = run_once(root, item, harness);
         walk.runs += 1;
+        for tree in worktrees(root) {
+            if !walk.trees.contains(&tree) {
+                walk.trees.push(tree);
+            }
+        }
         assert_eq!(
             exit,
             Exit::Success,
@@ -664,10 +853,137 @@ pub(crate) fn committed_paths(root: &Path, item: &str) -> Vec<(String, String, s
         .filter(|e| e.kind == EventKind::ActivityCommitted)
         .filter_map(|e| {
             Some((
-                e.payload.get("activity_id_at_version")?.as_str()?.to_owned(),
+                e.payload
+                    .get("activity_id_at_version")?
+                    .as_str()?
+                    .to_owned(),
                 e.payload.get("step_id")?.as_str()?.to_owned(),
                 e.payload.get("iteration_path")?.clone(),
             ))
         })
+        .collect()
+}
+
+/// The fixture checkout's observable state for AC-518: `(HEAD, git status --porcelain, git
+/// diff-index --quiet HEAD's exit code)`.
+pub(crate) fn checkout_state(root: &Path) -> (String, String, Option<i32>) {
+    let head = crate::lane_e2e::git_read(root, &["rev-parse", "HEAD"])
+        .expect("the fixture has a HEAD")
+        .trim()
+        .to_owned();
+    let porcelain = crate::lane_e2e::git_read(root, &["status", "--porcelain"])
+        .expect("git status reads the fixture");
+    let quiet = crate::lane_e2e::git_rc(root, &["diff-index", "--quiet", "HEAD"]);
+    (head, porcelain, quiet)
+}
+
+/// The fork point of `rk-run/<item>` from the fixture's `HEAD`.
+pub(crate) fn fork_point(root: &Path, item: &str) -> String {
+    crate::lane_e2e::git_read(
+        root,
+        &["merge-base", "HEAD", &crate::lane_e2e::run_ref(item)],
+    )
+    .unwrap_or_else(|| panic!("`rk-run/{item}` shares no history with HEAD"))
+    .trim()
+    .to_owned()
+}
+
+/// The commits on `<fork>..rk-run/<item>` whose own diff touches `path`, oldest first.
+pub(crate) fn commits_touching(root: &Path, item: &str, path: &str) -> Vec<String> {
+    let range = format!(
+        "{}..{}",
+        fork_point(root, item),
+        crate::lane_e2e::run_ref(item)
+    );
+    crate::lane_e2e::git_read(
+        root,
+        &["log", "--reverse", "--format=%H", &range, "--", path],
+    )
+    .unwrap_or_default()
+    .lines()
+    .map(str::to_owned)
+    .collect()
+}
+
+/// Every worktree git knows for the fixture, by `git worktree list --porcelain`.
+pub(crate) fn worktrees(root: &Path) -> Vec<PathBuf> {
+    crate::lane_e2e::git_read(root, &["worktree", "list", "--porcelain"])
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| l.strip_prefix("worktree "))
+        .map(PathBuf::from)
+        .collect()
+}
+
+/// Every `artifact.write` payload of `kind` for `item`, scoped by the interim `t2_event.item`
+/// column (s8e §8e.10), oldest first.
+pub(crate) fn artifact_writes(root: &Path, item: &str, kind: &str) -> Vec<serde_json::Value> {
+    let sql = format!(
+        "SELECT payload FROM t2_event WHERE item = '{item}' AND kind = 'artifact.write' ORDER BY id"
+    );
+    crate::lane_e2e::sql_rows(&crate::common_dir(root), &sql)
+        .unwrap_or_else(|e| panic!("the store reads: {e}"))
+        .into_iter()
+        .filter_map(|row| row.into_iter().next().flatten())
+        .map(|text| serde_json::from_str::<serde_json::Value>(&text).expect("a payload is JSON"))
+        .filter(|p| p.get("kind").and_then(serde_json::Value::as_str) == Some(kind))
+        .collect()
+}
+
+/// The bytes of `path` as committed at `rev`, by `git cat-file blob` (`None` when absent).
+pub(crate) fn blob_at(root: &Path, rev: &str, path: &str) -> Option<Vec<u8>> {
+    let spec = format!("{rev}:{path}");
+    crate::support::git_run(root, &["cat-file", "blob", &spec])
+        .ok()
+        .map(|out| out.stdout)
+}
+
+/// The first commit on `<fork>..rk-run/<item>` whose `Story:` mark names `stage`, oldest first.
+pub(crate) fn first_mark_of(root: &Path, item: &str, stage: &str) -> Option<String> {
+    let range = format!(
+        "{}..{}",
+        fork_point(root, item),
+        crate::lane_e2e::run_ref(item)
+    );
+    let format = "--format=%H %(trailers:key=Story,valueonly=true,separator=%x20)";
+    let qualified = format!("{PROJECT}/{item}");
+    crate::lane_e2e::git_read(root, &["log", "--reverse", format, &range])
+        .unwrap_or_default()
+        .lines()
+        .find_map(|line| {
+            let tokens: Vec<&str> = line.split_whitespace().collect();
+            match tokens.as_slice() {
+                [sha, project, .., last] if *project == qualified && *last == stage => {
+                    Some((*sha).to_owned())
+                }
+                _ => None,
+            }
+        })
+}
+
+/// Each `acceptance_criteria` entry's `(id, verification)` of the item's `Spec` as committed at
+/// `rev`, at the path the item's last `Spec` write names.
+pub(crate) fn spec_verifications(root: &Path, item: &str, rev: &str) -> Vec<(String, String)> {
+    let write = artifact_writes(root, item, "Spec")
+        .pop()
+        .expect("the item journalled a Spec write");
+    let path = write
+        .get("path")
+        .and_then(serde_json::Value::as_str)
+        .expect("the Spec write names its path");
+    let bytes = blob_at(root, rev, path)
+        .unwrap_or_else(|| panic!("the Spec `{path}` is not committed at {rev}"));
+    let spec: serde_json::Value = serde_json::from_slice(&bytes).expect("the landed Spec is JSON");
+    let field = |ac: &serde_json::Value, name: &str| {
+        ac.get(name)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned()
+    };
+    spec.get("acceptance_criteria")
+        .and_then(serde_json::Value::as_array)
+        .expect("the Spec carries acceptance_criteria")
+        .iter()
+        .map(|ac| (field(ac, "id"), field(ac, "verification")))
         .collect()
 }

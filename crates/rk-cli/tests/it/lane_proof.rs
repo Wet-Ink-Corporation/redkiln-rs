@@ -36,12 +36,13 @@ assert_eq!(word_count(\"one two three\"), 3);\n    }\n}\n";
 /// The reproduction the investigator writes: red over the defect, green after the fix.
 const REPRO_TEST: &str = "#[test]\nfn repro_empty_text_has_no_words() {\n    \
 assert_eq!(rk_lane_fixture::word_count(\"\"), 0);\n}\n";
-const REPRO_NAME: &str = "repro_empty_text_has_no_words";
+/// The repro's command: the kernel's one selection parser reads the tokens after ` -- `.
+const REPRO_NAME: &str = "cargo test -- repro_empty_text_has_no_words";
 
 /// The investigator's discriminating test: red over the defect, green after the fix.
 const HYPOTHESIS_TEST: &str = "#[test]\nfn hypothesis_doubled_space_is_one_separator() {\n    \
 assert_eq!(rk_lane_fixture::word_count(\"one  two\"), 2);\n}\n";
-const HYPOTHESIS_NAME: &str = "hypothesis_doubled_space_is_one_separator";
+const HYPOTHESIS_NAME: &str = "cargo test -- hypothesis_doubled_space_is_one_separator";
 
 /// The implementer's failing test at `red`, for the Spec's one criterion.
 const RED_TEST: &str = "#[test]\nfn red_ac_1_leading_space_is_not_a_word() {\n    \
@@ -89,6 +90,11 @@ fn impl_report(tests_added: &[&str], files: &[&str]) -> lane::ImplReport {
     }
 }
 
+/// A reviewer's empty finding set: nothing blocks.
+fn no_findings() -> Response {
+    Response::of(&rk_types::artifact::findings::Findings { items: Vec::new() })
+}
+
 /// The fix lane's script: every agent step `bug-standard` dispatches for the fix item, once.
 fn fix_script() -> BTreeMap<Key, Response> {
     let root_cause = lane::RootCause {
@@ -133,8 +139,12 @@ fn fix_script() -> BTreeMap<Key, Response> {
                 summary: t("split(' ') counts separators"),
                 rationale: t("the discriminating test fails"),
             })
-            .writing("crates/rk-lane-fixture/tests/hypothesis.rs", HYPOTHESIS_TEST),
+            .writing(
+                "crates/rk-lane-fixture/tests/hypothesis.rs",
+                HYPOTHESIS_TEST,
+            ),
         ),
+        (key("root-cause@5", "adversary", 0), no_findings()),
         (key("fix-spec@2", "draft", 0), Response::of(&fix_spec())),
         (
             key("fix-spec@2", "self-check", 0),
@@ -142,8 +152,11 @@ fn fix_script() -> BTreeMap<Key, Response> {
         ),
         (
             key("tdd-red-green-refactor@3", "red", 0),
-            Response::of(&impl_report(&[RED_NAME], &["crates/rk-lane-fixture/tests/red.rs"]))
-                .writing("crates/rk-lane-fixture/tests/red.rs", RED_TEST),
+            Response::of(&impl_report(
+                &[RED_NAME],
+                &["crates/rk-lane-fixture/tests/red.rs"],
+            ))
+            .writing("crates/rk-lane-fixture/tests/red.rs", RED_TEST),
         ),
         (
             key("tdd-red-green-refactor@3", "green", 0),
@@ -151,9 +164,10 @@ fn fix_script() -> BTreeMap<Key, Response> {
                 .writing("crates/rk-lane-fixture/src/lib.rs", FIXED_LIB),
         ),
         (
-            key("adversarial-review@4", "review", 0),
-            Response::of(&rk_types::artifact::findings::Findings { items: Vec::new() }),
+            key("tdd-red-green-refactor@3", "refactor", 0),
+            Response::of(&impl_report(&[], &[])),
         ),
+        (key("adversarial-review@4", "review", 0), no_findings()),
         (
             key("debt-logging@1", "extract", 0),
             Response::of(&lane::DebtRegisterEntry {
@@ -190,6 +204,69 @@ fn fix_script() -> BTreeMap<Key, Response> {
 fn fix_lane_reaches_a_landed_content_commit_under_fake_harness() {
     let repo = rig::fixture();
     let root = repo.path();
+    let before = rig::checkout_state(root);
+    let walk = walk_fix_lane(root);
+
+    // D21-41 (b): a kernel-made content commit under the crate's `src/`, and the tree differs.
+    let src = format!("{}/src", rig::CRATE_DIR);
+    let fork = rig::fork_point(root, FIX_ITEM);
+    let run_ref = crate::lane_e2e::run_ref(FIX_ITEM);
+    assert!(
+        !rig::commits_touching(root, FIX_ITEM, &src).is_empty(),
+        "no commit on {fork}..rk-run/{FIX_ITEM} touches `{src}`"
+    );
+    assert_eq!(
+        crate::lane_e2e::git_rc(root, &["diff", "--quiet", &fork, &run_ref, "--", &src]),
+        Some(1),
+        "rk-run/{FIX_ITEM}'s tree does not differ from the fork point under `{src}`"
+    );
+    let landed = rig::blob_at(root, &run_ref, &format!("{src}/lib.rs")).expect("lib.rs is landed");
+    assert_eq!(
+        landed,
+        FIXED_LIB.as_bytes(),
+        "the landed lib.rs is the implementer's fix"
+    );
+
+    // D21-44: the run-owned worktree is under `.redkiln/worktrees/`, never under the common dir.
+    let trees = walk.trees;
+    let expected = root.join(".redkiln").join("worktrees").join(FIX_ITEM);
+    let canonical =
+        |p: &std::path::Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    assert!(
+        trees.iter().any(|t| canonical(t) == canonical(&expected)),
+        "no worktree at {}; git knows {trees:?}",
+        expected.display()
+    );
+    let common = canonical(&crate::common_dir(root));
+    assert!(
+        trees.iter().all(|t| !canonical(t).starts_with(&common)),
+        "a worktree lives under the common dir: {trees:?}"
+    );
+
+    // AC-518: the fixture's own checkout is unchanged.
+    let after = rig::checkout_state(root);
+    assert_eq!(after.0, before.0, "HEAD moved");
+    assert_eq!(after.1, "", "`git status --porcelain` is not empty");
+    assert_eq!(after.2, Some(0), "`git diff-index --quiet HEAD` failed");
+
+    // s8g §8g.3: before verify's first step (at the mark that enters verify), every Spec AC
+    // carries a verification.
+    let entering_verify =
+        rig::first_mark_of(root, FIX_ITEM, "verify").expect("the lane marked its entry to verify");
+    let acs = rig::spec_verifications(root, FIX_ITEM, &entering_verify);
+    assert!(
+        !acs.is_empty(),
+        "the fix lane's Spec has no acceptance criteria"
+    );
+    assert!(
+        acs.iter().all(|(_, v)| !v.trim().is_empty()),
+        "an AC of the fix Spec lacks a verification: {acs:?}"
+    );
+}
+
+/// Walk the fix lane to `closed` under [`fix_script`], asserting the dispatched set equals the
+/// scripted set (no unscripted dispatch, no unconsumed response).
+fn walk_fix_lane(root: &std::path::Path) -> rig::Walk {
     let harness = rig::ScriptedLane::new(root, FIX_ITEM, fix_script());
     let walk = rig::walk_to_close(root, FIX_ITEM, &harness, 16);
     assert!(
@@ -202,5 +279,5 @@ fn fix_lane_reaches_a_landed_content_commit_under_fake_harness() {
         "scripted responses no dispatch reached: {:?}",
         harness.unconsumed()
     );
-    assert!(walk.runs >= 1, "the lane ran");
+    walk
 }
