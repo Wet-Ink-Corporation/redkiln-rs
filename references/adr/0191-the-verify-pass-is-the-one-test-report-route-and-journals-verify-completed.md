@@ -12,6 +12,8 @@ evidence: []
 consumers: []
 ---
 
+*(dated 2026-10-17, the operator's sitting before `s8j` Round A; D21-156.)* **This record's acceptance is ratified by the operator.** It flipped on *"the operator has not objected in this ledger"* (D21-131); the operator has now confirmed the AFK-provisional rulings it carries (D21-121 and D21-122) by D21-156. No decision sentence moves.
+
 *(Corrected 2026-10-02 in-record at `s8g`'s close, in the flip commit (D21-131); D21-121 and D21-122, each TAKEN
 PROVISIONALLY under D21-105.)* **The title's supersession clause is incomplete: this record supersedes ADR-0132 and
 ADR-0189 in part as well as ADR-0162.** The title, written at writing, reads *"Supersedes `0162`'s patch clause in

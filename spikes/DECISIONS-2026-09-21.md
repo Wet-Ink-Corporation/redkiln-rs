@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-15 (D21-1 … D21-155), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-17 (D21-1 … D21-156), and what they license
+
+*(Title moved 2026-10-17 during `s8j`, in the operator's sitting: it read **"2026-09-21 … 2026-10-15 (D21-1 … D21-155)"**; `D21-156` is appended with this move.)*
 
 *(Title moved 2026-10-15 at `s8i`'s close: it read **"2026-09-21 … 2026-10-07 (D21-1 … D21-153)"**; `D21-154` was appended without this move. Measured: `grep -c '^## D21-'` over this file → 154, the last `D21-154`. Moved again the same day for `D21-155`, `s8i`'s close entry: → 155, the last `D21-155`.)*
 
@@ -7347,3 +7349,38 @@ Refuting rounds 21 to 24 ran over the close; round 24 moved no code and no guard
 - The scratch folders the guard controls leave under `D:/repos/redkiln-sev/afk-tools/sp/s8i/tmp/`: the operator's to
   delete.
 - D21-143 stays OPEN until the operator closes it.
+
+## D21-156 · The operator confirms the twenty AFK-provisional rulings and signs ADR-0197 decision 7's table
+
+**Recorded 2026-10-17 in the operator's sitting before `s8j`'s Round A** (project thread, 2026-10-17; issues
+Wet-Ink-Corporation/redkiln-rs#28 and #73). The operator read one consolidated list,
+`/mnt/project-files/s8j/ryan-sitting-2026-10-17.md`, measured at `99a3753`, and answered *"confirm all"*. This entry
+records that answer. It takes no ruling of its own and rewrites none of the entries it confirms.
+
+**1. The twenty rulings are CONFIRMED by the operator, each as taken.** Every one was TAKEN PROVISIONALLY under the
+AFK rule (D21-105), pending the operator's confirmation, and none had a recorded confirmation (#28; audit 2026-10-06
+§13 O-3):
+D21-106, D21-108, D21-109, D21-110, D21-111, D21-112, D21-113, D21-114, D21-115, D21-119, D21-120, D21-121, D21-122, D21-123, D21-124, D21-125, D21-126, D21-127, D21-128, D21-137.
+Each stands on the option it defaulted to, with the dated corrections already written under it. D21-128, which its
+own entry flagged for the operator and did not default, is confirmed as its entry states it: the test git helpers
+route through `git_exec`, and the production Command-site line narrows to its fourteen pinned non-git spawn sites.
+D21-107 and D21-116 to D21-118 were not on the list and are not touched here.
+
+**2. The flips that rested on silence now rest on this line.** ADR-0189 (D21-118), ADR-0191 (D21-131), ADR-0194
+(D21-134) and ADR-0196 (D21-136) flipped `proposed → accepted` while the rulings they carry were still
+provisional: ADR-0189, ADR-0191 and ADR-0196 on *"the operator has not objected in this ledger"*, and ADR-0194 on the
+operator's standing authority under D21-105 item 1. The operator has now confirmed those rulings (ADR-0189: D21-106,
+D21-110, D21-113, D21-114; ADR-0191: D21-121, D21-122; ADR-0194: D21-123 … D21-127; ADR-0196: D21-119), so each
+acceptance is ratified by this entry. Each record gains one dated line citing it; no
+decision sentence moves.
+
+**3. ADR-0197 decision 7's table is SIGNED by the operator, as drafted (AC-156).** The eleven entries in
+`rk_types::schema::judgement::REGISTRY` that decision 7 brought in keep their drafted values: judgement-bearing
+`yes` for `FindingSeverity`, `Confidence`, `ReproStatus`, `HypothesisStatus` and `DocsQuadrant`; `no` for
+`AdrStatus`, `ChangeType`, `ArchitectureLevel`, `CausalMethod`, `EstimateMethod` and `RolloutStrategy`. The rows
+cited from `s8g`'s entry and the rows struck to free `Text` are unchanged. **ADR-0197 stays `proposed`**: decision 13's
+other condition, both `s8h` §8h.11 probes passed at `s8j`, is still owed, and the (g) flip is the operator's line at
+`s8j`'s Round E.
+
+**What this closes.** #28 and #73 have their acceptance criteria met by this entry and the dated lines it names
+(`runbook/PROGRESS.md` §2 rows; ADR-0189, ADR-0191, ADR-0194, ADR-0196 and ADR-0197). Nothing stays owed from either.

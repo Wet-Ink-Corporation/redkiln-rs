@@ -12,6 +12,8 @@ evidence: []
 consumers: []
 ---
 
+*(dated 2026-10-17, the operator's sitting before `s8j` Round A; D21-156.)* **This record's acceptance is ratified by the operator.** It flipped on *"the operator has not objected in this ledger"* (D21-118); the operator has now confirmed the AFK-provisional rulings it carries (D21-106, D21-110, D21-113 and D21-114) by D21-156. No decision sentence moves.
+
 *(Corrected 2026-09-29 in-record, while `proposed`, at `s8f`'s build (package R5FIX-8f); refuting round 5's
 spec-conformance major; D21-113, TAKEN PROVISIONALLY under D21-105.)* **The title's "Supersedes nothing" is corrected:
 this record supersedes ADR-0173 in part**, and the front matter's `supersedes` names `0173`. What moves is where the

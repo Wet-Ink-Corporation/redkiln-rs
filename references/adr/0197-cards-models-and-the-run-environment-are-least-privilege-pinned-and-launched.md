@@ -251,6 +251,8 @@ by dated line, and an enum the build adds that is not here is added by dated lin
 
 *(dated 2026-10-02, `s8h` build, package P2-rk-types)* **The table is complete; no enum was added beyond it.** The registry rows are `rk_types::schema::judgement::REGISTRY`'s eleven new entries (five drafted `yes`: `FindingSeverity`, `Confidence`, `ReproStatus`, `HypothesisStatus`, `DocsQuadrant`; six `no`), and `s8g`'s three `judgement_registry::` tests pass over them. The typing rule the build used is stated in `crates/rk-types/src/artifact/lane.rs`'s module comment: a scalar is a closed enum only when a shipped `expr`/`when`/`until` compares it to a literal or a catalog row, checklist or record names its complete vocabulary. Every `yes` value above is still drafted and the operator's to sign (AC-156).
 
+*(dated 2026-10-17, the operator's sitting before `s8j` Round A; D21-156.)* **The table is SIGNED by the operator, as drafted (AC-156).** The five `yes` and six `no` values above stand. This record stays `proposed`: decision 13's other condition, both §8h.11 probes passed at `s8j`, is still owed.
+
 **8. The three principle-7 guards, and the auth check (D21-41 (g); D21-42 15a, 17a).** All read the child's own
 report.
 1. **The closed-set lint** of decision 2, in `lint_card`.
