@@ -1137,6 +1137,18 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    mutant's anchor is still `TBD-after-C4`. Its synthetic controls are `python runbook/tools/s8j-mutants.py
    --self-test` and `python -m unittest runbook/tools/test_s8j_mutants.py`, and neither runs cargo.
 
+   *(dated 2026-10-18, s8j build, S8J-C5-ANCHORS)* Of the ten mutants, the six of §8j.4 shipped with
+   `TBD-after-C4` anchors; five are now anchored, read from C4's lane proofs and the code they exercise:
+   `M-seed-record` and `M-fixture-toolchain` in `crates/rk-cli/src/verbs/run.rs`, `M-land-empty` in
+   `crates/rk-git/src/landing.rs`, `M-spec-digest-pre-render` in `crates/rk-store/src/render.rs`, and
+   `M-worktree-under-git` in `crates/rk-git/src/worktree.rs`. Each anchor occurs exactly once (`python
+   runbook/tools/s8j-mutants.py --check-anchors HEAD`), and each mutated tree compiles (`cargo check -p rk-cli`,
+   not a mutant run). **`M-skip-empty-stage-trailer` stays `TBD-after-C4`, so the driver still refuses:** an empty
+   stage's `Story:` mark is minted by the advance into it (`rk-kernel` `runtime.rs`, the `AdvanceStage` arm's
+   `Mark::Stage(to)`), before that stage's selection shows it empty, and `replay.rs`'s entry act marks only a stage
+   the journal has not entered. No one anchor makes *"a `stage_empty` stage mints no trailer"*; a mutant needs a
+   look-ahead at the successor's selection, which is a design choice for a human, not an anchor.
+
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.

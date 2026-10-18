@@ -74,10 +74,10 @@ MUTANTS = [
         "section": "8j.4",
         "change": "through_step_seven seeds the stage from the item record, ignoring the reconciled trailer",
         "file": "crates/rk-cli/src/verbs/run.rs",
-        "anchor": TBD,
-        "replacement": TBD,
+        "anchor": "    let Some(stage) = seeded.or_else(|| record.stage.clone()) else {\n",
+        "replacement": "    let Some(stage) = record.stage.clone() else {\n",
         "anchor_from": C4,
-        "note": "hint: rk-cli verbs::run::through_step_seven; choose the anchor once C4's binary arm is green",
+        "note": "through_step_seven's seed: the record's stage (minted `triage`, never advanced) replaces the git seed",
         "tests": [_it(
             "lane_proof::gate_then_answer_then_second_process_continues_binary_arm",
             "lane_proof::boundary_hold_answered_lets_the_next_process_enter_specification",
@@ -88,10 +88,10 @@ MUTANTS = [
         "section": "8j.4",
         "change": "the landing commits allow_empty with nothing staged",
         "file": "crates/rk-git/src/landing.rs",
-        "anchor": TBD,
-        "replacement": TBD,
+        "anchor": "    let tree = if due {\n",
+        "replacement": "    let tree = if false {\n",
         "anchor_from": C4,
-        "note": "hint: rk-git landing's `if !due && !allow_empty` commit path",
+        "note": "landing::commit always takes the allow_empty arm's tree (HEAD's): every commit lands nothing staged",
         "tests": [_it("lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness")],
     },
     {
@@ -99,10 +99,13 @@ MUTANTS = [
         "section": "8j.4",
         "change": "the composition root builds FixtureToolchain",
         "file": "crates/rk-cli/src/verbs/run.rs",
-        "anchor": TBD,
-        "replacement": TBD,
+        "anchor": "        let toolchain = chosen.toolchain;\n",
+        "replacement": (
+            "        let toolchain: Arc<dyn rk_ports::toolchain::Toolchain> ="
+            " Arc::new(rk_ports::fakes::FixtureToolchain::default());\n"
+        ),
         "anchor_from": C4,
-        "note": "hint: the toolchain choice in rk-cli verbs::run (detect() over the run-owned worktree)",
+        "note": "the composition root's port slot takes FixtureToolchain::default() in place of detect()'s choice",
         "tests": [_it("lane_proof::fix_lane_verify_completed_names_the_rust_adapter")],
     },
     {
@@ -113,7 +116,10 @@ MUTANTS = [
         "anchor": TBD,
         "replacement": TBD,
         "anchor_from": C4,
-        "note": "hint: rk-kernel replay's stage_empty row and its Story: mark",
+        "note": "no single site: an empty stage's Story: mark is minted by the ADVANCE into it (rk-kernel"
+                " runtime.rs's AdvanceStage arm, Mark::Stage(to)), before that stage's selection shows it empty;"
+                " replay.rs's entry act marks only a stage the journal has not entered. A mutant needs a"
+                " look-ahead at the successor's selection, which is a design choice, not an anchor",
         "tests": [_it(
             "lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order",
             "lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order",
@@ -124,10 +130,23 @@ MUTANTS = [
         "section": "8j.4",
         "change": "artifact.write's digest is taken over the pre-render value, not the written bytes",
         "file": "crates/rk-store/src/render.rs",
-        "anchor": TBD,
-        "replacement": TBD,
+        "anchor": (
+            "    pub fn write(&self, kind: &str, value: &Json) -> Result<Written, RenderError> {\n"
+            "        let sidecar = canon::canonical(value).map_err(|e| canon_err(kind, &e))?;\n"
+            "        let rendering = template_of(kind).map(|t| render(t, value)).transpose()?;\n"
+            "        let path = self.dir.rel(&sidecar_name(kind));\n"
+            "        let digest = sha256(&sidecar);\n"
+        ),
+        "replacement": (
+            "    pub fn write(&self, kind: &str, value: &Json) -> Result<Written, RenderError> {\n"
+            "        let sidecar = canon::canonical(value).map_err(|e| canon_err(kind, &e))?;\n"
+            "        let rendering = template_of(kind).map(|t| render(t, value)).transpose()?;\n"
+            "        let path = self.dir.rel(&sidecar_name(kind));\n"
+            "        let digest = sha256(value.to_string().as_bytes());\n"
+        ),
         "anchor_from": C4,
-        "note": "hint: rk-store render's ArtifactWriter digest (file not confirmed)",
+        "note": "ArtifactWriter::write (the kernel's artifact.write seam) digests the value's own serialisation, not the"
+                " canonical sidecar it writes",
         "tests": [_it("lane_proof::story_lane_spec_is_landed_and_journalled")],
     },
     {
@@ -135,10 +154,11 @@ MUTANTS = [
         "section": "8j.4",
         "change": "the run-worktree root is derived under the common dir again",
         "file": "crates/rk-git/src/worktree.rs",
-        "anchor": TBD,
-        "replacement": TBD,
+        "anchor": "    main.join(\".redkiln\").join(\"worktrees\")\n",
+        "replacement": "    main.join(\".git\").join(\"redkiln\").join(\"worktrees\")\n",
         "anchor_from": C4,
-        "note": "hint: rk-git worktree's `main.join(\".redkiln\").join(\"worktrees\")`",
+        "note": "run_tree_root back to ADR-0137 decision 3's `<common-dir>/redkiln/worktrees` (the common dir of a"
+                " non-linked checkout is `<main>/.git`)",
         "tests": [_it("lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness")],
     },
     {
