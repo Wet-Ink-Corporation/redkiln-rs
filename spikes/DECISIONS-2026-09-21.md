@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-160), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-162), and what they license
+
+*(Title moved 2026-10-18, D21-162: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-160)"**; `D21-161` was appended without moving it, and `D21-162` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 161 before the append, the last `D21-161`; 162 after.)*
 
 *(Title moved 2026-10-18 during `s8j`, package S8J-C1-ITEMS: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-159)"**; `D21-160` is appended with this move.)*
 
@@ -7497,7 +7499,7 @@ reserved-fix-item: rk-fix-doctor-margin rk-cli:doctor::rules::margin
 fixes it. A fix landed earlier leaves Checkpoint 8j (4)'s repro green and the lane with nothing to repair.
 
 **The item, minted with it** (`s8j` §8j.5 step 3): `.redkiln/items/rk-fix-doctor-margin.toml`, `kind = "bug"`,
-`stage = "triage"`, `hold_before = "specification"` (§8j.3 item 1; ADR-0201, proposed), `slice = "doctor-margin"`,
+`stage = "triage"`, `hold_before = "specification"` (§8j.3 item 1; ADR-0201, proposed *(dated 2026-10-18, D21-162: ADR-0201 accepted)*), `slice = "doctor-margin"`,
 `[trial] activity = "tag-release"` (§8j.1(e); ADR-0195 decision 4), and `[facets]` `cos = "standard"`,
 `has_repro = true`, low `criticality`, `blast_radius` and `size`. Its BugReport and repro pair (§8j.5 steps 3 and 4)
 are `.redkiln/intake/rk-fix-doctor-margin.BugReport.md`, `.repro.rs` and `.repro.toml`, committed with it.
@@ -7520,7 +7522,7 @@ are `.redkiln/intake/rk-fix-doctor-margin.BugReport.md`, `.repro.rs` and `.repro
 2. **D1: a new record partly supersedes ADR-0173** (*"A: New record, read attached roots"*). A human-attached root
    is read by the next activity through `read_artifact_input`
    (`crates/rk-kernel/src/runtime/reference.rs`:1141), not only through an `emit` binding. The record is ADR-0202,
-   written `proposed`.
+   written `proposed` *(dated 2026-10-18, D21-162: ADR-0202 accepted)*.
 3. **D2: the kernel resolves `baseline`** (*"A: Kernel resolves baseline"*). `baseline` in the twelve catalog
    activities' `baseline..HEAD` is read as the run's fork point; the catalog rows are not rewritten.
 4. **D4: `package` compares trees outside `.redkiln/`** (*"A: Compare trees outside .redkiln/"*). Release's package
@@ -7528,3 +7530,24 @@ are `.redkiln/intake/rk-fix-doctor-margin.BugReport.md`, `.repro.rs` and `.repro
    anywhere else (`crates/rk-adapter-toolchain-rust/src/verbs.rs`:881).
 
 D1, D2 and D4 are S8J-C4-LANE-PROOF's findings; their fixes land before its lane proofs merge.
+
+## D21-162 · The operator accepts ADR-0200, 0201, 0202 and 0203
+
+**Recorded 2026-10-18 by an agent session.** Ryan answered a decision card in the project thread on 2026-10-18
+(20:43Z) by tapping *"Accept all four"*. This entry records that answer as the operator's dated ledger line each
+record's flip waits on (*"Each record flips to `accepted` only on the operator's dated ledger line (ADR-0126's
+route)"*, `s8j`'s stage file); it takes no ruling of its own. Each record flips `proposed → accepted` as drafted, its
+`date` unchanged; only its `status:` line moves, and no decision sentence moves.
+
+1. **ADR-0200, the human roots.** `root.bug-report` and `root.intake-record` are pack questions, each bound to the
+   step-4 `human_root:<Kind>` gate. It supersedes nothing, so no back-link moves.
+2. **ADR-0201, the boundary hold.** `hold_before` on the item record opens a `hold:<stage>` gate instead of the
+   advance. It supersedes nothing, so no back-link moves.
+3. **ADR-0202, the root read.** An `artifact:` input reads the item's human-attached root when no `emit` binding of
+   the kind exists. It supersedes ADR-0173 in part (decision 1's `artifact:` row and decision 8, the root arm only),
+   so ADR-0173's `superseded_by` now reads `["0189", "0202"]` and ADR-0173 stays `accepted` (ADR-0092).
+4. **ADR-0203, the package sha.** `package` accepts a `HEAD` whose tree outside `.redkiln/` is the `Changeset`
+   commit's. It supersedes ADR-0170 decision 6 in part (its `sha`/`HEAD`-mismatch sentence), so ADR-0170's
+   `superseded_by` now reads `["0179", "0203"]` and ADR-0170 stays `accepted` (ADR-0092).
+
+ADR-0197 stays `proposed`: its flip still waits on both `s8h` §8h.11 probes (D21-41 (g)).

@@ -1,7 +1,7 @@
 ---
 id: "0203"
 title: "**`package` accepts a `HEAD` whose tree outside `.redkiln/` is the `Changeset` commit's tree** (`s8j`'s package-sha record; the operator's ruling A on the S8J-C4 lane-proof defect D4, 2026-10-18): when the input `sha` is not the project root's `HEAD`, the Rust adapter reads `sha..HEAD` through `rk_git::diff::range_diff` and accepts only when every changed path lies under `.redkiln/`; any other changed path, or a `sha` that does not resolve, is still refused as `sha-head-mismatch`, naming the first such path. `BuildArtifact` still carries both `sha` and `head`. Supersedes ADR-0170 decision 6 in part, at its sentence *\"so is a `sha`/`HEAD` mismatch\"*"
-status: proposed
+status: accepted
 date: 2026-10-18
 legacy_id: none
 source: the S8J-C4 lane proofs (`crates/rk-cli/tests/it/lane_proof.rs` on `claude/s8j-afk-batch-2-tg23uw-c4`, PR #103), whose lanes' release stage refused `build-package`'s `package` step as `sha-head-mismatch`; the operator's ruling A on that defect (D4), 2026-10-18; references/adr/0170 decision 6 and its forbids, 0077, 0098, 0165 decision 4; spikes/DECISIONS-2026-09-21.md D21-62 C; runbook/phase-1/s8a-records-and-red-checkpoints.md Checkpoint 8a guard (6) (the adapter's `rk_git` allowlist: `diff`, `path`, `head`); crates/rk-adapter-toolchain-rust/src/verbs.rs (`package`), crates/rk-git/src/diff.rs (`range_diff`), .redkiln/catalog/build-package.toml (`sha = "artifact:Changeset.sha"`)

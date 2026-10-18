@@ -1,7 +1,7 @@
 ---
 id: "0201"
 title: "**A boundary hold is human-authored on the item record and opens a gate instead of the advance** (`s8j`'s boundary-hold record; D21-42 19b; D21-40 decision 2; ADR-0129 decision 3; ADR-0183): the item record's key `hold_before = \"<stage>\"`; when `fsm::next_action` would return `AdvanceStage` into the held stage and no answer to that hold stands on the item, it opens a gate of kind `hold:<stage>` instead, answered by the default question; an answered hold is spent and never re-fires, `approve` releases the advance and `changes-requested` holds the lane at the boundary; `run` refuses at load, by name, a hold naming a stage the item's pack does not order; `hold:specification` is a `&str` constant with a fail-closed `[[gate_expiry]]` row in both packs. Supersedes nothing that this record could find, and invites refutation"
-status: proposed
+status: accepted
 date: 2026-10-18
 legacy_id: none
 source: runbook/phase-1/s8j-run-preparation.md §8j.3 (the mechanism and the record's four clauses) and §8j.10 Checkpoint 8j (3); spikes/plans/s8j-build-plan-2026-10-16.md Round B (S8J-B2-HOLD) and Round C (S8J-C3-HOLD); spikes/DECISIONS-2026-09-21.md D21-40 decision 2, D21-42 19a, 19b and 21a, D21-43 N6, D21-46 (the launcher's `answer` mode), D21-47 (review finding 26); references/adr/0022, 0116 decision 5, 0123, 0128, 0129 decisions 1 and 3, 0152, 0153, 0154, 0157, 0161, 0183, 0198 decisions 6 and 7; references/2026-09-08-acceptance-criteria.md AC-039, AC-252, AC-276, AC-403, AC-518

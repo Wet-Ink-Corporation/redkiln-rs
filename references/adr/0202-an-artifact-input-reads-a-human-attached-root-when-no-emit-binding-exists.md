@@ -1,7 +1,7 @@
 ---
 id: "0202"
 title: "**An `artifact:` input reads a human-attached root when the item has no `emit` binding of the kind** (`s8j`'s root-read record; D21-110 ruling 2's conditional record; the operator's ruling A on the S8J-C4 lane-proof defect D1, 2026-10-18): with no committed `emit` binding of `Kind` for the item, the vouched pass's stored copy of the item's latest attach row of `Kind` (`<Kind>.root<ext>` in the item's managed directory, named through `rk-store`'s typed reader `vouched::stored`) resolves the input to its reference `{kind, path, digest}`, with no read-seam call, and an attached root with no stored copy under its vouched digest is refused by name; an `emit` binding, when there is one, still wins and still goes through the seam once; another item's row is never read. Supersedes ADR-0173 in part: decision 1's `artifact:` row and decision 8, for the root arm only"
-status: proposed
+status: accepted
 date: 2026-10-18
 legacy_id: none
 source: the S8J-C4 lane proofs (`crates/rk-cli/tests/it/lane_proof.rs` on `claude/s8j-afk-batch-2-tg23uw-c4`, PR #103), whose fix lane's first activity `minimal-repro` refused its mandatory `report = "artifact:BugReport"` input after the root was attached; the operator's ruling A on that defect (D1), 2026-10-18; spikes/DECISIONS-2026-09-21.md D21-110 rulings 1-3; references/adr/0173 decisions 1 and 8, 0189 decisions 8 and 9 (its dated correction), 0200 decisions 2, 4 and 5; crates/rk-kernel/src/runtime/reference.rs (`read_artifact_input`, `emit_binding_of`), crates/rk-store/src/vouched.rs (`attached`, `stored`, `ATTACHED_PATH`), crates/rk-cli/src/verbs/answer.rs (`store_attachments`)
