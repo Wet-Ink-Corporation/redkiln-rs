@@ -983,6 +983,10 @@ fn run_lane(
             resolved.exec.clone(),
             resolved.worktree.clone(),
         )));
+        // *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D2; the operator's ruling A.)* The
+        // run's fork point, which a tool step's `baseline..HEAD` range names: the commit the run
+        // tree was cut from, as `enter` read it into `RK_BASE` (ADR-0180 decisions 5 and 10).
+        let routing = routing.with_fork_point(entered.fork.as_str());
         // *(dated 2026-09-28, s8f build, package S8F-P4-RENDER-WRITE-READ.)* The read seam is
         // re-pointed from `UnwiredReadSeam` to `rk-store`'s reader, and the `emit` arm's write seam
         // is `rk-store`'s writer (§8f.2 item 10; ADR-0189 decision 9).

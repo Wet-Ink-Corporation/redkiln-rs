@@ -114,6 +114,9 @@ const GATE_ROUNDS: usize = 6;
 /// The head commit the scripted `change_summary` names: 40 hex, the shape `shallow_clone` demands.
 const HEAD_SHA: &str = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
 
+/// The fork point the rig binds for `baseline`: 40 hex, a commit id's shape.
+const FORK_SHA: &str = "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c";
+
 // ---- what a row asserts ----------------------------------------------------------------------------
 
 /// One selected activity's verdict.
@@ -958,6 +961,10 @@ impl Rig<'_> {
             // *(dated 2026-09-29, s8g build, package S8G-P8-TAG-RELEASE-AND-MOVES; R5 = ADR-0195
             // decision 2, proposed.)* The `git` route, as `rk-cli`'s composition root binds one.
             .with_git_route(Arc::new(LaneGit) as Arc<dyn GitRoute>)
+            // *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D2.)* The run's fork point, which
+            // the lanes' `baseline..HEAD` ranges name, as `rk-cli`'s composition root binds the run
+            // tree's `RK_BASE` fork. The scripted `change_summary` reads no range.
+            .with_fork_point(FORK_SHA)
     }
 
     /// Walk one activity to its end, answering each gate it opens with its first option.
