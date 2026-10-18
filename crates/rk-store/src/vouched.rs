@@ -113,6 +113,48 @@ pub fn attached(rows: &[Event], item: &str) -> Vec<Attached> {
     latest.into_values().collect()
 }
 
+/// **One vouched root as the store holds it**: the stored copy in the item's managed directory.
+/// *(Added 2026-10-18, `s8j` build, package S8J-C4-FIX D1; ADR-0202, proposed.)*
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stored {
+    /// The artifact kind the root was attached as.
+    pub kind: String,
+    /// The stored copy's repo-relative path, `<ARTIFACTS_DIR>/<item>/<Kind>.root<ext>`.
+    pub path: String,
+    /// The vouched digest, which is the digest of the bytes stored at `path`.
+    pub digest: Digest,
+}
+
+/// Is `e` the writer row that stored a root at `path` under `digest` for `item`? The one test of
+/// "stored" the vouched pass and [`stored`] share.
+fn is_stored_copy(e: &Event, item: &str, path: &str, digest: &Digest) -> bool {
+    e.kind == EventKind::ArtifactWrite
+        && str_of(e, "item") == Some(item)
+        && str_of(e, ATTACHED_PATH).is_none()
+        && str_of(e, "path") == Some(path)
+        && str_of(e, "digest") == Some(digest.as_str())
+}
+
+/// **The stored copy of `item`'s vouched root of `kind`** (ADR-0202, proposed).
+///
+/// It is the latest attach row of the kind ([`attached`]), when a writer row AFTER it stored its bytes at
+/// `<Kind>.root<ext>` in the item's managed directory under its vouched digest. `None` when there
+/// is no such attach row, or it is not stored yet (the vouched pass has not run since it), so a
+/// caller never reads the operator's `attached_path`.
+#[must_use]
+pub fn stored(rows: &[Event], item: &str, kind: &str) -> Option<Stored> {
+    let root = attached(rows, item).into_iter().find(|r| r.kind == kind)?;
+    let path = crate::render::managed_path(item, &root.name());
+    rows.iter()
+        .skip(root.at.saturating_add(1))
+        .any(|e| is_stored_copy(e, item, &path, &root.vouched))
+        .then_some(Stored {
+            kind: root.kind,
+            path,
+            digest: root.vouched,
+        })
+}
+
 /// What the run's advise function answers for one own-change advisory: the row to append (the
 /// kernel's `Advisory::own_change(..).to_event()`), and whether the run's `AdvisorySink` admitted
 /// it as the FIRST of its `(root, null, new_digest)` in this run.
@@ -190,13 +232,10 @@ pub fn vouched_pass(
         let path = writer.dir().rel(&name);
         // Stored = a writer row naming the root's managed path under the vouched digest, after
         // the attach row. A newer attach (a re-vouch) is stored again.
-        let is_stored = rows.iter().skip(root.at + 1).any(|e| {
-            e.kind == EventKind::ArtifactWrite
-                && str_of(e, "item") == Some(item.as_str())
-                && str_of(e, ATTACHED_PATH).is_none()
-                && str_of(e, "path") == Some(path.as_str())
-                && str_of(e, "digest") == Some(root.vouched.as_str())
-        });
+        let is_stored = rows
+            .iter()
+            .skip(root.at + 1)
+            .any(|e| is_stored_copy(e, &item, &path, &root.vouched));
         if !is_stored {
             done.stored.push(store(writer, &root, &name, checkout)?);
             continue;

@@ -287,7 +287,6 @@
 
 mod adapter_edge;
 mod advisory;
-#[cfg(test)]
 mod baseline_range;
 mod breaker;
 mod budget;

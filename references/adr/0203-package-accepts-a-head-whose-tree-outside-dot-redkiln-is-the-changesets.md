@@ -87,6 +87,12 @@ binary set, the relative paths, the refusals by name) and ADR-0170's forbids sta
   changed paths are bookkeeping, so the read is small.
 - **`.redkiln/` is trusted as non-product by name.** A product whose build reads a file under `.redkiln/` would be
   packaged from a tree that differs there; no shipped project does.
+- **A product symlink into `.redkiln/` is not seen** *(added 2026-10-18, review of PR #106, finding F4)*. A symlink
+  outside `.redkiln/` whose target lies under `.redkiln/` is one unchanged tree entry (its target string) while the
+  bytes it resolves to change, so the rule accepts a `HEAD` whose build would read different bytes. The rule compares
+  tree entries by path and never follows a link; no shipped project has such a link.
+- **The prefix is the directory, not the name.** Only paths under `.redkiln/` itself are bookkeeping; a sibling whose
+  name merely begins with it (`.redkilnx/`) is product and refuses by name.
 
 **What this forbids**
 
@@ -103,5 +109,7 @@ binary set, the relative paths, the refusals by name) and ADR-0170's forbids sta
   `verbs::package_accepts_a_head_whose_tree_is_the_shas`, `verbs::package_accepts_a_head_that_differs_only_under_dot_redkiln`
   and `verbs::package_refuses_a_product_difference_naming_its_path`, the first two red on the base with
   `sha-head-mismatch`, then green; the existing `package_digests_only_the_declared_binaries_of_a_locked_release_build`
-  still refuses an unresolvable `sha` as `sha-head-mismatch` naming `HEAD`.
+  still refuses an unresolvable `sha` as `sha-head-mismatch` naming `HEAD`;
+  `verbs::package_refuses_a_difference_under_a_dot_redkiln_lookalike` (added at PR #106's review, F4) pins that
+  `.redkilnx/foo` is refused by name, green as written because the prefix carries its slash.
 - **Confidence.** High: the rule is a filter over the one range read the adapter already makes for `change_summary`.

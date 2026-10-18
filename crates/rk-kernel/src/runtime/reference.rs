@@ -17,7 +17,7 @@
 //! | `${item}` | the current `for_each` element | outside a `for_each`, refuses by name |
 //! | `${step.outputs[*].field}` | one value per element, and a list-valued field concatenated in element order (D21-48 X5) | a non-list output refuses by name |
 //! | `${toolchain.<key>}` | `s8c`'s value table (D21-42 4a) | refused by name |
-//! | `artifact:Kind[.field]` | the journalled `emit` binding, through ONE [`ArtifactReadSeam`] call ([`read_artifact_input`]) | mandatory refuses; `?` is `null`; neither calls the seam |
+//! | `artifact:Kind[.field]` | the journalled `emit` binding, through ONE [`ArtifactReadSeam`] call ([`read_artifact_input`]). *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D1; ADR-0202, proposed.)* With no binding: the item's human-attached root as the vouched pass stored it, `{kind, path, digest}`, with no seam call | mandatory refuses (no binding and no stored root, or a root attached but not stored yet); `?` is `null`; neither calls the seam |
 //! | `kb:`, `checklist:`, `toolchain:<feed>[?]` | the key's row in `s8c`'s tables (D21-43 N14) | undeclared refuses even with `?`; a mandatory declared key with no content refuses |
 //! | literals | themselves | — |
 //!
@@ -1110,23 +1110,41 @@ pub fn emit_binding_of<'a>(
         })
 }
 
-/// **The human-attached root of `kind` for `item`** (ADR-0202, proposed; *added 2026-10-18, `s8j`
-/// build, package S8J-C4-FIX D1*): the item's latest attach row of the kind, as `rk-store`'s typed
-/// reader [`rk_store::vouched::attached`] names it (an `artifact.write` carrying `attached_path`,
-/// which only `answer` writes, ADR-0189 decision 8), served as that row's reference: `kind`,
-/// `attached_path` and `digest`. A later attach of the kind replaces an earlier one, in journal
-/// order. The root's bytes are not read here; its `attached_path` names them.
-fn attached_root_of(events: &[Event], item: &str, kind: &str) -> Option<Json> {
-    rk_store::vouched::attached(events, item)
-        .into_iter()
-        .find(|root| root.kind == kind)
-        .map(|root| {
-            serde_json::json!({
-                "kind": root.kind,
-                "attached_path": root.attached_path,
-                "digest": root.vouched.as_str(),
-            })
-        })
+/// **The human-attached root of `kind` for `item`, as the store holds it** (ADR-0202, proposed;
+/// *added 2026-10-18, `s8j` build, package S8J-C4-FIX D1; amended the same day, review of PR #106
+/// F1*). The item's latest attach row of the kind (an `artifact.write` carrying `attached_path`,
+/// which only `answer` writes, ADR-0189 decision 8), served as the vouched pass's STORED copy,
+/// as [`rk_store::vouched::stored`] names it: `kind`, `path` (`<Kind>.root<ext>` in the item's
+/// managed directory, in the run tree) and `digest`, the digest of the bytes at `path`. A later
+/// attach replaces an earlier one, in journal order. ~~`attached_path`~~ is never served: it is
+/// relative to the invoking checkout and names a file that can move after it was vouched.
+///
+/// `Err` is why the root is absent, for the caller's refusal (or `null` on a `?` input): no attach
+/// row of the kind, or one the vouched pass has not stored yet. An unstored root is refused, never
+/// read from `attached_path`.
+fn stored_root_of(events: &[Event], item: &str, kind: &str) -> Result<Json, String> {
+    if let Some(root) = rk_store::vouched::stored(events, item, kind) {
+        return Ok(serde_json::json!({
+            "kind": root.kind,
+            "path": root.path,
+            "digest": root.digest.as_str(),
+        }));
+    }
+    let attached = rk_store::vouched::attached(events, item)
+        .iter()
+        .any(|root| root.kind == kind);
+    Err(if attached {
+        format!(
+            "no committed `emit` binding of `{kind}` for the item `{item}` is in the journal, and its \
+             human-attached root is not stored in the item's managed directory under its vouched \
+             digest yet (the vouched pass stores it at the next run's entry)"
+        )
+    } else {
+        format!(
+            "no committed `emit` binding of `{kind}` for the item `{item}` is in the journal, and no \
+             human-attached root of it"
+        )
+    })
 }
 
 /// **The one call site of the read seam** (N12; R2 decision 8).
@@ -1144,12 +1162,12 @@ fn attached_root_of(events: &[Event], item: &str, kind: &str) -> Option<Json> {
 ///
 /// *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D1; ADR-0202, proposed, superseding
 /// ADR-0173's `artifact:` row and decision 8 in part.)* With no binding, the item's human-attached
-/// root of the kind (`attached_root_of`) gates presence instead and is the value served, with no
-/// seam call. A binding, when there is one, still wins.
+/// root of the kind, as the vouched pass stored it (`stored_root_of`), gates presence instead and
+/// is the value served, with no seam call. A binding, when there is one, still wins.
 ///
 /// # Errors
-/// [`RefError`] for a mandatory input with no binding and no attached root, or no such field, or
-/// the seam's refusal.
+/// [`RefError`] for a mandatory input with no binding and no stored attached root, or no such
+/// field, or the seam's refusal.
 pub fn read_artifact_input(env: &Env<'_>, input: &ArtifactInput<'_>) -> Result<Json, RefError> {
     let site = Site {
         step: input.step,
@@ -1165,14 +1183,11 @@ pub fn read_artifact_input(env: &Env<'_>, input: &ArtifactInput<'_>) -> Result<J
     };
     let Some((bound, producer)) = emit_binding_of(env.events, env.item, input.kind) else {
         // *(dated 2026-10-18, `s8j` build, package S8J-C4-FIX D1; ADR-0202, proposed.)* With no
-        // emit binding, the item's human-attached root of the kind resolves the input. No seam
-        // call: the store's seam serves `<Kind>.json` sidecars, and a root has none.
-        let Some(root) = attached_root_of(env.events, env.item, input.kind) else {
-            return absent(format!(
-                "no committed `emit` binding of `{}` for the item `{}` is in the journal, and no \
-                 human-attached root of it",
-                input.kind, env.item
-            ));
+        // emit binding, the item's human-attached root of the kind, as stored, resolves the input.
+        // No seam call: the store's seam serves `<Kind>.json` sidecars, and a root has none.
+        let root = match stored_root_of(env.events, env.item, input.kind) {
+            Ok(root) => root,
+            Err(why) => return absent(why),
         };
         return at_path(&root, input.path).cloned().map_or_else(
             || {

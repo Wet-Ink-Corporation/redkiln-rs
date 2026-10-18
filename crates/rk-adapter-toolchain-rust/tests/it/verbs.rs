@@ -785,6 +785,33 @@ fn package_refuses_a_product_difference_naming_its_path() {
     );
 }
 
+/// **ADR-0203 (proposed): only `.redkiln/` itself is bookkeeping**: a sibling whose name merely
+/// begins with it, `.redkilnx/`, is product, and its difference is refused naming it. *(Added
+/// 2026-10-18, `s8j` build, package S8J-C4-FIX D4; review of PR #106 F4.)*
+#[test]
+fn package_refuses_a_difference_under_a_dot_redkiln_lookalike() {
+    let tmp = crate::support::repo_tempdir();
+    let (root, sha, _head) = committed_past(tmp.path(), |root| {
+        write_at(root, ".redkilnx/foo", "not bookkeeping\n")
+    })
+    .expect("the fixture commits");
+    let scratch = tmp.path().join("scratch");
+    let tc = workspace_adapter(&root, &scratch);
+
+    let err = run_verb(
+        &tc,
+        "package",
+        &serde_json::json!({ "sha": sha, "binaries": ["wsbin"] }),
+    )
+    .expect_err("`.redkilnx/` is not `.redkiln/`");
+
+    refused_naming(
+        &err,
+        &["sha-head-mismatch", ".redkilnx/foo"],
+        "a `.redkiln` lookalike",
+    );
+}
+
 /// **A built binary outside the adapter's target directory is refused by name**
 /// (`package-binary-outside-target`), never recorded as an absolute path (record V decision 6:
 /// `BuildArtifact`'s paths are relative to the target directory). Asserted over the path function
