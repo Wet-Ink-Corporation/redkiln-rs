@@ -428,9 +428,11 @@ mod lanes {
     use super::{read_toml, workspace_root};
 
     /// The two lanes: the shipped pack and the shipped item record each lane's real run is pointed at.
+    /// *(Dated 2026-10-18: the story lane's item is `rk-story-harden-spike-pack`, which replaced the
+    /// retired `rk-story-codex-adapter` in S8J-C1-ITEMS; §8j.1(a).)*
     pub(super) const LANES: [(&str, &str); 2] = [
         ("bug-standard", "rk-fix-doctor-test-count"),
-        ("story", "rk-story-codex-adapter"),
+        ("story", "rk-story-harden-spike-pack"),
     ];
 
     /// The shipped catalog, registries and one lane's pack, read off `.redkiln/` (never a fixture copy).
@@ -617,10 +619,14 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
     // *(dated 2026-10-18.)* The stages whose selection refuses are pinned by name, so a
     // stage that newly refuses (and so silently demands nothing) fails here: `story/design`
     // ("ordering against null at `novelty`") and `story/release` (`rolling-deploy`: unknown field
-    // `rigor`), both refusals that predate this package [measured 2026-10-18].
+    // `rigor`), both refusals that predate this package [measured 2026-10-18]. *(Re-measured
+    // 2026-10-18 after S8J-C1-ITEMS: `rolling-deploy`'s `applicable_if` (`blast_radius < med or
+    // rigor < recommended or ...`) is decided by `blast_radius < med` over
+    // `rk-story-harden-spike-pack`'s facets before it reads `rigor`, so `story/release` selects
+    // and only `story/design` refuses.)*
     assert_eq!(
         refused,
-        ["story/design", "story/release"],
+        ["story/design"],
         "PREMISE: the stages whose selection refuses over the shipped lanes"
     );
     assert!(
