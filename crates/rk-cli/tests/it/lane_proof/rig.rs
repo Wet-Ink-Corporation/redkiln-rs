@@ -22,20 +22,20 @@ use rk_types::event_kind::EventKind;
 use rk_types::typed::Typed;
 
 /// `.redkiln/config.toml`'s `[project] name`, as the byte copy carries it (ADR-0159).
-pub(crate) const PROJECT: &str = "redkiln-rs";
+pub(super) const PROJECT: &str = "redkiln-rs";
 /// The fix-lane item the fixture writes: `kind = "bug"`, the real fix item's facets, a `slice`,
 /// `hold_before = "specification"` and `[trial] activity = "tag-release"` (§8j.1(e)).
-pub(crate) const FIX_ITEM: &str = "rk-lane-fix";
+pub(super) const FIX_ITEM: &str = "rk-lane-fix";
 /// The story-lane item the fixture writes: `kind = "story"`, a `slice` and the same `[trial]`.
-pub(crate) const STORY_ITEM: &str = "rk-lane-story";
+pub(super) const STORY_ITEM: &str = "rk-lane-story";
 
 /// The fixture crate's path inside the repository.
-pub(crate) const CRATE_DIR: &str = "crates/rk-lane-fixture";
+pub(super) const CRATE_DIR: &str = "crates/rk-lane-fixture";
 
 // ------------------------------------------------------------------------------- the fixture
 
 /// The workspace root this test binary was built from: the tree whose tracked `.redkiln/` is copied.
-pub(crate) fn workspace_root() -> PathBuf {
+pub(super) fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
@@ -224,7 +224,7 @@ fn write_items(root: &Path) {
 }
 
 /// The path of an item's human-root file, relative to the repository root.
-pub(crate) fn root_file(item: &str, kind: &str) -> PathBuf {
+pub(super) fn root_file(item: &str, kind: &str) -> PathBuf {
     PathBuf::from(".redkiln")
         .join("intake")
         .join(format!("{item}.{kind}.md"))
@@ -233,7 +233,7 @@ pub(crate) fn root_file(item: &str, kind: &str) -> PathBuf {
 /// **The fixture repository** (§8j.4): a fresh git repository holding the fixture workspace, the
 /// byte copy of the tracked `.redkiln/` and the two lane items, committed, then initialised through
 /// the product's own `init` (so `info/exclude` carries the `# redkiln-runtime` block).
-pub(crate) fn fixture() -> tempfile::TempDir {
+pub(super) fn fixture() -> tempfile::TempDir {
     let repo = crate::temp_repo();
     let root = repo.path();
     materialise_crate(root);
@@ -263,7 +263,7 @@ pub(crate) fn fixture() -> tempfile::TempDir {
 
 /// The fixture's `CARGO_HOME`: inside the repository's common directory, so it is outside the
 /// checkout `git status` reads (AC-518) and is removed with the fixture.
-pub(crate) fn cargo_home(root: &Path) -> PathBuf {
+pub(super) fn cargo_home(root: &Path) -> PathBuf {
     crate::common_dir(root).join("lane-proof-cargo-home")
 }
 
@@ -314,7 +314,7 @@ fn lay_advisory_databases(root: &Path) {
 /// The environment the in-process proofs hand `run`: built key by key from this process, never
 /// `Env::capture()` and never a provider name (issue #11). The real Rust adapter's `cargo` needs a
 /// `PATH`, a home and rustup's toolchain selection; `CARGO_HOME` is the fixture's own.
-pub(crate) fn lane_env(root: &Path) -> rk_cli::env::Env {
+pub(super) fn lane_env(root: &Path) -> rk_cli::env::Env {
     let mut map = BTreeMap::from([(
         "CARGO_HOME".to_owned(),
         cargo_home(root).display().to_string(),
@@ -350,11 +350,11 @@ pub(crate) fn lane_env(root: &Path) -> rk_cli::env::Env {
 /// this dispatch among the item's `dispatch` rows for that activity and step, read from the
 /// journal (judgement call J2): the harness cannot see the iteration path at dispatch, and every
 /// committed row's `iteration_path` is read back afterwards ([`committed_paths`]).
-pub(crate) type Key = (String, String, usize);
+pub(super) type Key = (String, String, usize);
 
 /// One scripted response: the typed value, and the files the double writes inside the run-owned
 /// worktree before it answers (a failing test at `red`, the fix at `green`).
-pub(crate) struct Response {
+pub(super) struct Response {
     value: serde_json::Value,
     writes: Vec<(String, String)>,
 }
@@ -362,7 +362,7 @@ pub(crate) struct Response {
 impl Response {
     /// A value of an `rk-types` lane kind, serialised: so it validates against the `EXPORTED`
     /// schema `s8h` produced by construction.
-    pub(crate) fn of<T: serde::Serialize>(value: &T) -> Self {
+    pub(super) fn of<T: serde::Serialize>(value: &T) -> Self {
         Self {
             value: serde_json::to_value(value).expect("an rk-types value serialises"),
             writes: Vec::new(),
@@ -370,7 +370,7 @@ impl Response {
     }
 
     /// The same response, writing `contents` to `path` (relative to the run-owned worktree) first.
-    pub(crate) fn writing(mut self, path: &str, contents: &str) -> Self {
+    pub(super) fn writing(mut self, path: &str, contents: &str) -> Self {
         self.writes.push((path.to_owned(), contents.to_owned()));
         self
     }
@@ -385,7 +385,7 @@ struct Seen {
 
 /// **The scripted harness**: a response per key, **no default response**. An unscripted dispatch
 /// returns `StepError::Unsupported` naming its key, and is recorded, so the proof fails by name.
-pub(crate) struct ScriptedLane {
+pub(super) struct ScriptedLane {
     item: String,
     tree: PathBuf,
     // A `Mutex` because `Harness::dispatch` takes `&self` and one harness serves every stage's
@@ -397,7 +397,7 @@ pub(crate) struct ScriptedLane {
 
 impl ScriptedLane {
     /// A harness for `item` over `root`'s run-owned worktree.
-    pub(crate) fn new(root: &Path, item: &str, script: BTreeMap<Key, Response>) -> Arc<Self> {
+    pub(super) fn new(root: &Path, item: &str, script: BTreeMap<Key, Response>) -> Arc<Self> {
         Arc::new(Self {
             item: item.to_owned(),
             tree: crate::run_tree(root, item).path,
@@ -408,17 +408,17 @@ impl ScriptedLane {
     }
 
     /// Every key dispatched with no response scripted.
-    pub(crate) fn unscripted(&self) -> Vec<Key> {
+    pub(super) fn unscripted(&self) -> Vec<Key> {
         self.seen.lock().expect("unpoisoned").unscripted.clone()
     }
 
     /// Every key dispatched, in order.
-    pub(crate) fn visited(&self) -> Vec<Key> {
+    pub(super) fn visited(&self) -> Vec<Key> {
         self.seen.lock().expect("unpoisoned").visited.clone()
     }
 
     /// Every scripted key no dispatch reached.
-    pub(crate) fn unconsumed(&self) -> Vec<Key> {
+    pub(super) fn unconsumed(&self) -> Vec<Key> {
         self.script
             .lock()
             .expect("unpoisoned")
@@ -565,26 +565,26 @@ impl Harness for ScriptedLane {
     fn dispatch(&self, spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
         let key = self.key_of(spec, store);
         let response = self.script.lock().expect("unpoisoned").remove(&key);
-        let result = {
-            let mut seen = self.seen.lock().expect("unpoisoned");
-            seen.visited.push(key.clone());
-            match response {
-                Some(r) => {
-                    for (path, contents) in &r.writes {
-                        let to = self.tree.join(path);
-                        if let Some(parent) = to.parent() {
-                            std::fs::create_dir_all(parent).expect("the write's directory");
-                        }
-                        std::fs::write(&to, contents).expect("the double's write lands");
+        self.seen
+            .lock()
+            .expect("unpoisoned")
+            .visited
+            .push(key.clone());
+        let result = match response {
+            Some(r) => {
+                for (path, contents) in &r.writes {
+                    let to = self.tree.join(path);
+                    if let Some(parent) = to.parent() {
+                        std::fs::create_dir_all(parent).expect("the write's directory");
                     }
-                    Ok(Typed::new(spec.schema.clone(), r.value))
+                    std::fs::write(&to, contents).expect("the double's write lands");
                 }
-                None => {
-                    seen.unscripted.push(key.clone());
-                    Err(StepError::Unsupported {
-                        capability: format!("LANE-PROOF: no scripted response for {key:?}"),
-                    })
-                }
+                Ok(Typed::new(spec.schema.clone(), r.value))
+            }
+            None => {
+                let capability = format!("LANE-PROOF: no scripted response for {key:?}");
+                self.seen.lock().expect("unpoisoned").unscripted.push(key);
+                Err(StepError::Unsupported { capability })
             }
         };
         FakeHarness::scripted(vec![result]).dispatch(spec, store)
@@ -592,7 +592,7 @@ impl Harness for ScriptedLane {
 }
 
 /// The test side of `Startup::harness`: every stage of every invocation gets the one harness.
-pub(crate) struct Factory(pub(crate) Arc<ScriptedLane>);
+pub(super) struct Factory(pub(super) Arc<ScriptedLane>);
 
 impl HarnessFactory for Factory {
     fn build(
@@ -600,7 +600,9 @@ impl HarnessFactory for Factory {
         _config: rk_adapter_claude::config::Config,
         _token: CancelToken,
     ) -> Result<Arc<dyn Harness>, String> {
-        Ok(Arc::clone(&self.0) as Arc<dyn Harness>)
+        let lane: Arc<ScriptedLane> = Arc::clone(&self.0);
+        let harness: Arc<dyn Harness> = lane;
+        Ok(harness)
     }
 
     fn builds_the_real_harness(&self) -> bool {
@@ -611,7 +613,7 @@ impl HarnessFactory for Factory {
 // ------------------------------------------------------------------------------- the driver
 
 /// One `run <item>` in process through `rk_cli::verbs::run::run`.
-pub(crate) fn run_once(root: &Path, item: &str, harness: &Arc<ScriptedLane>) -> Exit {
+pub(super) fn run_once(root: &Path, item: &str, harness: &Arc<ScriptedLane>) -> Exit {
     let factory = Factory(Arc::clone(harness));
     rk_cli::verbs::run::run(
         &crate::lane_e2e::cli(root, item),
@@ -627,7 +629,7 @@ pub(crate) fn run_once(root: &Path, item: &str, harness: &Arc<ScriptedLane>) -> 
 }
 
 /// The gate the item's journal awaits, as `(token, kind)`, or `None`.
-pub(crate) fn awaited_gate(root: &Path, item: &str) -> Option<(String, String)> {
+pub(super) fn awaited_gate(root: &Path, item: &str) -> Option<(String, String)> {
     let rows = crate::support::journal_rows(root, item);
     let stage = story_stages(root, item)
         .last()
@@ -647,7 +649,7 @@ pub(crate) fn awaited_gate(root: &Path, item: &str) -> Option<(String, String)> 
 
 /// The gate's question's FIRST option (as `s8d`'s walk answers), with the item's root file attached
 /// when that option attaches a kind.
-pub(crate) fn first_option(
+pub(super) fn first_option(
     root: &Path,
     item: &str,
     kind: &str,
@@ -708,7 +710,7 @@ fn declared_first_option(root: &Path, question_id: &str) -> Option<String> {
 }
 
 /// `answer <item> <option> [--attach ..] --explain-sufficed yes --toml-opened no`, in process.
-pub(crate) fn answer(
+pub(super) fn answer(
     root: &Path,
     item: &str,
     option: &str,
@@ -736,15 +738,15 @@ pub(crate) fn answer(
 
 /// What a walk saw: each gate it answered, as `(kind, option)`, how many `run`s it took, and every
 /// worktree git knew after any `run` (the run tree is removed at close, so it is read on the way).
-pub(crate) struct Walk {
-    pub(crate) gates: Vec<(String, String)>,
-    pub(crate) runs: usize,
-    pub(crate) trees: Vec<PathBuf>,
+pub(super) struct Walk {
+    pub(super) gates: Vec<(String, String)>,
+    pub(super) runs: usize,
+    pub(super) trees: Vec<PathBuf>,
 }
 
 /// **Walk the lane to its `closed` mark**: run; while a gate is awaited, answer its question's
 /// first option and run again. Each `run` must exit 0, and the walk stops at `max_runs`.
-pub(crate) fn walk_to_close(
+pub(super) fn walk_to_close(
     root: &Path,
     item: &str,
     harness: &Arc<ScriptedLane>,
@@ -801,7 +803,7 @@ pub(crate) fn walk_to_close(
 }
 
 /// The item journal's last `n` rows, one per line, for a failure message.
-pub(crate) fn journal_tail(root: &Path, item: &str, n: usize) -> String {
+pub(super) fn journal_tail(root: &Path, item: &str, n: usize) -> String {
     let rows: Vec<Event> = crate::support::journal_rows(root, item)
         .into_iter()
         .filter(|e| e.kind.wire_name() != "git_op")
@@ -817,7 +819,7 @@ pub(crate) fn journal_tail(root: &Path, item: &str, n: usize) -> String {
 
 /// The stage token of every `Story:` mark for `item` on `rk-run/<item>`, oldest first, by git's
 /// own `%(trailers)` parser, taking the last whitespace token of each value.
-pub(crate) fn story_stages(root: &Path, item: &str) -> Vec<String> {
+pub(super) fn story_stages(root: &Path, item: &str) -> Vec<String> {
     let qualified = format!("{PROJECT}/{item}");
     let format = "--format=%(trailers:key=Story,valueonly=true)";
     let out = crate::lane_e2e::git_read(
@@ -833,7 +835,7 @@ pub(crate) fn story_stages(root: &Path, item: &str) -> Vec<String> {
 }
 
 /// The pack's lane: `stage_order` without its `forbidden` stages, from the installed pack's bytes.
-pub(crate) fn declared_lane(root: &Path, pack: &str) -> Vec<String> {
+pub(super) fn declared_lane(root: &Path, pack: &str) -> Vec<String> {
     let src = std::fs::read_to_string(root.join(".redkiln").join("packs").join(pack))
         .expect("the installed pack reads");
     let parsed = rk_kernel::select::Pack::from_toml(pack, &src)
@@ -847,7 +849,7 @@ pub(crate) fn declared_lane(root: &Path, pack: &str) -> Vec<String> {
 }
 
 /// Each committed step row's `(activity@version, step id, iteration path)`, in journal order.
-pub(crate) fn committed_paths(root: &Path, item: &str) -> Vec<(String, String, serde_json::Value)> {
+pub(super) fn committed_paths(root: &Path, item: &str) -> Vec<(String, String, serde_json::Value)> {
     crate::support::journal_rows(root, item)
         .iter()
         .filter(|e| e.kind == EventKind::ActivityCommitted)
@@ -866,7 +868,7 @@ pub(crate) fn committed_paths(root: &Path, item: &str) -> Vec<(String, String, s
 
 /// The fixture checkout's observable state for AC-518: `(HEAD, git status --porcelain, git
 /// diff-index --quiet HEAD's exit code)`.
-pub(crate) fn checkout_state(root: &Path) -> (String, String, Option<i32>) {
+pub(super) fn checkout_state(root: &Path) -> (String, String, Option<i32>) {
     let head = crate::lane_e2e::git_read(root, &["rev-parse", "HEAD"])
         .expect("the fixture has a HEAD")
         .trim()
@@ -878,7 +880,7 @@ pub(crate) fn checkout_state(root: &Path) -> (String, String, Option<i32>) {
 }
 
 /// The fork point of `rk-run/<item>` from the fixture's `HEAD`.
-pub(crate) fn fork_point(root: &Path, item: &str) -> String {
+pub(super) fn fork_point(root: &Path, item: &str) -> String {
     crate::lane_e2e::git_read(
         root,
         &["merge-base", "HEAD", &crate::lane_e2e::run_ref(item)],
@@ -889,7 +891,7 @@ pub(crate) fn fork_point(root: &Path, item: &str) -> String {
 }
 
 /// The commits on `<fork>..rk-run/<item>` whose own diff touches `path`, oldest first.
-pub(crate) fn commits_touching(root: &Path, item: &str, path: &str) -> Vec<String> {
+pub(super) fn commits_touching(root: &Path, item: &str, path: &str) -> Vec<String> {
     let range = format!(
         "{}..{}",
         fork_point(root, item),
@@ -906,7 +908,7 @@ pub(crate) fn commits_touching(root: &Path, item: &str, path: &str) -> Vec<Strin
 }
 
 /// Every worktree git knows for the fixture, by `git worktree list --porcelain`.
-pub(crate) fn worktrees(root: &Path) -> Vec<PathBuf> {
+pub(super) fn worktrees(root: &Path) -> Vec<PathBuf> {
     crate::lane_e2e::git_read(root, &["worktree", "list", "--porcelain"])
         .unwrap_or_default()
         .lines()
@@ -915,23 +917,49 @@ pub(crate) fn worktrees(root: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Every `artifact.write` payload of `kind` for `item`, scoped by the interim `t2_event.item`
-/// column (s8e §8e.10), oldest first.
-pub(crate) fn artifact_writes(root: &Path, item: &str, kind: &str) -> Vec<serde_json::Value> {
+/// Every tier-2 row of `wire_kind` for `item`, as its payload, scoped by the interim
+/// `t2_event.item` column (s8e §8e.10), oldest first.
+pub(super) fn item_rows(root: &Path, item: &str, wire_kind: &str) -> Vec<serde_json::Value> {
     let sql = format!(
-        "SELECT payload FROM t2_event WHERE item = '{item}' AND kind = 'artifact.write' ORDER BY id"
+        "SELECT payload FROM t2_event WHERE item = '{item}' AND kind = '{wire_kind}' ORDER BY id"
     );
     crate::lane_e2e::sql_rows(&crate::common_dir(root), &sql)
         .unwrap_or_else(|e| panic!("the store reads: {e}"))
         .into_iter()
         .filter_map(|row| row.into_iter().next().flatten())
         .map(|text| serde_json::from_str::<serde_json::Value>(&text).expect("a payload is JSON"))
+        .collect()
+}
+
+/// Every `artifact.write` payload of `kind` for `item` ([`item_rows`]), oldest first.
+pub(super) fn artifact_writes(root: &Path, item: &str, kind: &str) -> Vec<serde_json::Value> {
+    item_rows(root, item, "artifact.write")
+        .into_iter()
         .filter(|p| p.get("kind").and_then(serde_json::Value::as_str) == Some(kind))
         .collect()
 }
 
+/// The stage token of every `Story:` mark for `item` on `<fork>..rk-run/<item>`, oldest first,
+/// by git's own `%(trailers)` parser, taking the last whitespace token of each value.
+pub(super) fn stages_since_fork(root: &Path, item: &str) -> Vec<String> {
+    let range = format!(
+        "{}..{}",
+        fork_point(root, item),
+        crate::lane_e2e::run_ref(item)
+    );
+    let qualified = format!("{PROJECT}/{item}");
+    let format = "--format=%(trailers:key=Story,valueonly=true)";
+    crate::lane_e2e::git_read(root, &["log", "--reverse", format, &range])
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|v| v.split_whitespace().next() == Some(qualified.as_str()))
+        .filter_map(|v| v.split_whitespace().last().map(str::to_owned))
+        .collect()
+}
+
 /// The bytes of `path` as committed at `rev`, by `git cat-file blob` (`None` when absent).
-pub(crate) fn blob_at(root: &Path, rev: &str, path: &str) -> Option<Vec<u8>> {
+pub(super) fn blob_at(root: &Path, rev: &str, path: &str) -> Option<Vec<u8>> {
     let spec = format!("{rev}:{path}");
     crate::support::git_run(root, &["cat-file", "blob", &spec])
         .ok()
@@ -939,7 +967,7 @@ pub(crate) fn blob_at(root: &Path, rev: &str, path: &str) -> Option<Vec<u8>> {
 }
 
 /// The first commit on `<fork>..rk-run/<item>` whose `Story:` mark names `stage`, oldest first.
-pub(crate) fn first_mark_of(root: &Path, item: &str, stage: &str) -> Option<String> {
+pub(super) fn first_mark_of(root: &Path, item: &str, stage: &str) -> Option<String> {
     let range = format!(
         "{}..{}",
         fork_point(root, item),
@@ -963,7 +991,7 @@ pub(crate) fn first_mark_of(root: &Path, item: &str, stage: &str) -> Option<Stri
 
 /// Each `acceptance_criteria` entry's `(id, verification)` of the item's `Spec` as committed at
 /// `rev`, at the path the item's last `Spec` write names.
-pub(crate) fn spec_verifications(root: &Path, item: &str, rev: &str) -> Vec<(String, String)> {
+pub(super) fn spec_verifications(root: &Path, item: &str, rev: &str) -> Vec<(String, String)> {
     let write = artifact_writes(root, item, "Spec")
         .pop()
         .expect("the item journalled a Spec write");
@@ -985,5 +1013,57 @@ pub(crate) fn spec_verifications(root: &Path, item: &str, rev: &str) -> Vec<(Str
         .expect("the Spec carries acceptance_criteria")
         .iter()
         .map(|ac| (field(ac, "id"), field(ac, "verification")))
+        .collect()
+}
+
+/// **The run's own record of what `stage` selected**: the `activity_id_at_version` of every node
+/// binding (`inputs/specs.json`, read back by `replay::read_run`) across every recorded run
+/// (`<common>/redkiln/runs/<run>/`) whose `run.json` names `stage`. Never typed by the proof.
+pub(super) fn selected_at(root: &Path, stage: &str) -> Vec<String> {
+    let runs = crate::common_dir(root).join("redkiln").join("runs");
+    let mut selected = Vec::new();
+    for dir in std::fs::read_dir(&runs)
+        .unwrap_or_else(|e| panic!("{} reads: {e}", runs.display()))
+        .map(|e| e.expect("a run directory entry reads").path())
+    {
+        let manifest: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(dir.join("run.json")).expect("a recorded run has its run.json"),
+        )
+        .expect("run.json is JSON");
+        if manifest.get("stage").and_then(serde_json::Value::as_str) != Some(stage) {
+            continue;
+        }
+        let run = rk_kernel::replay::read_run(&dir)
+            .unwrap_or_else(|e| panic!("the recorded run {} reads back: {e:?}", dir.display()));
+        selected.extend(
+            run.inputs
+                .specs()
+                .iter()
+                .map(|(_, spec)| spec.activity_id_at_version().to_owned()),
+        );
+    }
+    selected.sort();
+    selected.dedup();
+    selected
+}
+
+/// The `activity_id_at_version` of every completing `activity_committed` row whose `artifacts`
+/// carry `kind`, in journal order.
+pub(super) fn committed_producers(root: &Path, item: &str, kind: &str) -> Vec<String> {
+    crate::support::journal_rows(root, item)
+        .iter()
+        .filter(|e| e.kind == EventKind::ActivityCommitted)
+        .filter(|e| {
+            e.payload
+                .get("artifacts")
+                .and_then(|a| a.get(kind))
+                .is_some()
+        })
+        .filter_map(|e| {
+            e.payload
+                .get("activity_id_at_version")?
+                .as_str()
+                .map(str::to_owned)
+        })
         .collect()
 }
