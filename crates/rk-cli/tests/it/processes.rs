@@ -350,3 +350,53 @@ fn a_gate_kind_the_registry_does_not_declare_refuses_by_name() {
         "CONTROL: the gate step's gate is open"
     );
 }
+
+// ---- s8j §8j.2: the human roots (ADR-0200, proposed) -------------------------------------------
+// *(Added 2026-10-18, `s8j` build, package S8J-C2-ROOT-QUESTIONS.)*
+
+/// `(question id, the kind its one option attaches, the gate kind it answers)`, as ADR-0200
+/// decisions 1 and 2 spell them. Literals, not the kernel's constants: the constants are under test.
+const HUMAN_ROOTS: [(&str, &str, &str); 2] = [
+    ("root.bug-report", "BugReport", "human_root:BugReport"),
+    ("root.intake-record", "IntakeRecord", "human_root:IntakeRecord"),
+];
+
+/// **The two human-root questions load from `.redkiln/processes/`, and each one's one option
+/// attaches exactly its kind** (`s8j` §8j.2 item 1; ADR-0200 decision 1).
+///
+/// Each is declared with text, has the one option `attach` whose `attaches` names its kind and
+/// nothing else, and answers the `human_root:<Kind>` gate through the loader's `binds` (decision 2),
+/// never the default question. The kernel's two minted spellings are those gate kinds, and its one
+/// mint, `human_root::gate_kind`, spells them. `M-attach-dropped` (the BugReport option loses its
+/// `attaches`) fails the `attaches` assertion here.
+#[test]
+fn the_two_human_root_questions_load_and_each_attaches_its_kind() {
+    use rk_kernel::workflow::human_root;
+    let registry = rk_cli::processes::load(&workspace_root())
+        .unwrap_or_else(|e| panic!("the shipped .redkiln/processes/ loads: {e}"));
+    for (id, kind, gate) in HUMAN_ROOTS {
+        let question = registry.question(id).unwrap_or_else(|| {
+            panic!("`{id}` is not declared under .redkiln/processes/ (s8j §8j.2; ADR-0200 decision 1)")
+        });
+        assert!(
+            question.text().is_some_and(|t| !t.trim().is_empty()),
+            "`{id}` carries its text"
+        );
+        assert_eq!(question.options(), ["attach"], "`{id}` has the one option `attach`");
+        assert_eq!(
+            question.attaches("attach"),
+            Some([kind.to_owned()].as_slice()),
+            "`{id}`'s `attach` option must attach exactly `{kind}` (ADR-0129 decision 4: the \
+             attachment is validated against the option, so this is what the gate admits)"
+        );
+        assert_eq!(
+            registry.question_for(gate),
+            id,
+            "the `{gate}` gate must be answered with `{id}` (ADR-0200 decision 2), not the default \
+             question, whose options attach nothing"
+        );
+        assert_eq!(human_root::gate_kind(kind), gate, "the kernel's mint for `{kind}`");
+    }
+    assert_eq!(human_root::BUG_REPORT_KIND, "human_root:BugReport");
+    assert_eq!(human_root::INTAKE_RECORD_KIND, "human_root:IntakeRecord");
+}

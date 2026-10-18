@@ -64,3 +64,19 @@ binds = ["unknown_facet:change"]
 [question."verify.ac-discriminates"]
 text = "No executable mutation pins this acceptance criterion. Does the named assertion discriminate it?"
 options = ["discriminates", "does-not-discriminate"]
+
+# (dated 2026-10-18, s8j build, package S8J-C2-ROOT-QUESTIONS; s8j section 8j.2; ADR-0200 decisions 1 and 2,
+# proposed.) The twelfth and thirteenth: the human roots, one question per `source = "human"` kind the lanes demand
+# (D21-41 (f): "supplied through a pack-declared gate question whose option attaches the kind"). No catalog step asks
+# either: the kernel opens `human_root:<Kind>` when selection's step 4 finds no admissible producer for a human kind,
+# and each question answers its own gate through `binds`. Each one option admits only its own kind, so an answer can
+# store only the root its gate asked for (ADR-0129 decision 4). Their texts are ADR-0200's, not taken from spikes/p9.
+[question."root.bug-report"]
+text = "No activity produces a BugReport: a person supplies it. Attach the bug report the work starts from."
+options = [{ id = "attach", attaches = "BugReport" }]
+binds = ["human_root:BugReport"]
+
+[question."root.intake-record"]
+text = "No activity produces an IntakeRecord: a person supplies it. Attach the intake record the work starts from."
+options = [{ id = "attach", attaches = "IntakeRecord" }]
+binds = ["human_root:IntakeRecord"]

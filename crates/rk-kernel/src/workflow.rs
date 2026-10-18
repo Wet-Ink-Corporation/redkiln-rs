@@ -258,6 +258,10 @@ pub mod degrade;
 /// declared one file away.
 pub mod fsm;
 
+/// **ADR-0200 decision 2.** The step-4 gate on a `source = "human"` kind, `human_root:<Kind>`, and
+/// the two Phase-1 spellings as constants. *(Added 2026-10-18, `s8j` build, S8J-C2-ROOT-QUESTIONS.)*
+pub mod human_root;
+
 /// **AC-010–AC-012.** The idempotency key's validator and the dispatch that cannot be constructed
 /// without one. A child of this module, for [`budget`]'s reason — and pointedly so: a key is a pure
 /// function of `(item, activity_id@version, attempt)`, and a key minted from a clock or a random
