@@ -65,7 +65,7 @@ impl Marker {
 }
 
 /// Every `*.marker` in `dir`, parsed; a file that is not yet complete is skipped (the bin writes
-/// to `.tmp` and renames, so a `.marker` is always whole).
+/// to `.tmp` and hard-links it to a fresh name, so a `.marker` is always whole and never replaced).
 pub fn read_markers(dir: &Path) -> Vec<Marker> {
     let Ok(entries) = fs::read_dir(dir) else {
         return Vec::new();

@@ -182,7 +182,7 @@ fn write_marker(dir: Option<&Path>, mode: &str, argv: &[String], extra: &[String
     if let Err(e) = publish_marker(dir, pid, &body) {
         let warning = writeln!(
             io::stderr().lock(),
-            "rk-fixture-child: marker for pid {pid} not written in {}: {e}",
+            "rk-fixture-child: marker for pid {pid} in {}: {e}",
             dir.display()
         );
         if warning.is_err() {
@@ -204,8 +204,13 @@ fn publish_marker(dir: &Path, pid: u32, body: &str) -> io::Result<()> {
     fs::write(&tmp, body)?;
     let linked = link_first_free(&tmp, dir, pid);
     let removed = fs::remove_file(&tmp);
-    linked?;
-    removed
+    linked.map_err(|e| io::Error::new(e.kind(), format!("not written: {e}")))?;
+    removed.map_err(|e| {
+        io::Error::new(
+            e.kind(),
+            format!("published, but staging {} not removed: {e}", tmp.display()),
+        )
+    })
 }
 
 /// Hard-link `tmp` to the first of [`MARKER_NAMES`] candidate names that does not exist yet.
