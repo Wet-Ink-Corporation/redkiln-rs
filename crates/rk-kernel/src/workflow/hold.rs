@@ -42,7 +42,9 @@ pub fn standing<'s>(state: &'s RunState, stage: &str) -> Option<&'s GateAnswer> 
     state.answered_gates().find(|a| a.token() == latest)
 }
 
-/// Whether a standing answer releases the advance into the held stage: `approve` only.
-pub(crate) fn releases(answer: &GateAnswer) -> bool {
+/// Whether a standing answer releases the advance into the held stage: `approve` only. Any other
+/// standing verdict (`changes-requested`) holds the lane at the boundary (D21-40 decision 2).
+#[must_use]
+pub fn releases(answer: &GateAnswer) -> bool {
     answer.verdict() == RELEASE
 }

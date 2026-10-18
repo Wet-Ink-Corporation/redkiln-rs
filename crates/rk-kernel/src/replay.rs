@@ -106,7 +106,8 @@
 //!       context.json              the item's context digest preimage (canonical)
 //!       artifact-state.json       the item's artifact digests preimage (canonical)
 //!       runtime.json              NEW at 4f: { tree_hash, deadline, entered_from, successor,
-//!                                   results_at }   ← `results_at` NEW at 4i
+//!                                   results_at [, hold_before] }   ← `results_at` NEW at 4i;
+//!                                   `hold_before` only when supplied (ADR-0201, s8j C3)
 //!       specs.json                NEW at 4i: { "<dag node id>": { activity_id_at_version,
 //!                                   card_digest, tools, schema, timeout_secs, inputs } }
 //!       deviation.json            OPTIONAL: the RequestDeviation and its requesting activity
@@ -570,6 +571,10 @@ pub struct RuntimeContext {
     deadline: i64,
     entered_from: Option<String>,
     successor: Option<String>,
+    /// *(dated 2026-10-18, `s8j` build, S8J-C3-HOLD; ADR-0201 decision 2, proposed.)* The item
+    /// record's `hold_before`. Recorded in `runtime.json` only when supplied, so a run without a
+    /// hold keeps the bytes (and the `run_id`) it had before the member existed.
+    hold_before: Option<String>,
     results_at: Option<i64>,
 }
 
@@ -583,6 +588,7 @@ impl RuntimeContext {
             deadline,
             entered_from: None,
             successor: None,
+            hold_before: None,
             results_at: None,
         }
     }
@@ -622,6 +628,15 @@ impl RuntimeContext {
         self
     }
 
+    /// The stage the item record holds the lane before (ADR-0201 decision 2): supplied beside
+    /// [`Self::advances_to`], never invented, and handed to the FSM as
+    /// [`crate::workflow::fsm::FsmContext::with_hold_before`].
+    #[must_use]
+    pub fn holds_before(mut self, stage: &str) -> Self {
+        self.hold_before = Some(stage.to_owned());
+        self
+    }
+
     #[must_use]
     pub fn tree_hash(&self) -> &str {
         &self.tree_hash
@@ -633,13 +648,21 @@ impl RuntimeContext {
     }
 
     fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
+        let mut value = serde_json::json!({
             "deadline": self.deadline,
             "entered_from": self.entered_from,
             "results_at": self.results_at,
             "successor": self.successor,
             "tree_hash": self.tree_hash,
-        })
+        });
+        // Present only when supplied: every run recorded before ADR-0201 keeps its bytes.
+        if let (Some(stage), Some(map)) = (&self.hold_before, value.as_object_mut()) {
+            map.insert(
+                "hold_before".to_owned(),
+                serde_json::Value::from(stage.as_str()),
+            );
+        }
+        value
     }
 
     /// The journaled instant, **refused rather than defaulted** when absent.
@@ -1756,13 +1779,17 @@ fn fsm_context<'a>(
     item: &'a Item,
     activations: &'a [(String, String)],
 ) -> FsmContext<'a> {
-    FsmContext::supplied(
+    let ctx = FsmContext::supplied(
         item.id(),
         &runtime.tree_hash,
         Timestamp::from_unix_seconds(runtime.deadline),
         runtime.successor.as_deref(),
     )
-    .with_activations(activations)
+    .with_activations(activations);
+    match runtime.hold_before.as_deref() {
+        Some(stage) => ctx.with_hold_before(stage),
+        None => ctx,
+    }
 }
 
 /// The stage entry, as an event.
@@ -2591,6 +2618,9 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         }
         if let Some(to) = value["successor"].as_str() {
             runtime = runtime.advances_to(to);
+        }
+        if let Some(held) = value["hold_before"].as_str() {
+            runtime = runtime.holds_before(held);
         }
         if let Some(at) = value["results_at"].as_i64() {
             runtime = runtime.results_at(at);

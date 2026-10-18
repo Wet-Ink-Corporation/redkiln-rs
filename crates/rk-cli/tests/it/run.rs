@@ -1890,6 +1890,169 @@ fn a_gate_expiry_row_naming_no_reachable_class_is_refused() {
     }
 }
 
+// ---- THE BOUNDARY HOLD AT LOAD (`s8j` §8j.3; ADR-0201 decisions 4 and 5, proposed). *(Added
+// 2026-10-18, `s8j` build, package S8J-C3-HOLD.)* Over the fixture lane, whose pack orders
+// `triage, discovery, implement, review` (discovery forbidden) and so does not order
+// `specification`.
+
+/// `lane-2`'s record with `hold_before = "<stage>"` written as a top-level key.
+fn hold_lane_item(root: &Path, stage: &str) {
+    let path = root
+        .join(".redkiln")
+        .join("items")
+        .join(format!("{}.toml", crate::lane_e2e::THROUGH_ITEM));
+    let src = std::fs::read_to_string(&path).expect("the lane item record reads");
+    assert_eq!(
+        src.matches("\n[facets]").count(),
+        1,
+        "PREMISE: one [facets]"
+    );
+    let out = src.replace(
+        "\n[facets]",
+        &format!("hold_before = \"{stage}\"\n\n[facets]"),
+    );
+    std::fs::write(&path, out).expect("the lane item record writes");
+}
+
+/// **ADR-0201 decision 4: a hold naming a stage the item's pack does not order is refused at load,
+/// by name.** `lane-2` holds `specification`, which the fixture lane's pack does not order: `run`
+/// exits `ConfigError` naming the item, the key, the stage and the pack, writes no item event, and
+/// creates no run ref. Kills `M-hold-unordered-accepted`: `hold:specification` is a minted kind
+/// with a row in every pack, so without the check the lint passes and the run walks.
+///
+/// RED (observed 2026-10-18, before the check): `left: Some(10)`, `right: Some(3)`: the key was
+/// parsed and dropped, and the lane walked on to `implement`'s dispatch.
+#[test]
+fn a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load() {
+    assert_the_unedited_lane_dispatches();
+    let repo = crate::lane_e2e::lane_repo();
+    let root = repo.path();
+    hold_lane_item(root, "specification");
+
+    let item = crate::lane_e2e::THROUGH_ITEM;
+    let out = spawn_run(root, item, None);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(3), "stderr:\n{stderr}");
+    for name in [item, "hold_before", "`specification`", "bug-standard"] {
+        assert!(
+            stderr.contains(name) && stderr.contains("does not order"),
+            "the refusal does not name `{name}` (ADR-0201 decision 4); stderr:\n{stderr}"
+        );
+    }
+    assert!(
+        !refs(root)
+            .iter()
+            .any(|r| r.contains(&format!("rk-run/{item}"))),
+        "the refusal came after the run ref was made: {:?}",
+        refs(root)
+    );
+    let item_rows = crate::support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.item() == Some(item))
+        .count();
+    assert_eq!(item_rows, 0, "the refusal wrote item events");
+}
+
+/// **ADR-0201 decision 5's control: a hold naming an ordered stage loads once its row exists, and
+/// stops the lane at the boundary.** `lane-2` holds `implement` and both installed packs carry a
+/// `hold:implement` row, which the lint admits only because the item's own hold kind counts as
+/// reachable. The run exits 0 at the hold's gate: `triage` entered, `implement` not, no dispatch,
+/// one `gate_opened` of kind `hold:implement`, and the hold recorded in one stage's `runtime.json`.
+#[test]
+fn a_hold_naming_an_ordered_stage_with_its_row_loads_and_stops_at_the_boundary() {
+    let repo = lane_held_before_implement();
+    let root = repo.path();
+
+    let (exit, dispatches) = run_lane_counting(root);
+    assert_eq!(exit, rk_cli::exit::Exit::Success, "a run at a gate exits 0");
+    assert_eq!(dispatches, 0, "the held stage dispatched");
+    let item = crate::lane_e2e::THROUGH_ITEM;
+    assert_eq!(
+        crate::lane_e2e::story_stages(root, item),
+        ["triage"],
+        "the held stage `implement` was entered"
+    );
+    assert_eq!(hold_gates_opened(root), 1, "one hold gate opened");
+
+    let runs = crate::common_dir(root).join("redkiln").join("runs");
+    let held = std::fs::read_dir(&runs)
+        .expect("the runs directory reads")
+        .filter_map(Result::ok)
+        .filter_map(|d| std::fs::read_to_string(d.path().join("inputs").join("runtime.json")).ok())
+        .filter(|json| json.contains("\"hold_before\":\"implement\""))
+        .count();
+    assert_eq!(
+        held, 1,
+        "the hold is recorded in the held stage's runtime.json"
+    );
+}
+
+/// The fixture lane with `lane-2` holding `implement` and both packs carrying its row.
+fn lane_held_before_implement() -> tempfile::TempDir {
+    let repo = crate::lane_e2e::lane_repo();
+    hold_lane_item(repo.path(), "implement");
+    edit_installed_packs(repo.path(), |src| {
+        format!("{src}\n[[gate_expiry]]\nclass = \"hold:implement\"\naction = \"fail\"\n")
+    });
+    repo
+}
+
+/// The `gate_opened` rows of kind `hold:implement` in the store.
+fn hold_gates_opened(root: &Path) -> usize {
+    let rows = crate::support::store_rows(root);
+    crate::lane_e2e::rows_named(&rows, "gate_opened")
+        .into_iter()
+        .filter(|e| {
+            e.payload.get("kind").and_then(serde_json::Value::as_str) == Some("hold:implement")
+        })
+        .count()
+}
+
+/// **ADR-0201 decision 3 across runs: an answered hold is spent and never re-fires; `approve`
+/// releases the advance, `changes-requested` holds the lane at the boundary.** Each lane stops at
+/// the hold (run 1), takes its answer, and runs again (run 2, a fresh `run` call folding the
+/// journal): under `approve` it enters `implement`; under `changes-requested` it stays at `triage`
+/// with nothing dispatched, on run 2 and again on run 3. Neither opens a second hold gate.
+#[test]
+fn an_answered_hold_never_refires_and_only_approve_enters_the_held_stage() {
+    for (verdict, enters) in [("approve", true), ("changes-requested", false)] {
+        let repo = lane_held_before_implement();
+        let root = repo.path();
+        let item = crate::lane_e2e::THROUGH_ITEM;
+        assert_eq!(
+            run_lane_counting(root),
+            (rk_cli::exit::Exit::Success, 0),
+            "PREMISE: run 1 stops at the hold"
+        );
+        assert_eq!(
+            crate::lane_e2e::answer_item(root, item, verdict),
+            rk_cli::exit::Exit::Success,
+            "`{verdict}` answers the hold"
+        );
+        let reruns = if enters { 1 } else { 2 };
+        for n in 0..reruns {
+            let (exit, dispatches) = run_lane_counting(root);
+            assert_eq!(exit, rk_cli::exit::Exit::Success, "`{verdict}`: rerun {n}");
+            assert_eq!(
+                dispatches > 0,
+                enters,
+                "`{verdict}`: rerun {n} dispatched {dispatches}"
+            );
+        }
+        let stages = crate::lane_e2e::story_stages(root, item);
+        assert_eq!(
+            stages.iter().any(|s| s == "implement"),
+            enters,
+            "`{verdict}`: the stage marks are {stages:?}"
+        );
+        assert_eq!(
+            hold_gates_opened(root),
+            1,
+            "`{verdict}`: the answered hold re-fired"
+        );
+    }
+}
+
 /// **D21-137 item 2, as amended 2026-10-02 (`s8h` §8h.6): a child-settings file survives
 /// `write_run` over its own `run_id`.** `run` writes each dispatch's settings file into
 /// `child_settings_dir(&resolved, run_id)` before the stage's dispatches, and calls
