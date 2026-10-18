@@ -111,15 +111,29 @@ MUTANTS = [
     {
         "id": "M-skip-empty-stage-trailer",
         "section": "8j.4",
-        "change": "a stage_empty stage mints no trailer",
-        "file": "crates/rk-kernel/src/replay.rs",
-        "anchor": TBD,
-        "replacement": TBD,
+        "change": "the advance into a stage mints no Story: trailer (broadened from 'a stage_empty stage mints"
+                  " no trailer'; wi card 2026-10-18, recommended option A)",
+        "file": "crates/rk-kernel/src/runtime.rs",
+        "anchor": (
+            "                self.tier_one_act(tier_one::Act::marked(\n"
+            "                    tier_one::Mark::Stage(to.clone()),\n"
+            "                    vec![stage_transition_event(from, to)],\n"
+            "                ))?;\n"
+        ),
+        "replacement": (
+            "                self.tier_one_act(tier_one::Act {\n"
+            "                    mark: None,\n"
+            "                    ..tier_one::Act::marked(\n"
+            "                        tier_one::Mark::Stage(to.clone()),\n"
+            "                        vec![stage_transition_event(from, to)],\n"
+            "                    )\n"
+            "                })?;\n"
+        ),
         "anchor_from": C4,
-        "note": "no single site: an empty stage's Story: mark is minted by the ADVANCE into it (rk-kernel"
-                " runtime.rs's AdvanceStage arm, Mark::Stage(to)), before that stage's selection shows it empty;"
-                " replay.rs's entry act marks only a stage the journal has not entered. A mutant needs a"
-                " look-ahead at the successor's selection, which is a design choice, not an anchor",
+        "note": "no single site mutates ONLY an empty stage: an empty stage's Story: mark is minted by the"
+                " ADVANCE into it (runtime.rs's AdvanceStage arm, Mark::Stage(to)), before that stage's"
+                " selection shows it empty. Pending Ryan's weigh-in card, the mutant drops the advance's mark"
+                " for every stage: broader than the intent, and still something the trailer tests must kill",
         "tests": [_it(
             "lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order",
             "lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order",
