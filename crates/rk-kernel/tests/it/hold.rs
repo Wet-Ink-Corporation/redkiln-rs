@@ -193,7 +193,8 @@ fn a_changes_requested_hold_stands_and_does_not_advance() {
     );
     let standing = {
         let state = fold(ITEM, STAGE, &journal).expect("folds");
-        rk_kernel::workflow::hold::standing(&state, HELD).map(|a| a.verdict().to_owned())
+        rk_kernel::workflow::hold::standing(&state, rk_kernel::workflow::hold::SPECIFICATION_KIND)
+            .map(|a| a.verdict().to_owned())
     };
     assert_eq!(standing.as_deref(), Some("changes-requested"));
 }

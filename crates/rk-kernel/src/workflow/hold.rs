@@ -30,18 +30,15 @@ pub fn gate_kind(stage: &str) -> String {
     format!("{PREFIX}:{stage}")
 }
 
-/// The answer to the hold before `stage` that **stands** on the item.
+/// The answer to the hold whose gate kind is `kind` (from [`gate_kind`]) that **stands** on the
+/// item.
 ///
 /// That is the latest reach of its gate, answered and not void. `None` while it was never opened,
-/// is open, expired unanswered, or its latest reach was voided (a void is not an answer that
-/// stood, ADR-0201 decision 3).
+/// is open, expired unanswered, or its latest reach was voided: the fold never keeps a void token
+/// in the answered set, and a void is not an answer that stood (ADR-0201 decision 3).
 #[must_use]
-pub fn standing<'s>(state: &'s RunState, stage: &str) -> Option<&'s GateAnswer> {
-    let latest = state.latest_gate(&gate_kind(stage))?;
-    if state.is_void(latest) {
-        return None;
-    }
-    state.answered_gates().find(|a| a.token() == latest)
+pub fn standing<'s>(state: &'s RunState, kind: &str) -> Option<&'s GateAnswer> {
+    state.answer(state.latest_gate(kind)?)
 }
 
 /// Whether a standing answer releases the advance into the held stage: `approve` only. Any other

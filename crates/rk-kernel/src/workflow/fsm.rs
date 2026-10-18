@@ -1093,6 +1093,12 @@ impl RunState {
         self.gates_answered.contains_key(token)
     }
 
+    /// The answer folded for `token`, if one stands in the answered set (a void one never does).
+    #[must_use]
+    pub(crate) fn answer(&self, token: &Digest) -> Option<&GateAnswer> {
+        self.gates_answered.get(token)
+    }
+
     #[must_use]
     pub fn is_void(&self, token: &Digest) -> bool {
         self.gates_void.contains(token)
@@ -1952,7 +1958,7 @@ pub fn next_action(
             if let Some(record) = gate_to_open(state, &kind, ctx)? {
                 return Ok(NextAction::OpenGate(record));
             }
-            if !super::hold::standing(state, to).is_some_and(super::hold::releases) {
+            if !super::hold::standing(state, &kind).is_some_and(super::hold::releases) {
                 return Ok(NextAction::Done);
             }
         }
