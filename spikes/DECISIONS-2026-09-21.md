@@ -7581,4 +7581,12 @@ takes no ruling of its own.
    unopened. The A2 and A8 lines, in `s8j` §8j.8 and in `s8`'s (2) block, take dated notes citing the same list;
    no checkpoint code line moves.
 4. **The Codex item's retirement stays under D21-160** (weigh-in wi-c55409, option A): no separate entry is written.
+   *(dated 2026-10-18, D21-163)* Correction to the premise of that card: D21-160's text does not name the Codex item, so
+   §8j.1(b)'s *"deleted, by a dated ledger entry"* was not yet met. This item is that record, inside D21-163, so no
+   separate entry is written. `.redkiln/items/rk-story-codex-adapter.toml` was deleted at `fba08b0` (S8J-C1-ITEMS, PR #99),
+   in the same commit as Checkpoint 7i's re-pointed names (§8j.1(c)). The warrants, quoted as §8j.1(b) requires:
+   ADR-0007, *"the Codex adapter ships in Phase 4 ("reach"), and only after S-CODEX passes"*; E-0094-1,
+   *"`rk-adapter-codex` is out of Phase 1 under every reading"*; and D21-42 22 (*"Phase 4, after S-CODEX"*), recorded
+   by `s8a`, which supersedes ADR-0094 decision 2's phase clause toward ADR-0007 (D21-53). The retirement itself was
+   decided at D21-42 f.
 5. **The two `ci.yml` edits are approved** (weigh-ins wi-db28c6 and wi-4b8d3c) and land in PR #109, not here.
