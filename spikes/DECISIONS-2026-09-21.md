@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-162), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-163), and what they license
+
+*(Title moved 2026-10-18, D21-163: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-162)"**; `D21-163` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 162 before the append, the last `D21-162`; 163 after.)*
 
 *(Title moved 2026-10-18, D21-162: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-160)"**; `D21-161` was appended without moving it, and `D21-162` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 161 before the append, the last `D21-161`; 162 after.)*
 
@@ -7551,3 +7553,40 @@ route)"*, `s8j`'s stage file); it takes no ruling of its own. Each record flips 
    `superseded_by` now reads `["0179", "0203"]` and ADR-0170 stays `accepted` (ADR-0092).
 
 ADR-0197 stays `proposed`: its flip still waits on both `s8h` §8h.11 probes (D21-41 (g)).
+
+## D21-163 · Ryan's rulings: the six drafted expiry rows and C3's hold API signed, the failed-first-run procedure approved, AC-184's rebuild exclusions named
+
+**Recorded 2026-10-18 by an agent session.** Ryan answered decision cards in the project thread on 2026-10-18 (~21:08Z),
+each by tapping an option. This entry records those answers, as Ryan's card taps recorded by an agent session; it
+takes no ruling of its own.
+
+1. **Sign all as drafted** (weigh-in wi-a909d4, option A). The six fail-closed `[[gate_expiry]]` rows,
+   `human_root:BugReport`, `human_root:IntakeRecord` and `hold:specification` in each of
+   `.redkiln/packs/bug-standard.toml` and `.redkiln/packs/story.toml`, all `action = "fail"`, are the operator's
+   row-by-row signature AC-276 asks for. C3's additive hold API (`hold_before` on the item record and the
+   `hold:specification` gate, PR #101) is signed with them. Each pack's comment block takes a dated line saying so,
+   and its two "draft until the operator signs" phrases are struck, not deleted; no non-comment line moves.
+2. **The "failed first real run" procedure is approved as answered** (weigh-in wi-5ac031, option A).
+   `runbook/phase-1/s8-exit-criterion.md`'s section *"After a failed first real run of the fix item"* takes the
+   operator's dated approval line under its 🛑 DRAFT banner, as the banner requires. Its three open questions are
+   answered by dated lines, the questions kept: (a) the live store stays in place; (b) `s8`'s (2) treats
+   `refs/archive/` as reachable, since the tier-1 read is `git log --all` (`crates/rk-git/src/reconcile.rs`:278,
+   `read_commits`); (c) a failed story-item run (1b) takes steps 1-3 only (stop and record, archive the ref, archive
+   the store) and then stops, and any re-run is a separate operator decision. Nothing in it is fenced, and it is not
+   a checkpoint.
+3. **AC-184 names the rebuild differential's four exclusions** (issue #90). A dated amendment under AC-184 in
+   `references/2026-09-08-acceptance-criteria.md` names them: `t2_event` rows and payloads; `t2_event.item`; an
+   `opened` gate row's `stage`/`run_id` (D21-48 X11); and a void's `observed_tree_hash` (D21-96). It is consistent
+   with ADR-0131 decision 2 (`canonical_events` stays `{kind, payload}`; a tag is outside it) and leaves decision 6
+   unopened. The A2 and A8 lines, in `s8j` §8j.8 and in `s8`'s (2) block, take dated notes citing the same list;
+   no checkpoint code line moves.
+4. **The Codex item's retirement stays under D21-160** (weigh-in wi-c55409, option A): no separate entry is written.
+   *(dated 2026-10-18, D21-163)* Correction to the premise of that card: D21-160's text does not name the Codex item, so
+   §8j.1(b)'s *"deleted, by a dated ledger entry"* was not yet met. This item is that record, inside D21-163, so no
+   separate entry is written. `.redkiln/items/rk-story-codex-adapter.toml` was deleted at `fba08b0` (S8J-C1-ITEMS, PR #99),
+   in the same commit as Checkpoint 7i's re-pointed names (§8j.1(c)). The warrants, quoted as §8j.1(b) requires:
+   ADR-0007, *"the Codex adapter ships in Phase 4 ("reach"), and only after S-CODEX passes"*; E-0094-1,
+   *"`rk-adapter-codex` is out of Phase 1 under every reading"*; and D21-42 22 (*"Phase 4, after S-CODEX"*), recorded
+   by `s8a`, which supersedes ADR-0094 decision 2's phase clause toward ADR-0007 (D21-53). The retirement itself was
+   decided at D21-42 f.
+5. **The two `ci.yml` edits are approved** (weigh-ins wi-db28c6 and wi-4b8d3c) and land in PR #109, not here.

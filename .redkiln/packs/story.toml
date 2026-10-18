@@ -316,10 +316,13 @@ accepts_effort = true
 # proposed), takes its fail-closed row: ~~56~~ 57 rows.
 # (dated 2026-10-18, s8j build, S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3, proposed) The step-4
 # gates on the two human roots, `human_root:BugReport` and `human_root:IntakeRecord` (workflow::human_root),
-# take their fail-closed rows, drafts until the operator signs them row by row (AC-276): ~~57~~ 59 rows.
+# take their fail-closed rows, ~~drafts until the operator signs them row by row~~ signed (AC-276; D21-163): ~~57~~ 59 rows.
 # (dated 2026-10-18, s8j build, S8J-C3-HOLD; ADR-0201 decision 5, proposed) The boundary hold's
-# kind, `hold:specification` (workflow::hold), takes its fail-closed row, a draft until the
-# operator signs it (D21-42 21a; AC-276): ~~59~~ 60 rows.
+# kind, `hold:specification` (workflow::hold), takes its fail-closed row, ~~a draft until the
+# operator signs it~~ signed (D21-42 21a; AC-276; D21-163): ~~59~~ 60 rows.
+# (dated 2026-10-18, D21-163; Ryan's card tap, weigh-in wi-a909d4) The three kernel-minted rows the two entries above add,
+# `human_root:BugReport`, `human_root:IntakeRecord` and `hold:specification`, each `action = "fail"`, are
+# signed as drafted (AC-276). No row's value changes.
 
 # catalog question
 [[gate_expiry]]
