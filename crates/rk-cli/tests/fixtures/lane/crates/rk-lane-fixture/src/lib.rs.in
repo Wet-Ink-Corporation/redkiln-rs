@@ -1,0 +1,23 @@
+//! The lane proofs' fixture crate (`s8j` §8j.4): one function with a PLANTED DEFECT and one test
+//! that passes over it. No failing test is committed; the fix lane's scripted implementer writes
+//! one at `red` and the fix at `green`, inside the run-owned worktree. Stored as `lib.rs.in` and
+//! renamed when `lane_proof`'s rig materialises the fixture.
+
+/// The number of words in `text`, a word being a maximal run of non-whitespace characters.
+///
+/// The planted defect: it counts the pieces between single spaces, so an empty string reads as
+/// one word and a doubled, leading or trailing space as an extra word.
+#[must_use]
+pub fn word_count(text: &str) -> usize {
+    text.split(' ').count()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::word_count;
+
+    #[test]
+    fn counts_single_spaced_words() {
+        assert_eq!(word_count("one two three"), 3);
+    }
+}

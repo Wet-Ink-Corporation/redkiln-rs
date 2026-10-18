@@ -1,0 +1,11 @@
+# The lane proofs' FIXTURE WORKSPACE (`s8j` §8j.4): a one-crate Cargo workspace with a planted
+# defect and no failing test committed. `crates/rk-cli/tests/it/lane_proof.rs` materialises it per
+# test into a fresh git repository beside a byte copy of the tracked `.redkiln/`, so the real
+# `rk-adapter-toolchain-rust` detects it (ADR-0137 decision 2) and builds it in the run worktree.
+#
+# It is its OWN workspace root, and it sits outside the repository root's `tests/fixtures/*` member
+# glob (it is under crates/<crate>/tests/), like rk-adapter-toolchain-rust's fixtures. Cargo.lock is
+# committed, and `.gitignore` names `/target`, so a build leaves the tree clean. LF under ADR-0164.
+[workspace]
+members = ["crates/rk-lane-fixture"]
+resolver = "3"
