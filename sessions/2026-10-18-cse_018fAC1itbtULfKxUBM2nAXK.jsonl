@@ -42,3 +42,4 @@
 {"t":"2026-10-18T05:27:41.891Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"session-start","source":"compact"}
 {"t":"2026-10-18T05:36:52.373Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-implementer","event":"deny-shell-write"}
 {"t":"2026-10-18T05:38:45.480Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-implementer","event":"deny-scan","file":"crates/rk-cli/src/verbs/run.rs","rules":["H-06"]}
+{"t":"2026-10-18T05:40:21.858Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-implementer","event":"deny-scan","file":"crates/rk-cli/src/verbs/run.rs","rules":["H-10"]}
