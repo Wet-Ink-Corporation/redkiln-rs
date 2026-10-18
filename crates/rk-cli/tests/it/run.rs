@@ -1902,6 +1902,11 @@ mod hold_fixture {
 
     /// `lane-2`'s record with `hold_before = "<stage>"` written as a top-level key.
     pub(super) fn hold_lane_item(root: &Path, stage: &str) {
+        hold_lane_item_raw(root, &format!("\"{stage}\""));
+    }
+
+    /// `lane-2`'s record with `hold_before = <value>`, the TOML value verbatim.
+    pub(super) fn hold_lane_item_raw(root: &Path, value: &str) {
         let path = root
             .join(".redkiln")
             .join("items")
@@ -1912,10 +1917,7 @@ mod hold_fixture {
             1,
             "PREMISE: one [facets]"
         );
-        let out = src.replace(
-            "\n[facets]",
-            &format!("hold_before = \"{stage}\"\n\n[facets]"),
-        );
+        let out = src.replace("\n[facets]", &format!("hold_before = {value}\n\n[facets]"));
         std::fs::write(&path, out).expect("the lane item record writes");
     }
 }
@@ -2005,15 +2007,101 @@ fn lane_held_before_implement() -> tempfile::TempDir {
     repo
 }
 
-/// The `gate_opened` rows of kind `hold:implement` in the store.
-fn hold_gates_opened(root: &Path) -> usize {
+/// The tokens of the `gate_opened` rows of kind `hold:implement` in the store, in order.
+fn hold_tokens(root: &Path) -> Vec<String> {
     let rows = crate::support::store_rows(root);
     crate::lane_e2e::rows_named(&rows, "gate_opened")
         .into_iter()
         .filter(|e| {
             e.payload.get("kind").and_then(serde_json::Value::as_str) == Some("hold:implement")
         })
-        .count()
+        .filter_map(|e| e.payload.get("token").and_then(serde_json::Value::as_str))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// The number of `gate_opened` rows of kind `hold:implement` in the store.
+fn hold_gates_opened(root: &Path) -> usize {
+    hold_tokens(root).len()
+}
+
+/// **ADR-0201 decision 3: a standing `changes-requested` is reported by the hold's token.** *(Added
+/// 2026-10-18, `s8j` build, package S8J-C3-HOLD, review finding F1.)* Run 1 stops at the hold, the
+/// hold is answered, and run 2 is the real binary: under `changes-requested` its stdout carries
+/// `hold <token> before `implement` stands `changes-requested` for lane-2`, the token the one
+/// `gate_opened` row carries, and it exits 0; under `approve` (the control) no such line is printed.
+///
+/// RED (observed 2026-10-18, the terminal read's `held_at_boundary` call removed): stdout carried
+/// no `hold … stands` line.
+#[test]
+fn a_standing_changes_requested_hold_is_reported_by_its_token() {
+    for verdict in ["changes-requested", "approve"] {
+        let repo = lane_held_before_implement();
+        let root = repo.path();
+        let item = crate::lane_e2e::THROUGH_ITEM;
+        assert_eq!(
+            run_lane_counting(root),
+            (rk_cli::exit::Exit::Success, 0),
+            "PREMISE: run 1 stops at the hold"
+        );
+        let tokens = hold_tokens(root);
+        let [token] = tokens.as_slice() else {
+            panic!("PREMISE: one hold gate opened: {tokens:?}");
+        };
+        assert_eq!(
+            crate::lane_e2e::answer_item(root, item, verdict),
+            rk_cli::exit::Exit::Success,
+            "`{verdict}` answers the hold"
+        );
+
+        let out = spawn_run(root, item, None);
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let line = format!("hold {token} before `implement` stands `changes-requested` for {item}");
+        if verdict == "changes-requested" {
+            assert_eq!(
+                out.status.code(),
+                Some(0),
+                "stderr:\n{}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            assert!(
+                stdout.contains(&line),
+                "the standing hold is not reported by its token; stdout:\n{stdout}"
+            );
+        } else {
+            assert!(
+                !stdout.contains("stands `"),
+                "an approved hold was reported as standing; stdout:\n{stdout}"
+            );
+        }
+    }
+}
+
+/// **ADR-0201 decision 1: a `hold_before` that is not a string is refused at load, by name.**
+/// *(Added 2026-10-18, `s8j` build, package S8J-C3-HOLD, review finding F4.)* `hold_before = 3`:
+/// `run` exits `ConfigError`, stderr names the key, and no item event is written.
+///
+/// RED (observed 2026-10-18, the field renamed off `hold_before` so the key is unread): `left:
+/// Some(10)`, `right: Some(3)`: the key was dropped and the lane walked to `implement`'s dispatch.
+#[test]
+fn a_hold_before_that_is_not_a_string_is_refused_at_load() {
+    let repo = crate::lane_e2e::lane_repo();
+    let root = repo.path();
+    hold_fixture::hold_lane_item_raw(root, "3");
+
+    let item = crate::lane_e2e::THROUGH_ITEM;
+    let out = spawn_run(root, item, None);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(3), "stderr:\n{stderr}");
+    assert!(
+        stderr.contains("hold_before"),
+        "the refusal does not name the key; stderr:\n{stderr}"
+    );
+    let item_rows = crate::support::store_rows(root)
+        .into_iter()
+        .filter(|e| e.item() == Some(item))
+        .count();
+    assert_eq!(item_rows, 0, "the refusal wrote item events");
 }
 
 /// **ADR-0201 decision 3 across runs: an answered hold is spent and never re-fires; `approve`

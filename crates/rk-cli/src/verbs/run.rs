@@ -4072,7 +4072,8 @@ fn held_at_boundary(
     else {
         return None;
     };
-    let answer = rk_kernel::workflow::hold::standing(&state, stage)?;
+    let kind = rk_kernel::workflow::hold::gate_kind(stage);
+    let answer = rk_kernel::workflow::hold::standing(&state, &kind)?;
     if rk_kernel::workflow::hold::releases(answer) {
         return None;
     }
