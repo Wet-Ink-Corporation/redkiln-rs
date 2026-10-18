@@ -2246,7 +2246,12 @@ directories.
 🛑 **Checkpoint 8j is one-shot** *(stated 2026-09-24, D21-47; review finding 24).* It passes once, over the
 frozen-record commit (§8j.10's stage close), before `s8`'s first launch. It is never re-run after that launch: (3)
 refuses an existing `rk-run/<fix item>`, which the first launch creates, and (12) refuses a moved store. `s8` reads
-the pass recorded in `PROGRESS.md` row 8j. A re-run after the first launch fails at (3) by design.
+the pass recorded in `PROGRESS.md` row 8j. A re-run after the first launch fails at (3) by design. *(dated 2026-10-18,
+`s8j` build, package S8J-D3-RECOVERY; issues #61 and #25)* The route back after a failed first real run is drafted
+in `runbook/phase-1/s8-exit-criterion.md`, under *"After a failed first real run of the fix item"*, at the file's end:
+archive `rk-run/<item>` and the store, mint a fresh item by §8j.5's route, and re-run this checkpoint's (3) and (12)
+against it. 🛑 It is a **DRAFT awaiting the operator's approval of its text before the freeze**, and nothing in it
+may be run until then. It changes none of this checkpoint's assertions.
 
 **At stage open, the chain is run once whole with its failures neutralised** *(added 2026-09-24, D21-47; review
 finding 5).* A checkpoint that has never been run whole accumulates assertions that cannot be satisfied. Checkpoint
