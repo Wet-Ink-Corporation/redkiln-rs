@@ -2443,7 +2443,8 @@ fn open_derived_facet_gates(
 /// `with_facet_null`, which is the abstention, never `[]` and never a default.
 ///
 /// # Errors
-/// A `String` naming the derived facet the record supplied, and its deriver.
+/// A `String` naming the derived facet the record supplied, and its deriver; or an `ordered`
+/// facet's value outside its declared domain ([`bind_string`]).
 fn build_item(
     record: &ItemRecord,
     registry: &rk_kernel::registry::Registry,
@@ -2499,7 +2500,7 @@ fn build_item(
     for (name, value) in &record.facets {
         item = match value {
             toml::Value::Boolean(b) => item.with_facet_bool(name, *b),
-            toml::Value::String(s) => item.with_facet_str(name, s),
+            toml::Value::String(s) => bind_string(item, registry, name, s)?,
             toml::Value::Array(values) => item.with_facet_set(
                 name,
                 values
@@ -2513,6 +2514,37 @@ fn build_item(
         };
     }
     Ok(item)
+}
+
+/// One record string onto `item`: **an `ordered` facet binds by its declared rank**, any other as a
+/// plain string.
+///
+/// *(dated 2026-10-18, `s8j` build, defect D3 of the S8J-C4 lane proofs; s7d §7d.5 names
+/// `with_facet_ordinal` for the `[facets]` binding, and ADR-0048's `ordered = true` is what makes an
+/// ordering comparison checkable.)* Bound as a string, `criticality >= high` compared `"low"` with
+/// `"high"` lexically, which is true, so a low item selected what a high one owes.
+///
+/// # Errors
+/// A `String` naming the value and the domain, when an `ordered` facet's value is not one of its
+/// declared members: refused here, because `with_facet_ordinal` treats that as a fault.
+fn bind_string(
+    item: Item,
+    registry: &rk_kernel::registry::Registry,
+    name: &str,
+    value: &str,
+) -> Result<Item, String> {
+    let Some(facet) = registry.facet(name).filter(|f| f.ordered) else {
+        return Ok(item.with_facet_str(name, value));
+    };
+    let domain: Vec<&str> = facet.values.iter().filter_map(|v| v.as_str()).collect();
+    if !domain.contains(&value) {
+        return Err(format!(
+            "the item record sets `{name} = \"{value}\"`, and `facets.toml` declares `{name}` \
+             ordered over {domain:?}: an ordered facet binds by its rank in that domain, so a value \
+             outside it is refused rather than compared as a string"
+        ));
+    }
+    Ok(item.with_facet_ordinal(name, &domain, value))
 }
 
 // ------------------------------------------------------------------ steps (8)-(10), the inner path
