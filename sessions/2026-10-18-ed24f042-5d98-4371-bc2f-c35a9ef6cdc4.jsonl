@@ -5,3 +5,4 @@
 {"t":"2026-10-18T20:35:47.697Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"","event":"subagent-stop","type":"","msg":false,"transcript":true}
 {"t":"2026-10-18T20:36:16.664Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"","event":"subagent-stop","type":"","msg":true,"transcript":true}
 {"t":"2026-10-18T20:36:21.529Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"main","event":"stop-blocked","reason":"gate","fp":"3c448b3515020f74","ms":35805,"cached":false}
+{"t":"2026-10-18T20:36:31.062Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"main","event":"stop-declared","status":"WIP"}
