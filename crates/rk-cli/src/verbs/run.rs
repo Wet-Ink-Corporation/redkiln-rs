@@ -182,6 +182,12 @@ pub struct ItemRecord {
     /// without the declaration never admits one (AC-110).
     #[serde(default)]
     pub trial: Option<TrialDecl>,
+    /// *(dated 2026-10-18, `s8j` build, package S8J-C3-HOLD; `s8j` §8j.3; ADR-0201 decision 1,
+    /// proposed.)* **`hold_before = "<stage>"`**: the boundary hold, human-authored and never
+    /// written by a verb (AC-518). The kernel opens `hold:<stage>` instead of advancing into
+    /// `<stage>` while no answer to it stands; a stage the pack does not order is refused at load.
+    #[serde(default)]
+    pub hold_before: Option<String>,
 }
 
 /// An item record's `[trial]` table (R5 = ADR-0195 decision 4, proposed). *(dated 2026-09-29,
@@ -263,6 +269,10 @@ pub struct Resolved {
     /// decision 4, proposed.)* The item record's `[trial] activity`, read verbatim: the one
     /// extended activity [`catalog_sources`] admits for this item's run, or `None`.
     pub trial: Option<String>,
+    /// *(dated 2026-10-18, `s8j` build, S8J-C3-HOLD; ADR-0201 decision 1, proposed.)* The item
+    /// record's `hold_before`, read verbatim and checked against the pack's order at load: supplied
+    /// to the kernel beside the successor (`base_inputs`), or `None`.
+    pub hold_before: Option<String>,
 }
 
 /// **ADR-0140, superseding ADR-0137 clause 5 in part.** The default for the construction bound on
@@ -1720,11 +1730,42 @@ pub fn through_step_seven(
         .collect();
     let registered: std::collections::BTreeSet<String> =
         registry.facets().map(|f| f.name.clone()).collect();
+    // *(dated 2026-10-18, `s8j` build, package S8J-C3-HOLD; ADR-0201 decision 4, proposed.)* A
+    // hold naming a stage the pack does not order is refused by name, before the lint (whose
+    // missing-row refusal would otherwise name the class, not the hold) and before any row.
+    if let Some(refusal) = unordered_hold(
+        &record.id,
+        record.hold_before.as_deref(),
+        pack_name,
+        &pack_src,
+    ) {
+        let exit = told(
+            &mut std::io::stderr().lock(),
+            &format!("redkiln: {}: {refusal}", record_path.display()),
+            Exit::ConfigError,
+        );
+        return Err(refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            exit,
+        ));
+    }
+    // ADR-0201 decision 5: the item's own `hold:<stage>` is a class this run reaches, so it joins
+    // the reachable set the lint reads: its row is required, and admitted.
+    let mut reached_classes =
+        catalog_questions(&root, record.trial.as_ref().map(|t| t.activity.as_str()));
+    reached_classes.extend(
+        record
+            .hold_before
+            .as_deref()
+            .map(rk_kernel::workflow::hold::gate_kind),
+    );
     let refusals = lint_gate_expiry(
         &extras.gate_expiry,
         pack_name,
         &pack_src,
-        &catalog_questions(&root, record.trial.as_ref().map(|t| t.activity.as_str())),
+        &reached_classes,
         &registered,
         &derived_names,
     );
@@ -1754,6 +1795,7 @@ pub fn through_step_seven(
         project,
         slice: record.slice,
         trial: record.trial.map(|t| t.activity),
+        hold_before: record.hold_before,
         // A lane's FIRST stage has no predecessor; the loop sets this for every stage after it.
         entered_from: None,
         config: kernel_config,
@@ -1816,20 +1858,25 @@ impl std::fmt::Display for GateExpiryLint {
 /// carries their rows. *(dated 2026-10-18, s8j build, S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3,
 /// proposed.)* Also the step-4 gates on the two human roots (`fsm::next_action`'s step 2), which
 /// any pack whose catalog requires the kind reaches; both packs share one catalog, so both carry
-/// their rows.
-const MINTED_GATE_KINDS: [&str; 6] = [
+/// their rows. *(dated 2026-10-18, s8j build, S8J-C3-HOLD; ADR-0201 decision 5, proposed.)* Also
+/// the reserved fix item's boundary hold, `hold:specification`: a hold is item-level and either
+/// pack's item can carry one, so every pack carries its row. A hold on any other stage is counted
+/// reachable for that item alone, at the lint's call site.
+const MINTED_GATE_KINDS: [&str; 7] = [
     rk_kernel::runtime::tier_one::LANDING_REFUSED_KIND,
     rk_kernel::workflow::fsm::DRIFT_GATE_KIND,
     rk_kernel::verify::ac_gate::AC_GATE_KIND,
     rk_kernel::workflow::gate::GateReason::AutomatedVerdictRefused.as_str(),
     rk_kernel::workflow::human_root::BUG_REPORT_KIND,
     rk_kernel::workflow::human_root::INTAKE_RECORD_KIND,
+    rk_kernel::workflow::hold::SPECIFICATION_KIND,
 ];
 
 /// **ADR-0146's load-time lint, both halves** (`s8h` §8h.10; D21-42 21c; Record B = ADR-0198
 /// decision 7, proposed). *(Added 2026-10-02, s8h build, package P7-cli-binding-data-and-amendments.)*
 ///
-/// The enabled pack's REACHABLE classes are: every catalog question (`questions`); `unknown_facet:
+/// The enabled pack's REACHABLE classes are: every catalog question (`questions`, which `run`
+/// also extends with the item's own `hold:<stage>`, ADR-0201 decision 5); `unknown_facet:
 /// <axis>` for every facet root the pack's `require` rows read (`step2.rs` opens one per abstaining
 /// axis) and for every DERIVED facet (`s8d`'s R6 opens `unknown_facet:<facet>` at the lane's first
 /// stage); `escalation` (`gate::ESCALATION_CLASS`); and [`MINTED_GATE_KINDS`]. Each must have a
@@ -1887,6 +1934,34 @@ pub fn lint_gate_expiry(
         }
     }
     out
+}
+
+/// **ADR-0201 decision 4** (`s8j` §8j.3; proposed): the refusal of a hold naming a stage the
+/// item's pack does not order (`[policy] stage_order`), naming the item, the key, the stage and the
+/// pack; `None` when the item holds nothing or holds an ordered stage. A pack the kernel cannot
+/// parse is left to the kernel's own refusal a step later, as [`lint_gate_expiry`] leaves it.
+/// *(Added 2026-10-18, `s8j` build, package S8J-C3-HOLD.)*
+fn unordered_hold(
+    item: &str,
+    hold: Option<&str>,
+    pack_name: &str,
+    pack_src: &str,
+) -> Option<String> {
+    let stage = hold?;
+    let Ok(pack) = rk_kernel::select::Pack::from_toml(&format!("{pack_name}.toml"), pack_src)
+    else {
+        return None;
+    };
+    let order = pack.stage_order();
+    if order.iter().any(|s| s == stage) {
+        return None;
+    }
+    Some(format!(
+        "the item `{item}`'s `hold_before` names the stage `{stage}`, which the pack \
+         `{pack_name}` does not order (`[policy] stage_order` = [{}]); a hold names a stage the \
+         lane advances into (ADR-0201 decision 4)",
+        order.join(", ")
+    ))
 }
 
 /// The facet ROOTS a predicate reads: the first segment of every `Path`. A quantifier's body reads
@@ -2715,6 +2790,10 @@ fn base_inputs(
         rk_kernel::replay::RuntimeContext::supplied(tree_hash, deadline).results_at(now);
     if let Some(to) = pack.successor(&resolved.stage) {
         runtime = runtime.advances_to(to);
+    }
+    // ADR-0201 decision 2: the hold travels beside the successor, by the same route (ADR-0153).
+    if let Some(held) = &resolved.hold_before {
+        runtime = runtime.holds_before(held);
     }
     if let Some(from) = &resolved.entered_from {
         runtime = runtime.entered_from(from);
@@ -3963,13 +4042,46 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
         .ok()
         .and_then(|state| state.awaiting_gate().map(|t| t.as_str().to_owned()));
     let Some(token_hex) = awaited else {
-        return Exit::Success;
+        // *(dated 2026-10-18, `s8j` build, package S8J-C3-HOLD; ADR-0201 decision 3, proposed.)*
+        return held_at_boundary(resolved, recorded).map_or(Exit::Success, |line| {
+            told(&mut std::io::stdout().lock(), &line, Exit::Success)
+        });
     };
 
     // **`run` NEVER WAITS** (golden constraint 2). The gate is an EXIT, and exit 0 at that
     // (D-01; AC-240; AC-024): a run that opened a gate did everything it was asked to do.
     println!("gate {token_hex} is open for {item_id}");
     Exit::Success
+}
+
+/// **The standing hold, reported** (ADR-0201 decision 3, proposed; `s8j` §8j.3 item 7). A stage
+/// that neither advanced nor ended the lane, under a standing answer to the item's hold that does
+/// not release it (`changes-requested`): the lane stays at the boundary, named by the hold's token.
+/// `None` otherwise, and for a journal that will not fold (the terminal read's rule: it reports
+/// nothing rather than guessing). *(Added 2026-10-18, `s8j` build, package S8J-C3-HOLD.)*
+fn held_at_boundary(
+    resolved: &Resolved,
+    recorded: &rk_kernel::replay::RecordedRun,
+) -> Option<String> {
+    let stage = resolved.hold_before.as_deref()?;
+    if recorded.advanced_to().is_some() || recorded.lane_ended() {
+        return None;
+    }
+    let item_id = resolved.item.id();
+    let Ok(state) = rk_kernel::workflow::fsm::fold(item_id, &resolved.stage, &recorded.events)
+    else {
+        return None;
+    };
+    let kind = rk_kernel::workflow::hold::gate_kind(stage);
+    let answer = rk_kernel::workflow::hold::standing(&state, &kind)?;
+    if rk_kernel::workflow::hold::releases(answer) {
+        return None;
+    }
+    Some(format!(
+        "hold {} before `{stage}` stands `{}` for {item_id}; the lane stays at the boundary",
+        answer.token().as_str(),
+        answer.verdict()
+    ))
 }
 
 // ------------------------------------------------------------------ the verify pass's site
