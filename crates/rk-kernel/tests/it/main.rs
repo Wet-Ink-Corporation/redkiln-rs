@@ -346,6 +346,7 @@ mod retry;
 mod review;
 mod review_confirm;
 mod rigor;
+mod root_input;
 mod runtime;
 mod second_agent;
 mod selection;
