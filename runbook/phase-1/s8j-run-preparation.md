@@ -1144,7 +1144,7 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    `M-worktree-under-git` in `crates/rk-git/src/worktree.rs`, and `M-skip-empty-stage-trailer` in
    `crates/rk-kernel/src/runtime.rs`. Each anchor occurs exactly once (`python
    runbook/tools/s8j-mutants.py --check-anchors HEAD`), and each mutated tree compiles (`cargo check`, not a
-   mutant run). **`M-skip-empty-stage-trailer` is broadened, pending Ryan's weigh-in card:** an empty stage's
+   mutant run). **`M-skip-empty-stage-trailer` is broadened, by Ryan's choice on 2026-10-18:** an empty stage's
    `Story:` mark is minted by the advance into it (the `AdvanceStage` arm's `Mark::Stage(to)`), before that
    stage's selection shows it empty, so no one anchor makes *"a `stage_empty` stage mints no trailer"*. The
    mutant drops the advance's mark for every stage instead; the two trailer tests must still kill it.

@@ -112,7 +112,7 @@ MUTANTS = [
         "id": "M-skip-empty-stage-trailer",
         "section": "8j.4",
         "change": "the advance into a stage mints no Story: trailer (broadened from 'a stage_empty stage mints"
-                  " no trailer'; wi card 2026-10-18, recommended option A)",
+                  " no trailer'; Ryan chose this on 2026-10-18)",
         "file": "crates/rk-kernel/src/runtime.rs",
         "anchor": (
             "                self.tier_one_act(tier_one::Act::marked(\n"
@@ -132,7 +132,7 @@ MUTANTS = [
         "anchor_from": C4,
         "note": "no single site mutates ONLY an empty stage: an empty stage's Story: mark is minted by the"
                 " ADVANCE into it (runtime.rs's AdvanceStage arm, Mark::Stage(to)), before that stage's"
-                " selection shows it empty. Pending Ryan's weigh-in card, the mutant drops the advance's mark"
+                " selection shows it empty. By Ryan's choice (2026-10-18), the mutant drops the advance's mark"
                 " for every stage: broader than the intent, and still something the trailer tests must kill",
         "tests": [_it(
             "lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order",
