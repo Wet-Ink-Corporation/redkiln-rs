@@ -703,9 +703,13 @@ fn answer_the_gate(
             // ---- AC-410's POSITIVE CONTROL: every admitted attachment is stored as a
             // human-supplied root, one `artifact.write` row each, in ADR-0116 decision 1's shape.
             //
-            // RT-59: that `answer` is this row's producer is ROUTED, not decided -- nothing in
+            // ~~RT-59: that `answer` is this row's producer is ROUTED, not decided -- nothing in
             // `rk-kernel/src` writes `artifact.write` [measured], so this verb is its first
-            // producer. §7d.18 holds the record OWED.
+            // producer. §7d.18 holds the record OWED.~~ *(dated 2026-10-18, `s8j` build,
+            // S8J-C2-ROOT-QUESTIONS; `s8j` §8j.2; ADR-0200 decision 5, proposed.)* RT-59 is
+            // settled: R-48's dated note on design §5's `artifact.write` row (2026-09-20) names
+            // its producers as *"every activity output, and `redkiln answer` for an admitted
+            // attachment"*, so this verb is a decided producer of the row.
             if let Err(exit) = store_attachments(resolved, args, store, token)? {
                 return Ok(exit);
             }

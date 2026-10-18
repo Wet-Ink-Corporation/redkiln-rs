@@ -293,6 +293,9 @@ accepts_effort = true
 # (dated 2026-10-14, s8i build, S8I-E2-EXPIRY-POLICY; operator ruling R9) A fourth
 # kernel-minted kind, `automated-verdict-refused` (gate::GateReason, ADR-0199 decision 3,
 # proposed), takes its fail-closed row: ~~54~~ 55 rows.
+# (dated 2026-10-18, s8j build, S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3, proposed) The step-4
+# gates on the two human roots, `human_root:BugReport` and `human_root:IntakeRecord` (workflow::human_root),
+# take their fail-closed rows, drafts until the operator signs them row by row (AC-276): ~~55~~ 57 rows.
 
 # catalog question
 [[gate_expiry]]
@@ -567,6 +570,16 @@ action = "fail"
 # kernel-minted, gate::GateReason::AutomatedVerdictRefused, ADR-0199 decision 3
 [[gate_expiry]]
 class = "automated-verdict-refused"
+action = "fail"
+
+# kernel-minted, workflow::human_root::BUG_REPORT_KIND, ADR-0200 decision 3
+[[gate_expiry]]
+class = "human_root:BugReport"
+action = "fail"
+
+# kernel-minted, workflow::human_root::INTAKE_RECORD_KIND, ADR-0200 decision 3
+[[gate_expiry]]
+class = "human_root:IntakeRecord"
 action = "fail"
 
 

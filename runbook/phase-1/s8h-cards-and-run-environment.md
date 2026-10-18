@@ -2534,7 +2534,12 @@ TOKENS_APPETITE=24000000
 # change that mints it (§8h.10): automated-verdict-refused, gate::GateReason's one spelling, read from its &str constant
 # AUTOMATED_VERDICT_REFUSED_KIND in crates/rk-kernel/src/workflow/gate.rs (ADR-0199 decision 3, proposed). Was:
 # ~~MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates"~~
-MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates automated-verdict-refused"
+# *(dated 2026-10-18, s8j build, S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3, proposed)* The fifth and sixth join in
+# the change that mints them (§8h.10's table, "yes, from s8j"): human_root:BugReport and human_root:IntakeRecord, the
+# step-4 gates on the two human roots, read from their &str constants BUG_REPORT_KIND and INTAKE_RECORD_KIND in
+# crates/rk-kernel/src/workflow/human_root.rs. Was:
+# ~~MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates automated-verdict-refused"~~
+MINTED_CLASSES="landing.refused-path render.structured-drift verify.ac-discriminates automated-verdict-refused human_root:BugReport human_root:IntakeRecord"
 printf '%s\n' "$REC_A" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_A (Record A's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 printf '%s\n' "$REC_B" | grep -qxE '0[0-9]{3}' || { echo "FAIL: REC_B (Record B's four-digit id) is not recorded in this block — write it by dated edit the day the record is written"; exit 1; }
 [ "$REC_A" != "$REC_B" ] || { echo "FAIL: REC_A and REC_B record the same id ($REC_A)"; exit 1; }

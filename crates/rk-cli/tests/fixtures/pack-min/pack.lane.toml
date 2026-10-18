@@ -109,6 +109,17 @@ action = "fail"
 class = "automated-verdict-refused"
 action = "fail"
 
+# (dated 2026-10-18, s8j build, S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 3, proposed) The step-4
+# gates on the two human roots (workflow::human_root) are kernel-minted kinds reachable in every pack,
+# so the lint requires their rows here too. Drafted `fail`, as the installed packs' are.
+[[gate_expiry]]
+class = "human_root:BugReport"
+action = "fail"
+
+[[gate_expiry]]
+class = "human_root:IntakeRecord"
+action = "fail"
+
 # `timeout_secs` on EVERY activity (`BindRequest.timeout_secs`).
 [activity.emit-report]
 timeout_secs = 900
