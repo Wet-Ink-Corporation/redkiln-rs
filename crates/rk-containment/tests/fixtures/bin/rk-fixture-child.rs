@@ -48,7 +48,7 @@
 //! | `orphan` | **three-level** (§7c.10): spawn an intermediate (`orphan-mid`) that spawns the **holder** (`orphan-holder`, which writes its marker and holds) and exits; wait for the intermediate to exit and for the holder's marker to appear; print `READY holder_pid=<n>` and **hold** — so the direct child is alive when the token fires and the holder's parent is dead: a PID walk from the live child finds nothing, only the job holds the holder (AC-224's positive control) |
 //! | `breakaway` | the bin's OWN attempt to leave containment: spawn a holder with `creation_flags(0x0100_0000)` (`CREATE_BREAKAWAY_FROM_JOB`, a plain `u32` `std` takes); print `BREAKAWAY spawn=ok pid=<n>` or `BREAKAWAY spawn=err os=<code>`, record the same in the marker, and hold. Under a job that never grants `BREAKAWAY_OK` the attempt must fail at spawn or land inside the job (AC-224's negative control, O-2). On POSIX the analogue is `process_group(0)` — a new group `killpg` cannot reach — which the group cannot refuse; the POSIX line is a measurement of that, not a control |
 //! | `echo-env` | print every environment variable as `KEY=VALUE` in sorted order, then `CWD=<dir>` (AC-509; RT-21) |
-//! | `script:<dir>` | ONE SCRIPTED DISPATCH PER INVOCATION (`s8j` §8j.4's binary arm, added 2026-10-18): drain stdin to EOF; take the next ordinal `n` from `<dir>/next` (absent reads `0`) and write `n + 1` back; copy the tree `<dir>/<n>.files/`, if present, into the current directory (the run-owned worktree the adapter spawns in); then print an init frame built from the child's OWN argv (`--agent`, `--model`, and the `--agents` JSON's `tools` and `permissionMode`, so the adapter's adoption and isolation checks read what it asked for) and a success result whose `structured_output` is `<dir>/<n>.json` verbatim (one line), and exit 0. A missing `<n>.json` exits 4, so a run past its script fails by name |
+//! | `script:<dir>` | ONE SCRIPTED DISPATCH PER INVOCATION (`s8j` §8j.4's binary arm, added 2026-10-18): drain stdin to EOF; take the next ordinal `n` from `<dir>/next` (absent reads `0`) and write `n + 1` back; write the tree `<dir>/<n>.files/`, if present, fresh into the current directory (a write, not a copy, so each file carries the current mtime and cargo rebuilds it) (the run-owned worktree the adapter spawns in); then print an init frame built from the child's OWN argv (`--agent`, `--model`, and the `--agents` JSON's `tools` and `permissionMode`, so the adapter's adoption and isolation checks read what it asked for) and a success result whose `structured_output` is `<dir>/<n>.json` verbatim (one line), and exit 0. A missing `<n>.json` exits 4, so a run past its script fails by name |
 //!
 //! The intermediate and holder modes (`orphan-mid[:<n>]`, `orphan-holder`) are this bin's own;
 //! `orphan` spawns `orphan-mid` (one holder), and `ac278_no_descendant_survives_exit` spawns
@@ -364,7 +364,7 @@ fn script(dir: Option<&str>, argv: &[String]) -> io::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-/// Copy every file under `from` to the same relative path under `to`, creating directories.
+/// Write every file under `from` to the same relative path under `to`, creating directories.
 fn copy_tree(from: &Path, to: &Path) -> io::Result<()> {
     for entry in fs::read_dir(from)? {
         let path = entry?.path();
@@ -376,7 +376,10 @@ fn copy_tree(from: &Path, to: &Path) -> io::Result<()> {
             fs::create_dir_all(&target)?;
             copy_tree(&path, &target)?;
         } else {
-            fs::copy(&path, &target)?;
+            // Not `fs::copy`: on Windows (`CopyFileExW`) it keeps the source's mtime, older than
+            // the fixture's last build, so cargo would not rebuild the scripted edit. A fresh write
+            // stamps the current time, as the in-process double's `fs::write` does.
+            fs::write(&target, fs::read(&path)?)?;
         }
     }
     Ok(())
