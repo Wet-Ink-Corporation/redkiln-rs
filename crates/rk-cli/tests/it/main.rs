@@ -76,6 +76,7 @@ mod doctor_drift;
 mod doctor_journal;
 mod exit;
 mod explain;
+mod facet_binding;
 mod init;
 mod item_create;
 mod landing;
