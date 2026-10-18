@@ -1743,6 +1743,53 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
     Ok(())
 }
 
+/// **Step 2's one rule for a gate the selection requires**: the record to open for `kind`, or
+/// `None` when the journal already holds a live one (answered, open or expired).
+///
+/// The gate STEP decides, not a token derived from the caller's context: the reach counter says
+/// whether this step has been reached, and the latest record's disposition says what to do. (Until
+/// 2026-09-17 this derived `(kind, ctx.tree_hash, ctx.deadline)` and looked the token up — so a tree
+/// that moved after an answer would have re-opened an answered gate on every call, and a void token
+/// could never re-open at all.)
+///
+/// # Errors
+///
+/// [`FsmError::Canon`] if a float reached the canonical serialiser while the token was derived.
+fn gate_to_open(
+    state: &RunState,
+    kind: &str,
+    ctx: &FsmContext<'_>,
+) -> Result<Option<GateRecord>, FsmError> {
+    let reaches = state.reaches(kind);
+    if reaches == 0 {
+        return Ok(Some(GateRecord::derive_reach(
+            kind,
+            ctx.tree_hash,
+            ctx.deadline,
+            1,
+        )?));
+    }
+    // **AC-252 — a void is followed by a re-open, fresh in all three fields.** The record is
+    // minted over the CURRENT tree and the deadline the caller supplies at this act; the reach is
+    // one past the voided one, so the token is fresh even if neither moved.
+    // (`DECISIONS-2026-09-14 D-5` left "does a voided gate re-open?" to this stage; the register
+    // answers it in AC-252 and this arm executes that answer.) An EXPIRED latest record is
+    // deliberately NOT re-opened here: its disposition is the expiry policy's terminal path
+    // (ADR-0017: fail / escalate / auto-decide; AC-257, AC-259), not a bare re-open — and an
+    // answered one proceeds.
+    if let Some(latest) = state.latest_gate(kind)
+        && state.gates_void.contains(latest)
+    {
+        return Ok(Some(GateRecord::derive_reach(
+            kind,
+            ctx.tree_hash,
+            ctx.deadline,
+            reaches.saturating_add(1),
+        )?));
+    }
+    Ok(None)
+}
+
 /// The full-grain next action.
 ///
 /// The evaluation order **is** the answer, so it is written out rather than inferred from the body:
@@ -1750,7 +1797,9 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
 /// 1. an open gate that is neither answered nor void → [`NextAction::AwaitGate`] (ADR-0022:
 ///    escalation is a kernel-owned durable `Gate:` mark and the kernel takes no action until it is
 ///    answered);
-/// 2. a gate the selection requires that the journal has not opened → [`NextAction::OpenGate`];
+/// 2. a gate the selection requires that the journal has not opened → [`NextAction::OpenGate`]:
+///    the step-2 `unknown_facet` abstentions, then the step-4 `human_root:<Kind>` gates
+///    (ADR-0200 decision 2, proposed);
 /// 3. a node in step 6's topological order whose activation is not committed →
 ///    [`NextAction::Dispatch`];
 /// 4. a recorded halt → [`NextAction::Halt`] — **above the successor check, ADR-0154: a recorded
@@ -1781,39 +1830,22 @@ pub fn next_action(
     // 2. The `kind` spelling is a READING — see the module header's first reading. Design §5 gives
     //    `gate_opened` a `reason` and an `axis`; `GateRecord` carries one `kind`, and two gates
     //    differing only in axis must not derive one token and collapse into one gate.
-    for gate in selection.gates() {
-        let kind = format!("{}:{}", gate.reason.as_str(), gate.axis);
-        // The gate STEP decides, not a token derived from the caller's context: the reach
-        // counter says whether this step has been reached, and the latest record's disposition
-        // says what to do. (Until 2026-09-17 this derived `(kind, ctx.tree_hash, ctx.deadline)`
-        // and looked the token up — so a tree that moved after an answer would have re-opened an
-        // answered gate on every call, and a void token could never re-open at all.)
-        let reaches = state.reaches(&kind);
-        if reaches == 0 {
-            return Ok(NextAction::OpenGate(GateRecord::derive_reach(
-                &kind,
-                ctx.tree_hash,
-                ctx.deadline,
-                1,
-            )?));
-        }
-        // **AC-252 — a void is followed by a re-open, fresh in all three fields.** The record is
-        // minted over the CURRENT tree and the deadline the caller supplies at this act; the
-        // reach is one past the voided one, so the token is fresh even if neither moved.
-        // (`DECISIONS-2026-09-14 D-5` left "does a voided gate re-open?" to this stage; the
-        // register answers it in AC-252 and this arm executes that answer.) An EXPIRED latest
-        // record is deliberately NOT re-opened here: its disposition is the expiry policy's
-        // terminal path (ADR-0017: fail / escalate / auto-decide; AC-257, AC-259), not a bare
-        // re-open — and an answered one proceeds.
-        if let Some(latest) = state.latest_gate(&kind)
-            && state.gates_void.contains(latest)
-        {
-            return Ok(NextAction::OpenGate(GateRecord::derive_reach(
-                &kind,
-                ctx.tree_hash,
-                ctx.deadline,
-                reaches.saturating_add(1),
-            )?));
+    //
+    //    *(dated 2026-10-18, `s8j` build, package S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 2,
+    //    proposed.)* After the step-2 abstentions, the step-4 gate on each human-sourced kind no
+    //    activity produces (`Selection::human_roots`, sorted by kind), as `human_root:<Kind>`
+    //    (AC-054's *"opens a gate"*). Both follow the one rule in [`gate_to_open`].
+    let facet_gates = selection
+        .gates()
+        .iter()
+        .map(|gate| format!("{}:{}", gate.reason.as_str(), gate.axis));
+    let root_gates = selection
+        .human_roots()
+        .iter()
+        .map(|kind| super::human_root::gate_kind(kind));
+    for kind in facet_gates.chain(root_gates) {
+        if let Some(record) = gate_to_open(state, &kind, ctx)? {
+            return Ok(NextAction::OpenGate(record));
         }
     }
     // 3. Step 6's topological order is the source of *which one*, and step 6 is already on disk as

@@ -253,9 +253,23 @@ pub struct Selection {
     /// until the pass's `artifact.write` materialises each. Derived from `R`, the step-3
     /// classifications and the registry, so it is not part of the canonical bytes.
     pass_sourced: Vec<Instance>,
+    /// *(dated 2026-10-18, s8j build, package S8J-C2-ROOT-QUESTIONS; ADR-0200 decision 2,
+    /// proposed.)* The kinds of [`Self::unsatisfiable`] with `NoAdmissibleProducer` that the
+    /// artifact registry declares `source = "human"`, sorted and once each: the roots only an
+    /// answer can supply. Derived from the step-4 list and the registry, so it is not part of the
+    /// canonical bytes.
+    human_roots: Vec<String>,
 }
 
 impl Selection {
+    /// The human-sourced kinds no activity can produce here (ADR-0200 decision 2): each is the
+    /// `<Kind>` of a `human_root:<Kind>` gate the FSM's step 2 opens. A `ForbiddenStage`
+    /// unsatisfiable and an activity-sourced kind are never in it.
+    #[must_use]
+    pub fn human_roots(&self) -> &[String] {
+        &self.human_roots
+    }
+
     /// The required, pass-sourced instances still `Missing` or `Stale` (R1 = ADR-0191 decision
     /// 1): what a composition-root pass owes before the stage is complete.
     #[must_use]
@@ -672,6 +686,15 @@ pub(in crate::select) fn select_amended(
     skipped.sort();
     skipped.dedup();
     unsatisfiable.sort_by(|a, b| a.kind.cmp(&b.kind));
+    // ADR-0200 decision 2: the step-4 gate opens on a human kind's `NoAdmissibleProducer` only.
+    // Owned copies: the selection stores them beside `unsatisfiable`, which keeps its own.
+    let mut human_roots: Vec<String> = unsatisfiable
+        .iter()
+        .filter(|u| u.reason == step4::UnsatReason::NoAdmissibleProducer)
+        .filter(|u| artifacts.is_human_sourced(&u.kind))
+        .map(|u| u.kind.clone())
+        .collect();
+    human_roots.dedup();
     drift.sort_by(|a, b| (&a.root, &a.upstream).cmp(&(&b.root, &b.upstream)));
 
     let inputs_digest = canonical::inputs_digest(pack, catalog, item)?;
@@ -713,6 +736,7 @@ pub(in crate::select) fn select_amended(
         step5: five,
         inputs_digest,
         pass_sourced,
+        human_roots,
     })
 }
 

@@ -575,3 +575,99 @@ fn every_human_kind_a_lane_demands_is_attached_by_exactly_one_question() {
         );
     }
 }
+
+/// The kernel's next action over a fresh journal for `item` at `stage`, and the selection it read.
+fn first_action(
+    s: &Shipped,
+    stage: &str,
+    item: &rk_kernel::select::Item,
+) -> (rk_kernel::select::Selection, rk_kernel::workflow::fsm::NextAction) {
+    use rk_kernel::workflow::fsm;
+    let selection =
+        rk_kernel::select::select(&s.pack, &s.catalog, &s.artifacts, &s.facets, stage, item)
+            .unwrap_or_else(|e| panic!("PREMISE: the {stage} stage selects: {e}"));
+    let state = fsm::fold(item.id(), stage, &[]).expect("an empty journal folds");
+    let deadline = rk_types::time::Timestamp::from_unix_seconds(1_800_000_000);
+    let ctx = fsm::FsmContext::supplied(item.id(), "tree-0", deadline, None);
+    let action = fsm::next_action(&selection, &state, &ctx)
+        .unwrap_or_else(|e| panic!("the next action at {stage} is computed: {e}"));
+    (selection, action)
+}
+
+/// **Selection's step-4 `Unsatisfiable` on a `source = "human"` kind opens a durable gate of kind
+/// `human_root:<Kind>`, and the loaded registry answers that gate with the question whose one
+/// option attaches the kind** (`s8j` §8j.2 item 2; ADR-0200 decision 2; AC-054's *"opens a gate"*).
+///
+/// Over the shipped pack, catalog and registries, the fix lane's analysis stage (whose
+/// `minimal-repro` requires `BugReport`) and the story lane's specification stage (whose
+/// `bdd-scenarios` requires `IntakeRecord`) each report the root `Unsatisfiable {
+/// NoAdmissibleProducer }`, and the kernel's next action on a fresh journal is `OpenGate` of that
+/// gate kind, before any dispatch. CONTROL (*"Not widened"*): the same stage with the kind
+/// re-registered `source = "activity"` reports the same `Unsatisfiable` and opens no
+/// `human_root:` gate, so the gate is the registry's source and not the kind's name.
+#[test]
+fn the_step_four_gate_on_a_human_kind_is_bound_to_its_question() {
+    use rk_kernel::select::UnsatReason;
+    use rk_kernel::workflow::fsm::NextAction;
+    let registry = rk_cli::processes::load(&workspace_root())
+        .unwrap_or_else(|e| panic!("the shipped .redkiln/processes/ loads: {e}"));
+    let artifacts_src = shipped_artifacts_src();
+    let stages = ["analysis", "specification"];
+    for (((pack, item_id), stage), (id, kind, gate)) in LANES.into_iter().zip(stages).zip(HUMAN_ROOTS)
+    {
+        let unsat = |selection: &rk_kernel::select::Selection| {
+            selection
+                .unsatisfiable()
+                .iter()
+                .any(|u| u.kind == kind && u.reason == UnsatReason::NoAdmissibleProducer)
+        };
+        let s = shipped(pack, &artifacts_src);
+        let item = shipped_item(&s.facets, item_id);
+        let (selection, action) = first_action(&s, stage, &item);
+        assert!(
+            unsat(&selection),
+            "PREMISE: {pack}/{stage} reports `{kind}` Unsatisfiable {{ NoAdmissibleProducer }}"
+        );
+        let NextAction::OpenGate(record) = &action else {
+            panic!(
+                "{pack}/{stage}: with `{kind}` unattached the next action must open its gate \
+                 (ADR-0200 decision 2), not {action:?}"
+            );
+        };
+        assert_eq!(record.kind(), gate, "{pack}/{stage}: the gate's kind");
+        assert_eq!(record.reach(), 1, "a gate not yet reached opens at reach 1");
+        assert_eq!(
+            registry.question_for(record.kind()),
+            id,
+            "{pack}/{stage}: the `{gate}` gate is answered with `{id}`"
+        );
+        let question = registry.question(id).expect("the bound question is declared");
+        assert_eq!(
+            question.attaches("attach"),
+            Some([kind.to_owned()].as_slice()),
+            "{pack}/{stage}: the gate's question admits exactly `{kind}`"
+        );
+
+        // CONTROL: the kind registered `source = "activity"` is unsatisfiable the same way and
+        // opens no `human_root:` gate.
+        let human = format!("[artifact.{kind}]\nsource = \"human\"");
+        assert_eq!(
+            artifacts_src.matches(&human).count(),
+            1,
+            "PREMISE: artifacts.toml registers `{kind}` human"
+        );
+        let as_activity =
+            artifacts_src.replacen(&human, &format!("[artifact.{kind}]\nsource = \"activity\""), 1);
+        let control = shipped(pack, &as_activity);
+        let (selection, action) = first_action(&control, stage, &item);
+        assert!(
+            unsat(&selection),
+            "PREMISE (control): `{kind}` stays Unsatisfiable when registered `activity`"
+        );
+        assert!(
+            !matches!(&action, NextAction::OpenGate(r) if r.kind().starts_with("human_root:")),
+            "CONTROL: an activity-sourced Unsatisfiable must open no human_root gate (ADR-0200 \
+             decision 2, not widened); got {action:?}"
+        );
+    }
+}
