@@ -1676,6 +1676,13 @@ store (ADR-0105 clause 9); a restore-only block measured nothing about the rebui
 the anchor line itself, byte for byte, so A8's *"immediately above the line"* (re-quoted 2026-09-24, final consistency pass) holds whichever of A2 and A8 is applied
 first.
 
+*(dated 2026-10-18, D21-163, issue #90: the rebuilt tier-1 counts A2 compares, with `${rebuilt% *}` dropping the
+`t2_event` count, cover the tier-1 projection, which leaves out the four exclusions AC-184's amendment of that date
+names: `t2_event` rows and payloads; `t2_event.item`; an
+`opened` gate row's `stage`/`run_id` (D21-48 X11); and a void's `observed_tree_hash` (D21-96). Evidence, issue #90 at
+`3fa69db`: `crates/rk-cli/tests/it/doctor.rs`:2853-2885 masks the opening run and :3081 pins its null;
+`crates/rk-kernel/src/runtime/tier_one.rs`:2217-2291 (`rows_of_marks`) emits only the tier-1 kinds.)*
+
 ```bash
 # The operator path must still work (AC-427), but its STDOUT is not the comparison.
 # AMENDED at s8j (s8j §8j.8 A2): built first; the store `doctor --rebuild` replaces is backed up and restored, so (7)
@@ -1987,6 +1994,12 @@ clause 9's route. `s8e` hands its selection on: *"Adding the anchored test to `s
 instrument amendment, and it is listed there rather than made here."* Insert the lines below immediately above the
 line `# The operator path must still work (AC-427), but its STDOUT is not the comparison.`, which is A2's anchor. The
 kernel selections above them stay as they are.
+
+*(dated 2026-10-18, D21-163, issue #90: the anchored differential A8 adds compares the tier-1 projection, which
+leaves out the four exclusions AC-184's amendment of that date names: `t2_event` rows and payloads; `t2_event.item`; an
+`opened` gate row's `stage`/`run_id` (D21-48 X11); and a void's `observed_tree_hash` (D21-96). Evidence, issue #90 at
+`3fa69db`: `crates/rk-cli/tests/it/doctor.rs`:2853-2885 masks the opening run and :3081 pins its null;
+`crates/rk-kernel/src/runtime/tier_one.rs`:2217-2291 (`rows_of_marks`) emits only the tier-1 kinds.)*
 
 ```bash
 # AMENDED at s8j (s8j §8j.8 A8; s8e §8e.9): the ROUTE of ADR-0105 clause 9's tier-1 projection — rows whose anchor is

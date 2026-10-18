@@ -307,6 +307,9 @@ out=$(cargo test -p rk-kernel -- stage_level_next_action 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: stage_level_next_action exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
   || { echo "FAIL: 0 tests matched stage_level_next_action — AC-161's canonical-serialiser equality is unasserted"; exit 1; }
+# *(dated 2026-10-18, D21-163, issue #90)* A8 and A2 below compare the tier-1 projection that AC-184's 2026-10-18 amendment
+# names, with its four exclusions: `t2_event` rows and payloads; `t2_event.item`; an `opened` gate row's `stage`/`run_id`
+# (D21-48 X11); a void's `observed_tree_hash` (D21-96). A2's last line drops the `t2_event` count by `${rebuilt% *}`.
 # *(dated 2026-10-18, s8j build, S8J-D2-S8-AMENDMENTS)* s8j §8j.8 A8 inserted below, immediately above A2's anchor; no line rewritten.
 # AMENDED at s8j (s8j §8j.8 A8; s8e §8e.9): the ROUTE of ADR-0105 clause 9's tier-1 projection — rows whose anchor is
 # reachable from the refs, the store deleted, doctor --rebuild, canonical equality — which the kernel test cannot see.
@@ -323,6 +326,7 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo
 # AMENDED at s8j (s8j §8j.8 A2): built first; the store `doctor --rebuild` replaces is backed up and restored, so (7)
 # reads the store the run wrote; and the REBUILT store's tier-1 counts equal the pre-rebuild ones (AC-184; ADR-0105
 # clause 9), read before the restore. The line above is A8's anchor and stays byte-identical.
+# *(dated 2026-10-18, D21-163, issue #90)* A2's counts compare the tier-1 tables only; the four exclusions are AC-184's amendment's list.
 out=$(cargo build --workspace 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc — criterion (2)'s operator half NOT RUN (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
 test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (2)'s operator half NOT RUN (Halt 8)"; exit 1; }
@@ -1400,6 +1404,11 @@ checkpoint line: no block below is fenced, and nothing in it runs without the op
 the operator approves it by a dated line under it, this section is not a procedure and nothing here may be run. An
 agent drafted it. It changes no Checkpoint 8j assertion, no ADR decision sentence and no ledger entry.
 
+*(dated 2026-10-18, D21-163: **approved by the operator** — Ryan's card tap, weigh-in wi-5ac031, recorded by an agent
+session — with the three questions under "Open for the operator's approval" answered by the dated lines there. This
+section is now the procedure. Each step still waits on its own operator go-ahead, and nothing in it is fenced or a
+checkpoint line.)*
+
 > **After a failed first real run of the fix item.** Checkpoint 8j is one-shot (`s8j` §8j.10): its (3) refuses an
 > existing `rk-run/<fix item>`, which the first launch creates. This section is the route back when that first run
 > fails: (1) launch exits non-zero, or (1)'s check block refuses a run that did launch. D21-40 decision 2 still
@@ -1443,9 +1452,15 @@ agent drafted it. It changes no Checkpoint 8j assertion, no ADR decision sentenc
 > **Open for the operator's approval** (each one decides a line above):
 > - **Whether the live store stays in place** (step 3) or is replaced by a fresh one. Replacing it would move
 >   Checkpoint 7i's shipped-store readings and `s8`'s (2).
+>   *(dated 2026-10-18, D21-163: answered — the live store stays in place, as step 3 reads.)*
 > - **Whether `s8`'s (2) treats `refs/archive/` as reachable.** A2/A8's projection reads rows whose anchor is
 >   reachable from the refs, and the old run's rows anchor on archived commits.
+>   *(dated 2026-10-18, D21-163: answered — yes, `refs/archive/` counts as reachable. The tier-1 read is
+>   `git log --all` (`crates/rk-git/src/reconcile.rs`:278, `read_commits`, whose `--all` is at :302), so an archive
+>   ref's commits are read like any other ref's.)*
 > - **Whether a failed story-item run (1b) follows the same route.** Checkpoint 8j (3) does not read
 >   `rk-run/rk-story-harden-spike-pack`, and no fresh story item is minted by `s8j` §8j.5.
+>   *(dated 2026-10-18, D21-163: answered — a failed story-item run (1b) takes steps 1-3 only (stop and record,
+>   archive the ref, archive the store) and then stops. Any re-run of it is a separate operator decision.)*
 
 ---

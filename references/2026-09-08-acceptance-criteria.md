@@ -3444,6 +3444,20 @@ slices". F12 is S0.2, a trailer-corpus study reporting 15/74 ever-rejected and 2
 oracle or against engine decisions**. "Validated" was the fabrication; "exercised" is the record. After Step 2 the file
 lives in `redkiln-corpus` at the pin, and the runbook's Step 6 names that location.
 
+*(Amended 2026-10-18, D21-163, issue #90; Ryan's card tap, recorded by an agent session. Amended, not edited: the
+THEN clause above stands.)* **The rebuild differential's four named exclusions.** The tier-1 projection the
+differential compares leaves out exactly these four, each tier-2 or addressing data that the git trailers do not carry:
+1. `t2_event` rows and payloads (the tier-2 event log; `rows_of_marks` emits only the tier-1 kinds);
+2. `t2_event.item`, the item tag (ADR-0131 decisions 2 and 4: a tag is addressing metadata, outside
+   `canonical_events`, and decision 10 already says the differential must exclude tags if git cannot re-derive them);
+3. an `opened` gate row's `stage` and `run_id`, which the `Gate:` trailer does not carry (D21-48 X11);
+4. a void's `observed_tree_hash`, which stays in the tier-2 void row (D21-96).
+
+Naming them states the differential's reach rather than narrowing it: none of the four is carried by a git trailer,
+so no rebuild from git alone can reproduce it. The list is consistent with ADR-0131 decision 2 (`canonical_events`
+stays `{kind, payload}`) and decision 6 (git stays the tier-1 authority; ADR-0109 decision 2, ADR-0105 clause 9 and this AC are not re-opened). `s8` (2)'s amendments A2 and A8 and
+`s8j`'s rebuild reading cite this same list.
+
 *(AC-185 as originally written — "CI runs the rebuild test" — was cut; see Refutation notes. Its only non-vacuous
 content, the SHA pin, is folded into AC-184 above. The id is reassigned below.)*
 
