@@ -340,7 +340,9 @@ fn permission_mode_outside_the_cli_closed_set_is_refused() {
 /// against an over-narrow set — every choice the captured `claude --help` lists, plus `default`,
 /// is admitted by the closed set, at load and at bind, and the set is exactly those seven. The
 /// choices are read from the capture written at stage open
-/// (`tests/fixtures/cli-help/2.1.287.permission-mode.txt`), never from this file.
+/// (`tests/fixtures/cli-help/2.1.287.permission-mode.txt`), never from this file. *(dated
+/// 2026-10-19, s8j build, D21-164)* That capture is now `2.1.303.permission-mode.txt`, the pin
+/// move's byte-identical re-capture; the test reads every capture in the directory.
 ///
 /// RED (observed 2026-10-02, in the private worktree `target/wt-P3` through D21-47's wrapper, the
 /// driver `P3-adapter-argv-models-mutants.py`): with the set narrowed to the shipped pair (an

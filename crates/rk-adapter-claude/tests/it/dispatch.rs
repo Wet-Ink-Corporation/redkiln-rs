@@ -431,11 +431,11 @@ fn ac227_every_harness_event_carries_cli_version() {
     for row in &rows {
         assert_eq!(
             row.cli_version,
-            CliVersion::Observed("2.1.278".to_owned()),
+            CliVersion::Observed("2.1.303".to_owned()),
             "an init that reported a version lands as Observed(v)"
         );
     }
-    let observed = serde_json::to_value(CliVersion::Observed("2.1.278".to_owned()))
+    let observed = serde_json::to_value(CliVersion::Observed("2.1.303".to_owned()))
         .expect("a CliVersion serialises");
     let events = r.store.events();
     let written: Vec<EventKind> = events.iter().map(|e| e.kind).collect();
@@ -1341,7 +1341,7 @@ fn frame_read_before_the_timer_fired_does_not_overturn_the_arm() {
     );
     assert_eq!(
         r.outcome.record.cli_version,
-        CliVersion::Observed("2.1.278".to_owned()),
+        CliVersion::Observed("2.1.303".to_owned()),
         "the init was read before the kill"
     );
 }

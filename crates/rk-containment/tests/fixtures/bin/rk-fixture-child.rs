@@ -401,7 +401,7 @@ fn script(dir: Option<&str>, argv: &[String]) -> io::Result<ExitCode> {
     let mut out = io::stdout().lock();
     writeln!(
         out,
-        "{{\"agent\":{agent},\"apiKeySource\":\"none\",\"claude_code_version\":\"2.1.278\",\
+        "{{\"agent\":{agent},\"apiKeySource\":\"none\",\"claude_code_version\":\"2.1.303\",\
          \"cwd\":\"<worktree>\",\"mcp_servers\":[],\"model\":{model},\"permissionMode\":{mode},\
          \"session_id\":\"script\",\"slash_commands\":[],\"subtype\":\"init\",\"tools\":{tools},\
          \"type\":\"system\",\"uuid\":\"script-init-{n}\"}}",
