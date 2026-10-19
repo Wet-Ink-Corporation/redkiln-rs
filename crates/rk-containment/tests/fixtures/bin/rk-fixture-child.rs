@@ -10,8 +10,12 @@
 //! `std::env::var` ban's scope (the bans read adapter `src/`; this file is under `tests/`).
 //! `set_var` is never called: a child's environment is built on its `Command`.
 //!
-//! **One marker file per invocation** into `RK_FIXTURE_MARKER_DIR` (§7c.17), named `<pid>.marker`,
-//! written to a `.tmp` and renamed so a reader never sees a partial file, carrying `pid=<own pid>`,
+//! **One marker file per invocation** into `RK_FIXTURE_MARKER_DIR` (§7c.17), named `<pid>.marker`
+//! or, when that name is taken, the first free `<pid>-<n>.marker` (Windows reuses a pid across
+//! sequential spawns, and a replaced marker undercounts them), written to a `.tmp` and hard-linked
+//! into place so a reader never sees a partial file and no marker is ever overwritten. Readers
+//! select on the `.marker` extension and take the pid from the body, never from the name. It
+//! carries `pid=<own pid>`,
 //! `mode=<mode name, without its `:<arg>`>` and the argv it received one element per line as
 //! `arg=<element>` — so *"exactly
 //! one child spawn"* and *"dispatch count 0"* are file counts, `ac225_…`'s external kill has a pid
@@ -48,6 +52,7 @@
 //! | `orphan` | **three-level** (§7c.10): spawn an intermediate (`orphan-mid`) that spawns the **holder** (`orphan-holder`, which writes its marker and holds) and exits; wait for the intermediate to exit and for the holder's marker to appear; print `READY holder_pid=<n>` and **hold** — so the direct child is alive when the token fires and the holder's parent is dead: a PID walk from the live child finds nothing, only the job holds the holder (AC-224's positive control) |
 //! | `breakaway` | the bin's OWN attempt to leave containment: spawn a holder with `creation_flags(0x0100_0000)` (`CREATE_BREAKAWAY_FROM_JOB`, a plain `u32` `std` takes); print `BREAKAWAY spawn=ok pid=<n>` or `BREAKAWAY spawn=err os=<code>`, record the same in the marker, and hold. Under a job that never grants `BREAKAWAY_OK` the attempt must fail at spawn or land inside the job (AC-224's negative control, O-2). On POSIX the analogue is `process_group(0)` — a new group `killpg` cannot reach — which the group cannot refuse; the POSIX line is a measurement of that, not a control |
 //! | `echo-env` | print every environment variable as `KEY=VALUE` in sorted order, then `CWD=<dir>` (AC-509; RT-21) |
+//! | `marker-twice` | write the marker a second time and exit 0 — one pid's two markers, the collision a reused Windows pid makes, on every OS (`two_markers_with_one_pid_both_survive`, added 2026-10-18) |
 //! | `script:<dir>` | ONE SCRIPTED DISPATCH PER INVOCATION (`s8j` §8j.4's binary arm, added 2026-10-18): drain stdin to EOF; take the next ordinal `n` from `<dir>/next` (absent reads `0`) and write `n + 1` back; write the tree `<dir>/<n>.files/`, if present, fresh into the current directory (a write, not a copy, so each file carries the current mtime and cargo rebuilds it) (the run-owned worktree the adapter spawns in); then print an init frame built from the child's OWN argv (`--agent`, `--model`, and the `--agents` JSON's `tools` and `permissionMode`, so the adapter's adoption and isolation checks read what it asked for) and a success result whose `structured_output` is `<dir>/<n>.json` verbatim (one line), and exit 0. A missing `<n>.json` exits 4, so a run past its script fails by name |
 //!
 //! The intermediate and holder modes (`orphan-mid[:<n>]`, `orphan-holder`) are this bin's own;
@@ -78,6 +83,10 @@ const HOLD_PARKS: u32 = 600;
 /// `orphan` waits for its holder's marker in [`MARKER_POLLS`] parks of [`MARKER_POLL`] — 30 s.
 const MARKER_POLL: Duration = Duration::from_millis(5);
 const MARKER_POLLS: u32 = 6_000;
+
+/// How many names one pid's markers may take (`<pid>.marker`, then `<pid>-1.marker` …): far more
+/// spawns than any test makes reuse one pid, and a bound so a full directory fails by name.
+const MARKER_NAMES: u32 = 1_000;
 
 /// `CREATE_BREAKAWAY_FROM_JOB`, as `std::os::windows::process::CommandExt::creation_flags` takes it.
 #[cfg(windows)]
@@ -135,6 +144,10 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }),
         "echo-env" => echo_env(),
+        "marker-twice" => {
+            write_marker(marker_dir.as_deref(), &name, &argv, &extra);
+            Ok(ExitCode::SUCCESS)
+        }
         "script" => script(arg.as_deref(), &argv),
         other => {
             eprintln!("rk-fixture-child: unknown RK_FIXTURE_MODE {other:?}");
@@ -166,14 +179,58 @@ fn write_marker(dir: Option<&Path>, mode: &str, argv: &[String], extra: &[String
         body.push_str(line);
         body.push('\n');
     }
-    let tmp = dir.join(format!("{pid}.marker.tmp"));
-    let done = dir.join(format!("{pid}.marker"));
-    if let Err(e) = fs::write(&tmp, body).and_then(|()| fs::rename(&tmp, &done)) {
-        eprintln!(
-            "rk-fixture-child: marker {} not written: {e}",
-            done.display()
+    if let Err(e) = publish_marker(dir, pid, &body) {
+        let warning = writeln!(
+            io::stderr().lock(),
+            "rk-fixture-child: marker for pid {pid} in {}: {e}",
+            dir.display()
         );
+        if warning.is_err() {
+            // stderr is closed, so the warning has no channel left; the missing marker is itself
+            // the report a reader's count sees, and the marker never decides this child's exit.
+        }
     }
+}
+
+/// Publish `body` as a marker that replaces no other: staged whole in `<pid>.marker.tmp`, then
+/// hard-linked to the first free name of `<pid>.marker`, `<pid>-1.marker`, … `<pid>-<n>.marker`.
+/// A hard link fails on an existing name where `rename` replaces it, and Windows reuses a pid
+/// across sequential spawns quickly, so a renamed marker cost the earlier child its file and a
+/// spawn count read one short. The link is atomic, so a reader still never sees a partial file.
+/// The staging file is removed whether or not the link succeeded; a pid has one live process, so
+/// no other writer shares it.
+fn publish_marker(dir: &Path, pid: u32, body: &str) -> io::Result<()> {
+    let tmp = dir.join(format!("{pid}.marker.tmp"));
+    fs::write(&tmp, body)?;
+    let linked = link_first_free(&tmp, dir, pid);
+    let removed = fs::remove_file(&tmp);
+    linked.map_err(|e| io::Error::new(e.kind(), format!("not written: {e}")))?;
+    removed.map_err(|e| {
+        io::Error::new(
+            e.kind(),
+            format!("published, but staging {} not removed: {e}", tmp.display()),
+        )
+    })
+}
+
+/// Hard-link `tmp` to the first of [`MARKER_NAMES`] candidate names that does not exist yet.
+fn link_first_free(tmp: &Path, dir: &Path, pid: u32) -> io::Result<()> {
+    for n in 0..MARKER_NAMES {
+        let name = if n == 0 {
+            format!("{pid}.marker")
+        } else {
+            format!("{pid}-{n}.marker")
+        };
+        match fs::hard_link(tmp, dir.join(name)) {
+            Ok(()) => return Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        format!("all {MARKER_NAMES} marker names for pid {pid} are taken"),
+    ))
 }
 
 /// Stay alive: a counted loop of bounded parks. A spurious unpark returns early from one park

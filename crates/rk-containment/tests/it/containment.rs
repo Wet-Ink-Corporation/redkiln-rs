@@ -621,3 +621,40 @@ fn group_reads_non_empty_while_a_member_runs() {
     child.wait().expect("reap the child");
     dir.close().expect("the fixture tree deletes");
 }
+
+/// **A reused pid never costs a marker.** Windows hands a pid back out quickly across sequential
+/// spawns, and a marker named by pid alone and published by `rename` replaced the earlier child's
+/// file, so a count of spawns read one short (`lane_proof`'s binary arm, 13 vs 14 on
+/// `windows-latest`). `marker-twice` publishes its marker a second time from the same process —
+/// the same pid twice, the collision itself, on every OS — and both files must survive, whole,
+/// with no `.tmp` left behind.
+#[test]
+fn two_markers_with_one_pid_both_survive() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let mut reaper = Reaper::new();
+    let Contained {
+        mut child,
+        group: _group,
+    } = spawn_into_job(fixture("marker-twice", dir.path())).expect("spawn_into_job");
+    let pid = child.id();
+    reaper.track(pid);
+
+    let status = child.wait().expect("wait");
+
+    assert!(status.success(), "the fixture exited {status}");
+    let markers = read_markers(dir.path());
+    assert_eq!(markers.len(), 2, "one marker per write: {markers:?}");
+    for m in &markers {
+        assert_eq!((m.pid, m.mode.as_str()), (pid, "marker-twice"), "{m:?}");
+    }
+    let leftovers: Vec<_> = std::fs::read_dir(dir.path())
+        .expect("the marker dir reads")
+        .map(|e| e.expect("entry").file_name())
+        .filter(|n| n.to_string_lossy().ends_with(".tmp"))
+        .collect();
+    assert!(
+        leftovers.is_empty(),
+        "a staging file survived: {leftovers:?}"
+    );
+    dir.close().expect("the fixture tree deletes");
+}
