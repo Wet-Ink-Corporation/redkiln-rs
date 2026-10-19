@@ -81,7 +81,8 @@ grammar, `redkiln run <item> [--lane fix|story]`, superseding ADR-0107 decision 
 part** (every other clause of 0107 stands), and `0129` fixes the `answer` grammar and the ADR-0063 question registry,
 superseding ADR-0009's literal `approve|changes-requested` sentence **in part** (its CLI-only channel clause stands). Both
 were forced by the C-01 pass: each grammar sat in a Decision sentence, so ADR-0092 allowed neither an erratum nor a
-runbook choice. The next free number is **`0200`**.
+runbook choice. The next free number is **`0204`**.
+*(Corrected 2026-10-19 at `s8j`'s stage-open chain run (S8J-A2; Checkpoint 8a's next-free check failed on it): this read **`0200`** until `0200` — `s8j`'s human-root record — `0201` — its boundary-hold record — `0202` — its root-read record — and `0203` — its package-sha record — were written on 2026-10-18, at `proposed` *(dated 2026-10-18, D21-162: ADR-0200 to ADR-0203 accepted)*; the README's row moved with each, this line did not.)*
 *(Corrected 2026-10-15 at `s8i`'s build (package S8I-F2-RECORDS; `s8i` refuting round 21's blocker B2): this read **`0199`** until `0199` — `s8i`'s `Binary` record, the four cited fields and the human-gate route — was written, at `proposed` *(dated 2026-10-15, `s8i` close, D21-154: ADR-0199 accepted)*, on 2026-10-14.)*
 *(Corrected 2026-10-02 at `s8h`'s build (package P1-records): this read **`0197`** until `0197` — `s8h`'s Record A, cards, models and the run environment — and `0198` — `s8h`'s Record B, RT-57's scalars, the per-item envelope and gate expiry — were written, at `proposed` *(dated 2026-10-02, after `s8h`'s close: ADR-0198 accepted on D21-139)*.)*
 *(Corrected 2026-09-29 at `s8g`'s build (package R-D2119-8g): this read **`0196`** until `0196` — `s8g`'s Findings-key record (D21-119) — was written, at `proposed` *(dated 2026-10-02, `s8g` close: ADR-0196 accepted on D21-136)*.)*

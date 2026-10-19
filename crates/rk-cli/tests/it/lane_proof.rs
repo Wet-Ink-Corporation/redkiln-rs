@@ -235,7 +235,7 @@ fn fix_lane_reaches_a_landed_content_commit_under_fake_harness() {
 
     // D21-44: the run-owned worktree is under `.redkiln/worktrees/`, never under the common dir.
     let trees = walk.trees;
-    let expected = root.join(".redkiln").join("worktrees").join(FIX_ITEM);
+    let expected = crate::run_tree(root, FIX_ITEM).path;
     let canonical =
         |p: &std::path::Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
     assert!(

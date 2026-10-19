@@ -140,20 +140,25 @@ fn copy_tracked(root: &Path, pathspec: &str, skip: impl Fn(&Path) -> bool) -> us
 /// D21-44). Every file `git ls-files` lists under the workspace's `.redkiln/`, copied byte for byte;
 /// `registry.toml` is asserted to have arrived, and no `worktrees` directory exists afterwards.
 fn copy_tracked_redkiln(root: &Path) {
-    let copied = copy_tracked(root, ".redkiln", |rel| {
-        rel.components()
-            .nth(1)
-            .is_some_and(|c| c.as_os_str() == "worktrees")
-    });
+    let run_root = run_tree_root();
+    let copied = copy_tracked(root, ".redkiln", |rel| rel.starts_with(run_root));
     assert!(
         root.join(".redkiln").join("registry.toml").is_file(),
         "PREMISE: the byte copy carries `.redkiln/registry.toml`, s8c's verb table (review \
          finding 25); copied {copied} files"
     );
     assert!(
-        !root.join(".redkiln").join("worktrees").exists(),
-        "the byte copy must skip `.redkiln/worktrees/` (D21-44)"
+        !root.join(run_root).exists(),
+        "the byte copy must skip `{}` (D21-44)",
+        run_root.display()
     );
+}
+
+/// The run-tree root relative to a repository root: `rk_git::worktree`'s ignore row less its
+/// anchoring and trailing `/`, so the root is spelled in that one module (Checkpoint 8d-ii (3)'s
+/// root floor; D21-44). *(dated 2026-10-19, `s8j` S8J-A2: this read the root as joined literals.)*
+fn run_tree_root() -> &'static Path {
+    Path::new(rk_git::worktree::RUN_ROOT_IGNORE_ROW.trim_matches('/'))
 }
 
 /// **The projects the copied registry's `setup_projects` names, byte-copied from the workspace**
