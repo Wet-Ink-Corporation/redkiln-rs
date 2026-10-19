@@ -251,3 +251,5 @@
 {"t":"2026-10-19T16:07:57.113Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-declared","status":"WIP"}
 {"t":"2026-10-19T17:09:57.927Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"session-start","source":"resume"}
 {"t":"2026-10-19T17:10:48.958Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-10-19T17:10:53.465Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-start","pid":455,"timeoutMs":1200000}
+{"t":"2026-10-19T17:18:14.034Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"b348d2ee71f67313","ms":440564,"cached":false,"pid":455,"steps":{"fmt":3044,"scan":813,"manifests":158,"clippy":35540,"test":400600}}
