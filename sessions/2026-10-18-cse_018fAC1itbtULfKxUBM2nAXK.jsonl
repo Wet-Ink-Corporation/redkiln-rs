@@ -206,3 +206,5 @@
 {"t":"2026-10-19T03:56:59.232Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"subagent-stop","type":"temper:rust-reviewer","msg":false,"transcript":true}
 {"t":"2026-10-19T03:56:59.373Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"verdict","via":"subagent-stop","verdict":"changes-requested","fp":"12fc7f2d45d4bfc8","stale":false,"findings":5}
 {"t":"2026-10-19T04:00:59.130Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"12fc7f2d45d4bfc8","ms":604609,"cached":false}
+{"t":"2026-10-19T04:02:42.688Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"subagent-start","type":"temper:rust-reviewer"}
+{"t":"2026-10-19T04:03:31.494Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-declared","status":"WIP"}
