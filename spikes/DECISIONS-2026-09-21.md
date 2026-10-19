@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-18 (D21-1 … D21-163), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-19 (D21-1 … D21-164), and what they license
+
+*(Title moved 2026-10-19, D21-164: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-163)"**; `D21-164` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 163 before the append, the last `D21-163`; 164 after.)*
 
 *(Title moved 2026-10-18, D21-163: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-162)"**; `D21-163` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 162 before the append, the last `D21-162`; 163 after.)*
 
@@ -7590,3 +7592,26 @@ takes no ruling of its own.
    by `s8a`, which supersedes ADR-0094 decision 2's phase clause toward ADR-0007 (D21-53). The retirement itself was
    decided at D21-42 f.
 5. **The two `ci.yml` edits are approved** (weigh-ins wi-db28c6 and wi-4b8d3c) and land in PR #109, not here.
+
+## D21-164 · Ryan's ruling: the `s8j` pin is the installed 2.1.303, not S-BIN's 2.1.289
+
+**Recorded 2026-10-19 by an agent session.** On 2026-10-19 (02:59Z) the operator's `--help` capture for the pin move
+stopped at its Halt 2 guard: `claude --version` read `2.1.303 (Claude Code)`, where S-BIN's pins block reads
+`cli_version=2.1.289` (`spikes/F43-DRAFT.md`:261). The CLI had been moved by a manual update. The operator's
+`DISABLE_AUTOUPDATER=1` row (`s8i`, 2026-10-05 sitting) freezes only the automatic update, and it is unchanged. Ryan was
+offered three options on a decision card: restore 2.1.289, re-pin to 2.1.303, or stop and record. He answered in the
+thread (03:07Z): *"let's pin the new version (the previous sh command ran under this version as well)"*. This entry
+records that ruling.
+
+1. **The pin moves to 2.1.303.** `TESTED_CLI_VERSION`, the instrument record and the `--help` capture are taken at
+   2.1.303 by `s8h` §8h.8's steps. §8j.6 step 1's *"The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned
+   `cli_version`"* and its *"not a pin to move"* clause are superseded for `s8j` by this entry. Checkpoint 8j (6)'s
+   S-BIN equality line is amended by a dated edit. It now asserts that S-BIN's record still reads 2.1.289 and that the
+   pin equals this entry's 2.1.303. The move is recorded under Halt 2 (golden constraint 8), not worked around.
+2. **S-BIN's record is unchanged.** F43, ADR-0199 and the S-BIN set keep `cli_version=2.1.289`, the version their
+   dispatches ran on. `s8j`'s probes and `s8`'s real runs run on 2.1.303. A comparison between S-BIN's evidence and
+   those runs crosses one CLI move, and says so.
+3. **The freeze holds at 2.1.303 from here through `s8`.** No manual `claude update` is run in that window. The
+   `DISABLE_AUTOUPDATER` row stays, and the launcher's before/after sha256 (§8h.7 step 9) stays the detector.
+4. The parenthetical refers to item 16's run, measured the same night under the no-dispatch wrapper's fake claude.
+   That run is independent of the installed version and needs no re-run.
