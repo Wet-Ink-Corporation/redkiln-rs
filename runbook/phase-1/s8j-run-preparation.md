@@ -383,6 +383,9 @@ are not what the tree holds, and one more was found in the re-measure (item 12).
    give the entry commit's count are not readable from this container (the proxy refuses the log blob host). (11) is
    amended by a dated edit: its lower bound moves from 1249 to 1432, and the literal stays refusing until a count is
    recorded (item 4's dated line in (11) says how).
+   *(dated 2026-10-19, item 16)* Recorded: the operator measured Checkpoint 8i's tree `b3c746e` at **1432 passed**
+   (44 results, 0 with failures, 9 ignored, `rust-src` removed by R6), chosen over the entry-commit count (wi-eb62f5 A).
+   Row 8i carries it by a dated line, and (11)'s literal is edited to 1432, so (11)'s floor is 1446.
 5. **RT-57's record is accepted, and it is ADR-0198.** §8j.6's entry condition requires `s8h`'s Record B
    `accepted` before any paid step. `references/adr/0198-rt-57-pack-scalars-the-per-item-envelope-and-gate-expiry-are-recorded-fail-closed.md`
    reads `status: accepted` (D21-139) [measured]. The evidence file's `record-rt57` line is `record-rt57 0198`. §8j.6
@@ -2959,7 +2962,11 @@ fi
 # 12 off unix) is recorded in row 8i by a dated line; then it is edited to that count, by a dated line here. The lower-bound
 # line moves from 1249 to 1432. Was:
 # ~~[ "$CP8I_PASSED" -ge 1249 ] || { echo "FAIL: CP8I_PASSED=$CP8I_PASSED is below the authoring lower bound 1243 + 6"; exit 1; }~~
-CP8I_PASSED=1249
+# *(dated 2026-10-19, s8j build, item 16)* Edited to the count PROGRESS.md row 8i now records: Checkpoint 8i's tree
+# b3c746e, measured on the operator's box, passed 1432 (44 results, 0 with failures, 9 ignored, rust-src removed by R6).
+# This stage's floor is therefore 1432 + 14 = 1446. Was:
+# ~~CP8I_PASSED=1249~~
+CP8I_PASSED=1432
 r8i=$(grep -E '^\| *(Step )?8i\b' runbook/PROGRESS.md)
 test -n "$r8i" || { echo "FAIL: PROGRESS.md has no row 8i — Checkpoint 8i's recorded count cannot be read"; exit 1; }
 printf '%s\n' "$r8i" | grep -qwF "$CP8I_PASSED" || { echo "FAIL: CP8I_PASSED=$CP8I_PASSED does not appear in PROGRESS.md row 8i — edit the literal to the count that row records"; exit 1; }
