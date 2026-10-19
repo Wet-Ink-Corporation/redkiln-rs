@@ -1,1 +1,1 @@
-{"type":"system","subtype":"init","cwd":"<worktree>","session_id":"scripted-0001","tools":["StructuredOutput"],"mcp_servers":[],"permissionMode":"default","agent":"probe","slash_commands":[],"apiKeySource":"none","claude_code_version":"2.1.278","uuid":"scripted-init"}
+{"type":"system","subtype":"init","cwd":"<worktree>","session_id":"scripted-0001","tools":["StructuredOutput"],"mcp_servers":[],"permissionMode":"default","agent":"probe","slash_commands":[],"apiKeySource":"none","claude_code_version":"2.1.303","uuid":"scripted-init"}

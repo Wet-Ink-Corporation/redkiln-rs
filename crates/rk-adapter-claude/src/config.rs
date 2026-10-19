@@ -5,8 +5,8 @@
 //!
 //! **What `Config` is** (§7c.12, *"the adapter's constructor, stated once"*): the pins —
 //! [`TESTED_CLI_VERSION`], declared in the one form Checkpoint 7c's anchored grep reads (D17-11:
-//! `claude --version` measured `2.1.278 (Claude Code)` on 2026-09-19; ADR-0078: *"the pin is
-//! recorded with the measurement"*), never read from the process environment — the two TTLs
+//! `claude --version` measured ~~`2.1.278 (Claude Code)` on 2026-09-19~~ `2.1.303 (Claude Code)` on
+//! 2026-10-19, D21-164; ADR-0078: *"the pin is recorded with the measurement"*), never read from the process environment — the two TTLs
 //! (ADR-0078 (ii); AC-210; [`CACHE_TTL`]), **`margins: Margins`** (a value handed in, never a pack
 //! the adapter parses — §7c.8), the captured environment map and `harness_binary` (default `claude`;
 //! the tests set the fixture child through `env!("CARGO_BIN_EXE_rk-fixture-child-claude")` at Slice
@@ -100,8 +100,12 @@ use crate::card::AgentCard;
 use crate::env::{PROMPT_CACHE_TTL, SUBAGENT_PROMPT_CACHE_TTL};
 use crate::env_denylist::first_denylisted;
 
-/// The pinned CLI version (D17-11: `claude --version` = `2.1.278 (Claude Code)`, measured
-/// 2026-09-19 at Step 7d Slice 1 and re-teed into `RUNBOOK-instrument.txt` there).
+/// The pinned CLI version (D17-11; D21-164).
+///
+/// `claude --version` = ~~`2.1.278 (Claude Code)`, measured 2026-09-19 at Step 7d Slice 1 and
+/// re-teed into `RUNBOOK-instrument.txt` there~~ `2.1.303 (Claude Code)`, measured 2026-10-19 on
+/// the operator's box at s8j's pin move and re-written into `RUNBOOK-instrument.txt` by printf
+/// there.
 ///
 /// A `Config` value, recorded on every `dispatch_completed` row as `instrument_version` (ADR-0126
 /// decision 1) and the value a child's `system/init` version is compared against (AC-226, AC-385).
@@ -121,14 +125,23 @@ use crate::env_denylist::first_denylisted;
 // shape, registry.rs's probe row, streams/README.md's shape section) keep the version they were taken at; a
 // dated confirmation at 2.1.278 is appended to them once `live_dispatch_probe` has run -- one paid haiku
 // dispatch the operator runs in the foreground, as its own #[ignore] reason prescribes.
-pub const TESTED_CLI_VERSION: &str = "2.1.278";
+//
+// *(dated 2026-10-19, s8j build, D21-164)* Moved 2.1.278 -> 2.1.303 at s8j's pin move (s8h §8h.8 steps 2-3,
+// s8j §8j.6 step 1). The CLI moved to 2.1.303 by a manual update after S-BIN pinned 2.1.289 (Halt 2), and
+// the operator ruled that the pin is the installed 2.1.303. `claude --version` printed `2.1.303 (Claude
+// Code)` on the operator's box, re-written into `RUNBOOK-instrument.txt` by printf in the same commit, which
+// also carries D21-48 X12's argv spelling change (command.rs). As in 2026-09-21's move, the records measured
+// at earlier versions keep them, and `live_dispatch_probe` at the new pin is OWED: one paid haiku dispatch,
+// on the operator's go-ahead (s8h §8h.8 step 4).
+pub const TESTED_CLI_VERSION: &str = "2.1.303";
 
 /// The CLI version that provides `--permission-prompts` — the register's floor for AC-215.
 ///
 /// **2.1.259 [documented]** (§7c.5: *"the pin is 2.1.277, above it, recorded beside
 /// `TESTED_CLI_VERSION` in `Config`"*, quoted as §7c.5 wrote it; the pin has since moved to **2.1.278**
 /// — 2026-09-21, `s7d` §7d.15 as amended — and 2.1.259 is below that too, which is what the compare below
-/// asserts rather than either literal).
+/// asserts rather than either literal). *(dated 2026-10-19, D21-164)* The pin is now **2.1.303**, still
+/// above the floor; the compare asserts it.
 /// Declared beside the pin in the pin's form; the probe's tag lift at Slice 5 asserts the recorded
 /// version at or above it. The `[surface unverified]` tag on the floor stands until the probe has
 /// run (AC-215).

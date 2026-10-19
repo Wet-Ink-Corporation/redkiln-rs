@@ -97,7 +97,8 @@ pub type Models = BTreeMap<String, ModelRow>;
 /// Cited to `claude --help`, the CLI's argv parser, and not to an SDK enum: *"(choices:
 /// "acceptEdits", "auto", "bypassPermissions", "manual", "dontAsk", "plan")"* [measured
 /// 2026-09-24 on 2.1.281; re-read 2026-10-02 on 2.1.287, the same six, captured to
-/// `tests/fixtures/cli-help/2.1.287.permission-mode.txt`]. The binary maps `manual` to `default`
+/// `tests/fixtures/cli-help/2.1.287.permission-mode.txt`; re-read 2026-10-19 on 2.1.303 at s8j's pin
+/// move, byte-identical, and that capture is now `2.1.303.permission-mode.txt`]. The binary maps `manual` to `default`
 /// [measured by string search], so `default` is the name the init reports and the name a card
 /// carries: seven in all. Only the shipped pair `default` / `acceptEdits` is admitted in a SHIPPED
 /// card, and that is the doctor row's job, not this set's.

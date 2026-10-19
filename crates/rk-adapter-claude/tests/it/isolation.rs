@@ -239,10 +239,13 @@ fn config_with_policy(markers: &Markers, mode: &str, policy: MismatchPolicy) -> 
 ///
 /// RED (observed 2026-09-18) against the skeleton: `Refuse × higher: expected Transport { kind:
 /// Decode }, got Err(Transport { kind: Spawn, … })`.
+///
+/// *(dated 2026-10-19, s8j build, the pin move to 2.1.303; D21-164)* The higher init moved
+/// `2.1.300` → `2.1.400`: at the new pin `2.1.300` is lower, and AC-226 wants one of each.
 #[test]
 fn ac226_version_mismatch_configured_outcome() {
     for (init, observed) in [
-        ("init-version-higher.scripted.ndjson", "2.1.300"),
+        ("init-version-higher.scripted.ndjson", "2.1.400"),
         ("init-version-lower.scripted.ndjson", "2.1.259"),
     ] {
         let t = with_init(init);
@@ -328,15 +331,15 @@ fn ac385_version_on_event_and_mismatch_warning() {
     let o = harness(config).dispatch(&spec, &mut store);
     assert_eq!(
         o.record.cli_version,
-        CliVersion::Observed("2.1.300".to_owned()),
-        "the row lacks Observed(2.1.300): {:?}",
+        CliVersion::Observed("2.1.400".to_owned()),
+        "the row lacks Observed(2.1.400): {:?}",
         o.record.cli_version
     );
     let w = mismatch_warning(&o.record);
     assert_eq!(
         w,
         Some(rk_adapter_claude::record::VersionMismatch {
-            observed: "2.1.300".to_owned(),
+            observed: "2.1.400".to_owned(),
             pinned: TESTED_CLI_VERSION.to_owned(),
         }),
         "mismatch_warning is Some exactly when Observed(v) != instrument_version (AC-385)"
@@ -402,8 +405,10 @@ fn one(s: &str) -> std::collections::BTreeSet<String> {
 /// §8h.5 / N17 Q1 (iii): an init reporting `permissionMode` `acceptEdits` for a `default` card is
 /// `NotIsolated { surface: Env }`, the digest over `{acceptEdits}` against `{default}`. And the
 /// comparison reads the CARD's mode, never the argv's spelling (D21-48 X12): a `Config` pinned at
-/// `2.1.287` puts `--permission-mode manual` on the argv (§8h.2's row), and an init reporting
-/// `default` for it is adopted.
+/// ~~`2.1.287`~~ `2.1.303` puts `--permission-mode manual` on the argv (§8h.2's row), and an init
+/// reporting `default` for it is adopted. *(dated 2026-10-19, s8j build, the pin move to 2.1.303;
+/// D21-164)* The `2.1.287` row was deleted by the pin move, so the arm and its fixture
+/// (`init-2-1-303-default`, renamed from `init-2-1-287-default`) are at the new pin's one row.
 #[test]
 fn permission_mode_reported_unequal_to_the_card_is_refused() {
     let r = dispatch_replay(
@@ -430,11 +435,11 @@ fn permission_mode_reported_unequal_to_the_card_is_refused() {
         "the refusal carries its row (AC-360)"
     );
     // the card's `default`, never the argv's `manual` (X12)
-    let t = with_init("init-2-1-287-default.scripted.ndjson");
+    let t = with_init("init-2-1-303-default.scripted.ndjson");
     let markers = Markers::new();
     let wt = tempfile::tempdir().expect("wt");
     let config = crate::support::spawn_config(&markers, &format!("replay:{}", t.path.display()))
-        .at_pin("2.1.287");
+        .at_pin("2.1.303");
     let (config, spec) = bind_probe(config, 30, wt.path(), "x");
     let mut store = VecStore::default();
     let o = harness(config).dispatch(&spec, &mut store);
@@ -446,7 +451,7 @@ fn permission_mode_reported_unequal_to_the_card_is_refused() {
     assert_eq!(
         argv[at + 1],
         "manual",
-        "PREMISE: at 2.1.287 the argv carries the row's spelling of `default` (s8h §8h.2)"
+        "PREMISE: at 2.1.303 the argv carries the row's spelling of `default` (s8h §8h.2)"
     );
     assert!(
         o.result.is_ok(),

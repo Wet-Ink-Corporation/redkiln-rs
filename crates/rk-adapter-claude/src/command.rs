@@ -127,16 +127,20 @@ pub const STRUCTURED_OUTPUT: &str = "StructuredOutput";
 // live acceptance (`LIVE_WARRANTED`); `2.1.287` is warranted by its help capture
 // (`tests/fixtures/cli-help/2.1.287.permission-mode.txt`, read at s8h stage open) and is dormant
 // until s8j's pin move deletes the `2.1.278` row.
+// *(dated 2026-10-19, s8j build, the pin move to 2.1.303; D21-164; D21-48 X12)* The pin move took
+// place at 2.1.303, not 2.1.287: the table keeps the one row keyed by the new pin, spelling `manual`,
+// warranted by `tests/fixtures/cli-help/2.1.303.permission-mode.txt` (the operator's 2026-10-19
+// capture, byte-identical to 2.1.287's, which it replaces). The `2.1.278` and `2.1.287` rows are
+// deleted, and `LIVE_WARRANTED` is empty.
 // rustfmt would fold the rows onto one line; the declared form is one row per line.
 #[rustfmt::skip]
 pub(crate) const PERMISSION_MODE_ARGV: &[(&str, &str)] = &[
-    ("2.1.278", "default"),
-    ("2.1.287", "manual"),
+    ("2.1.303", "manual"),
 ];
 
 /// The rows of [`PERMISSION_MODE_ARGV`] warranted by a live acceptance rather than a help capture
 /// (`s8h` §8h.2). `&[]` after s8j's pin move.
-pub(crate) const LIVE_WARRANTED: &[&str] = &["2.1.278"];
+pub(crate) const LIVE_WARRANTED: &[&str] = &[];
 
 /// [`PERMISSION_MODE_ARGV`], read by the help-capture test (an integration test cannot name a
 /// `pub(crate)` item).

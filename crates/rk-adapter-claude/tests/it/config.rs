@@ -497,14 +497,14 @@ fn ac377_margin_parse_vectors_and_no_default() {
 /// and never read from the process environment; `Config` carries it as `tested_cli_version`.
 #[test]
 fn tested_cli_version_is_the_pin_as_a_config_value() {
-    assert_eq!(TESTED_CLI_VERSION, "2.1.278");
+    assert_eq!(TESTED_CLI_VERSION, "2.1.303");
     let cfg = crate::support::config();
     assert_eq!(cfg.tested_cli_version(), TESTED_CLI_VERSION);
     let src = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/config.rs"))
         .expect("read src/config.rs");
     assert!(
         src.lines()
-            .any(|l| l.trim_start() == "pub const TESTED_CLI_VERSION: &str = \"2.1.278\";"),
+            .any(|l| l.trim_start() == "pub const TESTED_CLI_VERSION: &str = \"2.1.303\";"),
         "config.rs declares the constant in the form the checkpoint's anchored grep reads (§7c.12)"
     );
 }

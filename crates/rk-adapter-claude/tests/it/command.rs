@@ -285,9 +285,14 @@ fn golden_argv_per_profile() {
             built.argv[pos("--json-schema") + 1],
             schema.json.to_string()
         );
+        // *(dated 2026-10-19, s8j build, the pin move to 2.1.303; D21-48 X12)* ~~the card's mode~~ —
+        // the table's spelling of the card's mode at the fixture Config's pin (`manual` for a
+        // `default` card at 2.1.303), as `ac214_permission_mode_explicit` reads it; the
+        // golden fixture and snapshot carry the literal.
         assert_eq!(
             built.argv[pos("--permission-mode") + 1],
-            card.permission_mode
+            rk_adapter_claude::command::argv_permission_mode(&cfg, &card.permission_mode)
+                .expect("the fixture pin has a row")
         );
         assert_eq!(built.argv[pos("--permission-prompts") + 1], "none");
         assert!(
@@ -337,6 +342,10 @@ fn golden_argv_per_profile() {
 /// prompt was re-trimmed by 1,825 characters, the measure the two new elements add under this
 /// file's `spec` (`--setting-sources ""` and the golden chain's `--settings` element), so it is
 /// at the cap again under the vector the builder now produces.
+///
+/// *(dated 2026-10-19, s8j build, the pin move to 2.1.303; D21-48 X12.)* The fixture's prompt grew
+/// by one character: the pin's `--permission-mode` element is `manual`, one unit shorter than
+/// `default`, so the same card measured cap - 1 and the fixture is at the cap again.
 ///
 /// RED (observed 2026-09-18) twice: against the skeleton's byte-sum measure, `one byte under the
 /// cap measures cap - 1: left: 32702 right: 32766` (a measure that is not the platform's is red
@@ -1256,10 +1265,12 @@ fn spelling_listed(capture: &str, spelling: &str) -> bool {
 /// `s8h` §8h.2 (D21-48 X12): every `PERMISSION_MODE_ARGV` row outside `LIVE_WARRANTED` has its
 /// help capture `cli-help/<version>.permission-mode.txt`, whose parsed `(choices: …)` list holds the
 /// row's spelling and `acceptEdits`; every capture has its row (one to one). Premises: a row exists
-/// for the fixture `Config`'s pin; at least one row is checked; `LIVE_WARRANTED` is `["2.1.278"]`
+/// for the fixture `Config`'s pin; at least one row is checked; ~~`LIVE_WARRANTED` is `["2.1.278"]`
 /// here (`[]` after s8j's pin move, when the test reads exactly *"the pinned row's spelling of
-/// `default` is in the pinned `--help` list"*). Control: the same check over a synthetic capture
-/// whose choices lack the row's spelling reports it absent.
+/// `default` is in the pinned `--help` list"*)~~ *(dated 2026-10-19, s8j build, the pin move to
+/// 2.1.303; D21-164)* `LIVE_WARRANTED` is `[]`, so the test reads exactly *"the pinned row's
+/// spelling of `default` is in the pinned `--help` list"*. Control: the same check over a synthetic
+/// capture whose choices lack the row's spelling reports it absent.
 ///
 /// RED (observed 2026-10-02, in the private worktree `target/wt-P3` through D21-47's wrapper): with
 /// the `2.1.287` row removed, *"PREMISE: at least one help-warranted row was checked"*; with the
@@ -1274,10 +1285,9 @@ fn permission_mode_spelling_rows_are_listed_by_their_help_fixtures() {
         rows.iter().any(|(v, _)| *v == pin),
         "PREMISE: a row exists for the fixture Config's pin {pin}"
     );
-    assert_eq!(
-        live,
-        ["2.1.278"],
-        "PREMISE: LIVE_WARRANTED is the pin's row until s8j"
+    assert!(
+        live.is_empty(),
+        "PREMISE: LIVE_WARRANTED is empty after s8j's pin move, got {live:?}"
     );
     let captures: BTreeMap<String, String> = crate::support::help_captures().into_iter().collect();
     let mut checked = 0usize;
@@ -1337,6 +1347,13 @@ fn permission_mode_spelling_rows_are_listed_by_their_help_fixtures() {
 /// init permission-mode guard exists in this package's tree.*) The pin-move commit turns the
 /// `2.1.278` arm into a refusal arm when it deletes that row.
 ///
+/// *(dated 2026-10-19, s8j build, the pin move to 2.1.303; D21-164; D21-48 X12)* The table holds
+/// one row, `2.1.303` spelling `manual` (its capture is byte-identical to 2.1.287's), so the
+/// spelling arm is `2.1.303`; the deleted rows' versions, `2.1.278` and `2.1.287`, are refusal arms:
+/// `assemble` refuses them with `NoPermissionModeSpelling` naming the version, whatever the card's
+/// mode. With one spelling arm, the digest-across-pins check has nothing to compare and is gone:
+/// the card's digest never reads the `Config`.
+///
 /// RED (observed 2026-10-02, through D21-47's wrapper): with the card's mode verbatim on the argv,
 /// *"2.1.287: a `default` card's --permission-mode is the row's spelling"*, left `"default"`, right
 /// `"manual"`.
@@ -1350,39 +1367,48 @@ fn argv_permission_mode_reads_the_row_of_the_configs_pin() {
     );
     let mut accept = bound("golden-default", "haiku", None);
     accept.permission_mode = "acceptEdits".to_owned();
-    let mut digests = BTreeSet::new();
-    for (pin, want) in [("2.1.287", "manual"), ("2.1.278", "default")] {
-        let cfg = config().at_pin(pin);
-        assert_eq!(
-            cfg.tested_cli_version(),
-            pin,
-            "PREMISE: the Config is at {pin}"
-        );
-        let built = assemble(&cfg, &spec(&default_card, &schema.json, "")).expect("builds");
-        assert_eq!(
-            value_of(&built.argv, "--permission-mode"),
-            want,
-            "{pin}: a `default` card's --permission-mode is the row's spelling"
-        );
-        let agents: serde_json::Value =
-            serde_json::from_str(value_of(&built.argv, "--agents")).expect("JSON");
-        assert_eq!(
-            agents["golden-default"]["permissionMode"], "default",
-            "{pin}: the --agents JSON keeps the card's `default`"
-        );
-        digests.insert(default_card.digest());
-        let built = assemble(&cfg, &spec(&accept, &schema.json, "")).expect("builds");
-        assert_eq!(
-            value_of(&built.argv, "--permission-mode"),
-            "acceptEdits",
-            "{pin}: any other mode is the card's own spelling"
-        );
-    }
+    let pin = "2.1.303";
+    let cfg = config().at_pin(pin);
     assert_eq!(
-        digests.len(),
-        1,
-        "the card digest does not move with the pin"
+        cfg.tested_cli_version(),
+        pin,
+        "PREMISE: the Config is at {pin}"
     );
+    let built = assemble(&cfg, &spec(&default_card, &schema.json, "")).expect("builds");
+    assert_eq!(
+        value_of(&built.argv, "--permission-mode"),
+        "manual",
+        "{pin}: a `default` card's --permission-mode is the row's spelling"
+    );
+    let agents: serde_json::Value =
+        serde_json::from_str(value_of(&built.argv, "--agents")).expect("JSON");
+    assert_eq!(
+        agents["golden-default"]["permissionMode"], "default",
+        "{pin}: the --agents JSON keeps the card's `default`"
+    );
+    let built = assemble(&cfg, &spec(&accept, &schema.json, "")).expect("builds");
+    assert_eq!(
+        value_of(&built.argv, "--permission-mode"),
+        "acceptEdits",
+        "{pin}: any other mode is the card's own spelling"
+    );
+    // The refusal arms: the rows the pin move deleted spell nothing now (X12).
+    for gone in ["2.1.278", "2.1.287"] {
+        for c in [&default_card, &accept] {
+            match assemble(&config().at_pin(gone), &spec(c, &schema.json, "")) {
+                Err(ConfigError::NoPermissionModeSpelling { version }) => {
+                    assert_eq!(version, gone);
+                }
+                Err(other) => {
+                    panic!("{gone}: the refusal is NoPermissionModeSpelling; got {other:?}")
+                }
+                Ok(built) => panic!(
+                    "{pin}: a deleted row must be refused (X12), got Ok({:?})",
+                    built.argv
+                ),
+            }
+        }
+    }
 }
 
 /// `s8h` §8h.2 (D21-48 X12): a `Config` pinned at a version with no `PERMISSION_MODE_ARGV` row is

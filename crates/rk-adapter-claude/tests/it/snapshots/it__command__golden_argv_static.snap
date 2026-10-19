@@ -17,7 +17,7 @@ expression: "serde_json::json!({ \"argv\": argv, \"stdin\": stdin })"
     "--json-schema",
     "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}},\"required\":[\"ok\"]}",
     "--permission-mode",
-    "default",
+    "manual",
     "--strict-mcp-config",
     "--permission-prompts",
     "none",

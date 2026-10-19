@@ -32,7 +32,7 @@ proposed), so the tier word no longer adopts. The parts added for §8h.5's guard
 | file | what it is / which test |
 | --- | --- |
 | `init-permission-mode-unequal.scripted.ndjson` / `init-permission-mode-absent.scripted.ndjson` | `permissionMode` `acceptEdits` for a `default` card / no key → `NotIsolated { surface: env }` (`isolation::permission_mode_*`) |
-| `init-2-1-287-default.scripted.ndjson` | the init at `2.1.287` reporting `default` while the argv spelled it `manual` (D21-48 X12) → adopted |
+| `init-2-1-303-default.scripted.ndjson` | the init at `2.1.303` reporting `default` while the argv spelled it `manual` (D21-48 X12) → adopted. *(dated 2026-10-19, D21-164)* Renamed from `init-2-1-287-default` at s8j's pin move, which deleted the `2.1.287` row |
 | `init-api-key-source-other.scripted.ndjson` / `init-api-key-source-absent.scripted.ndjson` | `apiKeySource` `ANTHROPIC_API_KEY` / no key → `NotIsolated { surface: env }` (`isolation::api_key_source_*`) |
 | `init-model-sonnet-4-6.scripted.ndjson` / `init-model-sonnet-5.scripted.ndjson` | under the `sonnet-high` role (requested `claude-sonnet-5`): reported `claude-sonnet-4-6` → `NotAdopted`; reported `claude-sonnet-5` → adopted |
 | `init-model-haiku-undated.scripted.ndjson` / `init-no-model.scripted.ndjson` | the haiku id without its dated suffix, and no `model` key → `NotAdopted`; also `dispatch::observed_model_*` |
@@ -43,7 +43,7 @@ proposed), so the tier word no longer adopts. The parts added for §8h.5's guard
 
 | file | what it is / which test |
 | --- | --- |
-| `init.scripted.ndjson` | the good init: `agent: probe`, `tools: ["StructuredOutput"]` (EQUAL to the probe card's list), `mcp_servers: []`, `claude_code_version: 2.1.278` (the pin; the version key is [surface unverified] — `init.rs`'s `VERSION_KEYS`). `cwd` is the literal `<worktree>` — the child's real cwd is `echo-env`'s line, not this |
+| `init.scripted.ndjson` | the good init: `agent: probe`, `tools: ["StructuredOutput"]` (EQUAL to the probe card's list), `mcp_servers: []`, `claude_code_version: 2.1.303` (the pin, moved from `2.1.278` 2026-10-19, D21-164; the version key is [surface unverified] — `init.rs`'s `VERSION_KEYS`). `cwd` is the literal `<worktree>` — the child's real cwd is `echo-env`'s line, not this |
 | `init-wrong-agent.scripted.ndjson` / `init-no-agent.scripted.ndjson` | AC-204's fourth case → `NotAdopted` |
 | `init-superset.scripted.ndjson` / `init-subset.scripted.ndjson` | AC-204/AC-386: extra tools / no tools → `NotIsolated { surface: tools }` |
 | `init-same-count-substituted.scripted.ndjson` | AC-202: the card's tool COUNT with one substituted name — a count-based check is green here, a set digest is red |

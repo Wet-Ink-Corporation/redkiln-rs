@@ -1067,6 +1067,8 @@ pass, and not before."* RT-57's record, `s8h`'s Record B, is `accepted` before a
 evidence file's `record-rt57` line, because D21-47 names it among the pre-spend checks and Checkpoint 8j (6) reads
 it. *(dated 2026-10-18, s8j build, S8J-A1-DRIFT)* Record B is **ADR-0198**, `accepted` on D21-139 [measured: its frontmatter at `3fa69db`], so the
 line is `record-rt57 0198` (§8j.0 item 5). It is written when the evidence file is opened, in the work commit.
+*(dated 2026-10-19, s8j build, item 18)* No earlier commit had opened the file, so the pin-move commit opens it with
+this line first and its own `pin-move 2.1.278 2.1.303 2026-10-19` line second, in execution order.
 
 🛑 **Who runs it, and where.** The operator runs every step below in one sitting, the probe session. They run from a
 plain terminal, never from a Claude Code session or a shell an agent spawned. The operator's own `! python …` line is
