@@ -356,6 +356,8 @@ are not what the tree holds, and one more was found in the re-measure (item 12).
    only `2.1.287.permission-mode.txt` [measured]. So the pin-move commit needs a 2.1.289 capture first, by `s8h`
    §8h.0 item 6's rule, which §8j.6 step 1 already cites; the capture is the operator's (it runs the installed CLI), and
    its one row replaces both old rows (D21-48 X12). Unchanged since the plan.
+   *(dated 2026-10-19, D21-164)* The installed CLI read 2.1.303 at the capture, and the operator ruled the pin moves to
+   2.1.303, so the capture is `2.1.303.permission-mode.txt`.
 2. **CI has run, and is green; the pnpm step is in `ci.yml`.** §8j.7 says *"The branch has never been pushed … and
    `ci.yml` has never run"* and gives a *"known missing step"*. At the entry commit `ci.yml`:94-102 carries the pnpm
    step (pnpm 10.33.0, `--frozen-lockfile`) [measured], and its comment at :86-90 counts **fourteen**
@@ -1106,7 +1108,10 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    recorded as unneeded. **The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`**: `s8i` §8i.5
    hands this on (*"The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`."*), because D21-43 N22
    froze the CLI from S-BIN on. If the installed version differs from S-BIN's pin, the freeze failed, and that is
-   Halt 2 to report, not a pin to move. Checkpoint 8j (6) asserts the equality. The mismatch policy stays
+   Halt 2 to report, not a pin to move. Checkpoint 8j (6) asserts the equality. *(dated 2026-10-19, D21-164)* Superseded for `s8j`: the CLI moved to
+   2.1.303 by a manual update, recorded under Halt 2, and the operator ruled that the pin moves to 2.1.303. The capture
+   and the instrument record are taken at 2.1.303, and (6) asserts the pin equals D21-164's version while S-BIN's record
+   still reads 2.1.289. The mismatch policy stays
    `MismatchPolicy::Refuse`, hard-coded in `real_harness_config`
    (`crates/rk-cli/src/verbs/run.rs` [measured]). That is why the pin moves before any dispatch. Under D17-11's
    amendment, *"the adapter refused all three dispatches at the init line"*.
@@ -2533,7 +2538,14 @@ sbin=$(grep -lE '^## F[0-9]+ — S-BIN' spikes/F*-DRAFT.md); rc=$?
 [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$sbin" | grep -c .)" -eq 1 ] || { echo "FAIL: not exactly one S-BIN finding draft (rc=$rc) — the pin has no S-BIN version to equal"; exit 1; }
 sbin_pins() { sed -n '/^<!-- s-bin-pins$/,/^-->$/p' "$1" | sed -n 's/^cli_version=//p'; }
 sbin_cli=$(sbin_pins "$sbin")
-[ -n "$sbin_cli" ] && [ "$sbin_cli" = "$pin" ] || { echo "FAIL: TESTED_CLI_VERSION is '$pin' and S-BIN pinned cli_version '$sbin_cli' — the freeze failed between S-BIN and the pin move (Halt 2)"; exit 1; }
+# *(dated 2026-10-19, s8j build, D21-164)* The operator ruled the pin is the installed 2.1.303, not S-BIN's 2.1.289 (the
+# CLI moved by a manual update, Halt 2). S-BIN's record must still read 2.1.289, and the pin must equal D21-164's version,
+# which the ledger must carry. Was:
+# ~~[ -n "$sbin_cli" ] && [ "$sbin_cli" = "$pin" ] || { echo "FAIL: TESTED_CLI_VERSION is '$pin' and S-BIN pinned cli_version '$sbin_cli' — the freeze failed between S-BIN and the pin move (Halt 2)"; exit 1; }~~
+S8J_CLI=2.1.303
+[ "$sbin_cli" = "2.1.289" ] || { echo "FAIL: S-BIN's pinned cli_version reads '$sbin_cli', not the 2.1.289 D21-164 records"; exit 1; }
+grep -qE '^## D21-164 .*`s8j` pin is the installed 2\.1\.303' spikes/DECISIONS-2026-09-21.md || { echo "FAIL: the ledger carries no D21-164 entry naming 2.1.303"; exit 1; }
+[ "$pin" = "$S8J_CLI" ] || { echo "FAIL: TESTED_CLI_VERSION is '$pin', not D21-164's $S8J_CLI (Halt 2)"; exit 1; }
 printf '%s\n' '<!-- s-bin-pins' 'cli_version=9.9.9' '-->' > "$tdir/sbin-ctl.md" || { echo "FAIL: could not write the S-BIN pins control"; exit 1; }
 [ "$(sbin_pins "$tdir/sbin-ctl.md")" = "9.9.9" ] || { echo "FAIL: the S-BIN pins reader did not read a planted cli_version — it is vacuous"; exit 1; }
 grep -qxF "    assert_eq!(TESTED_CLI_VERSION, \"$pin\");" crates/rk-adapter-claude/tests/it/config.rs || { echo "FAIL: the literal pin test does not carry $pin"; exit 1; }
