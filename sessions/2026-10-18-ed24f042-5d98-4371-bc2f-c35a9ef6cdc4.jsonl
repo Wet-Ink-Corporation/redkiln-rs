@@ -21,3 +21,5 @@
 {"t":"2026-10-19T00:31:15.446Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"main","event":"gate-start"}
 {"t":"2026-10-19T00:31:16.680Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"","event":"subagent-stop","type":"","msg":true,"transcript":true}
 {"t":"2026-10-19T00:32:04.022Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"main","event":"stop-blocked","reason":"gate","fp":"75efb3ce338e72ac","ms":48572,"cached":false}
+{"t":"2026-10-19T00:32:15.331Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"main","event":"gate-start"}
+{"t":"2026-10-19T00:32:17.275Z","sid":"ed24f042-5d98-4371-bc2f-c35a9ef6cdc4","agent":"main","event":"stop-allowed-red","fp":"75efb3ce338e72ac","ms":1942,"cached":true}
