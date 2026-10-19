@@ -123,10 +123,10 @@ pub const STRUCTURED_OUTPUT: &str = "StructuredOutput";
 // decision 3, proposed.)* THE ARGV SPELLING OF A CARD'S `default`, one row per CLI version, declared
 // in exactly the form Checkpoint 8h (9) and s8j's Checkpoint 8j (6) read. The card, the `--agents`
 // JSON, the digest and the init comparison all keep `default`; only the `--permission-mode` element
-// reads this table, keyed by the `Config`'s pin. `2.1.278` is the pin, warranted by the 2026-09-21
+// reads this table, keyed by the `Config`'s pin. ~~`2.1.278` is the pin, warranted by the 2026-09-21
 // live acceptance (`LIVE_WARRANTED`); `2.1.287` is warranted by its help capture
 // (`tests/fixtures/cli-help/2.1.287.permission-mode.txt`, read at s8h stage open) and is dormant
-// until s8j's pin move deletes the `2.1.278` row.
+// until s8j's pin move deletes the `2.1.278` row.~~
 // *(dated 2026-10-19, s8j build, the pin move to 2.1.303; D21-164; D21-48 X12)* The pin move took
 // place at 2.1.303, not 2.1.287: the table keeps the one row keyed by the new pin, spelling `manual`,
 // warranted by `tests/fixtures/cli-help/2.1.303.permission-mode.txt` (the operator's 2026-10-19

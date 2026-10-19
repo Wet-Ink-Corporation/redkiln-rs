@@ -287,13 +287,9 @@ fn golden_argv_per_profile() {
         );
         // *(dated 2026-10-19, s8j build, the pin move to 2.1.303; D21-48 X12)* ~~the card's mode~~ —
         // the table's spelling of the card's mode at the fixture Config's pin (`manual` for a
-        // `default` card at 2.1.303), as `ac214_permission_mode_explicit` reads it; the
-        // golden fixture and snapshot carry the literal.
-        assert_eq!(
-            built.argv[pos("--permission-mode") + 1],
-            rk_adapter_claude::command::argv_permission_mode(&cfg, &card.permission_mode)
-                .expect("the fixture pin has a row")
-        );
+        // `default` card at 2.1.303), stated as the literal both goldens carry.
+        assert_eq!(card.permission_mode, "default", "PREMISE: a `default` card");
+        assert_eq!(built.argv[pos("--permission-mode") + 1], "manual");
         assert_eq!(built.argv[pos("--permission-prompts") + 1], "none");
         assert!(
             pos("--permission-mode") < pos("--strict-mcp-config"),
@@ -621,8 +617,9 @@ fn ac214_permission_mode_explicit() {
             .expect("the flag is unconditional");
         // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models; s8h §8h.2; D21-48 X12.)*
         // ~~the value is the card's~~ — the value is PERMISSION_MODE_ARGV's spelling of the card's
-        // mode at the fixture Config's pin (2.1.278: `default` stays `default`), so this reading
-        // does not move here and the pin move does not touch it again.
+        // mode at the fixture Config's pin (~~2.1.278: `default` stays `default`~~ *(dated
+        // 2026-10-19, D21-164)* 2.1.303: `default` is spelt `manual`), so this reading does not
+        // move here and the pin move does not touch it again.
         let want = rk_adapter_claude::command::argv_permission_mode(&cfg, mode)
             .expect("the fixture pin has a row");
         // *(dated 2026-10-02, s8h build, package R1FIX-8h; s8h refuting round 1.)* ~~`assert_eq!(want,
@@ -1403,7 +1400,7 @@ fn argv_permission_mode_reads_the_row_of_the_configs_pin() {
                     panic!("{gone}: the refusal is NoPermissionModeSpelling; got {other:?}")
                 }
                 Ok(built) => panic!(
-                    "{pin}: a deleted row must be refused (X12), got Ok({:?})",
+                    "{gone}: a deleted row must be refused (X12), got Ok({:?})",
                     built.argv
                 ),
             }
