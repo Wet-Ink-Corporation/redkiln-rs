@@ -297,6 +297,15 @@ cfg='import sys; p=sys.argv[1]; t=open(p,encoding="utf-8").read(); assert t.coun
 python -c "$cfg" "$clone/.redkiln/config.toml" "$s8j_fx" || { echo "FAIL: could not point the clone's harness_binary at the fixture child"; exit 1; }
 got=$(python -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["adapters"].get("harness_binary",""))' "$clone/.redkiln/config.toml") || { echo "FAIL: the clone's config does not parse after the edit"; exit 1; }
 [ "$got" = "$s8j_fx" ] || { echo "FAIL: the clone's harness_binary reads '$got', not the fixture child"; exit 1; }
+# *(dated 2026-10-20, s8j stage-open chain run S8J-A2; s8j section 8j.8 A10 item 5; D21-47's time-bound rule)* the clone's
+# copy of the fixture item gains a slice, and nothing else does. The run is refused at entry before any run record when a
+# lane reaches a review stage and the item declares no slice (s8e section 8e.8; D21-94, D21-95, D21-119). The fixture
+# item's non-comment lines are fixed by D21-42 18, so the line is written into the throwaway clone only.
+sl='import sys; p=sys.argv[1]; t=open(p,encoding="utf-8").read(); assert t.count("\nstage = \"triage\"\n")==1, "one stage line"; assert "\nslice" not in t, "no slice yet"; open(p,"w",encoding="utf-8",newline="\n").write(t.replace("\nstage = \"triage\"\n","\nstage = \"triage\"\nslice = \"doctor-test-count\"\n",1))'
+python -c "$sl" "$clone/.redkiln/items/rk-fix-doctor-test-count.toml" || { echo "FAIL: could not write the clone's slice line"; rm -rf "$c7f"; exit 1; }
+got=$(python -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb")).get("slice",""))' "$clone/.redkiln/items/rk-fix-doctor-test-count.toml") || { echo "FAIL: the clone's item does not parse after the edit"; rm -rf "$c7f"; exit 1; }
+[ "$got" = "doctor-test-count" ] || { echo "FAIL: the clone's item reads slice '$got', not doctor-test-count"; rm -rf "$c7f"; exit 1; }
+git diff --quiet -- .redkiln/items/rk-fix-doctor-test-count.toml || { echo "FAIL: the product repository's fixture item changed — only the clone's copy may carry the slice"; exit 1; }
 s8j_mk="$s8j_root/target/s7f-markers"; rm -rf "$s8j_mk"; mkdir -p "$s8j_mk" || { echo "FAIL: cannot create $s8j_mk"; exit 1; }
 s8j_lr="$s8j_root/target/s7f-fixture-launch-record.txt"
 printf 'MODE=fixture\nNOTE=Checkpoint 7f fixture route (s8j A10); no real CLI is reachable from this run\n' > "$s8j_lr" || { echo "FAIL: cannot write the fixture launch record"; exit 1; }
