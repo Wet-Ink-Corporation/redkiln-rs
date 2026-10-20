@@ -305,7 +305,7 @@ sl='import sys; p=sys.argv[1]; t=open(p,encoding="utf-8").read(); assert t.count
 python -c "$sl" "$clone/.redkiln/items/rk-fix-doctor-test-count.toml" || { echo "FAIL: could not write the clone's slice line"; rm -rf "$c7f"; exit 1; }
 got=$(python -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb")).get("slice",""))' "$clone/.redkiln/items/rk-fix-doctor-test-count.toml") || { echo "FAIL: the clone's item does not parse after the edit"; rm -rf "$c7f"; exit 1; }
 [ "$got" = "doctor-test-count" ] || { echo "FAIL: the clone's item reads slice '$got', not doctor-test-count"; rm -rf "$c7f"; exit 1; }
-git diff --quiet -- .redkiln/items/rk-fix-doctor-test-count.toml || { echo "FAIL: the product repository's fixture item changed — only the clone's copy may carry the slice"; exit 1; }
+git diff --quiet HEAD -- .redkiln/items/rk-fix-doctor-test-count.toml || { echo "FAIL: the product repository's fixture item changed (staged or not) — only the clone's copy may carry the slice"; rm -rf "$c7f"; exit 1; }
 s8j_mk="$s8j_root/target/s7f-markers"; rm -rf "$s8j_mk"; mkdir -p "$s8j_mk" || { echo "FAIL: cannot create $s8j_mk"; exit 1; }
 s8j_lr="$s8j_root/target/s7f-fixture-launch-record.txt"
 printf 'MODE=fixture\nNOTE=Checkpoint 7f fixture route (s8j A10); no real CLI is reachable from this run\n' > "$s8j_lr" || { echo "FAIL: cannot write the fixture launch record"; exit 1; }
