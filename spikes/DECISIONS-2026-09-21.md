@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-19 (D21-1 … D21-164), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-22 (D21-1 … D21-165), and what they license
+
+*(Title moved 2026-10-22, D21-165: it read **"2026-09-21 … 2026-10-19 (D21-1 … D21-164)"**; `D21-165` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 164 before the append, the last `D21-164`; 165 after.)*
 
 *(Title moved 2026-10-19, D21-164: it read **"2026-09-21 … 2026-10-18 (D21-1 … D21-163)"**; `D21-164` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 163 before the append, the last `D21-163`; 164 after.)*
 
@@ -7615,3 +7617,18 @@ records that ruling.
    `DISABLE_AUTOUPDATER` row stays, and the launcher's before/after sha256 (§8h.7 step 9) stays the detector.
 4. The parenthetical refers to item 16's run, measured the same night under the no-dispatch wrapper's fake claude.
    That run is independent of the installed version and needs no re-run.
+
+## D21-165 · Ryan's ruling: Checkpoint 7f's clone run carries a slice on the clone's copy of the fixture item only
+
+**Recorded 2026-10-22 by an agent session.** The `s8j` stage-open chain run (A2, 2026-10-20, from the operator's Git
+Bash under the no-dispatch wrapper) failed Checkpoint 7f's fixture-route block: `redkiln run rk-fix-doctor-test-count
+--lane fix` was refused at entry before any run record, because the lane reaches a review stage and the fixture item
+declares no slice (s8e §8e.8; D21-94, D21-95, D21-119). The fixture item's non-comment lines are fixed by D21-42 18.
+Ryan was offered three options on a decision card: a slice written into the throwaway clone's copy only, a different
+item, or a slice on the shipped item. He chose *"Clone-only slice"* (2026-10-22, 04:25Z). This entry records that ruling.
+
+1. **The slice is the clone's alone.** Checkpoint 7f's block writes `slice = "doctor-test-count"` after the clone's
+   `stage = "triage"` line, reads it back with `tomllib`, and fails (removing the clone) if the product repository's
+   fixture item differs from `HEAD`, staged or not (`runbook/phase-1/s7f-conformance-and-records.md`; §8j.8 A10 item 5).
+2. **The shipped item is unchanged.** D21-42 18's fixed lines hold; no item record, golden or memo key moves.
+3. **No refusal is relaxed.** The slice-at-entry check is untouched; the checkpoint now satisfies it, as a real item must.
