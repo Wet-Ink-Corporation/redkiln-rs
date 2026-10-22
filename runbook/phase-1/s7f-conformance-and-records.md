@@ -297,7 +297,7 @@ cfg='import sys; p=sys.argv[1]; t=open(p,encoding="utf-8").read(); assert t.coun
 python -c "$cfg" "$clone/.redkiln/config.toml" "$s8j_fx" || { echo "FAIL: could not point the clone's harness_binary at the fixture child"; exit 1; }
 got=$(python -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["adapters"].get("harness_binary",""))' "$clone/.redkiln/config.toml") || { echo "FAIL: the clone's config does not parse after the edit"; exit 1; }
 [ "$got" = "$s8j_fx" ] || { echo "FAIL: the clone's harness_binary reads '$got', not the fixture child"; exit 1; }
-# *(dated 2026-10-20, s8j stage-open chain run S8J-A2; s8j section 8j.8 A10 item 5; D21-47's time-bound rule)* the clone's
+# *(dated 2026-10-20, s8j stage-open chain run S8J-A2; s8j section 8j.8 A10 item 5; D21-47's time-bound rule; D21-165)* the clone's
 # copy of the fixture item gains a slice, and nothing else does. The run is refused at entry before any run record when a
 # lane reaches a review stage and the item declares no slice (s8e section 8e.8; D21-94, D21-95, D21-119). The fixture
 # item's non-comment lines are fixed by D21-42 18, so the line is written into the throwaway clone only.
