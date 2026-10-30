@@ -28,7 +28,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         # s8b (D21-47 V2): the frozen p9 tests read `spikes/p9` at P9_PIN from the object store, and a depth-1
         # clone holds no such commit. Whole history, so the pin is present; the helper refuses by name otherwise.
         with:
@@ -232,7 +232,7 @@ jobs:
       CARGO_VOLUME: rk-egress-cargo
       RUSTUP_VOLUME: rk-egress-rustup
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         # s8b (D21-47 V2): the frozen p9 tests read `spikes/p9` at P9_PIN from the object store, and a depth-1
         # clone holds no such commit. Whole history, so the pin is present; the helper refuses by name otherwise.
         with:
@@ -291,7 +291,7 @@ jobs:
     name: structural assertions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # AC-465 — the corpus-residency lint. Enforceable for the FIRST TIME as of Step 2: before the
       # redkiln-corpus split this criterion was violated by construction. No frozen tree, no E3
