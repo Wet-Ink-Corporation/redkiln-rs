@@ -1823,7 +1823,15 @@ raw=$(grep -rnE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(critical
 # ---- rules, the EXCLUSION is widened rather than the PATTERN narrowed; the synthetic control after each ban proves
 # ---- the same lines still halt when planted anywhere else under crates/. Recorded at s8c §8c.12.
 # ~~hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/(rk-kernel|rk-cli)/tests/fixtures/')~~
-X7B='^crates/(rk-kernel|rk-cli)/tests/fixtures/|^crates/rk-kernel/tests/it/(lattice|p9_pin)\.rs:'
+# ---- AMENDED 2026-10-31 (dated 2026-10-31, s8j stage-open chain run S8J-A2, second re-run). THE EXCLUSION ADMITS A
+# ---- THIRD TEST FILE, crates/rk-kernel/tests/it/human_root.rs, by the same anchored path. `s8j` package S8J-C2 (21ebad3,
+# ---- 2026-10-18) added its inline pack, whose one `[[stage.analysis.require]]` row reads `when = "external_dep"` at
+# ---- line 36. The test supplies that facet itself (`Some` to decide it, `None` to make the evaluator abstain), so the
+# ---- line is a test's input, not a predicate authored from an LLM classification. It is the class the 2026-09-26
+# ---- amendment admitted. Clause 1 was RED from 21ebad3 on its one hit, human_root.rs:36; clause 2 has none there.
+# ---- As before, the EXCLUSION is widened rather than the PATTERN narrowed, and the synthetic controls stand.
+# ~~X7B='^crates/(rk-kernel|rk-cli)/tests/fixtures/|^crates/rk-kernel/tests/it/(lattice|p9_pin)\.rs:'~~
+X7B='^crates/(rk-kernel|rk-cli)/tests/fixtures/|^crates/rk-kernel/tests/it/(lattice|p9_pin|human_root)\.rs:'
 hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE "$X7B")
 [ -z "$hits" ] || { echo "FAIL: an LLM-ordinal predicate exists on a non-comment line outside the prescribed fixture tree — golden constraint 1, ADR-0090 clauses 1 and 2, AC-071, design §10.2's 'may not' column. READ each hit (golden constraint 9); do not silence the grep"; printf '%s\n' "$hits"; exit 1; }   # → silent
 # POSITIVE CONTROL, because the line above passes on ABSENCE and a pattern that silently stopped matching
