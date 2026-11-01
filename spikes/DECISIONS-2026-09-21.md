@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-31 (D21-1 … D21-166), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-167), and what they license
+
+*(Title moved 2026-11-01, D21-167: it read **"2026-09-21 … 2026-10-31 (D21-1 … D21-166)"**; `D21-167` is appended with this move.)*
 
 *(Title moved 2026-10-31, D21-166: it read **"2026-09-21 … 2026-10-22 (D21-1 … D21-165)"**; `D21-166` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 165 before the append, the last `D21-165`; 166 after.)*
 
@@ -7653,3 +7655,29 @@ shipped or a Haiku override on a decision card, and chose *"Sonnet, as shipped"*
    Pass means the dispatch happened and is recorded (one `dispatch`, one `dispatch_completed`), not a green outcome.
    The block refuses a second run, and any re-spend is a new go-ahead (D21-40 decision 2).
 4. Step 1a stays outside the spend table's six. It still needs its own go-ahead before it runs.
+
+## D21-167 · Step 1a's finding: the CLI refuses every exported schema's `$schema`, so the adapter drops it from `--json-schema`
+
+**Recorded 2026-11-01 by an agent session, TAKEN PROVISIONALLY under D21-105 pending Ryan's confirmation.** Step 1a
+(D21-166) ran on Ryan's box on 2026-11-01 at `a80da06`. It dispatched once and recorded the dispatch (`first-contact
+rk-fix-s8j-first-contact sonnet 1 14 2026-11-01 …`), so it passed as written. The dispatch failed `non_zero` in
+2.9 s with no usage and no cost, and the child's retained stderr reads *"Error: --json-schema is not a valid JSON
+Schema: no schema with key or ref "https://json-schema.org/draft/2020-12/schema""*. Measured the same day in an agent
+container with no credentials and no network (the refusal comes at start-up, before any request): CLI 2.1.278 and
+2.1.303 both refuse a schema whose top-level `$schema` names draft 2020-12, and both accept the same schema without
+it or naming draft-07. Each of the 31 schema snapshots under `crates/rk-types/tests/it/snapshots/`, with its
+`$schema` removed, passes 2.1.303's start-up check (the child reaches `system/init`). `rk_types::schema::export_settings()` is `SchemaSettings::draft2020_12()`, so every schema in
+`rk_types::registry::EXPORTED` carries that keyword, and `rk-cli` hands that export to the binder
+(`crates/rk-cli/src/verbs/run.rs`, `exported_schema`). No real agent step could have run. The live probes did not
+see this, because their schemas are hand-written without `$schema`.
+
+1. **The fix is at the argv, not the export.** `rk_adapter_claude::command::json_schema_element` serialises the
+   schema without its top-level `$schema` and changes nothing else. The keyword names a dialect and constrains no
+   value. The snapshots, the CI lint and the return-side validation in `classify.rs` still see the whole export.
+   The alternative was to drop `$schema` in `export_settings()`, which moves all 31 snapshots and the judgement
+   registry's input for a keyword only the CLI objects to.
+2. **Guard:** `command::json_schema_element_drops_the_top_level_meta_schema_only` assembles every `EXPORTED` schema
+   and asserts that the element equals the export minus `$schema`, and that a schema without `$schema` passes
+   byte for byte. The argv goldens do not move.
+3. **Step 1a stands as run.** Its line records the dispatch that found this, and the block still refuses a second
+   run. Whether to spend a second first-contact dispatch after this lands is a new go-ahead (D21-40 decision 2).

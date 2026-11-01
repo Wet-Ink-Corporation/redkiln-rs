@@ -589,7 +589,8 @@ pub fn write_settings_file(
 pub struct CommandSpec<'a> {
     /// The bound card (the role's tier injected — `binder.rs`).
     pub card: &'a AgentCard,
-    /// The one output schema, as JSON; the `--json-schema` element is its compact serialisation.
+    /// The one output schema, as JSON; the `--json-schema` element is its compact serialisation
+    /// without a top-level `$schema` (D21-167).
     pub schema: &'a serde_json::Value,
     /// `--agent <name>` beside `--agents` — `false` is AC-203's refusal.
     pub adopt_agent: bool,
@@ -631,6 +632,32 @@ pub struct Assembled {
     pub stdin: String,
     /// [`command_line_units`] of `program` + `argv` — under the cap, or this value would not exist.
     pub command_line_units: usize,
+}
+
+/// The `--json-schema` element: `schema`'s compact serialisation without its top-level `$schema`.
+///
+/// *(dated 2026-11-01, s8j step 1a; D21-167.)* The CLI refuses a schema whose `$schema` names
+/// draft 2020-12 (*"no schema with key or ref"*, measured on 2.1.278 and 2.1.303) at start-up,
+/// before any request, and every `rk_types::schema::export` carries that keyword. Without it the
+/// CLI reads the schema in its default dialect, which reads every exported schema the same way
+/// only while none uses a keyword whose meaning is 2020-12's alone (`prefixItems`, `$defs`,
+/// `items: false`, ...); `command::json_schema_element_drops_the_top_level_meta_schema_only`
+/// asserts that condition over every export. Every other keyword is sent as derived. The output is still validated against the whole
+/// schema on return (`classify.rs`). The copy is the element's own data: the caller's schema is
+/// kept whole for that validation.
+#[must_use]
+pub(crate) fn json_schema_element(schema: &serde_json::Value) -> String {
+    match schema.as_object() {
+        Some(map) if map.contains_key("$schema") => {
+            let sent: serde_json::Map<String, serde_json::Value> = map
+                .iter()
+                .filter(|(key, _)| key.as_str() != "$schema")
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect();
+            serde_json::Value::Object(sent).to_string()
+        }
+        _ => schema.to_string(),
+    }
 }
 
 /// The UTF-16 length of one element as `std` quotes it for `CreateProcessW` (MSVCRT rules).
@@ -721,7 +748,7 @@ pub fn assemble(config: &Config, spec: &CommandSpec<'_>) -> Result<Assembled, Co
     argv.push("--agent".to_owned());
     argv.push(card.name.clone());
     argv.push("--json-schema".to_owned());
-    argv.push(spec.schema.to_string());
+    argv.push(json_schema_element(spec.schema));
     // AC-214: unconditional, the card's explicit value — *(dated 2026-10-02, s8h build, package
     // P3-adapter-argv-models; s8h §8h.2; D21-48 X12)* spelt on the argv by PERMISSION_MODE_ARGV's
     // row for the Config's pin when the card says `default`. Only this element moves: the card,
