@@ -30,8 +30,10 @@
 //!    `f64` utilisation against an `f64` ceiling; here both sides are `u16`. Halt 12: a firing
 //!    guard is a reading, never a reason to move `margin_ticks`.
 //! 3. **The input is `headroom::RateLimitReading`**, whose ticks are the digit scanner's
-//!    (AC-374) and whose windows are exactly two (AC-375; `rk_types::usage::WindowReading`); the
-//!    runner's `event::Headroom` with its `Option<f64>` members is not lifted.
+//!    (AC-374) and whose windows are the two (AC-375; `rk_types::usage::WindowReading`) or, since
+//!    D21-169, the one `unifiedWindows` carried — the guard checks each window that has ticks and
+//!    never reads an absent one as a value; the runner's `event::Headroom` with its `Option<f64>`
+//!    members is not lifted.
 //!
 //! **Rewritten, not lifted: [`batch_draw`]** (the table's *rewritten* column; O-7: the calculator
 //! is the adapter's, the reader over the log that assembles a dispatch set is 7d's `redkiln cost`).

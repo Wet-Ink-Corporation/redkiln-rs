@@ -113,6 +113,44 @@ fn ac220_refuse_within_margin_two_ticks() {
     assert_eq!(Guard::empty().check(m), Verdict::Proceed);
 }
 
+/// D21-169: a seven-day-only reading is guarded on the window it carries — at the margin it halts
+/// on `seven_day` with that window's own `resetsAt`, one tick below it proceeds, and the absent
+/// `five_hour` is never read as a value (a five-hour margin of 99 ticks, which any present reading
+/// would trip, does not fire).
+#[test]
+fn d21_169_one_window_reading_is_guarded_on_its_window() {
+    let one = |seven: &str| {
+        let line = format!(
+            "{{\"type\":\"rate_limit_event\",\"rate_limit_info\":{{\"status\":\"allowed\",\
+             \"resetsAt\":1793984400,\"rateLimitType\":\"seven_day\",\"isUsingOverage\":false,\
+             \"unifiedWindows\":{{\"seven_day\":{{\"utilization\":{seven},\
+             \"resetsAt\":1793984400}}}}}}}}"
+        );
+        read_rate_limit_event(line.as_bytes()).expect("a seven-day-only reading parses")
+    };
+    let m = Margins {
+        five_hour: 99,
+        seven_day: 18,
+    };
+    let mut g = Guard::empty();
+    g.observe(&one("0.82"));
+    assert_eq!(
+        g.check(m),
+        Verdict::Halt {
+            window: Window::SevenDay,
+            ticks: 82,
+            margin_ticks: 18,
+            resets_at: Some(Timestamp::from_unix_seconds(1_793_984_400)),
+        }
+    );
+    g.observe(&one("0.81"));
+    assert_eq!(
+        g.check(m),
+        Verdict::Proceed,
+        "the absent five_hour window is not read as a value"
+    );
+}
+
 fn replay_config(
     markers: &Markers,
     t: &crate::support::Transcript,

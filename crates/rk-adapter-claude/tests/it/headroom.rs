@@ -221,11 +221,64 @@ fn ac380_rate_limit_event_sole_source_both_shapes() {
         ),
         Err(HeadroomError::NoUtilization)
     );
-    // one window of two: named too
-    assert!(matches!(
+    // one window of two: since D21-169 a reading of the carried window only (the next test)
+    assert_eq!(
         read_rate_limit_event(
             br#"{"rate_limit_info":{"unifiedWindows":{"five_hour":{"utilization":0.04}}}}"#
-        ),
-        Err(HeadroomError::OneWindow { .. })
-    ));
+        )
+        .map(|r| r.shape),
+        Ok(Shape::OneWindow {
+            window: Window::FiveHour,
+            ticks: 4,
+            resets_at: None
+        })
+    );
+}
+
+/// D21-169 (2026-11-01; amends AC-375's "exactly two"): the RECORDED seven-day-only line (CLI
+/// 2.1.303, an account whose plan has no five-hour window) is a reading of `seven_day` and of
+/// nothing else — the absent window answers `None` for ticks AND for `resetsAt` (the top-level
+/// `resetsAt` is not lent to it), `windows()` is `None` (never a pair with an invented member),
+/// and the window is the KEY's, not `rateLimitType`'s: the mirror line (five-hour only, its
+/// `rateLimitType` naming `seven_day`) reads as `five_hour`.
+///
+/// RED (2026-11-01, live, probe 2 on the operator's box): `Err(Transport { kind: Decode, detail:
+/// "rate_limit_event: unifiedWindows carries seven_day but not five_hour: …" })` on all three
+/// dispatches.
+#[test]
+fn d21_169_one_window_reading_is_the_carried_window_only() {
+    let live = std::fs::read(
+        crate::support::fixtures()
+            .join("recorded/live-2026-11-01.probe2-planner.rate_limit_event.jsonl"),
+    )
+    .expect("the recorded line");
+    let r = read_rate_limit_event(live.trim_ascii_end())
+        .unwrap_or_else(|e| panic!("the recorded seven-day-only line parses: Err({e:?})"));
+    let reset = Some(rk_types::time::Timestamp::from_unix_seconds(1_793_984_400));
+    assert_eq!(
+        r.shape,
+        Shape::OneWindow {
+            window: Window::SevenDay,
+            ticks: 46,
+            resets_at: reset
+        }
+    );
+    assert_eq!(r.ticks(Window::SevenDay), Some(46));
+    assert_eq!(
+        r.ticks(Window::FiveHour),
+        None,
+        "never extrapolated (AC-374)"
+    );
+    assert_eq!(r.resets_at(Window::SevenDay), reset);
+    assert_eq!(r.resets_at(Window::FiveHour), None);
+    assert_eq!(r.windows(), None, "no pair is formed from one window");
+    assert!(r.is_allowed());
+    assert_eq!(r.rate_limit_type.as_deref(), Some("seven_day"));
+    // the key decides the window, not rateLimitType
+    let mirror = read_rate_limit_event(
+        br#"{"rate_limit_info":{"rateLimitType":"seven_day","unifiedWindows":{"five_hour":{"utilization":0.5}}}}"#,
+    )
+    .expect("parses");
+    assert_eq!(mirror.ticks(Window::FiveHour), Some(50));
+    assert_eq!(mirror.ticks(Window::SevenDay), None);
 }

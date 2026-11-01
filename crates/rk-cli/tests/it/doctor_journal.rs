@@ -246,6 +246,38 @@ fn headroom_margin_reads_the_latest_five_hour_bearing_reading() {
     );
 }
 
+/// D21-169 (2026-11-01): a one-window reading answers only for the window it carries — a
+/// `seven_day`-only row (`five_hour: null`) is skipped by the five-hour margin rule, so an earlier
+/// unified `99` still fires; and a `five_hour`-only row is read, so its `10` silences that `99`.
+///
+/// Red by a reader that keeps refusing a `null` member (the `five_hour`-only row is skipped and
+/// the `99` fires), or one that reads a `null` member as `0`.
+#[test]
+fn headroom_margin_reads_a_one_window_reading_by_its_carried_window() {
+    let found = margin_over(&[
+        serde_json::json!({ "windows": { "five_hour": 99, "seven_day": 20 } }),
+        serde_json::json!({ "windows": { "five_hour": null, "seven_day": 46 } }),
+    ]);
+    assert_eq!(
+        found.len(),
+        1,
+        "a seven-day-only reading silenced the five-hour margin: {found:?}"
+    );
+    assert!(
+        found[0].detail.contains(" 99 of 100"),
+        "{:?}",
+        found[0].detail
+    );
+    let later = margin_over(&[
+        serde_json::json!({ "windows": { "five_hour": 99, "seven_day": 20 } }),
+        serde_json::json!({ "windows": { "five_hour": 10, "seven_day": null } }),
+    ]);
+    assert!(
+        later.is_empty(),
+        "the five-hour-only reading of 10 is the latest, outside the margin: {later:?}"
+    );
+}
+
 /// Every code line of every `.rs` file under `root`, with its path.
 fn code_lines_under(root: &Path) -> Vec<(PathBuf, usize, String)> {
     crate::rs_files(root)

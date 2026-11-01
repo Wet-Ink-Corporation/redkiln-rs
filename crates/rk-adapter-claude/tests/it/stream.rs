@@ -557,8 +557,11 @@ fn resets_at_from_last_non_allowed_not_last_reading() {
 /// }` naming the key path (AC-374, AC-375; §7c.8) — WITHOUT a mid-run kill (the reviews of Slice
 /// 5, F4 / S5-09): the drain runs to EOF, so the row keeps the result frame's usage and cost, the
 /// child spawned exactly once, exactly one row, `headroom_after: None` (no representable reading
-/// was taken) and the guard's reading unchanged. Two shapes: a third decimal (`0.045`) and one
-/// window of two.
+/// was taken) and the guard's reading unchanged. Two shapes: a third decimal (`0.045`) and an
+/// exponent spelling (`1e-1`). *(2026-11-01, D21-169: the second shape was one window of two until
+/// D21-169 admitted that shape as `Shape::OneWindow` —
+/// `d21_169_one_window_reading_drains_ok_with_a_null_window` is its test now; a second refused
+/// shape keeps this test's two-case reach.)*
 ///
 /// RED (observed 2026-09-18) against the log-and-continue mutant (`if false && e != NoUtilization`):
 /// `streams/rate-limit-three-decimals.synthetic.ndjson: a reading the instrument cannot represent
@@ -567,18 +570,19 @@ fn resets_at_from_last_non_allowed_not_last_reading() {
 /// kill): None`.
 #[test]
 fn refused_reading_is_decode_without_a_kill() {
-    for (part, names) in [
-        (
-            "streams/rate-limit-three-decimals.synthetic.ndjson",
-            "more than two decimals",
-        ),
-        (
-            "streams/rate-limit-one-window.synthetic.ndjson",
-            "seven_day",
-        ),
+    let three_decimals = std::fs::read(
+        crate::support::fixtures().join("streams/rate-limit-three-decimals.synthetic.ndjson"),
+    )
+    .expect("fixture");
+    let exponent = br#"{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","unifiedWindows":{"five_hour":{"utilization":1e-1},"seven_day":{"utilization":0.2}}}}
+"#
+    .to_vec();
+    for (part, bytes, names) in [
+        ("three decimals", three_decimals, "more than two decimals"),
+        ("exponent", exponent, "is not a decimal utilization"),
     ] {
         let t = init_then(&[
-            Part::File(part),
+            Part::Bytes(bytes),
             Part::File("streams/result-ok.scripted.ndjson"),
         ]);
         let r = dispatch_replay(&t, 30);
@@ -646,4 +650,44 @@ fn structured_output_quoting_a_marker_is_not_a_usage_limit() {
     )]);
     let r = dispatch_replay(&t, 30);
     assert_eq!(r.outcome.record.detected_by, Some(DetectedBy::TextMarker));
+}
+
+/// D21-169 (2026-11-01): the RECORDED seven-day-only line drains to an `Ok` dispatch — the reading
+/// is representable, so it is journalled as one `rate_limit_reading` row whose `windows` carries
+/// `seven_day: 46` and `five_hour: null` (ADR-0163 clause 3: a member the frame did not carry is
+/// `null`, never omitted and never zero), its `resets_at.five_hour` `null` too; the record's
+/// `headroom_after` stays `None`, because `WindowReading` is a pair and no pair is formed from one
+/// window.
+///
+/// RED (2026-11-01, live, probe 2): `Err(Transport { kind: Decode, detail: "rate_limit_event:
+/// unifiedWindows carries seven_day but not five_hour: …" })`.
+#[test]
+fn d21_169_one_window_reading_drains_ok_with_a_null_window() {
+    let t = init_then(&[
+        Part::File("recorded/live-2026-11-01.probe2-planner.rate_limit_event.jsonl"),
+        Part::File("streams/result-ok.scripted.ndjson"),
+    ]);
+    let r = dispatch_replay(&t, 30);
+    assert!(
+        r.outcome.result.is_ok(),
+        "a one-window reading is a reading, not a refusal: {:?}",
+        r.outcome.result
+    );
+    assert_eq!(r.outcome.record.headroom_after, None);
+    let readings = crate::support::reading_rows(&r.store);
+    assert_eq!(
+        readings.len(),
+        1,
+        "one rate_limit_reading row: {readings:?}"
+    );
+    assert_eq!(
+        readings[0]["windows"],
+        serde_json::json!({ "five_hour": null, "seven_day": 46 })
+    );
+    assert_eq!(readings[0]["utilization"], serde_json::Value::Null);
+    assert_eq!(
+        readings[0]["resets_at"],
+        serde_json::json!({ "five_hour": null, "seven_day": 1_793_984_400 })
+    );
+    assert_eq!(readings[0]["rate_limit_type"], "seven_day");
 }
