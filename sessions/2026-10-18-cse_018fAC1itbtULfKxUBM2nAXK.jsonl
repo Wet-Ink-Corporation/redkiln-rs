@@ -447,3 +447,6 @@
 {"t":"2026-11-01T16:17:00.226Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"","event":"subagent-stop","type":"","msg":true,"transcript":true}
 {"t":"2026-11-01T16:17:00.501Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"session-start","source":"compact"}
 {"t":"2026-11-01T16:17:23.240Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-11-01T16:49:27.149Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"session-start","source":"resume"}
+{"t":"2026-11-01T16:50:07.216Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"deny-shell-write","cmd":"git show origin/build/phase-0-to-1:crates/rk-adapter-claude/src/init.rs > /tmp/init.rs; grep -n \"…\" /tmp/init.rs | head -30; sed -n 270,320p /tmp/init.rs"}
+{"t":"2026-11-01T16:50:45.003Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-declared","status":"WIP"}
