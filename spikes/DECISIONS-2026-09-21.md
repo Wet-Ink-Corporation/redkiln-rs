@@ -1,7 +1,8 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-169), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-170), and what they license
 
 *(Title moved 2026-11-01, D21-168: it read **"2026-09-21 … 2026-11-01 (D21-1 … D21-167)"**; `D21-168` is appended with this move.)*
 *(Title moved again 2026-11-01, D21-169: it read **"… (D21-1 … D21-168)"**; `D21-169` is appended with this move.)*
+*(Title moved again 2026-11-01, D21-170: it read **"… (D21-1 … D21-169)"**; `D21-170` is appended with this move.)*
 
 *(Title moved 2026-11-01, D21-167: it read **"2026-09-21 … 2026-10-31 (D21-1 … D21-166)"**; `D21-167` is appended with this move.)*
 
@@ -7747,3 +7748,27 @@ written. Each of its three dispatches (haiku planner, Sonnet investigator, Opus 
 4. **Probe 2 is re-run once this lands, on a new go-ahead.** The re-run spends the same three dispatches again, and
    a re-run is a new go-ahead (D21-40 decision 2). Step 1a-2 (D21-168 ruling 3) follows probe 2's pass.
 
+## D21-170 · Step 1a-2's refusal: a worktree under the home directory is not denied by `~/**`
+
+*(dated 2026-11-01, s8j; Ryan's ruling on the decision card, *"Skip ~/** under home"*.)*
+
+1. **What happened.** Step 1a-2 (D21-168) met its own pass criteria: one `dispatch`, one `dispatch_completed` with
+   usage, no `--json-schema` refusal; its `first-contact-2` line is recorded. The run still exited 17: the item's last
+   event is `step_refused { class: not_isolated }`. The result frame's `permission_denials` named the child's `Read` of
+   `.redkiln/artifacts/rk-fix-s8j-first-contact-2/BugReport.root.md` and its `Glob` of the worktree, so guard 3
+   (`classify.rs`, step 5b) refused the dispatch as `NotIsolated { surface: Env }`. No D21-45 warning was printed. The
+   step's clone was made by `mktemp -d` under `%TEMP%` (`C:/Users/ryanm/AppData/Local/Temp`), which is inside the user's
+   home directory, and `ChildSettings::from_chain` always wrote `Read(~/**)`, `Edit(~/**)` and `Write(~/**)`. The
+   child was denied its own worktree. `from_chain`'s doc named this as a residual; any repository under `C:/Users`
+   would hit it.
+2. **Ruling.** `ConfinementChain` gains `home_on_chain`: the home directory is the worktree or one of its ancestors.
+   `ConfinementChain::read` takes the home directory from `std::env::home_dir()` (the child's environment is the
+   captured process map, so its `~` is the same directory), and `ConfinementChain::read_with_home` takes it as an
+   argument. When `home_on_chain` is true, `from_chain` leaves `~/**` out. Nothing is lost: at the home directory's
+   level the ancestor complement already denies every entry off the worktree's path. The rejected alternatives were a
+   free refusal at assembly (repositories under the home directory stay unsupported) and recording the residual only.
+3. **Guard.** `d21_170_a_worktree_under_home_is_not_denied_by_the_home_rule` (`tests/it/command.rs`): with home at the
+   worktree, its parent's parent or the temp root, no `~/**` rule is written and a sibling inside home is still
+   denied; with home elsewhere, relative or absent, all three `~/**` rules stay. `golden_chain` carries
+   `home_on_chain: false`, so the golden deny set is unchanged.
+4. **No re-run of step 1a-2** (D21-40 decision 2). The next paid step on a tree carrying this fix is the first to show it.

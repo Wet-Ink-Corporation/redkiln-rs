@@ -195,13 +195,26 @@ pub struct ConfinementChain {
     /// `listings[i]` is the entry list of the directory `root + segments[..i]` — one per
     /// ancestor level, so exactly `segments.len()` lists.
     pub listings: Vec<Vec<Sibling>>,
+    /// The user's home directory is the worktree or one of its ancestors (D21-170). Then `~/**`
+    /// would deny the worktree itself, and [`ChildSettings::from_chain`] leaves it out: the
+    /// ancestor complement already denies every entry of the home directory off the path.
+    pub home_on_chain: bool,
 }
 
 impl ConfinementChain {
-    /// The chain of a real worktree, each ancestor level listed from the filesystem.
+    /// The chain of a real worktree, each ancestor level listed from the filesystem, with the
+    /// home directory read from the process ([`std::env::home_dir`]: `USERPROFILE` on Windows,
+    /// `HOME` elsewhere). The child's environment is the captured process map (`env.rs`), so its
+    /// `~` is this directory.
     ///
     /// # Errors
-    /// [`ConfigError::Confinement`].
+    /// [`ConfigError::Confinement`], as [`Self::read_with_home`].
+    pub fn read(worktree: &Path) -> Result<Self, ConfigError> {
+        Self::read_with_home(worktree, std::env::home_dir().as_deref())
+    }
+
+    /// The chain of a real worktree against a given home directory (`None`: no home, so `~/**`
+    /// stays in the deny set).
     ///
     /// The worktree must be absolute: a drive path on Windows (`D:/…`, or its verbatim form), a
     /// rooted path elsewhere. Each ancestor directory is listed once; an ancestor that does not
@@ -210,7 +223,7 @@ impl ConfinementChain {
     ///
     /// # Errors
     /// [`ConfigError::Confinement`] naming the path and the failure.
-    pub fn read(worktree: &Path) -> Result<Self, ConfigError> {
+    pub fn read_with_home(worktree: &Path, home: Option<&Path>) -> Result<Self, ConfigError> {
         use std::path::{Component, Prefix};
         let refuse = |why: &str| ConfigError::Confinement {
             detail: format!("{}: {why}", worktree.display()),
@@ -261,8 +274,39 @@ impl ConfinementChain {
             drive,
             segments,
             listings,
+            home_on_chain: home.is_some_and(|h| contains(h, worktree)),
         })
     }
+}
+
+/// Is `inner` the directory `outer` or below it? Both must be rooted. On Windows the comparison
+/// is ASCII-case-insensitive and a drive prefix matches its verbatim form (`C:` = `\\?\C:`).
+fn contains(outer: &Path, inner: &Path) -> bool {
+    use std::path::{Component, Prefix};
+    let drive = |p: &Prefix<'_>| match p {
+        Prefix::Disk(d) | Prefix::VerbatimDisk(d) => Some(d.to_ascii_lowercase()),
+        Prefix::Verbatim(_) | Prefix::VerbatimUNC(..) | Prefix::DeviceNS(_) | Prefix::UNC(..) => {
+            None
+        }
+    };
+    if !outer.has_root() || !inner.has_root() {
+        return false;
+    }
+    let mut rest = inner.components();
+    outer.components().all(|o| {
+        rest.next().is_some_and(|i| match (o, i) {
+            (Component::Prefix(a), Component::Prefix(b)) => {
+                drive(&a.kind()).is_some_and(|d| drive(&b.kind()) == Some(d))
+            }
+            (Component::Normal(a), Component::Normal(b)) if cfg!(windows) => {
+                match (a.to_str(), b.to_str()) {
+                    (Some(a), Some(b)) => a.eq_ignore_ascii_case(b),
+                    _ => a == b,
+                }
+            }
+            (a, b) => a == b,
+        })
+    })
 }
 
 /// The entries of one ancestor directory, sorted by name; a directory that does not exist lists
@@ -317,7 +361,9 @@ impl ChildSettings {
     /// `permissions.deny` for `Read`, `Edit` and `Write` over the COMPLEMENT ALONG THE ANCESTOR
     /// CHAIN — at each level every listed entry not on the path to the worktree (a directory as
     /// `<path>/**`, anything else as `<path>`), then `//<letter>/**` for every drive letter other
-    /// than the worktree's, then `~/**`; `autoMemoryEnabled: false`; and `enabledPlugins` with
+    /// than the worktree's, then `~/**` unless the home directory is on the chain (D21-170: it
+    /// would deny the worktree, and the complement already fences the home directory's other
+    /// entries); `autoMemoryEnabled: false`; and `enabledPlugins` with
     /// every [`DISABLED_BUILTIN_PLUGINS`] entry `false` (D21-169). Paths take the documented
     /// form `//<drive>/<segments>` (`//d/repos/...`), the drive lower-case. No `!` carve-out and no
     /// allow rule: a `!` pattern cannot reach an anchored rule and an allow rule cannot carve an
@@ -325,9 +371,9 @@ impl ChildSettings {
     /// comparison is ASCII-case-insensitive, as the filesystem is.
     ///
     /// **Residuals, stated rather than claimed away** (§8h.6): a sibling created after assembly is
-    /// outside the set; a worktree under the home directory would be denied by `~/**` (run
-    /// worktrees live under the repository's `.redkiln/worktrees/`, D21-44); an entry name carrying
-    /// a glob metacharacter is written as listed.
+    /// outside the set; an entry name carrying a glob metacharacter is written as listed. A
+    /// worktree under the home directory was denied by `~/**` until D21-170 (step 1a-2,
+    /// 2026-11-01: a clone under `%TEMP%` had its own `Read` and `Glob` denied).
     #[must_use]
     pub fn from_chain(chain: &ConfinementChain) -> Self {
         let root = chain
@@ -363,7 +409,9 @@ impl ChildSettings {
                 }
             }
         }
-        paths.push("~/**".to_owned());
+        if !chain.home_on_chain {
+            paths.push("~/**".to_owned());
+        }
         let deny: Vec<String> = paths
             .iter()
             .flat_map(|p| ["Read", "Edit", "Write"].map(|tool| format!("{tool}({p})")))

@@ -118,6 +118,7 @@ fn golden_chain() -> ConfinementChain {
             vec![entry(&segments[2], true), entry("run-2", true)],
         ],
         segments,
+        home_on_chain: false,
     }
 }
 
@@ -1306,6 +1307,66 @@ fn child_settings_carry_the_worktree_confinement() {
         ConfinementChain::read(Path::new("relative/wt")),
         Err(ConfigError::Confinement { .. })
     ));
+}
+
+/// D21-170 (step 1a-2, 2026-11-01): a worktree under the home directory is not denied by `~/**`.
+/// The run's clone sat under `%TEMP%`, inside the user's profile, and the child's `Read` of its own
+/// `BugReport` artifact and its `Glob` of the worktree were both denied (`permission_denials`), so
+/// the dispatch was refused as `NotIsolated { surface: Env }`. With the home directory on the
+/// chain, `~/**` is left out and the ancestor complement still denies the home directory's other
+/// entries; with home elsewhere, or none, `~/**` stays.
+#[test]
+fn d21_170_a_worktree_under_home_is_not_denied_by_the_home_rule() {
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let home = tmp.path().join("home");
+    let wt = home.join("repo").join("wt");
+    std::fs::create_dir_all(&wt).expect("the worktree");
+    std::fs::create_dir_all(home.join("secrets")).expect("a sibling in home");
+    let rules = |home: Option<&Path>| -> Vec<String> {
+        let chain = ConfinementChain::read_with_home(&wt, home).expect("the chain reads");
+        let s: serde_json::Value =
+            serde_json::from_str(ChildSettings::from_chain(&chain).json()).expect("JSON");
+        s["permissions"]["deny"]
+            .as_array()
+            .expect("deny")
+            .iter()
+            .map(|v| v.as_str().expect("a string").to_owned())
+            .collect()
+    };
+
+    for on_chain in [home.as_path(), wt.as_path(), tmp.path()] {
+        let chain = ConfinementChain::read_with_home(&wt, Some(on_chain)).expect("reads");
+        assert!(
+            chain.home_on_chain,
+            "{} is on the chain",
+            on_chain.display()
+        );
+        let under = rules(Some(on_chain));
+        assert!(
+            !under.iter().any(|r| r.contains("~/**")),
+            "no home rule when home ({}) is on the chain: {under:?}",
+            on_chain.display()
+        );
+        assert!(
+            under
+                .iter()
+                .any(|r| r.starts_with("Read(//") && r.ends_with("/home/secrets/**)")),
+            "the home directory's other entries are still denied: {under:?}"
+        );
+    }
+
+    let elsewhere = tmp.path().join("elsewhere");
+    for off_chain in [Some(elsewhere.as_path()), Some(Path::new("relative")), None] {
+        let chain = ConfinementChain::read_with_home(&wt, off_chain).expect("reads");
+        assert!(!chain.home_on_chain, "{off_chain:?} is not on the chain");
+        let rules = rules(off_chain);
+        for tool in ["Read", "Edit", "Write"] {
+            assert!(
+                rules.contains(&format!("{tool}(~/**)")),
+                "{tool}(~/**) stays when home is {off_chain:?}: {rules:?}"
+            );
+        }
+    }
 }
 
 /// `s8h` §8h.6 (D21-47; s8h review #7): the `--settings` element carries `autoMemoryEnabled:
