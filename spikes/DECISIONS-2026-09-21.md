@@ -1,6 +1,7 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-168), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-169), and what they license
 
 *(Title moved 2026-11-01, D21-168: it read **"2026-09-21 … 2026-11-01 (D21-1 … D21-167)"**; `D21-168` is appended with this move.)*
+*(Title moved again 2026-11-01, D21-169: it read **"… (D21-1 … D21-168)"**; `D21-169` is appended with this move.)*
 
 *(Title moved 2026-11-01, D21-167: it read **"2026-09-21 … 2026-10-31 (D21-1 … D21-166)"**; `D21-167` is appended with this move.)*
 
@@ -7699,3 +7700,50 @@ cards, and answered each on 2026-11-01 at 04:28-04:29Z.
    and no `--json-schema` refusal. Its line is `first-contact-2 … <step_failed count>`. It is an eighth dispatch
    outside the spend table's six and needs no further go-ahead beyond this ruling; a re-run is a new go-ahead (D21-40
    decision 2).
+
+## D21-169 · Probe 2's findings: a one-window `rate_limit_event` is a reading, and the child switches off 2.1.303's built-in plugins
+
+**Recorded 2026-11-01 by an agent session; both rulings are Ryan's, on decision cards at 04:46Z.** Probe 2
+(`live::live_init_equality_probe`, CLI 2.1.303) ran on Ryan's box on 2026-11-01 and FAILED (RC=101); no record line was
+written. Each of its three dispatches (haiku planner, Sonnet investigator, Opus reviewer) failed the same two checks,
+`plugins` and `outcome Ok`.
+
+1. **Every `rate_limit_event` carried one window.** The CLI's own line, the same in all three dispatches:
+   `unifiedWindows: { seven_day: { utilization: 0.46, resetsAt: 1793984400 } }`, `rateLimitType: seven_day`,
+   `overageDisabledReason: org_level_disabled`, and no `five_hour` key. The account's plan reports no five-hour window.
+   AC-375's "exactly two windows" (§7c.8) was drawn from e1-smoke, whose rows carried both. The adapter refused the line
+   as `HeadroomError::OneWindow`, so every dispatch ended `Transport { kind: Decode }` and nothing could dispatch on
+   this account. **Ruling (*"Adapter only"*): AC-375 is amended so that `unifiedWindows` carrying one of the two keys
+   is a reading of that window.** `headroom::Shape::OneWindow { window, ticks, resets_at }` takes the window from the
+   key, never from `rateLimitType`. `ticks` and `resets_at` answer `None` for the absent window (AC-374: never
+   extrapolated, never zero, and the top-level `resetsAt` is not lent to it). `windows()` is `None`, so
+   `rk_types::usage::WindowReading` (a pair, a stored type) and the record's `headroom_before`/`headroom_after` do not
+   change. The guard checks the window that is present (`throttle.rs` already skipped a window with no ticks). The
+   `rate_limit_reading` row keeps ADR-0163's six members, with the absent window `null` inside `windows` and inside
+   `resets_at`. `redkiln cost` and `doctor`'s margin rule read a `null` member as "no reading for this window".
+   `cost` refuses a `windows` object with both members `null`, with a member omitted, or with a key other than the
+   two windows; `doctor` skips the first two and ignores an extra key. The guard holds only the last reading, so on a stream that mixes shapes a one-window reading
+   forgets an earlier reading of the other window (documented on `Guard::check`); `doctor`'s margin rule keeps the
+   latest five-hour-bearing reading instead. `HeadroomError::OneWindow`
+   is removed. The rejected alternatives were making `WindowReading`'s members optional (a stored-shape change, an H-16
+   migration) and keeping the refusal (s8j stays blocked).
+2. **CLI 2.1.303 loads three built-in plugins into every child:** `cc-plugin-agents-md`, `cc-plugin-telemetry` and
+   `cc-plugin-plugin-authoring` (2.1.278 loaded none). `--setting-sources ""` does not stop them. A built-in is on
+   unless a consulted settings source sets `enabledPlugins["<name>@builtin"]` to `false`, and the `--settings` file is
+   always consulted (found by string search of the 2.1.303 binary, then run in an agent container with no credentials:
+   `system/init.plugins` went from three entries to `[]`). **Ruling (*"Disable them"*): `ChildSettings` writes
+   `enabledPlugins` with each of `command::DISABLED_BUILTIN_PLUGINS` set to `false`.** Probe 2's `plugins == []`
+   equality is unchanged (Halt 7), so a built-in added by a later CLI fails it again. The rejected alternative was to
+   loosen that equality.
+3. **What moved, and the guards:** `headroom.rs`, `command.rs` and `rk-cli`'s `doctor/rules.rs` and `verbs/cost.rs`.
+   The recorded line is in `crates/rk-adapter-claude/tests/fixtures/recorded/live-2026-11-01.probe2-planner.rate_limit_event.jsonl`,
+   with its provenance row. New tests: `d21_169_one_window_reading_is_the_carried_window_only`,
+   `d21_169_one_window_reading_drains_ok_with_a_null_window`, `d21_169_one_window_reading_is_guarded_on_its_window`,
+   `child_settings_disable_builtin_plugins`, `d21_169_a_one_window_reading_renders_and_an_empty_one_is_refused` and
+   `headroom_margin_reads_a_one_window_reading_by_its_carried_window`. Two tests were rewritten under this ruling.
+   `ac380_rate_limit_event_sole_source_both_shapes` now asserts that the five-hour-only line is a `OneWindow` reading,
+   where it asserted the refusal. `refused_reading_is_decode_without_a_kill` replaces its one-window case with an
+   exponent spelling (`1e-1`), so it still covers two refused shapes.
+4. **Probe 2 is re-run once this lands, on a new go-ahead.** The re-run spends the same three dispatches again, and
+   a re-run is a new go-ahead (D21-40 decision 2). Step 1a-2 (D21-168 ruling 3) follows probe 2's pass.
+

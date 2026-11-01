@@ -1331,6 +1331,36 @@ fn child_settings_disable_auto_memory() {
     }
 }
 
+/// D21-169 (2026-11-01): the `--settings` element switches off every built-in plugin CLI 2.1.303
+/// loads — `enabledPlugins` maps exactly the three `<name>@builtin` keys to `false` (the shape the
+/// 2.1.303 binary honours: its `system/init.plugins` went from three entries to `[]` with it).
+///
+/// RED (2026-11-01, live, probe 2): `planner: plugins` / `investigator: plugins` / `reviewer:
+/// plugins` — `system/init.plugins` listed `cc-plugin-agents-md`, `cc-plugin-telemetry` and
+/// `cc-plugin-plugin-authoring`.
+#[test]
+fn child_settings_disable_builtin_plugins() {
+    let cfg = config();
+    let schema = schema();
+    let expected = serde_json::json!({
+        "cc-plugin-agents-md@builtin": false,
+        "cc-plugin-telemetry@builtin": false,
+        "cc-plugin-plugin-authoring@builtin": false,
+    });
+    for stem in ["golden-static", "golden-default"] {
+        let card = bound(stem, "haiku", None);
+        let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
+        let s = settings_of(&built.argv);
+        assert_eq!(
+            s.get("enabledPlugins")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+            expected,
+            "enabledPlugins disables the three built-ins ({stem})"
+        );
+    }
+}
+
 /// Does a help capture's parsed `(choices: …)` list hold `spelling`? The one check the rows test
 /// and its synthetic control share (M33's target).
 fn spelling_listed(capture: &str, spelling: &str) -> bool {

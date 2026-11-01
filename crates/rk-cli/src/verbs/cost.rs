@@ -621,8 +621,9 @@ fn interleaving(span: &[Event], item: &str) -> u32 {
 /// from it.
 ///
 /// All six members must be present as keys — a missing key is [`Malformed`], never "no sample",
-/// which would shrink `n` silently. `windows` is an object carrying both windows as integer `u16`
-/// ticks, or `null`; `utilization` is integer `u16` ticks or `null`, checked whenever present and
+/// which would shrink `n` silently. `windows` is `null`, or an object with exactly the two window
+/// keys, each integer `u16` ticks or `null` (a window the event did not carry, D21-169), at least
+/// one of them ticks; `utilization` is integer `u16` ticks or `null`, checked whenever present and
 /// not only when `rate_limit_type` names a window; exactly one of the two is non-`null` (both or
 /// neither is malformed — a reading is one shape or the other); `resets_at` is an object whose two
 /// members are each integer seconds or `null`; `rate_limit_type` is a string or `null`; and
@@ -654,13 +655,30 @@ fn validate(row: &Event, at: usize) -> Result<(), Malformed> {
     match windows {
         serde_json::Value::Null => {}
         serde_json::Value::Object(w) => {
-            for name in [Window::FiveHour.as_str(), Window::SevenDay.as_str()] {
-                if !w.get(name).is_some_and(is_ticks) {
+            // Exactly the two window keys; each member is ticks, or `null` for a window the event
+            // did not carry (D21-169's one-window shape) — present either way; at least one is ticks.
+            let names = [Window::FiveHour.as_str(), Window::SevenDay.as_str()];
+            if let Some(extra) = w.keys().find(|k| !names.contains(&k.as_str())) {
+                return Err(malformed(format!(
+                    "`windows.{extra}` is not a window: the object carries exactly `five_hour` and \
+                     `seven_day`"
+                )));
+            }
+            for name in names {
+                if !w.get(name).is_some_and(|v| v.is_null() || is_ticks(v)) {
                     return Err(malformed(format!(
-                        "`windows.{name}` is {:?}, not integer ticks in u16",
+                        "`windows.{name}` is {:?}, neither integer ticks in u16 nor null",
                         w.get(name)
                     )));
                 }
+            }
+            if names
+                .iter()
+                .all(|name| w.get(*name).is_none_or(serde_json::Value::is_null))
+            {
+                return Err(malformed(
+                    "`windows` carries no window: an object reading names at least one".to_owned(),
+                ));
             }
         }
         other => {
@@ -827,7 +845,8 @@ pub fn draw_line(draw: &BatchDraw) -> String {
 
 /// This window's ticks off one reading, or `None` when the reading carries none for it.
 ///
-/// A unified reading's `windows` object answers for both windows. A flat reading (`windows: null`)
+/// A unified reading's `windows` object answers for both windows, except a member that is `null`
+/// (D21-169's one-window shape), which answers for none. A flat reading (`windows: null`)
 /// answers **only** for the window its `rate_limit_type` names — writing one utilisation into both,
 /// or into a window it does not name, is the extrapolation AC-374 forbids. Read as an integer and
 /// narrowed to `u16`; a float is a malformed row, never read (AC-374).
@@ -837,6 +856,9 @@ fn ticks(row: &Event, window: Window, at: usize) -> Result<Option<u16>, Malforme
     match row.payload.get("windows") {
         Some(serde_json::Value::Object(windows)) => {
             let value = windows.get(name);
+            if value.is_some_and(serde_json::Value::is_null) {
+                return Ok(None);
+            }
             value
                 .and_then(serde_json::Value::as_u64)
                 .and_then(|t| u16::try_from(t).ok())

@@ -27,7 +27,7 @@
 //! | [`binder`] | D-11: role tier → bound card → `ActivitySpec`; owns the `Config` while it fills its card store; RT-21's `"worktree"` key | AC-212, AC-204's declared list |
 //! | [`registry`] | the dated capability registry — the `dispatch` row, and nothing else | AC-238, AC-489, AC-492 (RT-24) |
 //! | [`event`] | the lift from `runner/src/event.rs`: the line classifier, `raw` as the line's bytes, nothing refused | AC-200, AC-201 |
-//! | [`headroom`] | NEW: the structural digit scanner over `StreamLine.raw` — `u16` ticks, both `rate_limit_event` shapes, the cost digits verbatim | AC-374, AC-375, AC-380, AC-219, AC-221, RT-2, RT-19 |
+//! | [`headroom`] | NEW: the structural digit scanner over `StreamLine.raw` — `u16` ticks, the unified, one-window (D21-169) and flat `rate_limit_event` shapes, the cost digits verbatim | AC-374, AC-375, AC-380, AC-219, AC-221, RT-2, RT-19 |
 //! | [`throttle`] | the lift from `runner/src/throttle.rs`: `Guard::check` at `ticks >= 100 - margin_ticks`; `batch_draw` REWRITTEN in ticks | AC-376, AC-220, AC-372, AC-381 (O-7) |
 //! | [`init`] | `system/init` → effective config as SET DIGESTS; adoption on equality; the observed version against the pin | AC-202, AC-204, AC-386, AC-226, AC-385 |
 //! | [`classify`] | every termination onto the closed ELEVEN, exhaustively, keyed on the observation | AC-229, AC-218, AC-206, AC-208, AC-523, AC-225 |
@@ -46,7 +46,8 @@
 //!   `Transport { kind: Spawn }` (RT-20 as amended); the guard's `HaltOverage` → `Overage`
 //!   (AC-221, AC-378); the guard's `Halt` → `RateLimited { resets_at }` (AC-376, AC-220) with
 //!   `headroom_before` the reading that fired — the reading and the verdict are taken under ONE
-//!   lock acquisition, so the row's `headroom_before` IS the reading the guard decided on
+//!   lock acquisition, so the row's `headroom_before` IS the reading the guard decided on (or
+//!   `None` when that reading carried one window, D21-169: `WindowReading` is a pair)
 //!   (S5-07); a token that has ALREADY fired → `Cancelled { by: Signal }` with nothing spawned
 //!   (R5-5 / F6 / S5-06: after Ctrl-C at the root no further `claude -p` is launched to be
 //!   killed on the first poll tick); a spawn failure → `Transport { kind: Spawn }`.

@@ -290,6 +290,20 @@ fn list_dir(dir: &Path) -> Result<Vec<Sibling>, String> {
     Ok(out)
 }
 
+/// The CLI's built-in plugins the child settings switch off (D21-169; probe 2, 2026-11-01).
+///
+/// CLI 2.1.303 loads these three into every child (`system/init.plugins`; 2.1.278 loaded none),
+/// and `--setting-sources ""` does not stop them: a built-in is enabled unless a settings source
+/// sets `enabledPlugins["<name>@builtin"]` to `false`, and `flagSettings` (the `--settings` file)
+/// is always a consulted source [observed with the 2.1.303 binary: `plugins` went from three
+/// entries to `[]`]. A built-in a later CLI adds is not in this list, and probe 2's `plugins == []`
+/// equality is what catches it.
+pub const DISABLED_BUILTIN_PLUGINS: [&str; 3] = [
+    "cc-plugin-agents-md@builtin",
+    "cc-plugin-telemetry@builtin",
+    "cc-plugin-plugin-authoring@builtin",
+];
+
 /// The child's `--settings` element (`s8h` §8h.6; ADR-0197 decision 9, proposed).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChildSettings {
@@ -303,7 +317,8 @@ impl ChildSettings {
     /// `permissions.deny` for `Read`, `Edit` and `Write` over the COMPLEMENT ALONG THE ANCESTOR
     /// CHAIN — at each level every listed entry not on the path to the worktree (a directory as
     /// `<path>/**`, anything else as `<path>`), then `//<letter>/**` for every drive letter other
-    /// than the worktree's, then `~/**`; and `autoMemoryEnabled: false`. Paths take the documented
+    /// than the worktree's, then `~/**`; `autoMemoryEnabled: false`; and `enabledPlugins` with
+    /// every [`DISABLED_BUILTIN_PLUGINS`] entry `false` (D21-169). Paths take the documented
     /// form `//<drive>/<segments>` (`//d/repos/...`), the drive lower-case. No `!` carve-out and no
     /// allow rule: a `!` pattern cannot reach an anchored rule and an allow rule cannot carve an
     /// exception out of a deny rule [documented, `permissions.md`]. On Windows the path-segment
@@ -353,8 +368,13 @@ impl ChildSettings {
             .iter()
             .flat_map(|p| ["Read", "Edit", "Write"].map(|tool| format!("{tool}({p})")))
             .collect();
+        let plugins: serde_json::Map<String, serde_json::Value> = DISABLED_BUILTIN_PLUGINS
+            .iter()
+            .map(|name| ((*name).to_owned(), serde_json::Value::Bool(false)))
+            .collect();
         let value = serde_json::json!({
             "autoMemoryEnabled": false,
+            "enabledPlugins": plugins,
             "permissions": {
                 "blockReadsOutsideWorkingDirectories": true,
                 "deny": deny,

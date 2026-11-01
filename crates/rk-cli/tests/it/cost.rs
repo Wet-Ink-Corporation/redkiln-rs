@@ -569,6 +569,76 @@ fn render_refuses_an_owned_reading_that_is_not_the_six_member_shape() {
     }
 }
 
+/// D21-169 (2026-11-01): **a one-window reading is the six-member shape** — the adapter journals a
+/// `seven_day`-only event as `windows: { five_hour: null, seven_day: <ticks> }` (ADR-0163 clause 3:
+/// a member the frame did not carry is `null`, never omitted), and `cost` renders it. A `windows`
+/// object with BOTH members `null`, with a member omitted, or with a key other than the two
+/// windows is malformed.
+///
+/// RED (2026-11-01) against the two-member validator: `the one-window reading rendered:
+/// Err(Malformed { … "`windows.five_hour` is Some(Null), not integer ticks in u16" })`.
+#[test]
+fn d21_169_a_one_window_reading_renders_and_an_empty_one_is_refused() {
+    let rows = cost_rows(&cost_dir().join("single-owned").join("rows.jsonl"));
+    let at = rows
+        .iter()
+        .position(|e| e.kind == EventKind::RateLimitReading)
+        .expect("single-owned carries a reading");
+    // the row as the adapter journals a seven-day-only event: the absent window `null` in
+    // `windows` AND in `resets_at`
+    let with_windows = |windows: serde_json::Value| {
+        let mut out = rows.clone();
+        let payload = out[at]
+            .payload
+            .as_object_mut()
+            .expect("the reading's payload is an object");
+        payload.insert("windows".to_owned(), windows);
+        payload.insert(
+            "resets_at".to_owned(),
+            serde_json::json!({ "five_hour": null, "seven_day": 1_788_408_000_i64 }),
+        );
+        out
+    };
+    let one = with_windows(serde_json::json!({ "five_hour": null, "seven_day": 37 }));
+    let rendered = cost::render(&one, "bug-1");
+    assert_eq!(
+        rendered.as_deref().map(|s| s.lines().collect::<Vec<_>>()),
+        Ok(vec![
+            "cost bug-1: rate_limit_reading rows in span: 1, this store's traffic only",
+            "five_hour: no sample",
+            "seven_day: n=1 resets_at=1788408000 low_sample resolution_limited",
+        ]),
+        "the one-window reading draws seven_day only — a null five_hour is no sample, never a \
+         sample of 0"
+    );
+    for (label, windows, names) in [
+        (
+            "both members null",
+            serde_json::json!({ "five_hour": null, "seven_day": null }),
+            "carries no window",
+        ),
+        (
+            "five_hour omitted",
+            serde_json::json!({ "seven_day": 37 }),
+            "`windows.five_hour` is None",
+        ),
+        (
+            "both null beside an extra key",
+            serde_json::json!({ "five_hour": null, "seven_day": null, "x": 1 }),
+            "`windows.x` is not a window",
+        ),
+    ] {
+        match cost::render(&with_windows(windows), "bug-1") {
+            Err(m) => assert!(
+                m.what.contains(names),
+                "{label}: refused, naming {names:?}: {}",
+                m.what
+            ),
+            Ok(out) => panic!("{label}: rendered as {out:?}"),
+        }
+    }
+}
+
 /// **The empty case renders nothing sampled** — `s7i` §7i.2's *"A vacuous rendering is not a
 /// pass"*, and ADR-0163's forbids bullet on an item that owns no reading.
 ///

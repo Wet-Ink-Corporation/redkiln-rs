@@ -42,7 +42,8 @@
 //!
 //! **What a reading is** ([`RateLimitReading`]): the event's `rate_limit_info` as the two
 //! shapes carry it — [`Shape::Unified`] with a [`WindowReading`] of **exactly two windows**
-//! (AC-375; `rk-types`' type) and each window's `resetsAt`, or [`Shape::Flat`] with the one
+//! (AC-375; `rk-types`' type) and each window's `resetsAt`, [`Shape::OneWindow`] when
+//! `unifiedWindows` carries one of the two keys and not the other, or [`Shape::Flat`] with the one
 //! utilisation the SDK shape carries — plus the top-level `status`, `resetsAt`, `rateLimitType`,
 //! `isUsingOverage` and `overageStatus` (e1-smoke's recorded keys, §7c.17). **A reading with
 //! neither shape is [`HeadroomError::NoUtilization`]** — a named error, so an event that changed
@@ -81,16 +82,6 @@ pub enum HeadroomError {
          shape) — a shape this adapter cannot read is named, never read as zero (AC-380)"
     )]
     NoUtilization,
-    /// The recorded shape carries one window and not the other — a reading of exactly two windows
-    /// cannot be formed (AC-375) and a half-reading is not extrapolated (AC-374).
-    #[error(
-        "unifiedWindows carries {present} but not {absent}: a reading is exactly two windows \
-         (AC-375) and the missing one is never extrapolated (AC-374)"
-    )]
-    OneWindow {
-        present: &'static str,
-        absent: &'static str,
-    },
     /// The value under a `utilization` key is not a JSON decimal of the accepted shape.
     #[error(
         "{key_path}: {text:?} is not a decimal utilization (digits, optionally a point and digits; \
@@ -128,7 +119,7 @@ pub struct RateLimitReading {
     pub overage_status: Option<String>,
 }
 
-/// The two shapes a reading arrives in.
+/// The shapes a reading arrives in.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Shape {
     /// The recorded shape: `unifiedWindows.{five_hour,seven_day}` — exactly two windows.
@@ -137,14 +128,29 @@ pub enum Shape {
         five_hour_resets_at: Option<Timestamp>,
         seven_day_resets_at: Option<Timestamp>,
     },
+    /// `unifiedWindows` carrying ONE of the two keys and not the other — recorded live
+    /// 2026-11-01 under CLI 2.1.303 on an account whose plan has no five-hour window
+    /// (`unifiedWindows: { seven_day: { utilization, resetsAt } }`, `rateLimitType: seven_day`;
+    /// D21-169, amending AC-375's "exactly two"). The window is the key's own, never inferred from
+    /// `rateLimitType`, and the absent window is **absent** — never extrapolated, never zero
+    /// (AC-374): [`RateLimitReading::ticks`] answers `None` for it.
+    OneWindow {
+        /// The window whose key `unifiedWindows` carried.
+        window: Window,
+        /// That window's utilisation in ticks (AC-374).
+        ticks: u16,
+        /// That window's own `resetsAt`.
+        resets_at: Option<Timestamp>,
+    },
     /// The SDK flat shape (**SYNTHETIC**, [surface unverified]): one utilisation, attributed to
     /// the window `rateLimitType` names when it names one of the two.
     Flat { utilization: u16 },
 }
 
 impl RateLimitReading {
-    /// The two-window reading, when the event carried the recorded shape. The flat shape yields
-    /// `None`: one utilisation is not extrapolated to two windows (AC-374's *"no extrapolation"*).
+    /// The two-window reading, when the event carried both windows. The flat and one-window shapes
+    /// yield `None`: one utilisation is not extrapolated to two windows (AC-374's *"no
+    /// extrapolation"*).
     #[must_use]
     pub const fn windows(&self) -> Option<WindowReading> {
         match &self.shape {
@@ -152,7 +158,7 @@ impl RateLimitReading {
                 five_hour: windows.five_hour,
                 seven_day: windows.seven_day,
             }),
-            Shape::Flat { .. } => None,
+            Shape::OneWindow { .. } | Shape::Flat { .. } => None,
         }
     }
 
@@ -167,6 +173,11 @@ impl RateLimitReading {
                 Window::FiveHour => windows.five_hour,
                 Window::SevenDay => windows.seven_day,
             }),
+            Shape::OneWindow {
+                window: carried,
+                ticks,
+                ..
+            } => (*carried == window).then_some(*ticks),
             Shape::Flat { utilization } => match self.rate_limit_type.as_deref() {
                 None => Some(*utilization),
                 Some(named) if named == window.as_str() => Some(*utilization),
@@ -175,7 +186,10 @@ impl RateLimitReading {
         }
     }
 
-    /// The `resetsAt` for `window`: the window's own under the unified shape, else the top-level.
+    /// The `resetsAt` for `window`: the window's own under the unified shape, the carried window's
+    /// own under the one-window shape (`None` for the absent window — the top-level `resetsAt`
+    /// belongs to whatever `rateLimitType` names and is not lent to a window the event did not
+    /// report), else the top-level.
     #[must_use]
     pub const fn resets_at(&self, window: Window) -> Option<Timestamp> {
         match &self.shape {
@@ -186,6 +200,16 @@ impl RateLimitReading {
             } => match window {
                 Window::FiveHour => *five_hour_resets_at,
                 Window::SevenDay => *seven_day_resets_at,
+            },
+            Shape::OneWindow {
+                window: carried,
+                resets_at,
+                ..
+            } => match (carried, window) {
+                (Window::FiveHour, Window::FiveHour) | (Window::SevenDay, Window::SevenDay) => {
+                    *resets_at
+                }
+                _ => None,
             },
             Shape::Flat { .. } => self.resets_at,
         }
@@ -207,7 +231,9 @@ impl RateLimitReading {
 /// present and a member the frame did not carry is JSON `null`, never omitted and never coerced.
 ///
 /// - `windows` — `{ five_hour, seven_day }` in ticks for [`Shape::Unified`], byte-compatible
-///   with `doctor`'s reader; `null` for [`Shape::Flat`]. Read off the shape, **never through
+///   with `doctor`'s reader; for [`Shape::OneWindow`] the same object with the absent window
+///   `null` (D21-169: a member the frame did not carry is `null`, never omitted and never zero);
+///   `null` for [`Shape::Flat`]. Read off the shape, **never through
 ///   [`RateLimitReading::ticks`]**, whose flat arm answers for both windows when `rateLimitType`
 ///   names none — writing that into a window pair is the extrapolation AC-374 and `s7i` §7i.1
 ///   forbid.
@@ -239,6 +265,16 @@ pub fn reading_payload(
             }),
             serde_json::Value::Null,
         ),
+        Shape::OneWindow { window, ticks, .. } => {
+            let member = |w: Window| (*window == w).then_some(*ticks);
+            (
+                serde_json::json!({
+                    "five_hour": member(Window::FiveHour),
+                    "seven_day": member(Window::SevenDay),
+                }),
+                serde_json::Value::Null,
+            )
+        }
         Shape::Flat { utilization } => (serde_json::Value::Null, serde_json::json!(utilization)),
     };
     let resets = |window: Window| reading.resets_at(window).map(Timestamp::unix_seconds);
@@ -447,8 +483,9 @@ pub fn render_ticks(ticks: u16) -> String {
 /// Read one `rate_limit_event` line into a reading.
 ///
 /// # Errors
-/// [`HeadroomError`] — neither shape found, one window of two, or a value under a
-/// `utilization` key that is not a two-decimal-or-fewer decimal.
+/// [`HeadroomError`] — neither shape found, or a value under a `utilization` key that is not a
+/// two-decimal-or-fewer decimal. One window of two is a reading ([`Shape::OneWindow`], D21-169),
+/// not an error.
 pub fn read_rate_limit_event(raw: &[u8]) -> Result<RateLimitReading, HeadroomError> {
     let info_path = [UNIFIED_PATH[0]];
     let s = |key: &str| walk(raw, &[info_path[0], key]).and_then(string_of);
@@ -505,18 +542,16 @@ pub fn read_rate_limit_event(raw: &[u8]) -> Result<RateLimitReading, HeadroomErr
                 seven_day_resets_at,
             }
         }
-        (Some(_), None) => {
-            return Err(HeadroomError::OneWindow {
-                present: Window::FiveHour.as_str(),
-                absent: Window::SevenDay.as_str(),
-            });
-        }
-        (None, Some(_)) => {
-            return Err(HeadroomError::OneWindow {
-                present: Window::SevenDay.as_str(),
-                absent: Window::FiveHour.as_str(),
-            });
-        }
+        (Some((ticks, resets_at)), None) => Shape::OneWindow {
+            window: Window::FiveHour,
+            ticks,
+            resets_at,
+        },
+        (None, Some((ticks, resets_at))) => Shape::OneWindow {
+            window: Window::SevenDay,
+            ticks,
+            resets_at,
+        },
         (None, None) => {
             // SYNTHETIC shape (AC-380's flat arm; [surface unverified]).
             let Some(span) = walk(raw, &FLAT_PATH) else {

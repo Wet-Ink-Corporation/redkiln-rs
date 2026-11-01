@@ -1735,22 +1735,44 @@ fn headroom_margin(ctx: &Ctx) -> Vec<Finding> {
 
 /// The five-hour ticks one `rate_limit_reading` row answers for, **as the guard reads them**
 /// (`s8f` §8f.9): the row's ADR-0163 decision 3 members rebuilt into the adapter's
-/// `RateLimitReading` — `windows` an object of two `u16` ticks is the unified shape, `windows: null`
+/// `RateLimitReading` — `windows` an object of two `u16` ticks is the unified shape, an object with
+/// one `u16` and the other member `null` the one-window shape (D21-169), `windows: null`
 /// with a `u16` `utilization` is the flat one, `rate_limit_type` a string or `null` — and then
 /// `RateLimitReading::ticks(Window::FiveHour)`, the one reading the throttle's guard takes. A row
 /// that is neither shape answers for nothing, and is skipped.
 fn five_hour_ticks(row: &super::Row) -> Option<i64> {
+    use rk_adapter_claude::config::Window;
     use rk_adapter_claude::headroom::{RateLimitReading, Shape};
     let u16_of = |v: &serde_json::Value| v.as_u64().and_then(|t| u16::try_from(t).ok());
     let shape = match row.payload.get("windows") {
-        Some(serde_json::Value::Object(w)) => Shape::Unified {
-            windows: rk_types::usage::WindowReading {
-                five_hour: w.get("five_hour").and_then(u16_of)?,
-                seven_day: w.get("seven_day").and_then(u16_of)?,
-            },
-            five_hour_resets_at: None,
-            seven_day_resets_at: None,
-        },
+        Some(serde_json::Value::Object(w)) => {
+            let member = |name: &str| match w.get(name) {
+                Some(serde_json::Value::Null) => Some(None),
+                Some(v) => u16_of(v).map(Some),
+                None => None,
+            };
+            match (member("five_hour")?, member("seven_day")?) {
+                (Some(five_hour), Some(seven_day)) => Shape::Unified {
+                    windows: rk_types::usage::WindowReading {
+                        five_hour,
+                        seven_day,
+                    },
+                    five_hour_resets_at: None,
+                    seven_day_resets_at: None,
+                },
+                (Some(ticks), None) => Shape::OneWindow {
+                    window: Window::FiveHour,
+                    ticks,
+                    resets_at: None,
+                },
+                (None, Some(ticks)) => Shape::OneWindow {
+                    window: Window::SevenDay,
+                    ticks,
+                    resets_at: None,
+                },
+                (None, None) => return None,
+            }
+        }
         None | Some(serde_json::Value::Null) => Shape::Flat {
             utilization: row.payload.get("utilization").and_then(u16_of)?,
         },
@@ -1769,9 +1791,7 @@ fn five_hour_ticks(row: &super::Row) -> Option<i64> {
         is_using_overage: None,
         overage_status: None,
     };
-    reading
-        .ticks(rk_adapter_claude::config::Window::FiveHour)
-        .map(i64::from)
+    reading.ticks(Window::FiveHour).map(i64::from)
 }
 
 /// **`RK-D-REVIEW-REEXEC`** — AC-290 (D18-19): a `reproduced` finding with no re-execution record.
