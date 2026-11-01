@@ -429,3 +429,5 @@
 {"t":"2026-11-01T05:43:39.940Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"subagent-stop","type":"temper:rust-reviewer","msg":false,"transcript":true}
 {"t":"2026-11-01T05:45:55.185Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-start","pid":12305,"timeoutMs":1200000}
 {"t":"2026-11-01T05:45:57.276Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"4d5ac828c644dda2","ms":2088,"cached":true,"pid":12305}
+{"t":"2026-11-01T05:47:07.365Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-start","pid":12501,"timeoutMs":1200000}
+{"t":"2026-11-01T05:47:09.221Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"4d5ac828c644dda2","ms":1852,"cached":true,"pid":12501}
