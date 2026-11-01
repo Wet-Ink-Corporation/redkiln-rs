@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-22 (D21-1 … D21-165), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-10-31 (D21-1 … D21-166), and what they license
+
+*(Title moved 2026-10-31, D21-166: it read **"2026-09-21 … 2026-10-22 (D21-1 … D21-165)"**; `D21-166` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 165 before the append, the last `D21-165`; 166 after.)*
 
 *(Title moved 2026-10-22, D21-165: it read **"2026-09-21 … 2026-10-19 (D21-1 … D21-164)"**; `D21-165` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 164 before the append, the last `D21-164`; 165 after.)*
 
@@ -7632,3 +7634,22 @@ item, or a slice on the shipped item. He chose *"Clone-only slice"* (2026-10-22,
    fixture item differs from `HEAD`, staged or not (`runbook/phase-1/s7f-conformance-and-records.md`; §8j.8 A10 item 5).
 2. **The shipped item is unchanged.** D21-42 18's fixed lines hold; no item record, golden or memo key moves.
 3. **No refusal is relaxed.** The slice-at-entry check is untouched; the checkpoint now satisfies it, as a real item must.
+
+## D21-166 · Ryan's ruling: step 1a's first-contact dispatch is one Sonnet dispatch, as shipped, capped at one
+
+**Recorded 2026-10-31 by an agent session.** §8j.6 step 1a (#62; D21-158; D21-161) named one real dispatch on a
+throwaway item in a scratch clone, with its model and cap to be written on its own line before it runs, but gave no
+command. An agent session wrote the block and trial-ran it in a container clone at `0377c2b` under the fixture harness.
+The throwaway item `rk-fix-s8j-first-contact` opens two free gates (`unknown_facet:change`, `human_root:BugReport`),
+and its first dispatch is analysis's `minimal-repro` `attempt` step, run by the investigator role, which the pack gives
+to Sonnet. Uncapped, a failing attempt was retried 14 times. With the clone's `appetite.dispatches = 1`, exactly one
+dispatch ran, and a re-run was refused before any spawn (Record B = ADR-0198 decision 4). Ryan was offered Sonnet as
+shipped or a Haiku override on a decision card, and chose *"Sonnet, as shipped"* (2026-10-31, 23:41Z).
+
+1. **Model: Sonnet, as shipped.** The clone's role and model table are unchanged, so the dispatch is the one `s8` makes.
+2. **Cap: one dispatch**, by the clone's copy of `bug-standard.toml` alone. The product repository's pack is unchanged,
+   and the block asserts it.
+3. **Evidence:** `first-contact rk-fix-s8j-first-contact sonnet 1 <launcher rc> <yyyy-mm-dd> <launch-record basename>`.
+   Pass means the dispatch happened and is recorded (one `dispatch`, one `dispatch_completed`), not a green outcome.
+   The block refuses a second run, and any re-spend is a new go-ahead (D21-40 decision 2).
+4. Step 1a stays outside the spend table's six. It still needs its own go-ahead before it runs.
