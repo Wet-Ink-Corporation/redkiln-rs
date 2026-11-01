@@ -474,3 +474,5 @@
 {"t":"2026-11-01T17:46:30.083Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"temper:rust-reviewer","event":"subagent-stop","type":"temper:rust-reviewer","msg":false,"transcript":true}
 {"t":"2026-11-01T17:48:11.625Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-start","pid":3798,"timeoutMs":1200000}
 {"t":"2026-11-01T17:53:59.766Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"e5897b6ac162985d","ms":348138,"cached":false,"pid":3798,"steps":{"fmt":1951,"scan":726,"manifests":113,"clippy":18415,"test":326734}}
+{"t":"2026-11-01T17:54:04.139Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-start","pid":11759,"timeoutMs":1200000}
+{"t":"2026-11-01T17:54:06.093Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"e5897b6ac162985d","ms":1949,"cached":true,"pid":11759}
