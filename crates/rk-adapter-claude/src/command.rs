@@ -590,7 +590,7 @@ pub struct CommandSpec<'a> {
     /// The bound card (the role's tier injected — `binder.rs`).
     pub card: &'a AgentCard,
     /// The one output schema, as JSON; the `--json-schema` element is its compact serialisation
-    /// without a top-level `$schema` ([`json_schema_element`]).
+    /// without a top-level `$schema` (D21-167).
     pub schema: &'a serde_json::Value,
     /// `--agent <name>` beside `--agents` — `false` is AC-203's refusal.
     pub adopt_agent: bool,
@@ -638,13 +638,15 @@ pub struct Assembled {
 ///
 /// *(dated 2026-11-01, s8j step 1a; D21-167.)* The CLI refuses a schema whose `$schema` names
 /// draft 2020-12 (*"no schema with key or ref"*, measured on 2.1.278 and 2.1.303) at start-up,
-/// before any request, and every `rk_types::schema::export` carries that keyword. The keyword
-/// names a dialect and constrains no value, so dropping it changes nothing the child is asked
-/// for; every other keyword is sent as derived. The output is still validated against the whole
+/// before any request, and every `rk_types::schema::export` carries that keyword. Without it the
+/// CLI reads the schema in its default dialect, which reads every exported schema the same way
+/// only while none uses a keyword whose meaning is 2020-12's alone (`prefixItems`, `$defs`,
+/// `items: false`, ...); `command::json_schema_element_drops_the_top_level_meta_schema_only`
+/// asserts that condition over every export. Every other keyword is sent as derived. The output is still validated against the whole
 /// schema on return (`classify.rs`). The copy is the element's own data: the caller's schema is
 /// kept whole for that validation.
 #[must_use]
-pub fn json_schema_element(schema: &serde_json::Value) -> String {
+pub(crate) fn json_schema_element(schema: &serde_json::Value) -> String {
     match schema.as_object() {
         Some(map) if map.contains_key("$schema") => {
             let sent: serde_json::Map<String, serde_json::Value> = map

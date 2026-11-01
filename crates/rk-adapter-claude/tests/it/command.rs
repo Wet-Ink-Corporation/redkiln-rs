@@ -1003,7 +1003,9 @@ fn ac132_builder_lints_one_schema_no_strict_tools() {
 /// `$schema` names draft 2020-12 before any request (*"no schema with key or ref
 /// \"https://json-schema.org/draft/2020-12/schema\""*, measured on 2.1.278 and 2.1.303), and every
 /// schema `rk_types::registry::EXPORTED` derives carries that keyword. So the element is the
-/// exported schema with its top-level `$schema` removed and nothing else changed.
+/// exported schema with its top-level `$schema` removed and nothing else changed. Without the
+/// keyword the CLI reads the schema in its default dialect, so no export may use a keyword whose
+/// meaning is 2020-12's alone, or the child would be asked for something else.
 #[test]
 fn json_schema_element_drops_the_top_level_meta_schema_only() {
     let cfg = config();
@@ -1017,6 +1019,11 @@ fn json_schema_element_drops_the_top_level_meta_schema_only() {
         assert!(
             exported.get("$schema").is_some(),
             "PREMISE: {name}'s export names its meta-schema"
+        );
+        let dialect_only = dialect_only_keywords(&exported);
+        assert!(
+            dialect_only.is_empty(),
+            "{name} uses keywords only draft 2020-12 reads this way: {dialect_only:?}"
         );
         let built = assemble(&cfg, &spec(&card, &exported, "")).expect("builds");
         let sent: serde_json::Value =
@@ -1034,6 +1041,41 @@ fn json_schema_element_drops_the_top_level_meta_schema_only() {
     let plain = schema().json;
     let built = assemble(&cfg, &spec(&card, &plain, "")).expect("builds");
     assert_eq!(value_of(&built.argv, "--json-schema"), plain.to_string());
+}
+
+/// Every keyword in `schema`, at any depth, whose meaning differs between draft 2020-12 and the
+/// earlier drafts, plus `items: false` (2020-12's tuple close, which draft-07 reads as "no item
+/// is valid").
+fn dialect_only_keywords(schema: &serde_json::Value) -> Vec<String> {
+    const ONLY_2020_12: [&str; 8] = [
+        "prefixItems",
+        "unevaluatedProperties",
+        "unevaluatedItems",
+        "dependentRequired",
+        "dependentSchemas",
+        "$dynamicRef",
+        "$dynamicAnchor",
+        "$defs",
+    ];
+    let mut found = Vec::new();
+    let mut stack = vec![schema];
+    while let Some(node) = stack.pop() {
+        match node {
+            serde_json::Value::Object(map) => {
+                for (key, value) in map {
+                    if ONLY_2020_12.contains(&key.as_str())
+                        || (key == "items" && *value == serde_json::Value::Bool(false))
+                    {
+                        found.push(key.clone());
+                    }
+                    stack.push(value);
+                }
+            }
+            serde_json::Value::Array(items) => stack.extend(items),
+            _ => {}
+        }
+    }
+    found
 }
 
 // ---------------------------------------------------------------------------------------------
