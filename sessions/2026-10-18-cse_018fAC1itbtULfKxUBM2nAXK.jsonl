@@ -389,3 +389,5 @@
 {"t":"2026-11-01T04:32:07.893Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"4d5ac828c644dda2","ms":2211,"cached":true,"pid":1325}
 {"t":"2026-11-01T04:32:10.345Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-start","pid":1471,"timeoutMs":1200000}
 {"t":"2026-11-01T04:32:12.657Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"4d5ac828c644dda2","ms":2309,"cached":true,"pid":1471}
+{"t":"2026-11-01T04:32:16.989Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"deny-shell-write","cmd":"git show origin/build/phase-0-to-1:runbook/phase-1/s8h-cards-and-run-environment.md | sed -n 1640,1680p; git show origin/build/phase-0-to-1:crates/rk-adapter-claude/tests/it/live.rs > /tmp/live.rs; gr…"}
+{"t":"2026-11-01T04:32:46.016Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-declared","status":"WIP"}
