@@ -115,8 +115,8 @@ fn ac220_refuse_within_margin_two_ticks() {
 
 /// D21-169: a seven-day-only reading is guarded on the window it carries — at the margin it halts
 /// on `seven_day` with that window's own `resetsAt`, one tick below it proceeds, and the absent
-/// `five_hour` is never read as a value (a five-hour margin of 99 ticks, which any present reading
-/// would trip, does not fire).
+/// `five_hour` is never read as a value (a five-hour margin of 100 ticks puts the threshold at 0,
+/// so any present five-hour reading, even 0, would trip it; it does not fire).
 #[test]
 fn d21_169_one_window_reading_is_guarded_on_its_window() {
     let one = |seven: &str| {
@@ -129,7 +129,7 @@ fn d21_169_one_window_reading_is_guarded_on_its_window() {
         read_rate_limit_event(line.as_bytes()).expect("a seven-day-only reading parses")
     };
     let m = Margins {
-        five_hour: 99,
+        five_hour: 100,
         seven_day: 18,
     };
     let mut g = Guard::empty();

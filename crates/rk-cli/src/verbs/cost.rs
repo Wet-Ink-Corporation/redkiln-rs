@@ -621,9 +621,9 @@ fn interleaving(span: &[Event], item: &str) -> u32 {
 /// from it.
 ///
 /// All six members must be present as keys — a missing key is [`Malformed`], never "no sample",
-/// which would shrink `n` silently. `windows` is an object carrying exactly the two window keys,
-/// each integer `u16` ticks or `null` (a window the event did not carry, D21-169) with at least one
-/// ticks, or `null`; `utilization` is integer `u16` ticks or `null`, checked whenever present and
+/// which would shrink `n` silently. `windows` is `null`, or an object with exactly the two window
+/// keys, each integer `u16` ticks or `null` (a window the event did not carry, D21-169), at least
+/// one of them ticks; `utilization` is integer `u16` ticks or `null`, checked whenever present and
 /// not only when `rate_limit_type` names a window; exactly one of the two is non-`null` (both or
 /// neither is malformed — a reading is one shape or the other); `resets_at` is an object whose two
 /// members are each integer seconds or `null`; `rate_limit_type` is a string or `null`; and

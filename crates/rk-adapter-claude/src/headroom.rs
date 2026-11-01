@@ -191,7 +191,7 @@ impl RateLimitReading {
     /// belongs to whatever `rateLimitType` names and is not lent to a window the event did not
     /// report), else the top-level.
     #[must_use]
-    pub fn resets_at(&self, window: Window) -> Option<Timestamp> {
+    pub const fn resets_at(&self, window: Window) -> Option<Timestamp> {
         match &self.shape {
             Shape::Unified {
                 five_hour_resets_at,
@@ -205,7 +205,12 @@ impl RateLimitReading {
                 window: carried,
                 resets_at,
                 ..
-            } => resets_at.filter(|_| *carried == window),
+            } => match (carried, window) {
+                (Window::FiveHour, Window::FiveHour) | (Window::SevenDay, Window::SevenDay) => {
+                    *resets_at
+                }
+                _ => None,
+            },
             Shape::Flat { .. } => self.resets_at,
         }
     }

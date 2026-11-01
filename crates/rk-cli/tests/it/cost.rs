@@ -572,7 +572,8 @@ fn render_refuses_an_owned_reading_that_is_not_the_six_member_shape() {
 /// D21-169 (2026-11-01): **a one-window reading is the six-member shape** — the adapter journals a
 /// `seven_day`-only event as `windows: { five_hour: null, seven_day: <ticks> }` (ADR-0163 clause 3:
 /// a member the frame did not carry is `null`, never omitted), and `cost` renders it. A `windows`
-/// object with BOTH members `null`, or with a member omitted, is still malformed.
+/// object with BOTH members `null`, with a member omitted, or with a key other than the two
+/// windows is malformed.
 ///
 /// RED (2026-11-01) against the two-member validator: `the one-window reading rendered:
 /// Err(Malformed { … "`windows.five_hour` is Some(Null), not integer ticks in u16" })`.
