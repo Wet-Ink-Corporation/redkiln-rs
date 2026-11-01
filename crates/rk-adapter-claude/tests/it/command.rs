@@ -999,6 +999,43 @@ fn ac132_builder_lints_one_schema_no_strict_tools() {
     );
 }
 
+/// *(dated 2026-11-01, s8j step 1a; D21-167.)* The CLI refuses a `--json-schema` whose top-level
+/// `$schema` names draft 2020-12 before any request (*"no schema with key or ref
+/// \"https://json-schema.org/draft/2020-12/schema\""*, measured on 2.1.278 and 2.1.303), and every
+/// schema `rk_types::registry::EXPORTED` derives carries that keyword. So the element is the
+/// exported schema with its top-level `$schema` removed and nothing else changed.
+#[test]
+fn json_schema_element_drops_the_top_level_meta_schema_only() {
+    let cfg = config();
+    let card = bound("golden-static", "haiku", None);
+    assert!(
+        !rk_types::registry::EXPORTED.is_empty(),
+        "PREMISE: there are exported schemas"
+    );
+    for (name, export) in rk_types::registry::EXPORTED {
+        let exported = export();
+        assert!(
+            exported.get("$schema").is_some(),
+            "PREMISE: {name}'s export names its meta-schema"
+        );
+        let built = assemble(&cfg, &spec(&card, &exported, "")).expect("builds");
+        let sent: serde_json::Value =
+            serde_json::from_str(value_of(&built.argv, "--json-schema")).expect("JSON");
+        let mut expected = exported.clone();
+        if let Some(map) = expected.as_object_mut() {
+            map.remove("$schema");
+        }
+        assert_eq!(
+            sent, expected,
+            "{name}: only the top-level `$schema` is removed"
+        );
+    }
+    // A schema with no `$schema` passes through byte for byte (the goldens' case).
+    let plain = schema().json;
+    let built = assemble(&cfg, &spec(&card, &plain, "")).expect("builds");
+    assert_eq!(value_of(&built.argv, "--json-schema"), plain.to_string());
+}
+
 // ---------------------------------------------------------------------------------------------
 // *(dated 2026-10-02, s8h build, package P3-adapter-argv-models.)* `s8h` §8h.2 (D21-48 X12) and
 // §8h.6 (D21-42 21b, 21d): ADR-0197 decisions 3 and 9, proposed.
