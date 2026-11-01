@@ -7764,11 +7764,16 @@ written. Each of its three dispatches (haiku planner, Sonnet investigator, Opus 
 2. **Ruling.** `ConfinementChain` gains `home_on_chain`: the home directory is the worktree or one of its ancestors.
    `ConfinementChain::read` takes the home directory from `std::env::home_dir()` (the child's environment is the
    captured process map, so its `~` is the same directory), and `ConfinementChain::read_with_home` takes it as an
-   argument. When `home_on_chain` is true, `from_chain` leaves `~/**` out. Nothing is lost: at the home directory's
-   level the ancestor complement already denies every entry off the worktree's path. The rejected alternatives were a
+   argument. When `home_on_chain` is true, `from_chain` leaves `~/**` out. At the home directory's level the ancestor
+   complement already denies every listed entry off the worktree's path; the residual is an entry created in the home
+   directory after assembly, which only `blockReadsOutsideWorkingDirectories` then fences (stated on `from_chain`).
+   The home directory is read from the adapter's process, not from the captured child environment; the two are the
+   same map at construction, and a mismatch cannot widen access past the worktree's chain. The rejected alternatives were a
    free refusal at assembly (repositories under the home directory stay unsupported) and recording the residual only.
 3. **Guard.** `d21_170_a_worktree_under_home_is_not_denied_by_the_home_rule` (`tests/it/command.rs`): with home at the
    worktree, its parent's parent or the temp root, no `~/**` rule is written and a sibling inside home is still
    denied; with home elsewhere, relative or absent, all three `~/**` rules stay. `golden_chain` carries
-   `home_on_chain: false`, so the golden deny set is unchanged.
+   `home_on_chain: false`, so the golden deny set is unchanged. A Windows-only test,
+   `d21_170_home_on_chain_ignores_case_and_verbatim_prefix_on_windows`, covers the case and `\\?\` prefix branches.
+   The fix was written before its test, so no red run is recorded for either.
 4. **No re-run of step 1a-2** (D21-40 decision 2). The next paid step on a tree carrying this fix is the first to show it.

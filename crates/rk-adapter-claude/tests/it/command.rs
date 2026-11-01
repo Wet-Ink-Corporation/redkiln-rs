@@ -1322,10 +1322,9 @@ fn d21_170_a_worktree_under_home_is_not_denied_by_the_home_rule() {
     let wt = home.join("repo").join("wt");
     std::fs::create_dir_all(&wt).expect("the worktree");
     std::fs::create_dir_all(home.join("secrets")).expect("a sibling in home");
-    let rules = |home: Option<&Path>| -> Vec<String> {
-        let chain = ConfinementChain::read_with_home(&wt, home).expect("the chain reads");
+    let rules = |chain: &ConfinementChain| -> Vec<String> {
         let s: serde_json::Value =
-            serde_json::from_str(ChildSettings::from_chain(&chain).json()).expect("JSON");
+            serde_json::from_str(ChildSettings::from_chain(chain).json()).expect("JSON");
         s["permissions"]["deny"]
             .as_array()
             .expect("deny")
@@ -1341,7 +1340,7 @@ fn d21_170_a_worktree_under_home_is_not_denied_by_the_home_rule() {
             "{} is on the chain",
             on_chain.display()
         );
-        let under = rules(Some(on_chain));
+        let under = rules(&chain);
         assert!(
             !under.iter().any(|r| r.contains("~/**")),
             "no home rule when home ({}) is on the chain: {under:?}",
@@ -1359,13 +1358,38 @@ fn d21_170_a_worktree_under_home_is_not_denied_by_the_home_rule() {
     for off_chain in [Some(elsewhere.as_path()), Some(Path::new("relative")), None] {
         let chain = ConfinementChain::read_with_home(&wt, off_chain).expect("reads");
         assert!(!chain.home_on_chain, "{off_chain:?} is not on the chain");
-        let rules = rules(off_chain);
+        let rules = rules(&chain);
         for tool in ["Read", "Edit", "Write"] {
             assert!(
                 rules.contains(&format!("{tool}(~/**)")),
                 "{tool}(~/**) stays when home is {off_chain:?}: {rules:?}"
             );
         }
+    }
+}
+
+/// D21-170 on Windows: the home comparison ignores ASCII case and matches a drive prefix to its
+/// verbatim form (`\\?\C:`), as the filesystem does; a home on another drive is off the chain.
+#[cfg(windows)]
+#[test]
+fn d21_170_home_on_chain_ignores_case_and_verbatim_prefix_on_windows() {
+    let tmp = tempfile::tempdir().expect("a temp dir");
+    let wt = tmp.path().join("Home").join("wt");
+    std::fs::create_dir_all(&wt).expect("the worktree");
+    let home = tmp.path().join("Home");
+    let text = home.to_str().expect("UTF-8");
+    let upper = std::path::PathBuf::from(text.to_ascii_uppercase());
+    let verbatim = std::path::PathBuf::from(format!(r"\\?\{text}"));
+    let drive = text
+        .chars()
+        .next()
+        .expect("a drive letter")
+        .to_ascii_uppercase();
+    let other = if drive == 'Q' { 'R' } else { 'Q' };
+    let other_drive = std::path::PathBuf::from(format!("{other}{}", &text[1..]));
+    for (h, want) in [(&upper, true), (&verbatim, true), (&other_drive, false)] {
+        let chain = ConfinementChain::read_with_home(&wt, Some(h.as_path())).expect("reads");
+        assert_eq!(chain.home_on_chain, want, "home {}", h.display());
     }
 }
 

@@ -371,9 +371,9 @@ impl ChildSettings {
     /// comparison is ASCII-case-insensitive, as the filesystem is.
     ///
     /// **Residuals, stated rather than claimed away** (§8h.6): a sibling created after assembly is
-    /// outside the set; an entry name carrying a glob metacharacter is written as listed. A
-    /// worktree under the home directory was denied by `~/**` until D21-170 (step 1a-2,
-    /// 2026-11-01: a clone under `%TEMP%` had its own `Read` and `Glob` denied).
+    /// outside the set (with the home directory on the chain, that includes an entry created in
+    /// the home directory after assembly, since `~/**` is not written, D21-170); an entry name
+    /// carrying a glob metacharacter is written as listed.
     #[must_use]
     pub fn from_chain(chain: &ConfinementChain) -> Self {
         let root = chain
