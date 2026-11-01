@@ -1190,6 +1190,66 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    printf 'first-contact %s sonnet 1 %s %s %s\n' "$I" "$rc" "$(date +%F)" "$(basename "$lr")" >> "$ev" || { echo "FAIL: could not append to $ev"; exit 1; }
    echo "first-contact recorded: one dispatch, launcher rc=$rc — read the logs under $c1a/log before anything else is spent"
    ```
+
+   *(dated 2026-11-01, s8j; D21-167; D21-168)* **Step 1a-2, the second first-contact dispatch.** Step 1a ran on
+   2026-11-01 at `a80da06` and passed as written, but its one dispatch never reached the model: the child refused
+   `--json-schema` at start-up because every exported schema names draft 2020-12 in its `$schema` (D21-167). #121
+   (`9e41173`) drops that keyword from the argument. Ryan ruled that one more Sonnet dispatch proves the fix, **after
+   probe 2** (D21-168). It is step 1a's block with four changes: it needs step 1a's line and refuses a second
+   `first-contact-2` line; it refuses a `HEAD` without `9e41173`; the throwaway item is `rk-fix-s8j-first-contact-2`;
+   and **pass** is stricter: one `dispatch`, one `dispatch_completed` that carries usage (the model was reached), and
+   no `--json-schema` refusal in its stderr. A `step_failed` after the model answered (for example a `schema` class on
+   the output) is reported and counted on the line, not a failure of this step. Re-running is never allowed (D21-40
+   decision 2).
+
+   ```bash
+   cd D:/repos/redkiln-rs || exit 1
+   # STEP 1a-2: THE SECOND FIRST-CONTACT DISPATCH (dated 2026-11-01; D21-167; D21-168). PAID: ONE Sonnet dispatch.
+   env | grep -qE '^(CLAUDECODE=|CLAUDE_CODE_|CLAUDE_PID=|CLAUDE_EFFORT=|AI_AGENT=)' && { echo "STOP: this shell was spawned by Claude Code — open a plain Git Bash"; exit 1; }
+   ev=runbook/phase-1/s8j-evidence.txt
+   grep -qE '^first-contact rk-fix-s8j-first-contact ' "$ev" || { echo "FAIL: no first-contact line — step 1a-2 follows step 1a (D21-168)"; exit 1; }
+   ! grep -qE '^first-contact-2 ' "$ev" || { echo "FAIL: step 1a-2 has a first-contact-2 line already — it is one dispatch, never repeated (D21-40 decision 2)"; exit 1; }
+   git merge-base --is-ancestor 9e41173 HEAD || { echo "FAIL: HEAD does not carry #121's \$schema fix (9e41173, D21-167) — pull build/phase-0-to-1 first"; exit 1; }
+   I=rk-fix-s8j-first-contact-2; head=$(git rev-parse HEAD) || exit 1; prod=$(pwd)
+   c1a=$(mktemp -d) || exit 1; clone="$(cygpath -m "$c1a" 2>/dev/null || printf '%s' "$c1a")/c"
+   git clone --quiet --no-local . "$clone" || { echo "FAIL: cannot clone into $clone"; exit 1; }
+   cd "$clone" || exit 1
+   [ "$(git rev-parse HEAD)" = "$head" ] || { echo "FAIL: the clone is not at $head"; exit 1; }
+   test ! -e ".redkiln/items/$I.toml" || { echo "FAIL: $I exists on the tree — the throwaway item must be minted here only"; exit 1; }
+   printf 'id          = "%s"\nkind        = "bug"\nstage       = "triage"\nhold_before = "specification"\nslice       = "s8j-first-contact-2"\n\n[facets]\ncos          = "standard"\nhas_repro    = true\ncriticality  = "low"\nblast_radius = "low"\nsize         = "low"\n' "$I" > ".redkiln/items/$I.toml" || exit 1
+   cp .redkiln/intake/rk-fix-doctor-margin.BugReport.md ".redkiln/intake/$I.BugReport.md" || { echo "FAIL: cannot copy the BugReport root"; exit 1; }
+   cap='import sys; p=sys.argv[1]; t=open(p,encoding="utf-8").read(); a="dispatches = 40 }"; assert t.count(a)==1, "one appetite"; open(p,"w",encoding="utf-8",newline="\n").write(t.replace(a,"dispatches = 1 }",1))'
+   python -c "$cap" .redkiln/packs/bug-standard.toml || { echo "FAIL: could not cap the clone's appetite"; exit 1; }
+   got=$(python -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["pack"]["appetite"]["dispatches"])' .redkiln/packs/bug-standard.toml) || exit 1
+   [ "$got" = 1 ] || { echo "FAIL: the clone's appetite.dispatches reads '$got', not 1"; exit 1; }
+   git -C "$prod" diff --quiet HEAD -- .redkiln/packs/bug-standard.toml || { echo "FAIL: the product repository's pack changed — only the clone's copy may carry the cap"; exit 1; }
+   grep -q '^harness_binary' .redkiln/config.toml && { echo "FAIL: the clone's config names a harness_binary — the dispatch must reach the real CLI"; exit 1; }
+   L=./tools/live-run.sh; mkdir -p "$c1a/log" || exit 1
+   step() {  # step <log> <launcher argv...>: one launcher call, its output kept, its rc returned
+     n=$1; shift; "$L" "$@" > "$c1a/log/$n.txt" 2>&1; r=$?; tail -3 "$c1a/log/$n.txt"; return $r
+   }
+   step 1-run run "$I" --lane fix || { echo "FAIL: the first run (free: the change-facet gate) exited $?"; exit 1; }
+   grep -qE '^gate [0-9a-f]{64} is open for '"$I"'$' "$c1a/log/1-run.txt" || { echo "FAIL: the first run opened no gate"; exit 1; }
+   step 2-answer answer "$I" text --explain-sufficed yes --toml-opened yes || { echo "FAIL: answering the change-facet gate exited $?"; exit 1; }
+   step 3-run run "$I" --lane fix || { echo "FAIL: the second run (free: the BugReport root) exited $?"; exit 1; }
+   grep -qE '^gate [0-9a-f]{64} is open for '"$I"'$' "$c1a/log/3-run.txt" || { echo "FAIL: the second run opened no gate"; exit 1; }
+   step 4-answer answer "$I" attach --attach "BugReport=.redkiln/intake/$I.BugReport.md" --explain-sufficed yes --toml-opened yes || { echo "FAIL: attaching the BugReport exited $?"; exit 1; }
+   echo "PAID: the next run makes step 1a-2's one Sonnet dispatch"
+   step 5-run run "$I" --lane fix; rc=$?
+   lr=$(grep -E '^LAUNCH_RECORD=' "$c1a/log/5-run.txt" | tail -1 | cut -d= -f2-)
+   q='import sqlite3,sys,json; c=sqlite3.connect(sys.argv[1]); it=sys.argv[2]; k=lambda s: c.execute("select count(*) from t2_event where kind=? and item=?",(s,it)).fetchone()[0]; dc=[json.loads(r[0]) for r in c.execute("select payload from t2_event where kind=? and item=?",("dispatch_completed",it))]; f=[r[0] for r in c.execute("select payload from t2_event where kind=? and item=?",("step_failed",it))]; se=lambda d: bytes((d.get("stderr") or {}).get("verbatim") or []); print(k("dispatch"),k("dispatch_completed"),len(f),sum(1 for d in dc if d.get("usage") is not None),sum(1 for d in dc if b"--json-schema" in se(d))); [print("step_failed",x) for x in f]'
+   counts=$(python -c "$q" "$(git rev-parse --git-common-dir)/redkiln/store.sqlite3" "$I") || { echo "FAIL: cannot read the clone's store"; exit 1; }
+   printf 'launcher rc=%s\nlaunch record=%s\nstore (dispatch, dispatch_completed, step_failed, reached the model, schema refused): %s\nclone kept at %s\n' "$rc" "$lr" "$counts" "$clone"
+   set -- $counts
+   [ "$1" = 1 ] && [ "$2" = 1 ] || { echo "FAIL: expected exactly one dispatch and one dispatch_completed — STOP and report (D21-40 decision 2)"; exit 1; }
+   [ "$5" = 0 ] || { echo "FAIL: the child still refused --json-schema — D21-167's fix did not reach this dispatch; STOP and report"; exit 1; }
+   [ "$4" = 1 ] || { echo "FAIL: the dispatch completed without usage — it never reached the model; STOP and report the step_failed line above"; exit 1; }
+   nf=$3
+   test -n "$lr" || { echo "FAIL: no LAUNCH_RECORD= line from the paid run"; exit 1; }
+   cd "$prod" || exit 1
+   printf 'first-contact-2 %s sonnet 1 %s %s %s %s\n' "$I" "$rc" "$(date +%F)" "$(basename "$lr")" "$nf" >> "$ev" || { echo "FAIL: could not append to $ev"; exit 1; }
+   echo "first-contact-2 recorded: one dispatch reached the model, launcher rc=$rc, step_failed=$nf — read the logs under $c1a/log"
+   ```
 1b. **The recorded fixture proofs, after the pin move and before any paid step** *(added 2026-09-24, D21-47; review
    finding 7).* The draft's entry condition was a sentence, and nothing mechanical stood between it and the first
    dispatch. The block below writes the gate's evidence. It runs over a clean commit that carries the moved pin, so
@@ -1373,6 +1433,8 @@ operator appends `checkpoint-7c <cli-version> pass <date> <launch-record basenam
 
 *(dated 2026-10-31, D21-166)* Step 1a (#62) is a seventh dispatch outside the six: **1 Sonnet**, through `run` in a scratch clone, capped at one by the clone's `appetite.dispatches = 1`. Its `first-contact` line records it.
 
+*(dated 2026-11-01, D21-168)* Step 1a-2 is an eighth: **1 Sonnet**, the same way, after probe 2. Its `first-contact-2` line records it.
+
 Each launch leaves its launch record under
 `<git-common-dir>/redkiln/launches/` (`s8h` §8h.7, step 8). Its basename goes on the evidence line, so Checkpoint 8j
 can find it.
@@ -1388,6 +1450,7 @@ record-rt57 <four-digit id of s8h's Record B, accepted>
 pin-move <old-version> <new-version|unchanged> <yyyy-mm-dd>
 fixture-proofs <40-hex HEAD sha> pass <yyyy-mm-dd>
 first-contact rk-fix-s8j-first-contact <model> <dispatch cap> <launcher rc> <yyyy-mm-dd> <launch-record basename>   (step 1a; D21-166)
+first-contact-2 rk-fix-s8j-first-contact-2 <model> <dispatch cap> <launcher rc> <yyyy-mm-dd> <launch-record basename> <step_failed count>   (step 1a-2; D21-168)
 mutant <id> killed <yyyy-mm-dd>            (one line per mutant of §8j.2–§8j.4, ten in all)
 checkpoint-7c-suite <40-hex HEAD sha> pass <yyyy-mm-dd>
 checkpoint-7c <cli-version> pass <yyyy-mm-dd> <launch-record basename>
