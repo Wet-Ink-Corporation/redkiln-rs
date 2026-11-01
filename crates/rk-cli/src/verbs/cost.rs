@@ -621,7 +621,8 @@ fn interleaving(span: &[Event], item: &str) -> u32 {
 /// from it.
 ///
 /// All six members must be present as keys — a missing key is [`Malformed`], never "no sample",
-/// which would shrink `n` silently. `windows` is an object carrying both windows as integer `u16`
+/// which would shrink `n` silently. `windows` is an object carrying exactly the two window keys,
+/// each integer `u16` ticks or `null` (a window the event did not carry, D21-169) with at least one
 /// ticks, or `null`; `utilization` is integer `u16` ticks or `null`, checked whenever present and
 /// not only when `rate_limit_type` names a window; exactly one of the two is non-`null` (both or
 /// neither is malformed — a reading is one shape or the other); `resets_at` is an object whose two
@@ -654,9 +655,16 @@ fn validate(row: &Event, at: usize) -> Result<(), Malformed> {
     match windows {
         serde_json::Value::Null => {}
         serde_json::Value::Object(w) => {
-            // Each member is ticks, or `null` for a window the event did not carry (D21-169's
-            // one-window shape) — present either way; at least one is ticks.
-            for name in [Window::FiveHour.as_str(), Window::SevenDay.as_str()] {
+            // Exactly the two window keys; each member is ticks, or `null` for a window the event
+            // did not carry (D21-169's one-window shape) — present either way; at least one is ticks.
+            let names = [Window::FiveHour.as_str(), Window::SevenDay.as_str()];
+            if let Some(extra) = w.keys().find(|k| !names.contains(&k.as_str())) {
+                return Err(malformed(format!(
+                    "`windows.{extra}` is not a window: the object carries exactly `five_hour` and \
+                     `seven_day`"
+                )));
+            }
+            for name in names {
                 if !w.get(name).is_some_and(|v| v.is_null() || is_ticks(v)) {
                     return Err(malformed(format!(
                         "`windows.{name}` is {:?}, neither integer ticks in u16 nor null",
@@ -664,7 +672,10 @@ fn validate(row: &Event, at: usize) -> Result<(), Malformed> {
                     )));
                 }
             }
-            if w.values().all(serde_json::Value::is_null) {
+            if names
+                .iter()
+                .all(|name| w.get(*name).is_none_or(serde_json::Value::is_null))
+            {
                 return Err(malformed(
                     "`windows` carries no window: an object reading names at least one".to_owned(),
                 ));

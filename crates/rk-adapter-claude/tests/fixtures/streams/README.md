@@ -71,7 +71,7 @@ proposed), so the tier word no longer adopts. The parts added for §8h.5's guard
 | `rate-limit-flat-sdk.synthetic.ndjson` | AC-380's flat SDK shape — its key names are an assumption |
 | `rate-limit-family-keys.synthetic.ndjson` | AC-375: `seven_day_opus` / `seven_day_sonnet` tolerated and ignored |
 | `rate-limit-three-decimals.synthetic.ndjson` | AC-374: `0.045` is refused, never rounded — through the real `dispatch` the refusal is `Transport { kind: Decode }` naming the key path, taken WITHOUT a mid-run kill (the drain runs to EOF and the row keeps the result frame's usage; `refused_reading_is_decode_without_a_kill`) |
-| `rate-limit-one-window.synthetic.ndjson` | `unifiedWindows` carrying `five_hour` and not `seven_day`. Until 2026-11-01 AC-375 refused it (`Transport { kind: Decode }`); D21-169 admits it as `Shape::OneWindow` on the `five_hour` window, the mirror of the RECORDED seven-day-only line in `../recorded/live-2026-11-01.probe2-planner.rate_limit_event.jsonl` |
+| `rate-limit-one-window.synthetic.ndjson` | `unifiedWindows` carrying `five_hour` and not `seven_day`. Until 2026-11-01 AC-375 refused it (`Transport { kind: Decode }`); D21-169 admits it as `Shape::OneWindow` on the `five_hour` window, the mirror of the RECORDED seven-day-only line in `../recorded/live-2026-11-01.probe2-planner.rate_limit_event.jsonl`. Read by `d21_169_one_window_reading_drains_ok_with_a_null_window` |
 | `rate-limit-at-boundary-five-hour-93.scripted.ndjson` / `…-one-below-…-92` / `…-seven-day-82` / `…-81` | AC-376/AC-220: the boundary and one tick below, at margins 0.07 (five_hour) and 0.18 (seven_day) |
 | `api-retry.reconstructed.ndjson` | AC-232's two lines |
 | `unknown-events.synthetic.ndjson` | AC-200's three injected unknown types |

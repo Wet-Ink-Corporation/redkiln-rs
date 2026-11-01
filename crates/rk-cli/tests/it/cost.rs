@@ -583,32 +583,58 @@ fn d21_169_a_one_window_reading_renders_and_an_empty_one_is_refused() {
         .iter()
         .position(|e| e.kind == EventKind::RateLimitReading)
         .expect("single-owned carries a reading");
+    // the row as the adapter journals a seven-day-only event: the absent window `null` in
+    // `windows` AND in `resets_at`
     let with_windows = |windows: serde_json::Value| {
         let mut out = rows.clone();
-        out[at]
+        let payload = out[at]
             .payload
             .as_object_mut()
-            .expect("the reading's payload is an object")
-            .insert("windows".to_owned(), windows);
+            .expect("the reading's payload is an object");
+        payload.insert("windows".to_owned(), windows);
+        payload.insert(
+            "resets_at".to_owned(),
+            serde_json::json!({ "five_hour": null, "seven_day": 1_788_408_000_i64 }),
+        );
         out
     };
     let one = with_windows(serde_json::json!({ "five_hour": null, "seven_day": 37 }));
     let rendered = cost::render(&one, "bug-1");
-    assert!(
-        rendered.is_ok(),
-        "the one-window reading rendered: {rendered:?}"
+    assert_eq!(
+        rendered.as_deref().map(|s| s.lines().collect::<Vec<_>>()),
+        Ok(vec![
+            "cost bug-1: rate_limit_reading rows in span: 1, this store's traffic only",
+            "five_hour: no sample",
+            "seven_day: n=1 resets_at=1788408000 low_sample resolution_limited",
+        ]),
+        "the one-window reading draws seven_day only — a null five_hour is no sample, never a \
+         sample of 0"
     );
-    for (label, windows) in [
+    for (label, windows, names) in [
         (
             "both members null",
             serde_json::json!({ "five_hour": null, "seven_day": null }),
+            "carries no window",
         ),
-        ("five_hour omitted", serde_json::json!({ "seven_day": 37 })),
+        (
+            "five_hour omitted",
+            serde_json::json!({ "seven_day": 37 }),
+            "`windows.five_hour` is None",
+        ),
+        (
+            "both null beside an extra key",
+            serde_json::json!({ "five_hour": null, "seven_day": null, "x": 1 }),
+            "`windows.x` is not a window",
+        ),
     ] {
-        assert!(
-            cost::render(&with_windows(windows), "bug-1").is_err(),
-            "{label}: refused as malformed"
-        );
+        match cost::render(&with_windows(windows), "bug-1") {
+            Err(m) => assert!(
+                m.what.contains(names),
+                "{label}: refused, naming {names:?}: {}",
+                m.what
+            ),
+            Ok(out) => panic!("{label}: rendered as {out:?}"),
+        }
     }
 }
 

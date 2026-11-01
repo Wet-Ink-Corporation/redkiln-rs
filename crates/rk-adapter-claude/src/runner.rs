@@ -104,7 +104,8 @@
 //! the last non-`allowed` one, the raw `system/init` line and the raw result frame (each ONE
 //! line, kept whole for the live probe's retention — RT-18 places the raw init on the probe's own
 //! output file, and the row's stdout is capped), the `api_retry` count, the init decision, and a
-//! reading the scanner REFUSED (a third decimal, one window of two): the refusal is recorded and
+//! reading the scanner REFUSED (a third decimal, a non-decimal spelling; one window of two is a
+//! reading since D21-169): the refusal is recorded and
 //! the drain runs on to EOF — the row keeps the frame's usage and cost and `classify.rs` turns the
 //! refusal into `Transport { kind: Decode }` after the frame-keyed steps (F4 / S5-09: fail closed,
 //! without a mid-run kill of a paid child). Stdout and stderr are accumulated in
@@ -249,7 +250,7 @@ struct Drained {
     denial_events: Vec<String>,
     /// An init-time refusal (`init::decide`).
     decided: Option<StepError>,
-    /// A `rate_limit_event` the scanner refused (a third decimal, one window of two), rendered
+    /// A `rate_limit_event` the scanner refused (a third decimal, a non-decimal spelling), rendered
     /// with its key path — recorded, and the drain runs on (F4 / S5-09).
     reading_refused: Option<String>,
 }
@@ -432,8 +433,9 @@ async fn drain_stdout(
                         st.last_reading = Some(reading);
                     }
                     Err(e) => {
-                        // A reading the instrument cannot represent (a third decimal, one window of
-                        // two) is refused, never rounded or ignored: fail closed (AC-374, AC-375) —
+                        // A reading the instrument cannot represent (a third decimal, a
+                        // non-decimal spelling) is refused, never rounded or ignored: fail closed
+                        // (AC-374; one window of two is a reading since D21-169) —
                         // recorded here, the drain continues, classify.rs decides (F4 / S5-09).
                         // A shape with no utilisation at all is not a reading and not a failure
                         // (AC-201: an unknown shape alone raises nothing); the line is retained.

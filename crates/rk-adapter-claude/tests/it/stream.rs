@@ -690,4 +690,21 @@ fn d21_169_one_window_reading_drains_ok_with_a_null_window() {
         serde_json::json!({ "five_hour": null, "seven_day": 1_793_984_400 })
     );
     assert_eq!(readings[0]["rate_limit_type"], "seven_day");
+    // the mirror: the five-hour-only SYNTHETIC line journals the other member null
+    let t = init_then(&[
+        Part::File("streams/rate-limit-one-window.synthetic.ndjson"),
+        Part::File("streams/result-ok.scripted.ndjson"),
+    ]);
+    let r = dispatch_replay(&t, 30);
+    assert!(r.outcome.result.is_ok(), "{:?}", r.outcome.result);
+    let readings = crate::support::reading_rows(&r.store);
+    assert_eq!(readings.len(), 1, "{readings:?}");
+    assert_eq!(
+        readings[0]["windows"],
+        serde_json::json!({ "five_hour": 4, "seven_day": null })
+    );
+    assert_eq!(
+        readings[0]["resets_at"],
+        serde_json::json!({ "five_hour": 1_788_370_800, "seven_day": null })
+    );
 }

@@ -7721,7 +7721,10 @@ written. Each of its three dispatches (haiku planner, Sonnet investigator, Opus 
    change. The guard checks the window that is present (`throttle.rs` already skipped a window with no ticks). The
    `rate_limit_reading` row keeps ADR-0163's six members, with the absent window `null` inside `windows` and inside
    `resets_at`. `redkiln cost` and `doctor`'s margin rule read a `null` member as "no reading for this window", and a
-   `windows` object with both members `null`, or with a member omitted, is still malformed. `HeadroomError::OneWindow`
+   `windows` object with both members `null`, with a member omitted, or with a key other than the two windows is
+   still malformed. The guard holds only the last reading, so on a stream that mixes shapes a one-window reading
+   forgets an earlier reading of the other window (documented on `Guard::check`); `doctor`'s margin rule keeps the
+   latest five-hour-bearing reading instead. `HeadroomError::OneWindow`
    is removed. The rejected alternatives were making `WindowReading`'s members optional (a stored-shape change, an H-16
    migration) and keeping the refusal (s8j stays blocked).
 2. **CLI 2.1.303 loads three built-in plugins into every child:** `cc-plugin-agents-md`, `cc-plugin-telemetry` and

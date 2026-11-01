@@ -46,7 +46,8 @@
 //!   `Transport { kind: Spawn }` (RT-20 as amended); the guard's `HaltOverage` → `Overage`
 //!   (AC-221, AC-378); the guard's `Halt` → `RateLimited { resets_at }` (AC-376, AC-220) with
 //!   `headroom_before` the reading that fired — the reading and the verdict are taken under ONE
-//!   lock acquisition, so the row's `headroom_before` IS the reading the guard decided on
+//!   lock acquisition, so the row's `headroom_before` IS the reading the guard decided on (or
+//!   `None` when that reading carried one window, D21-169: `WindowReading` is a pair)
 //!   (S5-07); a token that has ALREADY fired → `Cancelled { by: Signal }` with nothing spawned
 //!   (R5-5 / F6 / S5-06: after Ctrl-C at the root no further `claude -p` is launched to be
 //!   killed on the first poll tick); a spawn failure → `Transport { kind: Spawn }`.

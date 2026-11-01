@@ -260,13 +260,16 @@ pub fn reading_payload(
             }),
             serde_json::Value::Null,
         ),
-        Shape::OneWindow { .. } => (
-            serde_json::json!({
-                "five_hour": reading.ticks(Window::FiveHour),
-                "seven_day": reading.ticks(Window::SevenDay),
-            }),
-            serde_json::Value::Null,
-        ),
+        Shape::OneWindow { window, ticks, .. } => {
+            let member = |w: Window| (*window == w).then_some(*ticks);
+            (
+                serde_json::json!({
+                    "five_hour": member(Window::FiveHour),
+                    "seven_day": member(Window::SevenDay),
+                }),
+                serde_json::Value::Null,
+            )
+        }
         Shape::Flat { utilization } => (serde_json::Value::Null, serde_json::json!(utilization)),
     };
     let resets = |window: Window| reading.resets_at(window).map(Timestamp::unix_seconds);
@@ -475,8 +478,9 @@ pub fn render_ticks(ticks: u16) -> String {
 /// Read one `rate_limit_event` line into a reading.
 ///
 /// # Errors
-/// [`HeadroomError`] — neither shape found, one window of two, or a value under a
-/// `utilization` key that is not a two-decimal-or-fewer decimal.
+/// [`HeadroomError`] — neither shape found, or a value under a `utilization` key that is not a
+/// two-decimal-or-fewer decimal. One window of two is a reading ([`Shape::OneWindow`], D21-169),
+/// not an error.
 pub fn read_rate_limit_event(raw: &[u8]) -> Result<RateLimitReading, HeadroomError> {
     let info_path = [UNIFIED_PATH[0]];
     let s = |key: &str| walk(raw, &[info_path[0], key]).and_then(string_of);

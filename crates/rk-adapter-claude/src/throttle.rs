@@ -124,7 +124,10 @@ impl Guard {
     ///
     /// A flat (SDK-shape) reading is checked on the window its `rateLimitType` names, or on both
     /// when it names none (`RateLimitReading::ticks`); a window the reading carries nothing for
-    /// is not checked and never synthesised (AC-374).
+    /// is not checked and never synthesised (AC-374). The guard holds the LAST reading only, so a
+    /// one-window reading (D21-169) forgets an earlier reading of the other window: on a stream
+    /// that mixes shapes, an over-margin `five_hour` followed by a `seven_day`-only reading
+    /// proceeds. `doctor`'s margin rule keeps the latest five-hour-bearing reading instead.
     #[must_use]
     pub fn check(&self, margins: Margins) -> Verdict {
         let Some(reading) = &self.last else {

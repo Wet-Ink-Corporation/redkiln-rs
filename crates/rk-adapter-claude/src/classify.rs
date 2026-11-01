@@ -50,7 +50,8 @@
 //! 6. **A non-zero exit, or no exit code** → `NonZero { code, stderr_digest }` — with or without
 //!    a result frame; the exit code is the child's own verdict on itself when nothing above
 //!    overrode it.
-//! 7. **A `rate_limit_event` the scanner refused** (a third decimal, one window of two — the
+//! 7. **A `rate_limit_event` the scanner refused** (a third decimal or a non-decimal spelling;
+//!    one window of two is a reading since D21-169 — the
 //!    drain recorded it and ran on, F4 / S5-09) → `Transport { kind: Decode, detail }`: a reading
 //!    the throttle cannot represent is not a reading the next dispatch may proceed blind on
 //!    (§7c.8's fail-closed), and it outranks an `Ok` the same stream would otherwise have earned.
