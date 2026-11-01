@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-167), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-168), and what they license
+
+*(Title moved 2026-11-01, D21-168: it read **"2026-09-21 … 2026-11-01 (D21-1 … D21-167)"**; `D21-168` is appended with this move.)*
 
 *(Title moved 2026-11-01, D21-167: it read **"2026-09-21 … 2026-10-31 (D21-1 … D21-166)"**; `D21-167` is appended with this move.)*
 
@@ -7681,3 +7683,19 @@ see this, because their schemas are hand-written without `$schema`.
    byte for byte. The argv goldens do not move.
 3. **Step 1a stands as run.** Its line records the dispatch that found this, and the block still refuses a second
    run. Whether to spend a second first-contact dispatch after this lands is a new go-ahead (D21-40 decision 2).
+
+## D21-168 · Ryan's rulings: D21-167 confirmed, and one more Sonnet first-contact dispatch after probe 2
+
+**Recorded 2026-11-01 by an agent session.** After #121 (`9e41173`) merged, Ryan was asked three things on decision
+cards, and answered each on 2026-11-01 at 04:28-04:29Z.
+
+1. **D21-167 is confirmed** (*"Confirm"*): the CLI argument drops the top-level `$schema`; the exports, their 31
+   snapshots and the return-side validation keep it. D21-167's provisional status ends here.
+2. **Probe 0 goes ahead** (*"Go"*): its one haiku dispatch, per §8j.6 step 2b.
+3. **A second first-contact dispatch, after probe 2** (*"Yes, after probes"*): step 1a found the schema refusal but
+   never reached the model, so no real agent step has completed. Step 1a-2 (`runbook/phase-1/s8j-run-preparation.md`,
+   beside step 1a) spends one more Sonnet dispatch, capped at one in a scratch clone, on the throwaway item
+   `rk-fix-s8j-first-contact-2`. It refuses a tree without `9e41173` and passes only if the one dispatch carries usage
+   and no `--json-schema` refusal. Its line is `first-contact-2 … <step_failed count>`. It is an eighth dispatch
+   outside the spend table's six and needs no further go-ahead beyond this ruling; a re-run is a new go-ahead (D21-40
+   decision 2).
