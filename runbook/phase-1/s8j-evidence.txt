@@ -19,3 +19,20 @@ probe live::live_confinement_and_denial_probe 2.1.303 pass 2026-10-31 20261101T0
 probe live::live_init_equality_probe 2.1.303 pass 2026-11-01 20261101T160437.452402100Z-probe.txt
 first-contact-2 rk-fix-s8j-first-contact-2 sonnet 1 17 2026-11-01 20261101T161516.272240000Z-run.txt 0
 legacy-worktree-repointed rk-fix-doctor-test-count 73c087a 2026-10-19
+fixture-proofs f6f533513feb7ef7832cc4a95ff98c06912df83f pass 2026-11-01
+mutant M-seed-record killed 2026-11-01
+mutant M-land-empty killed 2026-11-01
+mutant M-fixture-toolchain killed 2026-11-01
+mutant M-skip-empty-stage-trailer killed 2026-11-01
+mutant M-spec-digest-pre-render killed 2026-11-01
+mutant M-worktree-under-git killed 2026-11-01
+mutant M-attach-dropped killed 2026-11-01
+mutant M-hold-ignored killed 2026-11-01
+mutant M-hold-spent-refires killed 2026-11-01
+mutant M-hold-unordered-accepted killed 2026-11-01
+checkpoint-7c-suite f6f533513feb7ef7832cc4a95ff98c06912df83f pass 2026-11-01
+checkpoint-7c 2.1.303 pass 2026-11-01 20261102T040112.569853900Z-wrap.txt
+probe live::live_denial_channel_preprobe 2.1.303 pass 2026-11-01 20261102T040650.833077700Z-probe.txt
+probe live::live_confinement_and_denial_probe 2.1.303 pass 2026-11-01 20261102T040750.011667400Z-probe.txt
+probe live::live_init_equality_probe 2.1.303 pass 2026-11-01 20261102T040901.511621900Z-probe.txt
+record-g 0197

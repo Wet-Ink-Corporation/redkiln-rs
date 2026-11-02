@@ -1,5 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-01 (D21-1 … D21-170), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-02 (D21-1 … D21-171), and what they license
 
+*(Title moved 2026-11-02, D21-171: it read **"2026-09-21 … 2026-11-01 (D21-1 … D21-170)"**; `D21-171` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 170 before the append, the last `D21-170`; 171 after.)*
 *(Title moved 2026-11-01, D21-168: it read **"2026-09-21 … 2026-11-01 (D21-1 … D21-167)"**; `D21-168` is appended with this move.)*
 *(Title moved again 2026-11-01, D21-169: it read **"… (D21-1 … D21-168)"**; `D21-169` is appended with this move.)*
 *(Title moved again 2026-11-01, D21-170: it read **"… (D21-1 … D21-169)"**; `D21-170` is appended with this move.)*
@@ -6146,7 +6147,7 @@ R2FIX-8h)* every accepted ADR but ADR-0126 decision 1, which moves in part throu
 
 **Taken 2026-10-02 by the session executing `s8h`, at the stage's close, under the operator's standing AFK rules
 (D21-105).** It records and cites. It re-takes no ruling, writes no go-ahead line, and **flips no record**: ADR-0197
-(Record A) and ADR-0198 (Record B) both stay `proposed`, each for the reason its own text gives (below). What this
+(Record A) and ADR-0198 (Record B) both stay `proposed` *(dated 2026-11-02, D21-171: ADR-0197 accepted)*, each for the reason its own text gives (below). What this
 entry records is what `s8h`'s §8h.0 … §8h.15 record; every figure below is quoted from the stage file's dated notes,
 the tree, the committed records or the refuting rounds' outputs, except the formal reading in the last paragraph,
 which is quoted from the run's output.
@@ -6203,7 +6204,7 @@ pending the operator's confirmation, recorded in the weigh-in ledger, and is on 
 **Recorded — what was built** (`d5bfb32` interim 1, `5e5d410` interim 2, `d692e71` D21-137, `55fda45` interim 3,
 `ed6dc02` D21-137 item 2 amended, `6f6bf09` interim 4, `d2c2e9e` interim 5 (refuting round 1 fixed), `e538f09` interim
 6 (refuting round 2 fixed), `d24d15a` refuting round 3's minors).
-- **The records and `rk-types` (`d5bfb32`, S8H-P1, S8H-P2).** ADR-0197 and ADR-0198 written `proposed`; the stage-open
+- **The records and `rk-types` (`d5bfb32`, S8H-P1, S8H-P2).** ADR-0197 and ADR-0198 written `proposed` *(dated 2026-11-02, D21-171: ADR-0197 accepted)*; the stage-open
   readings by dated lines (the installed CLI read `2.1.287` against the `2.1.278` pin, so Halt 2 is recorded and the
   pin moves once, at `s8j`; the `--permission-mode` help lines captured; `MINTED_CLASSES` written; `BASE_8G` 1337 from
   D21-129). `rk_types::registry::EXPORTED` holds 25 kinds generated from one table; `Spec` embeds
@@ -6330,7 +6331,7 @@ installed packs' `[[gate_expiry]]` rows (54 in `bug-standard`, 56 in `story`) st
   8h's `TOKENS_APPETITE` is not owed, and Checkpoint 8h's block does not move.
 - `references/adr/README.md` moves ADR-0198's status cell, the lifecycle census (192 → 193 `accepted`, 2 → 1
   `proposed`), the not-at-accepted sentence and the open-questions sentence, each by dated correction. The
-  not-at-accepted sentence was stale through `s8h`'s build and now reads five, with `0197` at `proposed`.
+  not-at-accepted sentence was stale through `s8h`'s build and now reads five, with `0197` at `proposed` *(dated 2026-11-02, D21-171: ADR-0197 accepted; the sentence now reads four, with no record at `proposed`)*.
   `runbook/00-preamble.md` carries no status census, and the flip moves neither its record count nor its next free
   number.
 - `runbook/PROGRESS.md` gains this entry's §2 row and a dated note in row 8h. The `s8h` stage file gains a dated note
@@ -6346,7 +6347,7 @@ not on a line this session writes."* This is that line, so D21-138's hold on Rec
 own decision 8, not under D21-105 item 1, so D21-138's reading of item 1 is not exercised. §8h.14's hand-on to `s8i`
 is met: *"Record B must be accepted before S-BIN spends (D21-42 19c)"*. `s8j`'s evidence check refuses while *"RT-57's
 record (ADR-…, s8h's Record B) is not accepted"*, and it no longer refuses on that ground once its evidence file names
-`0198`. Record A (ADR-0197) is untouched and stays `proposed` under its decision 13.
+`0198`. Record A (ADR-0197) is untouched and stays `proposed` under its decision 13 *(dated 2026-11-02, D21-171: ADR-0197 accepted)*.
 
 **Checkpoints.** Checkpoint 8h (2) asserts `status: (proposed|accepted)` for Record B, so it holds on both sides of
 the flip. No line of any fenced block under `runbook/` asserts ADR-0198 `proposed` (measured at the flip over 5 fenced
@@ -7398,7 +7399,7 @@ decision sentence moves.
 `rk_types::schema::judgement::REGISTRY` that decision 7 brought in keep their drafted values: judgement-bearing
 `yes` for `FindingSeverity`, `Confidence`, `ReproStatus`, `HypothesisStatus` and `DocsQuadrant`; `no` for
 `AdrStatus`, `ChangeType`, `ArchitectureLevel`, `CausalMethod`, `EstimateMethod` and `RolloutStrategy`. The rows
-cited from `s8g`'s entry and the rows struck to free `Text` are unchanged. **ADR-0197 stays `proposed`**: decision 13's
+cited from `s8g`'s entry and the rows struck to free `Text` are unchanged. **ADR-0197 stays `proposed`** *(dated 2026-11-02, D21-171: ADR-0197 accepted)*: decision 13's
 other condition, both `s8h` §8h.11 probes passed at `s8j`, is still owed, and the (g) flip is the operator's line at
 `s8j`'s Round E.
 
@@ -7425,7 +7426,7 @@ twelve items, each tagged. In short:
    is recorded in row 8i. **Owed:** that count (Checkpoint 8i's tree, or the entry commit's whole suite on the
    operator's box), recorded by a dated line, before Checkpoint 8j can pass.
 5. RT-57's record is ADR-0198, `accepted` (D21-139): the evidence file's line is `record-rt57 0198` (§8j.6, dated).
-6. ADR-0197 stays `proposed`; with decision 7's table signed on D21-156, the (g) flip waits only on probes 1 and 2.
+6. ADR-0197 stays `proposed` *(dated 2026-11-02, D21-171: ADR-0197 accepted)*; with decision 7's table signed on D21-156, the (g) flip waits only on probes 1 and 2.
 7. `s8`'s `S8_BIN` misses the point-free and qualified constructions D21-155 names: §8j.8 gains **A13**, applied with
    A1–A12 by S8J-D2.
 8. The fixture lanes stay `Text`-only (#80 open).
@@ -7564,7 +7565,7 @@ route)"*, `s8j`'s stage file); it takes no ruling of its own. Each record flips 
    commit's. It supersedes ADR-0170 decision 6 in part (its `sha`/`HEAD`-mismatch sentence), so ADR-0170's
    `superseded_by` now reads `["0179", "0203"]` and ADR-0170 stays `accepted` (ADR-0092).
 
-ADR-0197 stays `proposed`: its flip still waits on both `s8h` §8h.11 probes (D21-41 (g)).
+ADR-0197 stays `proposed` *(dated 2026-11-02, D21-171: ADR-0197 accepted)*: its flip still waits on both `s8h` §8h.11 probes (D21-41 (g)).
 
 ## D21-163 · Ryan's rulings: the six drafted expiry rows and C3's hold API signed, the failed-first-run procedure approved, AC-184's rebuild exclusions named
 
@@ -7777,3 +7778,66 @@ written. Each of its three dispatches (haiku planner, Sonnet investigator, Opus 
    `d21_170_home_on_chain_ignores_case_and_verbatim_prefix_on_windows`, covers the case and `\\?\` prefix branches.
    The fix was written before its test, so no red run is recorded for either.
 4. **No re-run of step 1a-2** (D21-40 decision 2). The next paid step on a tree carrying this fix is the first to show it.
+
+## D21-171 · The operator accepts ADR-0197 (`s8h`'s Record A): the (g) record flips after both live probes pass
+
+**Recorded 2026-11-02 by an agent session.** Ryan tapped "Accept" on a decision card in the project thread on
+2026-11-02 at 04:13Z. This entry records that answer as the operator's dated ledger line the record's flip waits on (D21-41 (g):
+*"The record is accepted only after two live probes pass, and those probes run after the fixture proofs."*; `s8j`'s
+run preparation: *"The flip is the operator's dated ledger line. Only the frontmatter, the README index cell and the
+census move."*); it takes no ruling of its own. The record flips `proposed → accepted` as drafted, its `date`
+unchanged; only its `status:` line moves, and no decision sentence moves.
+
+1. **The basis.** All three `s8h` probes passed over the frozen code `f6f5335` on 2026-11-01 (the operator's local
+   date), CLI 2.1.303, after the fixture proofs at `f6f5335`. Their launch records:
+   - probe 0, `live::live_denial_channel_preprobe`: `20261102T040650.833077700Z-probe.txt`;
+   - probe 1, `live::live_confinement_and_denial_probe`: `20261102T040750.011667400Z-probe.txt`;
+   - probe 2, `live::live_init_equality_probe`: `20261102T040901.511621900Z-probe.txt`.
+
+   Probes 1 and 2 are the two §8h.11 probes decision 13 names. The probes' raw frames are in corpus commit
+   `81421e09b78ac90c82fc3d13afe50ea0233e0b33`. That commit is on the corpus's `main` (parent `e1e90d1`); `CORPUS_PIN` is unmoved at `61f590e`
+   (O-9's route). Under `results/step-8j/probes-2026-11-01/`, its README lists each file's bytes and sha256, as
+   pasted by the operator 2026-11-02 and equal to the same files read under each `PROBE_DIR` before the copy
+   (s8h §8h.11: *"the corpus commit SHA and the frames' sha256, and the launch records' paths and sha256"*):
+
+   ```text
+   491 0bad60359cefdf24b55329ccc3f97ce9c2e79d63a3448445109c56f7693668da launches/20261102T040112.569853900Z-wrap.txt
+   500 9e2095dd4af317a87d49efb3880262cfac4626ce666c7534bf702dbec8cd5302 launches/20261102T040650.833077700Z-probe.txt
+   505 fc25748e41da68d841b0e63f84a70890513edd30bb540bb306edfda195ce040b launches/20261102T040750.011667400Z-probe.txt
+   496 9476333843b50fcede31ec77554d2e3d944dc176e9da7ae4c4b10b34ff59748c launches/20261102T040901.511621900Z-probe.txt
+   11699 5a7c5d63dd8fa25e58475e2b2961b69c9ea6e7b39eba6e40388a381670f7b300 probe0/probe0-denial-channel-preprobe.stdout.ndjson
+   46822 3cfe7090dbc4612d7b1367113da48720eeb455a7689fe392be1106ea7d40500d probe0/probe0-denial-channel-preprobe.txt
+   26988 e431b0fb81beccb13d2034b13218925090826e1aee79193e77c99877b62cc6f4 probe1/probe1-confinement-and-denial.stdout.ndjson
+   104573 de933ad63f02e51feddd5808d9d1a8bc809754624cf3a22f0c2eefa7026a4898 probe1/probe1-confinement-and-denial.txt
+   7606 873b2342401d08c742c50428cedbf2df5fa0cb1d8ea9685b591957eac2971f41 probe2-investigator/probe2-investigator.stdout.ndjson
+   32086 d33d6be4f6de856784ca78539bdec24395b932dd635cd3a210b8a50ec16ca7f6 probe2-investigator/probe2-investigator.txt
+   7940 0487ee2849aca2885e2a5e2dfc625d23439e3bdb7439cc2a6282da80cccd723e probe2-planner/probe2-planner.stdout.ndjson
+   33250 e9a9ad1ae5341cfd96d6a817d5a0b3e6c6784d7f882dfd36b6b21ca091a433b0 probe2-planner/probe2-planner.txt
+   5958 f7c580e54c80f63cfff9823834063923b8f73437b7b1b3cbff36269036107741 probe2-reviewer/probe2-reviewer.stdout.ndjson
+   26373 27ffdbb1873fef4934cec397decce6aaa0c62a67f8194eb685957705f6539820 probe2-reviewer/probe2-reviewer.txt
+   ```
+
+   The printed values: probe 0 read the denial on both channels and refused `NotIsolated{Env}`; probe 1 left the
+   outside file's sha256 unchanged with four denials on the guarded channels (the outside write under `%TEMP%`
+   among them), the inside edit landing, and D21-45's `.cargo` note; probe 2's three roles returned `Ok(probe-ok)`
+   with the reported model equal to the requested one (`claude-haiku-4-5-20251001`, `claude-sonnet-5`,
+   `claude-opus-5-5`), plugins `[]`, and memory files 91 before and after. Decision 13's other condition, decision 7's table signed enum by enum, was met on D21-156.
+2. **The back-links.** ADR-0197 supersedes ADR-0126 decision 1 in part (its `dispatch_completed` payload table gains
+   `observed_model` and, by D21-137, `settings_file { path, sha256 }`), so ADR-0126's `superseded_by` now reads
+   `["0197"]`. It supersedes ADR-0074 decision 1 in part (its finding shape gains `severity`), so ADR-0074's
+   `superseded_by` now reads `["0096", "0197"]`. Both supersessions are partial, and both records stay `accepted`
+   (ADR-0092). The README's two status cells and the Supersessions table's two rows move with them (decision 12:
+   *"The back-links on ADR-0126 and ADR-0074 are written in this record's flip commit, not before"*).
+3. **The evidence line.** The operator appends the `record-g 0197` line to `runbook/phase-1/s8j-evidence.txt`
+   on the operator's own machine. This entry does not write it.
+4. **Checkpoint 8h (2) gets a second state.** Checkpoint 8j (10) re-runs Checkpoint 8h whole (its `CHAIN` names
+   `s8h-cards-and-run-environment:CP8H`, `s8j` run preparation §8j.10). Step (2) asserted `status: proposed` for
+   Record A and failed on any back-link to it, so it would fail after this flip. The operator chose, on a second
+   decision card on 2026-11-02 at 04:23Z ("Two-state check"), to amend it by a dated edit: Record A passes either
+   `proposed` with neither `0126` nor `0074` back-linked to it, or `accepted` with both back-linked and a
+   `record-g 0197` line in the evidence file. The check is no weaker in the proposed state, and in the accepted state
+   it also asserts the flip commit wrote both back-links. Measured on a scratch copy, all five cases behave as stated
+   (s8h §8h.15's dated note under (2)).
+
+No record is at `proposed` after this flip (a `^status:` census over the 203 record files → accepted 199, superseded
+4, proposed 0), and every `supersedes:` link is reciprocated (99 of 99).
