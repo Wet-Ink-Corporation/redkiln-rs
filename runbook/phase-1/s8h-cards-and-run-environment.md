@@ -2492,7 +2492,12 @@ compiled fake `claude`, which cargo's toolchain provides.
     `probe_denials::` tests (§8h.11).
 - **(2) needs no FLIP_PENDING form.** It asserts `status: proposed` for Record A and `status: (proposed|accepted)` for
   Record B. No line of the block asserts `status: accepted` for this stage's own records, so the FLIP_PENDING form
-  (Checkpoint 8f (2), dated 2026-09-29) is not needed and is not added.
+  (Checkpoint 8f (2), dated 2026-09-29) is not needed and is not added. *(dated 2026-11-02, D21-171: (2) now has two
+  states, because Checkpoint 8j (10) re-runs this block after Record A's flip. Record A is either `proposed` with no
+  `superseded_by` back-link to it on `0126` or `0074`, or `accepted` with both back-links and a `record-g 0197` line in
+  `runbook/phase-1/s8j-evidence.txt`; anything else fails. The operator chose this form on a decision card on
+  2026-11-02. Measured on a scratch copy: proposed and unlinked passes, proposed with a link fails, accepted without
+  `record-g` fails, accepted with one back-link missing fails, and the flip tree with `record-g` passes.)*
 - **(10) passed in isolation** (§8h.7's dated note).
 - **The replayed checkpoints' guard lines.** The read-only, context-free single-line guards of the checkpoints that
   (13) replays (8g, 5, 7b, 7b-ii, 7d and 8b) were run one by one on the main checkout, from
@@ -2608,10 +2613,17 @@ for cand in ./target/debug/redkiln ./target/debug/redkiln.exe; do [ -f "$cand" ]
 [ -n "$RK" ] || { echo "FAIL: the build succeeded and no redkiln binary exists"; exit 1; }
 nd_check "(1) build" || exit 1
 
-# ---- (2) THE TWO RECORDS: one file each, the ADR-0164 form, Record A proposed and not yet back-linked.
+# ---- (2) THE TWO RECORDS: one file each, the ADR-0164 form, Record A proposed and not yet back-linked, or accepted,
+#      back-linked and carrying the operator's record-g line (dated 2026-11-02, D21-171: the two-state check, so that
+#      Checkpoint 8j's chain re-run of this block passes after the (g) flip).
 fa=$(ls references/adr/"$REC_A"-*.md 2>/dev/null); fb=$(ls references/adr/"$REC_B"-*.md 2>/dev/null)
 [ "$(printf '%s\n' "$fa" | grep -c .)" -eq 1 ] && [ "$(printf '%s\n' "$fb" | grep -c .)" -eq 1 ] || { echo "FAIL: expected exactly one file per record id"; exit 1; }
-grep -qxF 'status: proposed' "$fa" || { echo "FAIL: Record A must be proposed until both s8j probes pass (D21-41 (g))"; exit 1; }
+if grep -qxF 'status: proposed' "$fa"; then a_state=proposed
+elif grep -qxF 'status: accepted' "$fa"; then
+  ev=runbook/phase-1/s8j-evidence.txt
+  grep -qxF "record-g $REC_A" "$ev" || { echo "FAIL: Record A is accepted and $ev carries no 'record-g $REC_A' line (D21-41 (g), D21-171)"; exit 1; }
+  a_state=accepted
+else echo "FAIL: Record A must be proposed until both s8j probes pass, then accepted (D21-41 (g))"; exit 1; fi
 grep -qxE 'status: (proposed|accepted)' "$fb" || { echo "FAIL: Record B carries no valid status"; exit 1; }
 for f in "$fa" "$fb"; do
   [ "$(grep -c '^### Option — ' "$f")" -ge 2 ] || { echo "FAIL: $f lacks ADR-0085 option headings (D21-42 24a)"; exit 1; }
@@ -2624,7 +2636,9 @@ for s in $A_SUPERSEDES; do printf '%s\n' "$sup" | grep -qF "\"$s\"" || { echo "F
 for s in $A_SUPERSEDES; do
   sf=$(ls references/adr/"$s"-*.md 2>/dev/null)
   [ "$(printf '%s\n' "$sf" | grep -c .)" -eq 1 ] || { echo "FAIL: expected exactly one file for superseded ADR-$s"; exit 1; }
-  if grep -m1 '^superseded_by:' "$sf" | grep -qF "\"$REC_A\""; then echo "FAIL: ADR-$s is back-linked to a PROPOSED record — the link moves in the flip commit (ADR-0092 cl.2.1)"; exit 1; fi
+  if grep -m1 '^superseded_by:' "$sf" | grep -qF "\"$REC_A\""; then linked=yes; else linked=no; fi
+  [ "$a_state" = proposed ] && [ "$linked" = yes ] && { echo "FAIL: ADR-$s is back-linked to a PROPOSED record — the link moves in the flip commit (ADR-0092 cl.2.1)"; exit 1; }
+  [ "$a_state" = accepted ] && [ "$linked" = no ] && { echo "FAIL: ADR-$s lacks its back-link to the accepted Record A — the flip commit writes it (ADR-0092 cl.2.1, D21-171)"; exit 1; }
 done
 
 # ---- (3)-(6) THE NAMED TESTS, per crate: each `... ok` and an exact count (new + the regression names §8h.12 keeps).
