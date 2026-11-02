@@ -36,3 +36,6 @@ probe live::live_denial_channel_preprobe 2.1.303 pass 2026-11-01 20261102T040650
 probe live::live_confinement_and_denial_probe 2.1.303 pass 2026-11-01 20261102T040750.011667400Z-probe.txt
 probe live::live_init_equality_probe 2.1.303 pass 2026-11-01 20261102T040901.511621900Z-probe.txt
 record-g 0197
+ci 41394286434 1810fddc5c96a58bb6fc069cc7bcb0ff04003820 2026-11-02
+fix-item rk-fix-doctor-margin 1810fddc5c96a58bb6fc069cc7bcb0ff04003820
+story-item rk-story-harden-spike-pack 1810fddc5c96a58bb6fc069cc7bcb0ff04003820
