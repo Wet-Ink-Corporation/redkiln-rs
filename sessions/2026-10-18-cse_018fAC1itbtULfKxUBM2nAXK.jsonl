@@ -532,3 +532,5 @@
 {"t":"2026-11-02T04:45:47.645Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"session-start","source":"resume"}
 {"t":"2026-11-02T04:45:47.668Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-lost","pid":6680,"reason":"interrupted","ranMs":150159,"foundMs":354030,"timeoutMs":1200000,"heartbeat":true,"progress":true,"step":"test","steps":{"fmt":2025,"scan":827,"manifests":137,"clippy":2559}}
 {"t":"2026-11-02T04:46:00.093Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-11-02T04:46:04.657Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"gate-start","pid":417,"timeoutMs":1200000}
+{"t":"2026-11-02T04:51:17.748Z","sid":"080afb48-86aa-5313-8ab8-967958b9d4d4","ccr":"cse_018fAC1itbtULfKxUBM2nAXK","agent":"main","event":"stop-blocked","reason":"gate","fp":"3f9ce72df4b3fc6c","ms":313087,"cached":false,"pid":417,"steps":{"fmt":3251,"scan":1095,"manifests":176,"clippy":4046,"test":304051}}
