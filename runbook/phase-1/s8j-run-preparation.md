@@ -2602,6 +2602,16 @@ out=$(git clone -q --shared . "$p9c" 2>&1); rc=$?
 printf '\n# s8j Checkpoint 8j (3b): a byte perturbation in a throwaway clone, never committed\n' >> "$p9c/spikes/p9/packs/spike.toml" || { echo "FAIL: could not perturb the clone's spike.toml"; exit 1; }
 git -C "$p9c" diff --quiet -- spikes/p9/packs/spike.toml; rc=$?
 [ "$rc" -eq 1 ] || { echo "FAIL: the perturbation did not change spike.toml's bytes in the clone (rc=$rc) — the control is vacuous"; exit 1; }
+# *(dated 2026-11-06, s8j stage close, D21-172)* The clone carries no node_modules (git-ignored), and s8c's
+# rk-adapter-toolchain-rust::verbs::setup_installs_each_declared_node_project_offline (5561afa, after this step was
+# drafted) asserts the Node fixture is installed at the repository root. Its PREFLIGHT failed here on 2026-11-06 for that
+# reason, not for V2. So the clone gets the fixture the way ci.yml and Checkpoint 8c do: the setup verb's own frozen,
+# offline install, which reads the lockfile and leaves spike.toml as perturbed.
+nfx=crates/rk-adapter-toolchain-node/tests/fixtures/project
+out=$(cd "$p9c" && pnpm install --frozen-lockfile --prefer-offline --dir "$nfx" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && test -e "$p9c/$nfx/node_modules/.bin/vitest" || { echo "FAIL: the clone's Node fixture did not install (rc=$rc) — (3b) would fail for a reason that is not V2:"; printf '%s\n' "$out" | tail -10; exit 1; }
+git -C "$p9c" diff --quiet -- spikes/p9/packs/spike.toml; rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: spike.toml's perturbation did not survive the fixture install (rc=$rc)"; exit 1; }
 p9t="$PWD/target/s8j-repro-target"
 out=$(cd "$p9c" && wrapped env CARGO_TARGET_DIR="$p9t" cargo test -p rk-kernel -p rk-adapter-sqlite -p rk-adapter-toolchain-rust --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL (V2): a test reddened on a byte change to spike.toml — it reads the p9 WORKING tree, not its pinned commit (D21-47 V2; s8b), and the story lane's verify would go red on it:"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|test result:' | tail -20; exit 1; }
