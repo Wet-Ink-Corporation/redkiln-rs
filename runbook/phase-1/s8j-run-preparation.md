@@ -2624,7 +2624,9 @@ nd_check "(3b)" || exit 1
 # ---- private function a child module can see.
 rmeta=".redkiln/intake/$fx.repro.toml"; rsrc=".redkiln/intake/$fx.repro.rs"
 test -s "$rmeta" && test -s "$rsrc" || { echo "FAIL: $fx's repro pair is absent"; exit 1; }
-rp='import sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); print(d.get("kind","")); print(d["crate"]); print(d["module"]); print(d["test"]); print(d["expect"]); print(d.get("file","-"))'
+# *(dated 2026-11-07, s8j stage close)* LF on Windows: run 2 read kind as 'it<CR>' here (Python's text-mode stdout
+# writes CRLF, and read -r keeps the CR), so rp and (8)'s nm reconfigure stdout as (6)'s readers do.
+rp='import sys,tomllib; sys.stdout.reconfigure(newline="\n"); d=tomllib.load(open(sys.argv[1],"rb")); print(d.get("kind","")); print(d["crate"]); print(d["module"]); print(d["test"]); print(d["expect"]); print(d.get("file","-"))'
 meta=$(python -c "$rp" "$rmeta"); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: $rmeta did not parse (rc=$rc)"; exit 1; }
 { read -r rkind; read -r rcrate; read -r rmod; read -r rtest; read -r rexpect; read -r rfile; } <<< "$meta"
@@ -2946,6 +2948,7 @@ v=$(python -c "$rnchk" "$tdir/run-green.md" 1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the run-site checker refused a checked launcher run (rc=$rc: $v) — it cannot pass"; exit 1; }
 # Every test name s8 selects through a *_TESTS variable exists.
 nm='import re,sys
+sys.stdout.reconfigure(newline="\n")  # LF on Windows (dated 2026-11-07): a CR would ride into each name
 t=open(sys.argv[1],encoding="utf-8").read()
 for v in re.findall(r"^[A-Z_]*TESTS=\"([^\"]*)\"",t,re.M):
     for n in v.split(): print(n)'
