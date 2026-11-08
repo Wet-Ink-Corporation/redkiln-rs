@@ -594,3 +594,14 @@ tools/live-run.sh`). D14 (the story item's `novelty` facet) is outside this plan
   `S8J_MUTANTS` entry to `R_TESTS`, so the kernel mutant sits in `KERNEL_MUTANTS`, outside `S8J_MUTANTS` (D9's
   fallback). Records: ADR-0204 (proposed), D21-174, the s8 and s8j amendments, PROGRESS row 8, charters, intake
   comments.
+- 2026-11-08 (implementer): D21-174 item 4, commit bce6dbd. Ryan's ruling (08:11Z): root-cause@6 opens a gate, no
+  loop-back. The `on_false` grammar has no gate form, so policy continues and a gate step `not-reproduced` (question
+  `repro.cannot-reproduce`, when `confirm.outputs.failed == 0`) opens on its negation; hypothesise drops
+  `findings = ${adversary.outputs?}`. The three tests left red above were re-pinned by dated lines, as approved: d2
+  loop rows 5 -> 4 (the crafted must-fail row restores the old loop-back in its copy), ac527 93 -> 94, ac303 (4, 16) ->
+  (4, 15), and forward_ref_lint's back-edge list loses root-cause (census 73/61/3/9 -> 72/59/3/10).
+- 2026-11-08 (implementer): independent-review findings F1-F8. F1 `check_selection_token` refuses a `-`-led token
+  (red: `--include-ignored` accepted); F2 the stopped `run:` line reads "the run did not write its record"; F3 over-cap
+  and directory targets pinned; F4 `run_subjects` expects its git log; F6 `run_verb`'s doc; F7 `writeln!` for the
+  class line, `stopped_only` returns `Exit`; F8 a target holding the block anywhere is already placed (red: refused as
+  a duplicate `fn repro_red(`).
