@@ -140,3 +140,4 @@
 {"t":"2026-11-08T20:27:39.697Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"session-start","source":"compact"}
 {"t":"2026-11-08T20:29:19.903Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":613,"timeoutMs":1200000}
 {"t":"2026-11-08T20:36:50.576Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"6684b7e71d43ba1c","ms":450669,"cached":false,"pid":613,"steps":{"fmt":11419,"scan":657,"manifests":104,"clippy":15795,"test":420902}}
+{"t":"2026-11-08T20:37:20.891Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-declared","status":"WIP"}
