@@ -1457,28 +1457,11 @@ pub fn bind_emit(env: &Env<'_>, scope: &Scope, step: &Step) -> Result<Option<Emi
 // Test selection, the resolver side (D21-42 4c; R2 decision 9).
 // =================================================================================================
 
-/// The selection a `run` repro names: the tokens of `command` after a `--` separator.
-///
-/// **The ONE selection parser** (`s8d` §8d.3): moved here from `rk_cli::review_pass`, which
-/// re-exports it with `pub use` so its path and its tests are unchanged. `rk-kernel` cannot depend
-/// on `rk-cli`, and a second parser in the kernel is forbidden (ADR-0173).
-///
-/// 🛑 **`None` rather than a guess, and `None` rather than an empty selection.** `Repro.command` is
-/// a shell string and `Toolchain::test` takes a selection, and no record maps one to the other; the
-/// narrowest rule that makes AC-288's four cells computable from what a `Repro` actually carries is
-/// the explicit `--` filter. A command without one is refused into `Unverifiable { cannot_run }`,
-/// which AC-287 forbids from blocking — and an empty selection is refused outright, because
-/// `ac332_empty_selection_is_never_green` is the standing finding that an empty suite is not a pass.
-#[must_use]
-pub fn selection_of(command: &str) -> Option<Vec<String>> {
-    let (_, tail) = command.split_once(" -- ")?;
-    let selection: Vec<String> = tail
-        .split_whitespace()
-        .map(str::to_owned)
-        .filter(|t| !t.is_empty())
-        .collect();
-    (!selection.is_empty()).then_some(selection)
-}
+// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 6, proposed.)* The one parser moved
+// into its own module, `selection`, and refuses more; its path here is unchanged.
+mod selection;
+
+pub use selection::{SelectionRefusal, check_selection_token, parse_selection, selection_of};
 
 /// What a `toolchain:test` step's `inputs.selection` resolved to, before it becomes a port
 /// `Selection` (the kernel maps it; `rk-ports` owns the type).
@@ -1607,12 +1590,15 @@ pub fn selection_plan(
         Err(e) => return Err(refuse(text, e.why)),
     }
     let tests = match inputs.get("selection") {
-        Some(Json::String(command)) => selection_of(command).ok_or_else(|| {
+        // *(dated 2026-11-08, ADR-0204 decision 6.)* The refusal names its variant, so the
+        // 2026-11-08 prose reads `ShellSyntax` rather than reaching `--list`.
+        Some(Json::String(command)) => parse_selection(command).map_err(|why| {
             refuse(
                 text,
                 format!(
-                    "it resolved to `{command}`, which names no `--` test filter, so it selects no \
-                     test and is never run as an empty or whole-suite selection"
+                    "it resolved to `{command}`, which is not a plain command with a `--` test \
+                     filter ({why}), so it selects no test and is never run as an empty or \
+                     whole-suite selection"
                 ),
             )
         })?,
@@ -1629,6 +1615,14 @@ pub fn selection_plan(
                     "it resolved to a list that is empty or not all test names, and an empty \
                      selection is never run (ADR-0148)"
                         .to_owned(),
+                ));
+            }
+            // *(dated 2026-11-08, ADR-0204 decision 6; Decision D5.)* Each element is one plain
+            // name: a bad one refuses the run instead of looping on an `Empty` red check.
+            if let Some(why) = names.iter().find_map(|n| check_selection_token(n).err()) {
+                return Err(refuse(
+                    text,
+                    format!("it resolved to a list holding a name that is not plain ({why})"),
                 ));
             }
             names
