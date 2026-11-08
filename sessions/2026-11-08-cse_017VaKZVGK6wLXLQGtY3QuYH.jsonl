@@ -194,3 +194,7 @@
 {"t":"2026-11-08T23:51:15.438Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"session-start","source":"resume"}
 {"t":"2026-11-08T23:51:47.263Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"temper:rust-implementer","event":"subagent-start","type":"temper:rust-implementer"}
 {"t":"2026-11-08T23:52:03.188Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-declared","status":"WIP"}
+{"t":"2026-11-08T23:52:51.004Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":940,"timeoutMs":1200000}
+{"t":"2026-11-08T23:53:36.897Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"temper:rust-implementer","event":"deny-shell-write","via":"shell-reader","cmd":"python3 - <<…"}
+{"t":"2026-11-08T23:53:40.444Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"temper:rust-implementer","event":"ask","file":"crates/rk-kernel/tests/it/selection_feeds.rs","count":1}
+{"t":"2026-11-08T23:58:33.024Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"42daf52ae8b97ab4","ms":342018,"cached":false,"pid":940,"steps":{"fmt":2456,"scan":440,"manifests":105,"clippy":2733,"test":335990}}
