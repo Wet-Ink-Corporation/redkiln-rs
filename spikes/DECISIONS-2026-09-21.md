@@ -1,8 +1,10 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-175), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-176), and what they license
 
 *(Title moved 2026-11-08, D21-174: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-173)"**; `D21-174` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 173 before the append, the last `D21-173`; 174 after.)*
 
 *(Title moved 2026-11-08, D21-175: it read **"… (D21-1 … D21-174)"**; `D21-175` is appended with this move.)*
+
+*(Title moved 2026-11-08, D21-176: it read **"… (D21-1 … D21-175)"**; `D21-176` is appended with this move.)*
 
 *(Title moved 2026-11-08, D21-173: it read **"2026-09-21 … 2026-11-02 (D21-1 … D21-171)"**; `D21-172` and `D21-173` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 171 before the append, the last `D21-171`; 173 after.)*
 
@@ -8000,3 +8002,20 @@ exists for is unchanged: a lane whose latest mark is `closed`, or that has none,
 with two `Story:` commits under a `Gate:` tip read `''` under the old line and `analysis` under the new one. Only
 `runbook/phase-1/s8-exit-criterion.md`'s (3) kill block changes. `runbook/` is not a code path, so the frozen sha
 `a6d2f76` and the prespend checks are unmoved. The superseded line is kept in s8j §8j.8 A3's record as it stood.
+
+## D21-176 · `s8` (3) kill: the capture is written before the kill, and a partial taskkill refusal is not a live run
+
+*(dated 2026-11-08, agent; proposed to the operator on a card, which decides whether the first kill stands)*
+
+The (3) kill block ran on `rk-fix-doctor-margin-2` from `9c2cd17`. The run entered specification at `3e00278` about
+6 s in, the block took its `explain` capture, and `taskkill //T //F` killed the launcher's tree. One child,
+PID 9988, refused with "The operation attempted is not supported", so taskkill exited non-zero, and the block's
+FAIL fired **before** the line that writes `target/s8-cp/s8-3-pre.txt`. The capture was lost. A read-only check
+afterwards found PID 9988 gone, no run live and the ref still at `3e00278`. `s8-3-killed.out` ends at
+`advanced analysis -> specification`.
+
+The block now writes the capture before the kill. On a non-zero taskkill it fails only if the launcher or a
+`redkiln.exe` is still live; otherwise it prints a note and goes on. If the operator lets the first kill stand,
+the capture is re-taken by `explain` with the ref unmoved. It holds the same committed steps and the same
+`output_digest`s the lost one held, and it is marked with a provenance file beside it. `runbook/` is not a code
+path, so the frozen sha `a6d2f76` is unmoved.

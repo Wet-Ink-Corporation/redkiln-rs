@@ -455,10 +455,19 @@ kill -0 "$bg" 2>/dev/null || { echo "FAIL: the run exited after ${n}s, before it
 wp=$(cat "/proc/$bg/winpid") || { echo "FAIL: no Windows PID for the launcher (pid $bg) — stop it by hand"; exit 1; }
 [ "$(git rev-parse "rk-run/$ITEM")" != "$pre_tip" ] || { taskkill //T //F //PID "$wp" >/dev/null 2>&1; echo "FAIL: no step committed within ${n}s (the bound fired) — the run was killed before any step; stop and report"; exit 1; }
 pre=$(./target/debug/redkiln explain "$ITEM") || { taskkill //T //F //PID "$wp" >/dev/null 2>&1; echo "FAIL: pre-kill explain exited non-zero (the run was killed)"; exit 1; }
-taskkill //T //F //PID "$wp" || { echo "FAIL: taskkill on the launcher's tree ($wp) failed — the run may still be live; stop it by hand"; exit 1; }
+# AMENDED 2026-11-08 (D21-176): the capture is written BEFORE the kill, and a non-zero taskkill is judged by whether
+# the tree is still live. taskkill //T exits non-zero when ONE child refuses ("The operation attempted is not
+# supported") even though the launcher and the rest die; on rk-fix-doctor-margin-2 at 3e00278 that FAIL fired before
+# the capture's printf and lost it, while the refusing PID was already gone [measured 2026-11-08].
+test -n "$pre" || { taskkill //T //F //PID "$wp" >/dev/null 2>&1; echo "FAIL: empty pre-kill capture — two empty outputs compare equal (the run was killed)"; exit 1; }
+printf '%s\n' "$pre" > "$tdir/s8-3-pre.txt" || { taskkill //T //F //PID "$wp" >/dev/null 2>&1; echo "FAIL: cannot write the pre-kill capture (the run was killed)"; exit 1; }
+if ! taskkill //T //F //PID "$wp"; then
+  sleep 2
+  kill -0 "$bg" 2>/dev/null && { echo "FAIL: taskkill on the launcher's tree ($wp) failed and the launcher is still live — stop it by hand"; exit 1; }
+  if tasklist | grep -qi '^redkiln\.exe'; then echo "FAIL: taskkill reported a refusal and a redkiln.exe is still live — stop it by hand"; exit 1; fi
+  echo "note: taskkill reported a refusal, but the launcher and every redkiln.exe are gone (D21-176)"
+fi
 wait "$bg"
-test -n "$pre" || { echo "FAIL: empty pre-kill capture — two empty outputs compare equal"; exit 1; }
-printf '%s\n' "$pre" > "$tdir/s8-3-pre.txt" || { echo "FAIL: cannot write the pre-kill capture"; exit 1; }
 echo "(3) killed mid-graph after ${n}s at $(git rev-parse --short "rk-run/$ITEM"); run (3)'s resume block with its own go-ahead"
 ```
 
