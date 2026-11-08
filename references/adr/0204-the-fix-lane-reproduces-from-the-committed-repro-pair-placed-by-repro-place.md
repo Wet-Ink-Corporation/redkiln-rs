@@ -90,7 +90,7 @@ outside the project root or not a regular file, refuses a file that already defi
 `red` check (`report.failed > 0 and report.passed == 0`); the investigator's `attempt` judges the red run, with no
 repeat and no escalate; `triage-gate` opens when the run is not red or the agent says not reproduced; `emit` composes
 `ReproCase` with `command = "${place.outputs.command}"`. `root-cause@6`: `confirm` selects
-`artifact:ReproCase.command`, and `emit` composes `RootCause` with `discriminating_test = "artifact:ReproCase.command"`.
+`artifact:ReproCase.command`, and `emit` composes `RootCause` with `discriminating_test = "artifact:ReproCase.command"`; *(added 2026-11-08, D21-174 item 4)* `policy` continues and the `not-reproduced` gate (`repro.cannot-reproduce`) opens when the repro did not fail.
 Verify's `confirmation-test@2` is unchanged: it now re-runs the placed test.
 
 **5. The commit.** `repro_place` is side-effecting, so the placed test is committed on `rk-run/<item>` at `place`'s
@@ -130,6 +130,10 @@ an artifact kind and not a root, it is read from the frozen commit's bytes, and 
   moved (`ac527_empty_set_terminal_condition` 93 → 94 check steps, `review::ac303_confirm_step_survives_escalation`
   (4, 16) → (4, 15)). The plan did not settle the policy's shape; it is the operator's decision, and this record
   is amended when it is taken.
+  *(Answered 2026-11-08, D21-174 item 4: Ryan chose "Open a gate (no loop-back)".)* `policy` is `on_false =
+  "continue"` (the `on_false` grammar has no gate form), and a gate step `not-reproduced`, question
+  `repro.cannot-reproduce`, opens when `${confirm.outputs.failed} == 0`. `hypothesise` no longer reads
+  `${adversary.outputs?}`. The d2 lint passes on its rule; the moved counts are re-pinned by dated lines.
 
 ### Owed issue (D13)
 

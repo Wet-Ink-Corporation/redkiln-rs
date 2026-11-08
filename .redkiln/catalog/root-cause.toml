@@ -21,7 +21,7 @@ rationale    = "SRE ch.12 hypothetico-deductive loop, confirmed by a discriminat
 id      = "hypothesise"
 kind    = "agent"
 role    = "investigator"
-inputs  = { repro = "artifact:ReproCase", telemetry = "toolchain:logs?", hint = "${no-hypothesis.answer?}", findings = "${adversary.outputs?}" }
+inputs  = { repro = "artifact:ReproCase", telemetry = "toolchain:logs?", hint = "${no-hypothesis.answer?}" }
 outputs = "value:HypothesisLog"
 timeout_secs = 900
 retry   = { max = 2 }
@@ -57,12 +57,23 @@ outputs = "value:Findings"
 timeout_secs = 1200
 retry   = { max = 1 }
 
+# Dated 2026-11-08 (Ryan, D21-174 item 4; ADR-0204): `policy` no longer loops back to `hypothesise`, because `confirm`
+# re-runs the committed repro, which no new hypothesis can change. The catalog's `on_false` grammar has no gate form
+# (continue, fail, deviate, `{ to, max }`), so the check continues and `not-reproduced` opens the gate on its negation,
+# the confirmation-test pattern. Its question is `repro.cannot-reproduce`: the committed repro did not fail here.
 [[step]]
 id      = "policy"
 kind    = "check"
 inputs  = { report = "${confirm.outputs}", findings = "${adversary.outputs?}" }
 expr    = "report.failed > 0"
-on_false = { to = "hypothesise", max = 2 }
+on_false = "continue"
+
+[[step]]
+id      = "not-reproduced"
+kind    = "gate"
+question = "repro.cannot-reproduce"
+inputs  = { report = "${confirm.outputs}", log = "${hypothesise.outputs}" }
+when    = "${confirm.outputs.failed} == 0"
 
 [[step]]
 id      = "signoff"
@@ -75,4 +86,4 @@ inputs  = { summary = "${hypothesise.outputs.summary}", findings = "${adversary.
 id      = "emit"
 kind    = "emit"
 artifacts = { RootCause = { cause = "${hypothesise.outputs.root_cause.cause}", contributing_factors = "${hypothesise.outputs.root_cause.contributing_factors}", confidence = "${hypothesise.outputs.root_cause.confidence}", summary = "${hypothesise.outputs.root_cause.summary}", discriminating_test = "artifact:ReproCase.command", rationale = "${hypothesise.outputs.root_cause.rationale}" } }   # composing emit (§9c.34): `discriminating_test` is the committed repro's command, never an agent's
-evidence  = ["${confirm}", "${adversary?}", "${signoff?}"]
+evidence  = ["${confirm}", "${adversary?}", "${not-reproduced?}", "${signoff?}"]

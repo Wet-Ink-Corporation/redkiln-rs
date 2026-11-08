@@ -7930,6 +7930,24 @@ wrote test files, which no real investigator dispatch can do.
    `review::ac303_confirm_step_survives_escalation` ((4, 16) → (4, 15)) moved with the catalog. Their expectations are
    not re-pinned here. The policy's shape is the operator's to decide, and this entry is amended when it is.
 
+   *(Answered 2026-11-08, Ryan's decision card, 08:11Z: "Open a gate (no loop-back)".)* `policy.on_false` opens a
+   gate for the operator instead of looping back. The catalog's `on_false` grammar is closed (`continue`, `fail`,
+   `{ to = "deviate" }`, `{ to, max }`; `rk_kernel::predicate::classify_on_false`), with no gate form, so the
+   fallback is taken: `policy` is `on_false = "continue"` and a new gate step `not-reproduced` opens on the check's
+   negation (`when "${confirm.outputs.failed} == 0"`), the pattern `confirmation-test`'s `fixed`/`not-fixed` already
+   uses. Its question is the existing `repro.cannot-reproduce`, not `root-cause.no-hypothesis`: the condition is that
+   the committed repro did not fail at root-cause's confirm, which is a failure to reproduce (options
+   `supply-info`, `close-cannot-reproduce`, `proceed-without-repro`), while `no-hypothesis` asks about a hypothesis
+   loop budget this step no longer has. No new question, registry row or `gate_expiry` row: both packs already
+   carry `repro.cannot-reproduce`. `hypothesise` drops `findings = "${adversary.outputs?}"`, which only the
+   loop-back could bind (the forward-ref lint refuses it unlicensed without one). The d2 lint passes on its rule:
+   `root-cause`'s row has no loop, so it reads no quantity a loop must vary. Re-pinned by dated lines, as Ryan
+   accepted: d2's loop rows 5 → 4 (its crafted must-fail row restores the old loop-back in its copy), ac527 check
+   steps 93 → 94, ac303 (4, 16) → (4, 15), and `forward_ref_lint`'s adversary back-edge list loses `root-cause`
+   (census `total=73 letter=61 repeat=3 escalate=9` → `total=72 letter=59 repeat=3 escalate=10`, unpinned). With
+   the same card Ryan accepted `run`'s stderr line naming a failed step's class, `M-repro-pair-ignored` on the
+   emit's `command`, and `M-selection-shell-accepted` under `--kernel`, outside `S8J_MUTANTS`.
+
 The records are ADR-0204 (proposed), `.redkiln/CHANGELOG.md`'s `minimal-repro@2` and `root-cause@6` rows, dated
 amendments to `runbook/phase-1/s8-exit-criterion.md` and `runbook/phase-1/s8j-run-preparation.md`, and
 `runbook/PROGRESS.md` row 8. No evidence line is written by this route: `runbook/phase-1/s8j-evidence.txt` is the

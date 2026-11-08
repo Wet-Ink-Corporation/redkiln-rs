@@ -600,6 +600,10 @@ fn d2_severity_only_predicates_load() {
 /// proposed.)* Now **93** [measured 2026-09-29 from inside this binary: `check_steps_walked: 93`,
 /// `refused: 0`, `indeterminate: 0`]: `smoke-test@2` gains its `passing` check (`smoke.status ==
 /// 'passing'`), which reads no `findings`. Was 92.
+/// *(dated 2026-11-08, s8 repro-pair route; D21-174, D9 re-pin accepted by Ryan; ADR-0204.)* Now
+/// **94** [measured 2026-11-08 from inside this binary: `check_steps_walked: 94`, `refused: 0`,
+/// `indeterminate: 0`]: `minimal-repro@2` gains its `red` check (`report.failed > 0 and
+/// report.passed == 0`), which reads no `findings`. Was 93.
 #[test]
 fn ac527_empty_set_terminal_condition() {
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
@@ -611,7 +615,7 @@ fn ac527_empty_set_terminal_condition() {
         "the count walked comes first: a rule over zero check steps refuses nothing — {report:?}"
     );
     assert_eq!(
-        report.check_steps_walked, 93,
+        report.check_steps_walked, 94,
         "every check step carrying an `expr` in `.redkiln/catalog` is walked: {report:?}"
     );
     assert_eq!(
@@ -1021,22 +1025,35 @@ fn d2_rewritten_rows_read_a_quantity_the_loop_varies() {
     }
     // *(dated 2026-09-26, D21-59)* Was 6, "six of the seven": `threat-model`'s row left the shipped
     // set [measured 2026-09-26: `left: 5` from this assert, before the re-pin].
+    // *(dated 2026-11-08, Ryan's ruling, D21-174 item 4; ADR-0204)* Was 5, "five of the six":
+    // `root-cause@6`'s `policy` continues, and its `not-reproduced` gate opens instead of the
+    // loop-back, which re-ran `hypothesise` against a repro no hypothesis can change [measured
+    // 2026-11-08: `left: 4` from this assert, before the re-pin].
     assert_eq!(
-        loop_rows, 5,
-        "five of the six rows loop back; adversarial-review continues"
+        loop_rows, 4,
+        "four of the six rows loop back; adversarial-review and root-cause continue"
     );
     // The crafted must-fail row: `root-cause`'s policy, reading `limit` only inside a body.
     let path = workspace_root()
         .join(SHIPPED_CATALOG)
         .join("root-cause.toml");
     let src = std::fs::read_to_string(&path).expect("root-cause.toml is readable");
-    let (old_in, old_expr) = (
+    // *(dated 2026-11-08, D21-174 item 4)* `root-cause@6`'s policy continues, so the crafted row also
+    // puts its old loop-back back (`old_on_false`); without one, `loop_row_check` reads no loop and
+    // the must-fail row would pass for the wrong reason. `limit` sorts before `report`, so the
+    // refusal still names the body's binding first.
+    let (old_in, old_expr, old_on_false) = (
         r#"inputs  = { report = "${confirm.outputs}", findings = "${adversary.outputs?}" }"#,
         r#"expr    = "report.failed > 0""#,
+        r#"on_false = "continue""#,
     );
     assert_eq!(
-        (src.matches(old_in).count(), src.matches(old_expr).count()),
-        (1, 1),
+        (
+            src.matches(old_in).count(),
+            src.matches(old_expr).count(),
+            src.matches(old_on_false).count()
+        ),
+        (1, 1, 1),
         "premise: root-cause's policy lines are the ones this swap edits"
     );
     let crafted = src
@@ -1047,7 +1064,8 @@ fn d2_rewritten_rows_read_a_quantity_the_loop_varies() {
         .replace(
             old_expr,
             r#"expr    = "report.failed > 0 and report.cases.none(limit.level > 0)""#,
-        );
+        )
+        .replace(old_on_false, r#"on_false = { to = "hypothesise", max = 2 }"#);
     let t = toml_subset::parse(&crafted).expect("the crafted row parses");
     let err = loop_row_check("crafted root-cause", &t, "policy").expect_err(
         "a body that reads an `artifact:` binding reads a quantity the loop does not vary",
