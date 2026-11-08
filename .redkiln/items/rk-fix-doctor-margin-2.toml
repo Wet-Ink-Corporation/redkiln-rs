@@ -1,0 +1,32 @@
+# Step 8 criterion (1), AC-473: the fix-lane self-hosting item, minted again for the same real defect.
+# *(dated 2026-11-08, s8's route back after a failed first real run: runbook/phase-1/s8-exit-criterion.md,
+# "After a failed first real run of the fix item", step 4; D21-163; D21-174 item 5.)*
+#
+# The first item, `rk-fix-doctor-margin`, stopped at relaunch 3 (rc 14, D21-174). Its run is to be archived at
+# `refs/archive/s8-failed-2026-11-08/rk-fix-doctor-margin` (D21-163 steps 2-3, the operator's) and never resumed. This item is the same defect under a
+# new id, so the old run's store rows and archived `Story:` marks, which are keyed to the old id, do not touch this
+# run: `rk-cli` `doctor::rules::margin` (`RK-D-MARGIN`). A pack with no `[margins]`, with a window missing, or with a
+# non-integer margin produces no finding, while the run's loader refuses the same pack. AC-377 asks that `redkiln
+# doctor` reach the same verdict as the load. 🛑 Its `reserved-fix-item:` ledger line is the operator's, and it
+# forbids fixing the defect by hand or in any stage before `s8`: the lane fixes it. Its BugReport and repro pair are
+# `.redkiln/intake/rk-fix-doctor-margin-2.*`, copies of the first item's.
+#
+# The fields are the first item's (s8j section 8j.5). `kind = "bug"` derives the lane as `fix` -> pack
+# `bug-standard`. `hold_before = "specification"` is the boundary hold. `slice` is the id without its `rk-fix-`
+# prefix (s8e section 8e.8). `[trial] activity` is ADR-0195 decision 4's spelling. `cos = "standard"` is read by
+# `bug-standard`'s `applies`.
+id          = "rk-fix-doctor-margin-2"
+kind        = "bug"
+stage       = "triage"
+hold_before = "specification"
+slice       = "doctor-margin-2"
+
+[facets]
+cos          = "standard"
+has_repro    = true
+criticality  = "low"
+blast_radius = "low"
+size         = "low"
+
+[trial]
+activity = "tag-release"
