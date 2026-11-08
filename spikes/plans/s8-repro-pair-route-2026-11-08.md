@@ -356,44 +356,44 @@ commit, unchanged.
 ## Test list (red first, in this order)
 
 rk-kernel, `tests/it/test_selection.rs`:
-- [ ] 1. `parse_selection_reads_the_plain_tail_after_the_separator`: `"cargo test -p rk-cli --test it -- doctor::x --exact"` gives `["doctor::x","--exact"]`.
-- [ ] 2. `parse_selection_refuses_the_2026_11_08_prose_by_name`: the verbatim `command` from the failed run gives `ShellSyntax`.
-- [ ] 3. `parse_selection_refuses_a_backtick_a_dollar_and_a_semicolon`, each naming `found` and `at`.
-- [ ] 4. `parse_selection_refuses_a_newline_as_multiline` and `.._a_control_byte`.
-- [ ] 5. `parse_selection_refuses_no_filter_and_an_empty_filter` (the existing `selection_of` cases, now typed).
-- [ ] 6. Property (proptest is already a dev-dependency here): `selection_of(c) == parse_selection(c).ok()`, and any `c` holding a shell-syntax char is `Err`.
-- [ ] 7. `selection_plan_refuses_a_prose_string_naming_the_refusal`: the `RefError.why` contains `ShellSyntax`, and the runtime test shows no port call (FakeToolchain call count 0).
-- [ ] 8. `selection_plan_refuses_a_list_element_with_whitespace_naming_it` (D5).
+- [x] 1. `parse_selection_reads_the_plain_tail_after_the_separator`: `"cargo test -p rk-cli --test it -- doctor::x --exact"` gives `["doctor::x","--exact"]`.
+- [x] 2. `parse_selection_refuses_the_2026_11_08_prose_by_name`: the verbatim `command` from the failed run gives `ShellSyntax`.
+- [x] 3. `parse_selection_refuses_a_backtick_a_dollar_and_a_semicolon`, each naming `found` and `at`.
+- [x] 4. `parse_selection_refuses_a_newline_as_multiline` and `.._a_control_byte`.
+- [x] 5. `parse_selection_refuses_no_filter_and_an_empty_filter` (the existing `selection_of` cases, now typed).
+- [x] 6. Property (proptest is already a dev-dependency here): `selection_of(c) == parse_selection(c).ok()`, and any `c` holding a shell-syntax char is `Err`.
+- [x] 7. `selection_plan_refuses_a_prose_string_naming_the_refusal`: the `RefError.why` contains `ShellSyntax`, and the runtime test shows no port call (FakeToolchain call count 0).
+- [x] 8. `selection_plan_refuses_a_list_element_with_whitespace_naming_it` (D5).
 
 rk-types, `tests/it/repro_pair.rs` and `verb_outputs.rs`:
-- [ ] 9. `the_shipped_pair_shape_validates`: the JSON equivalent of `rk-fix-doctor-margin.repro.toml` plus a source holding `fn <test>(` once gives `Ok`.
-- [ ] 10. One test per `ReproPairError` variant (ten), each asserting the variant and its context fields.
-- [ ] 11. `ReproPlacement` round-trips, rejects an unknown field, and its new schema snapshot `exported__ReproPlacement.snap` exists. Its row joins `verb_outputs.rs`'s table, which is a list extension and moves no existing expectation.
+- [x] 9. `the_shipped_pair_shape_validates`: the JSON equivalent of `rk-fix-doctor-margin.repro.toml` plus a source holding `fn <test>(` once gives `Ok`.
+- [x] 10. One test per `ReproPairError` variant (ten), each asserting the variant and its context fields.
+- [x] 11. `ReproPlacement` round-trips, rejects an unknown field, and its new schema snapshot `exported__ReproPlacement.snap` exists. Its row joins `verb_outputs.rs`'s table, which is a list extension and moves no existing expectation.
 
 rk-adapter-toolchain-rust, `tests/it/repro.rs`, over a temp project root:
-- [ ] 12. `an_it_pair_is_appended_to_its_module_file_and_named_by_command`: file bytes, `path`, `test`, `command`, `appended = true`.
-- [ ] 13. `a_unit_pair_is_appended_to_its_src_file_under_lib`.
-- [ ] 14. `a_second_place_is_idempotent`: `appended = false`, and the file is byte-identical.
-- [ ] 15. `a_prior_different_fn_of_the_test_name_is_refused`: `Unsupported` naming the path.
-- [ ] 16. `a_missing_target_is_refused_naming_it`.
-- [ ] 17. `an_absent_pair_is_refused_naming_the_intake_paths`, and `an_invalid_pair_is_refused_with_its_reason`. Nothing is written in either case.
-- [ ] 18. `a_target_symlinked_outside_the_root_is_refused` (POSIX; on Windows a junction, where the platform allows).
+- [x] 12. `an_it_pair_is_appended_to_its_module_file_and_named_by_command`: file bytes, `path`, `test`, `command`, `appended = true`.
+- [x] 13. `a_unit_pair_is_appended_to_its_src_file_under_lib`.
+- [x] 14. `a_second_place_is_idempotent`: `appended = false`, and the file is byte-identical.
+- [x] 15. `a_prior_different_fn_of_the_test_name_is_refused`: `Unsupported` naming the path.
+- [x] 16. `a_missing_target_is_refused_naming_it`.
+- [x] 17. `an_absent_pair_is_refused_naming_the_intake_paths`, and `an_invalid_pair_is_refused_with_its_reason`. Nothing is written in either case.
+- [x] 18. `a_target_symlinked_outside_the_root_is_refused` (POSIX; on Windows a junction, where the platform allows).
 
 rk-kernel, existing suites with expectation changes (Decision D9):
-- [ ] 19. `verb_registry::SHIPPED_ROWS` goes from 13 to 14 rows (`("repro_place","toolchain","ReproPlacement",false)`), and `WRITING_VERBS` from 5 to 6.
-- [ ] 20. `tool_verb_routing`: `repro_place` with no row input bound refuses before the port, naming the verb and `pair`.
-- [ ] 21. `lane_walk`: `LaneToolchain` answers `repro_place`. `minimal-repro` and `root-cause` still `Walks`.
-- [ ] 22. `forward_ref_lint`: activities stay at 102 and `escalate > 0` still holds through `tdd-red-green-refactor`. The doc sentence naming `minimal-repro` is corrected.
+- [x] 19. `verb_registry::SHIPPED_ROWS` goes from 13 to 14 rows (`("repro_place","toolchain","ReproPlacement",false)`), and `WRITING_VERBS` from 5 to 6.
+- [x] 20. `tool_verb_routing`: `repro_place` with no row input bound refuses before the port, naming the verb and `pair`.
+- [x] 21. `lane_walk`: `LaneToolchain` answers `repro_place`. `minimal-repro` and `root-cause` still `Walks`.
+- [x] 22. `forward_ref_lint`: activities stay at 102 and `escalate > 0` still holds through `tdd-red-green-refactor`. The doc sentence naming `minimal-repro` is corrected.
 
 rk-cli:
-- [ ] 23. `repro_pair::read` returns `Present` for both files, `Absent` when the `.toml` is missing, `Invalid` for malformed TOML (naming the path and the toml error), and `Invalid` for an over-cap `.rs`.
-- [ ] 24. `processes::the_reserved_fix_items_shipped_pair_validates`: the real `.redkiln/intake/rk-fix-doctor-margin.repro.{toml,rs}` gives `Present`, with target `crates/rk-cli/tests/it/doctor.rs`, and that file exists. A premise test for s8.
-- [ ] 25. `catalog::no_test_selection_reads_a_read_only_roles_output`: for every activity and every `toolchain:test` step whose selection reads `${<step>.outputs..}`, the source step's role card has `Write` or `Edit`. The scope follows Decision D13, with two tracked known violators.
-- [ ] 26. `explain::a_run_that_stopped_at_a_failed_step_is_named_not_an_error`: the store holds an `activity_committed` row (run X) and a `step_refused` row, with no `runs/X`. Exit 0, a `run: X (no run record` line, and the `stopped:` line.
-- [ ] 27. `explain::the_newest_recorded_run_is_rendered_after_a_stopped_one`: run Y is recorded and run X is newer and stopped. Y's render follows.
-- [ ] 28. `lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose`. The rig writes `rk-lane-fix.repro.{toml,rs}` (`kind = "it"`, crate `rk-lane-fixture`, module `words`, test `repro_empty_text_has_no_words`). The fixture gains `crates/rk-lane-fixture/tests/it/{main.rs,words.rs}.in`, with one passing test in `words`. The `attempt` and `reduce` responses carry the 2026-11-08 prose as `command`, with **no `.writing`**. `hypothesise` writes no file and its `discriminating_test` is prose. Assertions: (a) an `rk step rk-lane-fix minimal-repro@2 place` commit exists on `rk-run`, and `tests/it/words.rs` there ends with the repro bytes; (b) minimal-repro's confirm `TestReport` has `failed == 1, passed == 0`; (c) the committed `ReproCase.command` equals the placement's command; (d) verify's `ConfirmationResult` is `passing`; (e) the landed tree keeps the repro test.
-- [ ] 29. `lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name`: no pair in the fixture. The run exits on the refusal, its stderr names `.redkiln/intake/rk-lane-fix.repro.toml`, there is no `TestReport` for minimal-repro, and `words.rs` is unchanged on `rk-run`.
-- [ ] 30. The existing proofs move to the new activity keys (`minimal-repro@2`, `root-cause@6`), and the old `.writing` of `tests/repro.rs` and `tests/hypothesis.rs` is removed. All 15 existing R_TESTS stay green (Decision D9: a script rewrite).
+- [x] 23. `repro_pair::read` returns `Present` for both files, `Absent` when the `.toml` is missing, `Invalid` for malformed TOML (naming the path and the toml error), and `Invalid` for an over-cap `.rs`.
+- [x] 24. `processes::the_reserved_fix_items_shipped_pair_validates`: the real `.redkiln/intake/rk-fix-doctor-margin.repro.{toml,rs}` gives `Present`, with target `crates/rk-cli/tests/it/doctor.rs`, and that file exists. A premise test for s8.
+- [x] 25. `catalog::no_test_selection_reads_a_read_only_roles_output`: for every activity and every `toolchain:test` step whose selection reads `${<step>.outputs..}`, the source step's role card has `Write` or `Edit`. The scope follows Decision D13, with two tracked known violators.
+- [x] 26. `explain::a_run_that_stopped_at_a_failed_step_is_named_not_an_error`: the store holds an `activity_committed` row (run X) and a `step_refused` row, with no `runs/X`. Exit 0, a `run: X (no run record` line, and the `stopped:` line.
+- [x] 27. `explain::the_newest_recorded_run_is_rendered_after_a_stopped_one`: run Y is recorded and run X is newer and stopped. Y's render follows.
+- [x] 28. `lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose`. The rig writes `rk-lane-fix.repro.{toml,rs}` (`kind = "it"`, crate `rk-lane-fixture`, module `words`, test `repro_empty_text_has_no_words`). The fixture gains `crates/rk-lane-fixture/tests/it/{main.rs,words.rs}.in`, with one passing test in `words`. The `attempt` and `reduce` responses carry the 2026-11-08 prose as `command`, with **no `.writing`**. `hypothesise` writes no file and its `discriminating_test` is prose. Assertions: (a) an `rk step rk-lane-fix minimal-repro@2 place` commit exists on `rk-run`, and `tests/it/words.rs` there ends with the repro bytes; (b) minimal-repro's confirm `TestReport` has `failed == 1, passed == 0`; (c) the committed `ReproCase.command` equals the placement's command; (d) verify's `ConfirmationResult` is `passing`; (e) the landed tree keeps the repro test.
+- [x] 29. `lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name`: no pair in the fixture. The run exits on the refusal, its stderr names `.redkiln/intake/rk-lane-fix.repro.toml`, there is no `TestReport` for minimal-repro, and `words.rs` is unchanged on `rk-run`.
+- [x] 30. The existing proofs move to the new activity keys (`minimal-repro@2`, `root-cause@6`), and the old `.writing` of `tests/repro.rs` and `tests/hypothesis.rs` is removed. All 15 existing R_TESTS stay green (Decision D9: a script rewrite).
 
 Mutants (s8j convention, `runbook/tools/s8j-mutants.py`, Python, sha256-verified restores; Decision D9):
 - `M-repro-pair-ignored`: `minimal-repro.toml`'s confirm selection goes back to `${attempt.outputs.command}`. Must turn test 28 red, because the prose is refused.
@@ -489,20 +489,20 @@ The procedure clears them all, so the question becomes moot. The query in step 2
 
 | # | Decision | Options | Recommendation | Decided by | Outcome |
 |---|---|---|---|---|---|
-| D1 | How the pair reaches the run | **A** `repro_place` toolchain verb plus an rk-cli row input envelope; **B** a human-attached `ReproPair` root through a gate (ADR-0200/0202): two files do not fit one `--attach`, and a mandatory human kind would block every bug without a pair; **C** a kernel seam that writes files: breaks "kernel knows no language"; **D** rk-cli places it at run entry (ADR-0188's entry landing): implicit, from triage on, with no typed output in the journal | A | | |
-| D2 | Commit the placed test on `rk-run/<item>` | **A** yes, at `place`'s step grain (`side_effecting = true`); **B** a throwaway tree only: verify's `confirmation-test` then selects nothing and the landed fix has no regression test | A | | |
-| D3 | A bug with no pair | **A** `place` refuses by name (fail closed); **B** fall back to `@1`'s agent command, which cannot run under read-only cards | A | | |
-| D4 | Where "not a plain command" is refused | **a** the one parser (`parse_selection`), plus the catalog's `red` check and gate; **b** also a schema newtype with a `pattern` on `ReproAttempt.command` and co.: a migration, with decode risk for historical rows under `deny_unknown_fields`; **c** also validate selection-feeding fields at the agent step as a `Schema` error (retryable), as a follow-up issue | a now, c as an issue | | |
-| D5 | Validate `${…}` list elements (`tests_added`) too | **A** yes: a bad name refuses the run instead of looping on an `Empty` red check; **B** strings only, lists as today | A | | |
-| D6 | `root-cause` under read-only investigators | **A** `@6` confirms on `artifact:ReproCase.command` and composes `discriminating_test` from it; **D** drop `confirm` and `policy` (no executable evidence); **leave**: the restarted run fails at `root-cause` | A | | |
-| D7 | `explain` after a stopped run | **a** exit 0, a `stopped:` block, then the newest recorded run; **b** exit 5 (`NoRecord`) with a message; **c** exit 3 as now, with a clearer message | a | | |
-| D8 | Restarting the run | **A** the operator procedure above (git, archive, `doctor --rebuild`), no code; **B** a new verb (`doctor --discard-run <item>`): CLI surface plus a record | A | | |
-| D9 | Test-expectation and fixture changes | `SHIPPED_ROWS` 13→14 and `WRITING_VERBS` 5→6; the `ReproAttempt` schema snapshot description; the `fix_script` rewrite (new keys, `.writing` removed); two fixture files in `lane/`; `R_TESTS` 15→17; three new mutants (which of them join `S8J_MUTANTS`) | approve all; put `M-repro-pair-ignored` and `M-repro-place-noop` in `S8J_MUTANTS`, and `M-selection-shell-accepted` beside it if the driver can run `rk-kernel` | | |
-| D10 | Paid steps after the code change | **A** follow §8j.7 to the letter: re-open §8j.6's paid steps (the 7c split and three probes); **B** a dated ruling that they stand, guarded by `git diff --quiet <old frozen> <new> -- crates/rk-adapter-claude crates/rk-containment .redkiln/cards tools/live-run.sh` | B, recorded in D21-174 | | |
-| D11 | The displayed scope against the scope that runs | **A** accept: the `Filter` runs workspace-wide with `--exact <path>`, which selects the same single test; **B** a new `Selection::Scoped { package, target, args }`: a port API change | A | | |
-| D12 | New public API | `rk_kernel::runtime::reference::{parse_selection, check_selection_token, SelectionRefusal}`; `rk_types::repro_pair::*`; `rk_types::verb_output::ReproPlacement`; the registry row; the catalog versions | approve (additive; `selection_of` unchanged) | | |
-| D13 | Scope of the read-only-role lint (test 25) | **A** the whole catalog, with `differential-debugging` and `instrumented-trace-analysis` as named known violators carrying a GitHub issue reference; **B** the two lanes' selected activities only | A | | |
-| D14 | The story item has no `novelty` facet (an observation) | add `novelty` to `.redkiln/items/rk-story-harden-spike-pack.toml` before its run, or let the `unknown_facet:novelty` gate ask | outside this plan: the operator decides | | |
+| D1 | How the pair reaches the run | **A** `repro_place` toolchain verb plus an rk-cli row input envelope; **B** a human-attached `ReproPair` root through a gate (ADR-0200/0202): two files do not fit one `--attach`, and a mandatory human kind would block every bug without a pair; **C** a kernel seam that writes files: breaks "kernel knows no language"; **D** rk-cli places it at run entry (ADR-0188's entry landing): implicit, from triage on, with no typed output in the journal | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D2 | Commit the placed test on `rk-run/<item>` | **A** yes, at `place`'s step grain (`side_effecting = true`); **B** a throwaway tree only: verify's `confirmation-test` then selects nothing and the landed fix has no regression test | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D3 | A bug with no pair | **A** `place` refuses by name (fail closed); **B** fall back to `@1`'s agent command, which cannot run under read-only cards | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D4 | Where "not a plain command" is refused | **a** the one parser (`parse_selection`), plus the catalog's `red` check and gate; **b** also a schema newtype with a `pattern` on `ReproAttempt.command` and co.: a migration, with decode risk for historical rows under `deny_unknown_fields`; **c** also validate selection-feeding fields at the agent step as a `Schema` error (retryable), as a follow-up issue | a now, c as an issue | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D5 | Validate `${…}` list elements (`tests_added`) too | **A** yes: a bad name refuses the run instead of looping on an `Empty` red check; **B** strings only, lists as today | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D6 | `root-cause` under read-only investigators | **A** `@6` confirms on `artifact:ReproCase.command` and composes `discriminating_test` from it; **D** drop `confirm` and `policy` (no executable evidence); **leave**: the restarted run fails at `root-cause` | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D7 | `explain` after a stopped run | **a** exit 0, a `stopped:` block, then the newest recorded run; **b** exit 5 (`NoRecord`) with a message; **c** exit 3 as now, with a clearer message | a | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D8 | Restarting the run | **A** the operator procedure above (git, archive, `doctor --rebuild`), no code; **B** a new verb (`doctor --discard-run <item>`): CLI surface plus a record | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D9 | Test-expectation and fixture changes | `SHIPPED_ROWS` 13→14 and `WRITING_VERBS` 5→6; the `ReproAttempt` schema snapshot description; the `fix_script` rewrite (new keys, `.writing` removed); two fixture files in `lane/`; `R_TESTS` 15→17; three new mutants (which of them join `S8J_MUTANTS`) | approve all; put `M-repro-pair-ignored` and `M-repro-place-noop` in `S8J_MUTANTS`, and `M-selection-shell-accepted` beside it if the driver can run `rk-kernel` | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D10 | Paid steps after the code change | **A** follow §8j.7 to the letter: re-open §8j.6's paid steps (the 7c split and three probes); **B** a dated ruling that they stand, guarded by `git diff --quiet <old frozen> <new> -- crates/rk-adapter-claude crates/rk-containment .redkiln/cards tools/live-run.sh` | B, recorded in D21-174 | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D11 | The displayed scope against the scope that runs | **A** accept: the `Filter` runs workspace-wide with `--exact <path>`, which selects the same single test; **B** a new `Selection::Scoped { package, target, args }`: a port API change | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D12 | New public API | `rk_kernel::runtime::reference::{parse_selection, check_selection_token, SelectionRefusal}`; `rk_types::repro_pair::*`; `rk_types::verb_output::ReproPlacement`; the registry row; the catalog versions | approve (additive; `selection_of` unchanged) | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D13 | Scope of the read-only-role lint (test 25) | **A** the whole catalog, with `differential-debugging` and `instrumented-trace-analysis` as named known violators carrying a GitHub issue reference; **B** the two lanes' selected activities only | A | Ryan, 2026-11-08 06:12Z | as recommended (D21-174) |
+| D14 | The story item has no `novelty` facet (an observation) | add `novelty` to `.redkiln/items/rk-story-harden-spike-pack.toml` before its run, or let the `unknown_facet:novelty` gate ask | outside this plan: the operator decides | open | outside this plan |
 
 ## Risks
 
@@ -547,3 +547,50 @@ comments, ADR-0204, D21-174, two runbook files, the mutant driver and its test, 
 (06:12Z), including D10 option B (a dated ruling, recorded in D21-174, that s8j's paid 7c split and three live probes
 stand, guarded by an empty `git diff` over `crates/rk-adapter-claude crates/rk-containment .redkiln/cards
 tools/live-run.sh`). D14 (the story item's `novelty` facet) is outside this plan and stays open.
+- 2026-11-08 (implementer): tests 1-8. Red: `cargo test -p rk-kernel --test it parse_selection` failed to compile,
+  `E0432 unresolved imports rk_kernel::runtime::reference::{SelectionRefusal, check_selection_token, parse_selection}`.
+  Green: 16 passed in `test_selection`; `rk-kernel` whole 456 passed / 5 ignored. The parser moved into
+  `runtime/reference/selection.rs` (ARC-06: `reference.rs` is 1648 lines), re-exported at its old path. The verbatim
+  2026-11-08 command is not in the repository (it is in the operator's store), so test 2 keeps its failing features
+  (a `(` before the separator and a backtick glued to `--exact`) and says so.
+- 2026-11-08 (implementer): tests 9-11. Red: `cargo test -p rk-types --test it repro` failed to compile,
+  `E0432 unresolved import rk_types::repro_pair` and `rk_types::verb_output::ReproPlacement`. Green: rk-types 97 passed.
+  Judgement calls: `ReproPair` (de)serialises through a private wire form with `try_from`, so a decoded pair is
+  re-validated (API-03); `CrateName`/`RustPath`/`Ident` are not newtypes because the fields are private and checked in
+  the one constructor; `SrcRelPath` is a pub newtype (private field) because it sits in the pub `ReproTarget::Unit`.
+  The accessor is `expected()`, not `expect()`, so no call site reads as `.expect()`. `ReproTarget` derives no
+  `JsonSchema` (nothing exports it). The snapshot is `verb_output__ReproPlacement.snap`, not `exported__…`, because
+  verb outputs are asserted not in `EXPORTED` and `exported__` is the agent-presented set.
+- 2026-11-08 (implementer): tests 12-20. Red (12-18): `cargo test -p rk-adapter-toolchain-rust --test it repro::`, 9
+  failed, each refused by the bare name `Unsupported { capability: "repro_place" }`. Red (20 and the decode arm):
+  `repro_place_with_no_pair_bound_refuses_before_the_port_naming_it` and the decode-table test failed at "the kind
+  `ReproPlacement` has no entry in the kernel's closed decode table". Green: repro 9 + 3 unit; kernel routing and
+  registry 18. Test 19's row was written before its count moved, so 19's red was not separately recorded (a D9
+  expectation change). The handler lives in `src/verbs/repro.rs` (a child of `verbs`) rather than `src/repro.rs`, so
+  `pub(super)` satisfies both `unreachable_pub` and `redundant_pub_crate`. The 11 other adapter failures are
+  environmental and unchanged: no cargo-nextest, no cargo-audit, the pnpm fixture not installed.
+- 2026-11-08 (implementer): tests 21-22 and the catalog (minimal-repro@2, root-cause@6, CHANGELOG). lane_walk walks
+  fix 14/0 and story 13/0; forward_ref_lint's census 74/61/3/10 -> 73/61/3/9. **Three rk-kernel tests went red on the
+  catalog change and are NOT re-pinned (an H-16 decision the plan did not settle):**
+  `quality_block::d2_rewritten_rows_read_a_quantity_the_loop_varies` (root-cause@6's policy loop-back to `hypothesise`
+  reads `${confirm.outputs}`, and confirm no longer reads anything hypothesise produces),
+  `quality_block::ac527_empty_set_terminal_condition` (check steps 93 -> 94: the new `red` check) and
+  `review::ac303_confirm_step_survives_escalation` ((4, 16) -> (4, 15): root-cause's policy no longer consumes the
+  adversary's findings through confirm). Reported to the operator with options.
+- 2026-11-08 (implementer): tests 23-27. Red: compile errors on `rk_cli::repro_pair` and on `explain`'s stopped block
+  (exit 3 "no run record"); test 25 red on the @1 catalog (minimal-repro/confirm and root-cause/confirm beside the two
+  known violators). Green: rk-cli repro_pair 10, processes, catalog, explain.
+- 2026-11-08 (implementer): tests 28-30. The rig commits `rk-lane-fix.repro.{toml,rs}`; the lane fixture gains
+  `tests/it/{main,words}.rs.in`; `fix_script` moves to @2/@6 with prose and no investigator `.writing`. Red: 29 failed
+  first on "no journalled refusal names .redkiln/intake/rk-lane-fix.repro.toml" (a toolchain refusal journals no
+  failure row, and `run` printed only "did not commit"); fixed by `run` naming the class on stderr (ADR-0204 decision
+  7) and moving 29 to the binary arm so stderr is observable. Green: the 15 R_TESTS plus 28 and 29, 17 passed (in this
+  container with local, uncommitted shims for cargo-audit and cargo-deny, which are not installed here, and with
+  pnpm/node linked into a PATH directory without claude, because nodispatch drops /opt/node22/bin for holding claude).
+- 2026-11-08 (implementer): mutants. `M-repro-pair-ignored` moved from confirm's selection to the emit's `command`
+  (at @2 `attempt` reads `${confirm.outputs}`, so the plan's site is a dependency cycle the loader refuses, a kill for
+  the wrong reason). Killed: `M-repro-pair-ignored`, `M-repro-place-noop` (driver, `--only`), and
+  `M-selection-shell-accepted` (`--kernel`). The driver can run rk-kernel, but step 1b's table test holds every
+  `S8J_MUTANTS` entry to `R_TESTS`, so the kernel mutant sits in `KERNEL_MUTANTS`, outside `S8J_MUTANTS` (D9's
+  fallback). Records: ADR-0204 (proposed), D21-174, the s8 and s8j amendments, PROGRESS row 8, charters, intake
+  comments.

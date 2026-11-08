@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-173), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-174), and what they license
+
+*(Title moved 2026-11-08, D21-174: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-173)"**; `D21-174` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 173 before the append, the last `D21-173`; 174 after.)*
 
 *(Title moved 2026-11-08, D21-173: it read **"2026-09-21 … 2026-11-02 (D21-1 … D21-171)"**; `D21-172` and `D21-173` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 171 before the append, the last `D21-171`; 173 after.)*
 
@@ -7885,3 +7887,50 @@ It dispatched nothing (its (12)), and it re-ran the entry chain (8a … 8i) and 
    `check-refs.py`, read by (9), refused. Each change touched the runbook only.
 3. **One-shot from here.** `s8` reads this pass from `PROGRESS.md` row 8j. Checkpoint 8j is not re-run after `s8`'s
    first launch: (3) then refuses `rk-run/rk-fix-doctor-margin` by design (§8j.10).
+
+## D21-174 · `s8` stops at relaunch 3: the fix lane reproduces from the committed repro pair (ADR-0204, proposed)
+
+**Recorded 2026-11-08, `s8`'s repro-pair route.** The rulings are Ryan's; the implementer records them.
+
+**What stopped.** Relaunch 3 of `rk-fix-doctor-margin` stopped on 2026-11-08 with exit 14. `minimal-repro@1`'s
+`confirm` selected `${attempt.outputs.command}`, the output of an `investigator` step. The investigator card grants
+Read, Glob, Grep and StructuredOutput, so that command could only be prose: `selection_of` split it after ` -- `,
+`` --exact` `` failed `--list` in every target (`NonZero`, then `StepFailedAfterCommit`), and `explain` then refused
+on the stopped run's missing `run.json`. The fixture proofs had passed because the fake's `attempt` and `hypothesise`
+wrote test files, which no real investigator dispatch can do.
+
+1. **The route ruling (Ryan, 2026-11-08):** *"the kernel uses the committed repro pair"*. The item's
+   `.redkiln/intake/<item>.repro.{toml,rs}`, written by the operator at §8j.5 step 3, is what the fix lane runs.
+2. **The plan's decisions D1-D13 are approved as recommended (Ryan, 2026-11-08 06:12Z)**, over
+   `spikes/plans/s8-repro-pair-route-2026-11-08.md`: D1 A (the `repro_place` toolchain verb and a row-input envelope),
+   D2 A (commit the placed test on `rk-run/<item>` at `place`'s step grain), D3 A (no pair refuses at `place`, by
+   name), D4 a now and c as an issue, D5 A (`${…}` list elements checked token by token), D6 A (`root-cause@6`
+   confirms on `artifact:ReproCase.command`), D7 a (`explain` exits 0 with a `stopped:` block), D8 A (the operator's
+   restart procedure, no new code), D9 (the test-expectation and fixture changes as listed: `SHIPPED_ROWS` 13 → 14,
+   `WRITING_VERBS` 5 → 6, the `ReproAttempt` schema description, the `fix_script` rewrite, two lane fixture files,
+   `R_TESTS` 15 → 17; `M-repro-pair-ignored` and `M-repro-place-noop` join `S8J_MUTANTS`, and
+   `M-selection-shell-accepted` is run beside them with `--kernel`, outside `S8J_MUTANTS`, because its tests are
+   `rk-kernel`'s and step 1b's table holds every listed mutant to `R_TESTS`), D11 A, D12 (the additive public API),
+   D13 A (the whole-catalog lint with two named known violators; the owed issue's text is in ADR-0204 § "Owed issue
+   (D13)", for the operator to file; D4 option c's issue text is beside it). D14 (the story item's `novelty` facet) is outside this route.
+3. **D10, option B: the paid steps of §8j.6 stand.** §8j.7's letter re-opens every paid step after a code change.
+   Ryan ruled that the 7c split and the three probes are not re-run for this change, because it touches none of what
+   they measured. **The guard**, which must exit 0 at the new frozen sha before the next paid launch, or this ruling
+   does not hold and §8j.7 applies to the letter:
+
+   ```text
+   git diff --quiet 1810fddc5c96a58bb6fc069cc7bcb0ff04003820 HEAD -- crates/rk-adapter-claude crates/rk-containment .redkiln/cards tools/live-run.sh
+   ```
+
+   Measured 2026-11-08 at this route's last commit: exit 0.
+4. **Open, not settled by the plan:** `root-cause@6`'s `policy` still loops back to `hypothesise` when its confirm
+   is not red, but its confirm no longer reads anything `hypothesise` produces, so the loop varies nothing.
+   `rk-kernel`'s `quality_block::d2_rewritten_rows_read_a_quantity_the_loop_varies` is red on it, and
+   `quality_block::ac527_empty_set_terminal_condition` (check steps 93 → 94) and
+   `review::ac303_confirm_step_survives_escalation` ((4, 16) → (4, 15)) moved with the catalog. Their expectations are
+   not re-pinned here. The policy's shape is the operator's to decide, and this entry is amended when it is.
+
+The records are ADR-0204 (proposed), `.redkiln/CHANGELOG.md`'s `minimal-repro@2` and `root-cause@6` rows, dated
+amendments to `runbook/phase-1/s8-exit-criterion.md` and `runbook/phase-1/s8j-run-preparation.md`, and
+`runbook/PROGRESS.md` row 8. No evidence line is written by this route: `runbook/phase-1/s8j-evidence.txt` is the
+operator's.

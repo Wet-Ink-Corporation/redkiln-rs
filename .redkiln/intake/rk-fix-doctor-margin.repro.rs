@@ -1,7 +1,9 @@
 
 /// *(s8j section 8j.5 step 3: the reserved fix item `rk-fix-doctor-margin`'s repro. It is appended
 /// to `crates/rk-cli/tests/it/doctor.rs` in a throwaway tree only, and never committed into the
-/// crate.)*
+/// crate on the integration branch. Dated 2026-11-08, ADR-0204 (proposed): the fix lane's
+/// `minimal-repro@2` `place` step appends it in the run tree and commits it on
+/// `rk-run/rk-fix-doctor-margin`, where it lands with the fix.)*
 ///
 /// **AC-377's doctor half over an absent window.** The run's loader refuses a pack whose
 /// `[margins]` lacks a window (`verbs/run.rs`'s `Margins` has both members required, with no

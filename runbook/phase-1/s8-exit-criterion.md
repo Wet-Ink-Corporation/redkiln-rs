@@ -82,6 +82,13 @@ echo "(1) launched once. Read explain; answer an open gate through tools/live-ru
 
 **(1) check.** It launches nothing.
 
+*(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed; D21-174)* `s8` stopped on 2026-11-08 at relaunch 3, rc 14:
+`minimal-repro@1` ran the investigator's prose as a test selection. The fix lane now reproduces from the item's
+committed repro pair (`minimal-repro@2`'s `place`), and the block below excludes the placed repro file from its
+content test, so the repro alone is not a landed change. Restarting the item's run on the new frozen sha is the
+operator's procedure in `spikes/plans/s8-repro-pair-route-2026-11-08.md` § "Restarting the item's run", with the
+steps listed there under "Before the next paid launch".
+
 ```bash
 cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
@@ -132,8 +139,17 @@ test -n "$out" || { echo "FAIL: empty explain output"; exit 1; }
 why=$(lane_check "$FIX_ITEM" .redkiln/packs/bug-standard.toml); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL (1): $why"; exit 1; }
 base=$(git merge-base HEAD "rk-run/$FIX_ITEM") || { echo "FAIL: no merge base"; exit 1; }
-git diff --quiet "$base" "rk-run/$FIX_ITEM" -- crates; rc=$?
-[ "$rc" -eq 1 ] || { echo "FAIL (1): the run landed no content change under crates/ (rc=$rc) — trailers without a landed commit (D21-41 (b))"; exit 1; }
+# *(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed; D21-174)* minimal-repro@2's `place` commits the item's
+# repro pair on rk-run/<item> (ADR-0204 decision 5), so a run that placed the repro and fixed nothing would still change
+# crates/. The placed file is excluded, read from the committed .repro.toml; only `kind = "it"` has a file of its own.
+# This line read: git diff --quiet "$base" "rk-run/$FIX_ITEM" -- crates; rc=$?
+rp=".redkiln/intake/$FIX_ITEM.repro.toml"
+rv() { sed -nE "s/^$1[[:space:]]*=[[:space:]]*\"([^\"]*)\".*/\1/p" "$rp" | tr -d '\r'; }
+test -f "$rp" || { echo "FAIL (1): $rp is absent — the fix lane reproduces from the committed pair (ADR-0204)"; exit 1; }
+[ "$(rv kind)" = it ] || { echo "FAIL (1): $rp's kind is '$(rv kind)', not it — a unit repro shares its file with the fix, so the content test cannot exclude it by path"; exit 1; }
+placed="crates/$(rv crate)/tests/it/$(rv module).rs"
+git diff --quiet "$base" "rk-run/$FIX_ITEM" -- crates ":(exclude)$placed"; rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL (1): the run landed no content change under crates/ outside the placed repro $placed (rc=$rc) — trailers without a landed commit (D21-41 (b))"; exit 1; }
 vc='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); r=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=? AND "+sys.argv[3]+"=?",("verify_completed",sys.argv[2]))]; a=sorted({str(x.get(sys.argv[4])) for x in r if x.get(sys.argv[5])==sys.argv[6]}); print(" ".join(a))'
 ids=$(python -c "$vc" "$store" "$FIX_ITEM" "$VC_ITEM_KEY" "$VC_ADAPTER_KEY" "$VC_ORIGIN_KEY" "$VC_PASS"); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the verify_completed probe did not run (rc=$rc)"; exit 1; }
