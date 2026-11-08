@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-02 (D21-1 … D21-171), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-173), and what they license
+
+*(Title moved 2026-11-08, D21-173: it read **"2026-09-21 … 2026-11-02 (D21-1 … D21-171)"**; `D21-172` and `D21-173` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 171 before the append, the last `D21-171`; 173 after.)*
 
 *(Title moved 2026-11-02, D21-171: it read **"2026-09-21 … 2026-11-01 (D21-1 … D21-170)"**; `D21-171` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 170 before the append, the last `D21-170`; 171 after.)*
 *(Title moved 2026-11-01, D21-168: it read **"2026-09-21 … 2026-11-01 (D21-1 … D21-167)"**; `D21-168` is appended with this move.)*
@@ -7841,3 +7843,45 @@ unchanged; only its `status:` line moves, and no decision sentence moves.
 
 No record is at `proposed` after this flip (a `^status:` census over the 203 record files → accepted 199, superseded
 4, proposed 0), and every `supersedes:` link is reciprocated (99 of 99).
+
+## D21-172 · Checkpoint 8j (3b) installs the Node fixture in its throwaway clone
+
+**Recorded 2026-11-08 by an agent session.** The operator's first Checkpoint 8j run (2026-11-06, HEAD `3e1578a`, rc 1)
+stopped at (3b): `FAIL (V2): a test reddened on a byte change to spike.toml`, with
+`rk-adapter-toolchain-rust`'s `verbs::setup_installs_each_declared_node_project_offline` the only failed test (77
+passed, 1 failed). That test (`s8c`, `5561afa`, 2026-09-26, two days after (3b) was drafted) opens by asserting the Node
+fixture's `node_modules/.bin` at the repository root. (3b) runs the suites in a `git clone --shared` of HEAD, and
+`node_modules` is git-ignored, so the clone never has it: the failure was the clone's, not V2's.
+
+A decision card offered three options: install the fixture in the clone (recommended), skip that test in (3b), or
+hold. The operator merged #129, which implements the first, on 2026-11-07 at 04:35Z, and the card was closed on that
+option. (3b) now runs the setup verb's own `pnpm install --frozen-lockfile --prefer-offline` in its clone, asserts
+`node_modules/.bin/vitest`, and re-asserts that spike.toml is still perturbed; no test is skipped, and V2 still
+covers every test of the three crates. Runbook only; no `CODE_PATHS` path moved.
+
+## D21-173 · `s8j` closes: Checkpoint 8j passed whole over the frozen-record commit
+
+**Recorded 2026-11-08 at `s8j`'s close.** This entry records a result and takes no ruling of its own.
+
+**Checkpoint 8j passed whole.** The operator ran it from a plain Git Bash, outside Claude Code, over `a4b76e6`, from
+2026-11-07 18:58:17Z to 2026-11-08 00:23:27Z (the operator's plain Git Bash, run 3, `rust-src` removed for the run and added back after it, ruling R6). The block was extracted from `runbook/phase-1/s8j-run-preparation.md` §8j.10 by its fence (the one
+block that echoes `CP8J-END-OF-BLOCK reached`), 719 lines, sha256
+`db1cb5c006b212c412bed5d0f9818b6c8685d90db969b37471c05b6018fec2f8`. Its output, sha256 `08af38113e081801496486c228e9985176a97993efd8acac3ba4f63ad5c45cee`, reads, whole:
+*"nodispatch: fake claude 2.1.303 at /d/repos/redkiln-rs/target/s8j-cp8j/nd/bin; trap
+D:/repos/redkiln-rs/target/s8j-cp8j/nd/trap; real claude before the wrapper: /c/Users/ryanm/.local/bin/claude"* and
+*"CP8J-END-OF-BLOCK reached"*, rc 0: no `FAIL` line, and every guard ends in `exit 1`, so the end marker is the pass.
+It dispatched nothing (its (12)), and it re-ran the entry chain (8a … 8i) and the older checkpoints (7h, 7i, 7d, 7f,
+7g, 5, 6, 7a, 7b, 7b-ii) whole, nested, under `runbook/tools/nodispatch.sh`.
+
+1. **The frozen sha is `1810fdd`**, the merged evidence commit (#126). CI run 41394286434 is its push run on
+   `build/phase-0-to-1`: success, the four jobs (7) names, both legs. The frozen-record commit (#128, `3e1578a`)
+   appended `ci 41394286434 1810fdd… 2026-11-02`, `fix-item rk-fix-doctor-margin 1810fdd…` and
+   `story-item rk-story-harden-spike-pack 1810fdd…`, as the operator appended them. No `CODE_PATHS` path moved from
+   the fixture proofs' `f6f5335` to `a4b76e6`.
+2. **Two earlier runs stopped on defects of the checkpoint, not of the code.** Run 1 (2026-11-06, `3e1578a`) at
+   (3b), fixed by #129 (D21-172). Run 2 (2026-11-07, `61e89f8`) at (4): Windows Python's CRLF left a CR on the repro
+   pair's `kind` (`it<CR>`), and (8)'s test-name reader had the same defect; #130 (`a4b76e6`) has both readers write
+   LF, as (6)'s readers already did. Before run 1, #127 (`ef258cd`) qualified a bare `§8h.11` in PROGRESS.md that
+   `check-refs.py`, read by (9), refused. Each change touched the runbook only.
+3. **One-shot from here.** `s8` reads this pass from `PROGRESS.md` row 8j. Checkpoint 8j is not re-run after `s8`'s
+   first launch: (3) then refuses `rk-run/rk-fix-doctor-margin` by design (§8j.10).
