@@ -1,6 +1,8 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-174), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-175), and what they license
 
 *(Title moved 2026-11-08, D21-174: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-173)"**; `D21-174` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 173 before the append, the last `D21-173`; 174 after.)*
+
+*(Title moved 2026-11-08, D21-175: it read **"… (D21-1 … D21-174)"**; `D21-175` is appended with this move.)*
 
 *(Title moved 2026-11-08, D21-173: it read **"2026-09-21 … 2026-11-02 (D21-1 … D21-171)"**; `D21-172` and `D21-173` are appended with this move. Measured: `grep -c '^## D21-'` over this file → 171 before the append, the last `D21-171`; 173 after.)*
 
@@ -7980,3 +7982,21 @@ operator's.
 *(dated 2026-11-08, Ryan; D21-163 step 4, D21-174 item 5)* The fresh fix item, the same defect under a new id:
 
 reserved-fix-item: rk-fix-doctor-margin-2 rk-cli:doctor::rules::margin
+
+## D21-175 · `s8` (3) kill's live-lane guard reads the latest `Story:` mark, not the tip's
+
+*(dated 2026-11-08, agent; a checkpoint-block defect found on the operator's run, the kind D21-172 fixed for 8j)*
+
+(3) kill refused a live lane. Its guard read `git log -1 --format='%(trailers:key=Story,valueonly=true)'` over
+`rk-run/$ITEM`, which is the **tip's** `Story:` alone. A gate's open and its answer each commit with a `Gate:` trailer
+and no `Story:`, so once (1)'s hold has opened and been answered, the tip carries no `Story:` and the guard read `''`.
+Measured on 2026-11-08 on `rk-fix-doctor-margin-2` at `2ec489c`, after the hold's `approve`:
+`FAIL: … last stage token is '' — a kill over a closed or unread lane is a no-op pass`. The block stopped before its
+launch, so nothing was spent.
+
+The guard now reads the latest `Story:` mark over `$(git merge-base HEAD rk-run/$ITEM)..rk-run/$ITEM`, the range
+(1) check's `verify` reads. `git log` lists newest first, so it takes the first non-empty value. The refusal it
+exists for is unchanged: a lane whose latest mark is `closed`, or that has none, is still refused. A toy repository
+with two `Story:` commits under a `Gate:` tip read `''` under the old line and `analysis` under the new one. Only
+`runbook/phase-1/s8-exit-criterion.md`'s (3) kill block changes. `runbook/` is not a code path, so the frozen sha
+`a6d2f76` and the prespend checks are unmoved. The superseded line is kept in s8j §8j.8 A3's record as it stood.

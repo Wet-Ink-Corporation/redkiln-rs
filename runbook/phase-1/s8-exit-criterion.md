@@ -435,8 +435,13 @@ prespend() {   # $1 = the item this block is about to launch
 why=$(prespend "$ITEM"); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL (3) NOT LAUNCHED: $why"; exit 1; }
 git rev-parse --verify --quiet "refs/heads/rk-run/$ITEM" >/dev/null || { echo "FAIL: no rk-run/$ITEM — run (1)'s launch block and answer the hold first; (3) kills the continuation"; exit 1; }
-lg=$(git log -1 --format='%(trailers:key=Story,valueonly=true)' "rk-run/$ITEM") || { echo "FAIL: git log over rk-run/$ITEM failed"; exit 1; }
-last=$(printf '%s\n' "$lg" | awk 'NF {t=$NF} END {print t}')
+# AMENDED 2026-11-08 (D21-175): this read `git log -1` — the TIP's Story: only. A gate's open and its answer each
+# ride a `Gate:` trailer commit with no Story:, so after (1)'s hold the tip carries none and the guard read '' on a
+# live lane [measured 2026-11-08, rk-fix-doctor-margin-2 at 2ec489c]. It now reads the LATEST Story: mark on the run
+# (git log is newest first, so the first non-empty value), over the run's fork from HEAD, as (1) check's verify does.
+base=$(git merge-base HEAD "rk-run/$ITEM") || { echo "FAIL: rk-run/$ITEM shares no history with HEAD"; exit 1; }
+lg=$(git log "$base..rk-run/$ITEM" --format='%(trailers:key=Story,valueonly=true)') || { echo "FAIL: git log over rk-run/$ITEM failed"; exit 1; }
+last=$(printf '%s\n' "$lg" | awk 'NF {print $NF; exit}')
 [ -n "$last" ] && [ "$last" != closed ] || { echo "FAIL: rk-run/$ITEM's last stage token is '$last' — a kill over a closed or unread lane is a no-op pass"; exit 1; }
 pre_tip=$(git rev-parse "rk-run/$ITEM") || { echo "FAIL: cannot read rk-run/$ITEM"; exit 1; }
 tdir=target/s8-cp; mkdir -p "$tdir" || { echo "FAIL: cannot create $tdir"; exit 1; }
