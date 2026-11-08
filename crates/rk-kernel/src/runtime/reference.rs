@@ -1461,7 +1461,12 @@ pub fn bind_emit(env: &Env<'_>, scope: &Scope, step: &Step) -> Result<Option<Emi
 // into its own module, `selection`, and refuses more; its path here is unchanged.
 mod selection;
 
-pub use selection::{SelectionRefusal, check_selection_token, parse_selection, selection_of};
+// *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; D21-177.)* The agent-step feed
+// check lives beside the parser it calls.
+pub use selection::{
+    FeedRefusal, SelectionFeed, SelectionRefusal, check_feeds, check_selection_token,
+    parse_selection, selection_feeds, selection_of,
+};
 
 /// What a `toolchain:test` step's `inputs.selection` resolved to, before it becomes a port
 /// `Selection` (the kernel maps it; `rk-ports` owns the type).
