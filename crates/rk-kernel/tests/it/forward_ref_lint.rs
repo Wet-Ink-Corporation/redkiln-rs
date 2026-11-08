@@ -186,8 +186,12 @@ fn a_forward_ref_is_licensed_by_a_back_edge_a_repeat_body_or_an_escalate_re_entr
 /// **Every shipped forward ref is licensed, over a census read from inside this binary.** Prints
 /// exactly one `FORWARD_REFS total=<n> letter=<a> repeat=<b> escalate=<c> unlicensed=<d>` line, which
 /// Checkpoint 8d (6b) reads. `n > 0` over a non-zero count of activities walked (D21-42 13a),
-/// `n = a + b + c + d`, `d = 0`, and `c > 0` because the lanes' own `minimal-repro` and
-/// `tdd-red-green-refactor` refs ride the escalate licence. D21-57: the `${adversary.outputs?}`
+/// `n = a + b + c + d`, `d = 0`, and `c > 0` because the lanes' own ~~`minimal-repro` and~~
+/// `tdd-red-green-refactor` refs ride the escalate licence. *(Corrected 2026-11-08, s8 repro-pair
+/// route; ADR-0204 decision 4, proposed: `minimal-repro@2` has no repeat, no escalate and no
+/// `${triage-gate.answer?}` ref, so its one escalate-licensed ref left the census, which read
+/// `total=74 letter=61 repeat=3 escalate=10` before and `total=73 letter=61 repeat=3 escalate=9`
+/// after; `escalate > 0` still holds through `tdd-red-green-refactor`.)* D21-57: the `${adversary.outputs?}`
 /// back-edges the localisation and spec-form chains depend on (`root-cause`,
 /// `differential-debugging`, `instrumented-trace-analysis`, `user-story-ac`) stay licensed.
 #[test]
@@ -208,7 +212,7 @@ fn every_shipped_forward_ref_is_licensed_and_the_census_is_printed() {
     );
     assert!(
         census.escalate > 0,
-        "the lanes' minimal-repro and tdd refs ride the escalate licence: {census:?}"
+        "the lanes' tdd refs ride the escalate licence: {census:?}"
     );
     let named: Vec<String> = refused.iter().map(ToString::to_string).collect();
     assert_eq!(

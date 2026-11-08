@@ -358,12 +358,31 @@ impl Harness for LaneHarness {
 fn happy(kind: &str) -> Json {
     match kind {
         "ReproAttempt" => serde_json::json!({ "status": "reproduced", "command": ["repro_crash"] }),
-        "ReproCase" => serde_json::json!({ "command": ["repro_crash"], "steps": ["run it"] }),
+        // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 4, proposed.)* `minimal-repro@2`
+        // and `root-cause@6` compose their artifacts member by member (§9c.34), so the reduce and
+        // hypothesis values carry every member they read. The agent `command` and
+        // `discriminating_test` stay prose-free names that no composed artifact reads.
+        "ReproCase" => serde_json::json!({
+            "status": "reproduced",
+            "steps": ["run it"],
+            "command": ["repro_crash"],
+            "expected": "no crash",
+            "observed": "a crash",
+            "confidence": "high",
+            "rationale": "the placed repro is red",
+        }),
         "HypothesisLog" => serde_json::json!({
             "status": "confirmed",
             "discriminating_test": ["hypothesis_off_by_one"],
             "summary": "an off-by-one in the parser",
-            "root_cause": { "summary": "an off-by-one in the parser" },
+            "root_cause": {
+                "cause": "an off-by-one in the parser",
+                "contributing_factors": [],
+                "confidence": "high",
+                "summary": "an off-by-one in the parser",
+                "discriminating_test": "hypothesis_off_by_one",
+                "rationale": "the repro is red",
+            },
         }),
         "Findings" => serde_json::json!({ "items": [] }),
         "Spec" => serde_json::json!({ "acceptance_criteria": ["AC-1", "AC-2"] }),
@@ -380,8 +399,25 @@ fn happy(kind: &str) -> Json {
 }
 
 /// The toolchain the tool steps reach through the shipped registry.
+///
+/// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 4, proposed.)* `repro_red` is the
+/// placed repro's state: red at `analysis` (before the fix), green from `implement` on (the fix
+/// landed). `minimal-repro@2`'s `confirm` and `root-cause@6`'s `confirm` run it red, and
+/// verify's `confirmation-test` runs the same command green.
 struct LaneToolchain {
     path: &'static str,
+    repro_red: bool,
+}
+
+/// The repro the rig's `repro_place` answers: a test whose last path segment starts `repro_`.
+const LANE_REPRO_COMMAND: &str =
+    "cargo test -p rk-kernel --test it -- lane::repro_lane_walk --exact";
+
+/// Whether `name` is the placed repro (its last `::` segment starts `repro_`).
+fn is_repro(name: &str) -> bool {
+    name.rsplit("::")
+        .next()
+        .is_some_and(|last| last.starts_with("repro_"))
 }
 
 fn verify_report(n: u32) -> rk_types::verify::VerifyReport {
@@ -420,9 +456,9 @@ impl Toolchain for LaneToolchain {
             Selection::Affected { changed, .. } => changed.clone(),
             Selection::WholeSuite { .. } => vec!["whole-suite".to_owned()],
         };
-        let failing = names
-            .iter()
-            .any(|n| n.starts_with("red_") || n.starts_with("hypothesis_"));
+        let failing = names.iter().any(|n| {
+            n.starts_with("red_") || n.starts_with("hypothesis_") || (self.repro_red && is_repro(n))
+        });
         let n = u32::try_from(names.len().max(1)).expect("a handful of names");
         let (passed, failed) = if failing { (0, n) } else { (n, 0) };
         TestOutcome::new(
@@ -477,6 +513,21 @@ impl Toolchain for LaneToolchain {
                         "predicate_held": true, "passed": true,
                     }],
                     "passed": 1, "failed": 0, "status": "passing",
+                }),
+            }),
+            // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decisions 1-4, proposed.)*
+            // `minimal-repro@2`'s `place`: the placement of the committed pair the routing binds.
+            // The append itself is `rk-adapter-toolchain-rust`'s, proved there.
+            "repro_place" => Ok(VerbOutput {
+                kind: "ReproPlacement".to_owned(),
+                value: serde_json::json!({
+                    "path": "crates/rk-kernel/tests/it/lane.rs",
+                    "test": "lane::repro_lane_walk",
+                    "command": LANE_REPRO_COMMAND,
+                    "expect": "the lane defect",
+                    "source_sha256": "lane",
+                    "spec_sha256": "lane",
+                    "appended": true,
                 }),
             }),
             "package" => Ok(VerbOutput {
@@ -950,6 +1001,14 @@ impl Rig<'_> {
                 "deny_db",
                 Json::from("/lane-cargo-home/advisory-dbs"),
             )
+            // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 2, proposed.)* The item's
+            // repro pair envelope, as `rk-cli`'s composition root binds it from the run tree
+            // (`repro_pair::row_input`, proved in `rk-cli`). The scripted `repro_place` ignores it.
+            .with_row_input(
+                "repro_place",
+                "pair",
+                serde_json::json!({ "state": "absent", "looked_for": [] }),
+            )
             // *(dated 2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173
             // decision 9 as amended, proposed.)* The run-branch reader, as `rk-cli`'s composition
             // root binds one, over the rig's git fixture.
@@ -1000,6 +1059,7 @@ impl Rig<'_> {
                 &self.db,
                 Arc::new(LaneToolchain {
                     path: self.lane.path,
+                    repro_red: stage == "analysis",
                 }) as Arc<dyn Toolchain>,
             ),
             &format!("lane-walk-{}-{stage}", self.lane.name),

@@ -1,6 +1,6 @@
 [activity]
 id           = "root-cause"
-version      = 5   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
+version      = 6   # bumped 2026-11-08 (s8 repro-pair route, ADR-0072; ADR-0204 decision 4, proposed; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["RootCause"]
 requires     = ["ReproCase"]
@@ -36,11 +36,13 @@ question = "root-cause.no-hypothesis"
 when    = "${hypothesise.outputs.status} != 'confirmed'"
 inputs  = { log = "${hypothesise.outputs}" }
 
+# The placed, trusted repro command (ADR-0204 decision 4): a read-only investigator cannot write or run a
+# discriminating test, so `confirm` re-runs the committed repro, and `policy`'s `report.failed > 0` holds on it.
 [[step]]
 id      = "confirm"
 kind    = "tool"
 run     = "toolchain:test"
-inputs  = { selection = "${hypothesise.outputs.discriminating_test}" }
+inputs  = { selection = "artifact:ReproCase.command" }
 outputs = "value:TestReport"
 timeout_secs = "${toolchain.test_timeout}"
 retry   = { max = 1 }
@@ -72,5 +74,5 @@ inputs  = { summary = "${hypothesise.outputs.summary}", findings = "${adversary.
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { RootCause = "${hypothesise.outputs.root_cause}" }
+artifacts = { RootCause = { cause = "${hypothesise.outputs.root_cause.cause}", contributing_factors = "${hypothesise.outputs.root_cause.contributing_factors}", confidence = "${hypothesise.outputs.root_cause.confidence}", summary = "${hypothesise.outputs.root_cause.summary}", discriminating_test = "artifact:ReproCase.command", rationale = "${hypothesise.outputs.root_cause.rationale}" } }   # composing emit (§9c.34): `discriminating_test` is the committed repro's command, never an agent's
 evidence  = ["${confirm}", "${adversary?}", "${signoff?}"]

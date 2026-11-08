@@ -1,6 +1,6 @@
 [activity]
 id           = "minimal-repro"
-version      = 1
+version      = 2   # bumped 2026-11-08 (s8 repro-pair route, ADR-0072; ADR-0204 decision 4, proposed; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["ReproCase"]
 requires     = ["BugReport"]
@@ -14,41 +14,60 @@ budget       = { attempts_total = 8, tokens = 250_000, wall_clock_secs = 3600 }
 human_source_ok = true
 deviation_ok = ["skip"]
 keywords     = ["reproduce", "SSCCE", "make it fail"]
-rationale    = "Agans rule 'make it fail': no investigation without a deterministic reproduction."
+rationale    = "Agans rule 'make it fail': no investigation without a deterministic reproduction, run from the item's committed repro pair."
 
+# The item's committed repro pair (.redkiln/intake/<item>.repro.{toml,rs}), appended in the run tree and committed on
+# rk-run/<item> at this step's grain (`repro_place` is side-effecting). A missing or invalid pair refuses here, by
+# name, before any test runs. Repeating it cannot help, so it is not retried.
+[[step]]
+id      = "place"
+kind    = "tool"
+run     = "toolchain:repro_place"
+outputs = "value:ReproPlacement"
+timeout_secs = "${toolchain.build_timeout}"
+retry   = { max = 0 }
+
+# The placed test, and only it: the selection is the placement's plain command, through the one parser (ADR-0173).
+[[step]]
+id      = "confirm"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${place.outputs.command}" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+# Red means the one placed test failed and nothing passed (confirmation-test's check-then-gate pattern).
+[[step]]
+id      = "red"
+kind    = "check"
+inputs  = { report = "${confirm.outputs}" }
+expr    = "report.failed > 0 and report.passed == 0"
+on_false = "continue"
+
+# The agent judges whether the red run is the reported defect. It runs nothing and is not asked for a command; asking
+# it again cannot change a deterministic run, so there is no repeat and no escalate.
 [[step]]
 id      = "attempt"
 kind    = "agent"
 role    = "investigator"
-inputs  = { report = "artifact:BugReport", hint = "${triage-gate.answer?}" }
+inputs  = { report = "artifact:BugReport", placed = "${place.outputs}", run = "${confirm.outputs}" }
 outputs = "value:ReproAttempt"
 timeout_secs = "${toolchain.repro_timeout}"
 retry   = { max = 2 }
-repeat  = { until = "${attempt.outputs.status} == 'reproduced'", max = 3 }
-on_exhausted = "escalate"
-escalate = { question = "repro.cannot-reproduce" }
 
 [[step]]
 id      = "triage-gate"
 kind    = "gate"
 question = "repro.cannot-reproduce"
-inputs  = { attempts = "${attempt.outputs}" }
-when    = "${attempt.outputs.status} != 'reproduced'"
-
-[[step]]
-id      = "confirm"
-kind    = "tool"
-run     = "toolchain:test"
-inputs  = { selection = "${attempt.outputs.command}" }
-outputs = "value:TestReport"
-timeout_secs = "${toolchain.test_timeout}"
-retry   = { max = 1 }
+inputs  = { attempt = "${attempt.outputs}", run = "${confirm.outputs}" }
+when    = "${confirm.outputs.failed} == 0 or ${confirm.outputs.passed} > 0 or ${attempt.outputs.status} != 'reproduced'"
 
 [[step]]
 id      = "reduce"
 kind    = "agent"
 role    = "investigator"
-inputs  = { attempt = "${attempt.outputs}", confirm = "${confirm.outputs}" }
+inputs  = { attempt = "${attempt.outputs}", confirm = "${confirm.outputs}", placed = "${place.outputs}" }
 outputs = "value:ReproCase"
 timeout_secs = 900
 retry   = { max = 1 }
@@ -56,5 +75,5 @@ retry   = { max = 1 }
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { ReproCase = "${reduce.outputs}" }
-evidence  = ["${confirm}", "${triage-gate?}"]
+artifacts = { ReproCase = { status = "${reduce.outputs.status}", steps = "${reduce.outputs.steps}", command = "${place.outputs.command}", expected = "${reduce.outputs.expected}", observed = "${reduce.outputs.observed}", confidence = "${reduce.outputs.confidence}", rationale = "${reduce.outputs.rationale}" } }   # composing emit (§9c.34): `command` is the placement's, never an agent's
+evidence  = ["${place}", "${confirm}", "${triage-gate?}"]
