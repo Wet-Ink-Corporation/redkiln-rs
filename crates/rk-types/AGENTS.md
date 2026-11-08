@@ -30,3 +30,4 @@ Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo te
 ## Decisions
 | Date | Decision | Rule | Decided by |
 |---|---|---|---|
+| 2026-11-08 | Add `repro_pair` (the `.repro.toml` DTO, the validated `ReproPair`, the `ReproPairInput` envelope, `ReproPairError`) and `verb_output::ReproPlacement`; manual `Display`/`Error`, no `thiserror` (ADR-0204, proposed; plan D12) | H-16, API-03, ERR-01 | Ryan Britton |

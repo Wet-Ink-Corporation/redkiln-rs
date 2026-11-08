@@ -189,7 +189,11 @@ fn shipped_catalog() -> Catalog {
 /// *(dated 2026-09-28, s8f build, package S8F-P6-ITEMS-BACKLOG-FEEDS; D21-46 R7; D21-106; the render
 /// record ADR-0189 decision 12, proposed.)* Thirteen: `s8f` adds `backlog`, the `store` route's first
 /// read (`live = true`), in the same commit as the two `[feed.*.backlog]` rows. No route is added.
-const SHIPPED_ROWS: [(&str, &str, &str, bool); 13] = [
+///
+/// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed; plan Decision D9.)*
+/// ~~Thirteen~~ Fourteen: `repro_place` (route `toolchain`, outputs `ReproPlacement`) appends the
+/// item's committed repro pair in the run tree. No route is added.
+const SHIPPED_ROWS: [(&str, &str, &str, bool); 14] = [
     ("build", "port", "BuildReport", false),
     ("change_summary", "port", "ChangeSummary", false),
     ("item_create", "store", "ItemRefs", false),
@@ -203,6 +207,7 @@ const SHIPPED_ROWS: [(&str, &str, &str, bool); 13] = [
     ("shallow_clone", "review_clone", "Workspace", false),
     ("verdict_record", "review_confirm", "Verdict", false),
     ("backlog", "store", "BacklogSnapshot", true),
+    ("repro_place", "toolchain", "ReproPlacement", false),
 ];
 
 #[test]
@@ -211,8 +216,8 @@ fn the_shipped_registry_loads_with_route_outputs_and_live_on_every_row() {
     assert_eq!(
         reg.len(),
         SHIPPED_ROWS.len(),
-        "the shipped `[verb]` table holds exactly record V decision 1's ten rows, R5's two and \
-         s8f's `backlog`"
+        "the shipped `[verb]` table holds exactly record V decision 1's ten rows, R5's two, \
+         s8f's `backlog` and ADR-0204's `repro_place`"
     );
     for (verb, route, outputs, live) in SHIPPED_ROWS {
         let row = reg
@@ -236,7 +241,8 @@ fn the_shipped_registry_loads_with_route_outputs_and_live_on_every_row() {
     }
     // A `toolchain` row declares the inputs its handler reads, so the executor refuses it before
     // the port until `s8d`'s resolver supplies them (§8c.4's routing table).
-    for verb in ["smoke", "sca_scan", "package", "setup"] {
+    // *(dated 2026-11-08, ADR-0204 decision 3.)* `repro_place` joins the list.
+    for verb in ["smoke", "sca_scan", "package", "setup", "repro_place"] {
         assert!(
             !reg.entry(verb).expect("rowed").inputs.is_empty(),
             "`{verb}` is a `toolchain` row and declares no inputs: the executor would reach \
@@ -581,12 +587,16 @@ fn the_shipped_rust_value_table_is_exactly_the_declared_key_map() {
 /// The verbs whose re-execution would repeat a write (§8d.1 R1's row): a second review clone, a
 /// second verdict record, a second artifact, a second item or a second tag. `shallow_clone` and
 /// `verdict_record` get their rows from R5; each is required `true` the moment it has one.
-const WRITING_VERBS: [&str; 5] = [
+///
+/// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed; plan Decision D9.)*
+/// ~~Five~~ Six: `repro_place` writes the run tree, so a re-run on re-entry would append twice.
+const WRITING_VERBS: [&str; 6] = [
     "shallow_clone",
     "verdict_record",
     "package",
     "item_create",
     "release_tag",
+    "repro_place",
 ];
 
 /// **Every `[verb]` row DECLARES `side_effecting`, and the writing verbs are marked `true`.** A row
