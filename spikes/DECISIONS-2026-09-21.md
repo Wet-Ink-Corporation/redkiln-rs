@@ -7948,6 +7948,30 @@ wrote test files, which no real investigator dispatch can do.
    the same card Ryan accepted `run`'s stderr line naming a failed step's class, `M-repro-pair-ignored` on the
    emit's `command`, and `M-selection-shell-accepted` under `--kernel`, outside `S8J_MUTANTS`.
 
+5. **The restart route: D21-163's procedure, not the plan's D8 A.** *(Recorded 2026-11-08 by an agent session under
+   Ryan's 08:20Z overnight authorisation, which says to weigh calls, follow the prudent recommendation and hold HITL
+   items for the morning. The operator may overrule it before any step runs, because every step is his to run.)*
+   Plan D8 A's procedure deletes `rk-run/rk-fix-doctor-margin`, runs `doctor --rebuild` (which drops every `t2_event`
+   row) and relaunches the **same** id. D21-163 had already approved the route back after a failed first real run
+   (`runbook/phase-1/s8-exit-criterion.md`, under its heading of that name), and it answered the questions D8 re-opened:
+   - **The live store stays in place.** Checkpoint 7i and `s8`'s (2) read it.
+   - **`refs/archive/` counts as reachable.** The tier-1 read is `git log --all`.
+   - **A fresh item is minted**, so that the old id's store rows and archived `Story:` marks cannot touch the new run.
+
+   The plan was drafted without D21-163 in view, and D8 A's rebuild would move the readings that D21-163 kept the
+   store for. The route followed is therefore D21-163's:
+   - **step 2:** archive the ref at `refs/archive/s8-failed-2026-11-08/rk-fix-doctor-margin` and tar the checkout,
+     then remove both;
+   - **step 3:** copy the store with SQLite's backup API to
+     `<git common dir>/redkiln/archive/2026-11-08-rk-fix-doctor-margin/`, with matching `counts.txt` readings;
+   - **step 4:** mint `rk-fix-doctor-margin-2`, the same defect under a new id. Its item, BugReport and repro pair
+     are copies of the first item's. The old item file gains one dated `#` line;
+   - **step 5:** re-freeze;
+   - **step 6:** Checkpoint 8j (3) and (12), and (4) per this entry's amendment, against the new id.
+
+   Steps 2, 3, 5 and 6 are the operator's to run. Step 4's `reserved-fix-item: rk-fix-doctor-margin-2
+   rk-cli:doctor::rules::margin` ledger line is his to write, in his voice. Plan D8 is superseded by this item.
+
 The records are ADR-0204 (proposed), `.redkiln/CHANGELOG.md`'s `minimal-repro@2` and `root-cause@6` rows, dated
 amendments to `runbook/phase-1/s8-exit-criterion.md` and `runbook/phase-1/s8j-run-preparation.md`, and
 `runbook/PROGRESS.md` row 8. No evidence line is written by this route: `runbook/phase-1/s8j-evidence.txt` is the

@@ -438,6 +438,11 @@ Mutants (s8j convention, `runbook/tools/s8j-mutants.py`, Python, sha256-verified
 
 ## Restarting the item's run (question 5): the operator's procedure, no new code (Decision D8)
 
+*(dated 2026-11-08, D21-174 item 5: superseded. The route followed is D21-163's approved procedure, in
+`runbook/phase-1/s8-exit-criterion.md` under "After a failed first real run of the fix item". It archives the ref
+under `refs/archive/`, keeps the live store in place and mints a fresh item, `rk-fix-doctor-margin-2`. It does not
+delete the ref, does not run `doctor --rebuild` and does not reuse the old id. The text below is kept as drafted.)*
+
 What the product offers, and why it is not enough:
 - **Run-tree reuse** (ADR-0180 decision 9) re-enters the old tree.
 - **On an existing `rk-run/<item>` branch**, `RK_BASE` records `merge-base(new HEAD, old tip)`, which is `0e569db`.
