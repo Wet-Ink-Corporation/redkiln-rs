@@ -10,6 +10,7 @@ mod findings;
 mod fixtures;
 mod judgement_registry;
 mod repro_ingest;
+mod repro_pair;
 mod review_gate;
 mod root_cause;
 mod schema_caps;

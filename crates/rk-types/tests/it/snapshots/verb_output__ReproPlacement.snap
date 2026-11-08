@@ -1,0 +1,50 @@
+---
+source: crates/rk-types/tests/it/verb_outputs.rs
+expression: "schemars::schema_for!(ReproPlacement)"
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReproPlacement",
+  "description": "`repro_place`'s output: what was appended where, and the one command that runs it (ADR-0204\ndecision 3, proposed; added 2026-11-08, s8 repro-pair route). A `toolchain` row, the Rust\nadapter's.",
+  "type": "object",
+  "properties": {
+    "path": {
+      "description": "The repo-relative file the repro was appended to.",
+      "type": "string"
+    },
+    "test": {
+      "description": "`<module>::<test>`, the test's full path inside its target.",
+      "type": "string"
+    },
+    "command": {
+      "description": "The plain command; its ` -- ` tail is the selection (`selection_of`).",
+      "type": "string"
+    },
+    "expect": {
+      "description": "The pair's expected failure substring.",
+      "type": "string"
+    },
+    "source_sha256": {
+      "description": "sha256 of the appended bytes, so the journal names what ran.",
+      "type": "string"
+    },
+    "spec_sha256": {
+      "description": "sha256 of the `.repro.toml` as read.",
+      "type": "string"
+    },
+    "appended": {
+      "description": "`true` when this call wrote; `false` when the target already ended with the bytes\n(re-entry).",
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "path",
+    "test",
+    "command",
+    "expect",
+    "source_sha256",
+    "spec_sha256",
+    "appended"
+  ]
+}
