@@ -32,6 +32,22 @@ pub(super) const STORY_ITEM: &str = "rk-lane-story";
 /// The fixture crate's path inside the repository.
 pub(super) const CRATE_DIR: &str = "crates/rk-lane-fixture";
 
+/// The fix item's committed repro test (ADR-0204, proposed; added 2026-11-08, s8 repro-pair
+/// route): `.redkiln/intake/rk-lane-fix.repro.rs`, red over the planted defect and green after the
+/// fix.
+pub(super) const REPRO_SOURCE: &str = "#[test]\nfn repro_empty_text_has_no_words() {\n    \
+assert_eq!(rk_lane_fixture::word_count(\"\"), 0);\n}\n";
+/// The fix item's committed repro spec, `.redkiln/intake/rk-lane-fix.repro.toml`: appended to the
+/// fixture's `tests/it/words.rs`.
+pub(super) const REPRO_SPEC: &str = "# The lane proofs' repro pair (ADR-0204, proposed).\n\
+kind   = \"it\"\ncrate  = \"rk-lane-fixture\"\nmodule = \"words\"\n\
+test   = \"repro_empty_text_has_no_words\"\nexpect = \"left: 1\"\n";
+/// The command `repro_place` derives from [`REPRO_SPEC`]: the placed test, and only it.
+pub(super) const REPRO_COMMAND: &str =
+    "cargo test -p rk-lane-fixture --test it -- words::repro_empty_text_has_no_words --exact";
+/// The file `repro_place` appends [`REPRO_SOURCE`] to.
+pub(super) const REPRO_FILE: &str = "crates/rk-lane-fixture/tests/it/words.rs";
+
 // ------------------------------------------------------------------------------- the fixture
 
 /// The workspace root this test binary was built from: the tree whose tracked `.redkiln/` is copied.
@@ -226,6 +242,12 @@ fn write_items(root: &Path) {
         "Count words separated by any run of whitespace.\n",
     )
     .expect("the intake record writes");
+    // Added 2026-11-08 (ADR-0204, proposed): the fix item's committed repro pair, which
+    // `minimal-repro@2`'s `place` appends in the run tree.
+    std::fs::write(intake.join(format!("{FIX_ITEM}.repro.toml")), REPRO_SPEC)
+        .expect("the repro spec writes");
+    std::fs::write(intake.join(format!("{FIX_ITEM}.repro.rs")), REPRO_SOURCE)
+        .expect("the repro source writes");
 }
 
 /// The path of an item's human-root file, relative to the repository root.
@@ -246,31 +268,52 @@ pub(super) fn fixture() -> tempfile::TempDir {
 /// child as `[adapters] harness_binary`, by absolute path (`support::fixture_child()`, the sibling
 /// of `redkiln`; the pack-min fixture's rule), before the fixture's commit.
 pub(super) fn binary_fixture() -> tempfile::TempDir {
+    fixture_with(name_fixture_child)
+}
+
+/// [`binary_fixture`] with the fix item's repro pair removed before the fixture's commit
+/// (ADR-0204, proposed; added 2026-11-08): `place` must refuse, by name, on stderr.
+pub(super) fn binary_fixture_without_repro_pair() -> tempfile::TempDir {
     fixture_with(|root| {
-        let path = root.join(".redkiln").join("config.toml");
-        let src = std::fs::read_to_string(&path).expect("the copied config reads");
-        let child = crate::support::fixture_child();
-        let row = format!(
-            "harness_binary = \"{}\"",
-            child.display().to_string().replace('\\', "\\\\")
-        );
-        let mut out = String::with_capacity(src.len() + row.len() + 1);
-        let mut placed = false;
-        for line in src.lines() {
-            out.push_str(line);
-            out.push('\n');
-            if line.trim() == "[adapters]" {
-                out.push_str(&row);
-                out.push('\n');
-                placed = true;
-            }
-        }
-        assert!(
-            placed,
-            "PREMISE: the copied config has an `[adapters]` table to name the harness binary in"
-        );
-        std::fs::write(&path, out).expect("the config writes");
+        name_fixture_child(root);
+        remove_repro_pair(root);
     })
+}
+
+/// Remove the fix item's repro pair [`write_items`] wrote.
+fn remove_repro_pair(root: &Path) {
+    let intake = root.join(".redkiln").join("intake");
+    for ext in ["toml", "rs"] {
+        std::fs::remove_file(intake.join(format!("{FIX_ITEM}.repro.{ext}")))
+            .expect("the rig's repro pair file is removed");
+    }
+}
+
+/// Name the built fixture child as the copied config's `[adapters] harness_binary`.
+fn name_fixture_child(root: &Path) {
+    let path = root.join(".redkiln").join("config.toml");
+    let src = std::fs::read_to_string(&path).expect("the copied config reads");
+    let child = crate::support::fixture_child();
+    let row = format!(
+        "harness_binary = \"{}\"",
+        child.display().to_string().replace('\\', "\\\\")
+    );
+    let mut out = String::with_capacity(src.len() + row.len() + 1);
+    let mut placed = false;
+    for line in src.lines() {
+        out.push_str(line);
+        out.push('\n');
+        if line.trim() == "[adapters]" {
+            out.push_str(&row);
+            out.push('\n');
+            placed = true;
+        }
+    }
+    assert!(
+        placed,
+        "PREMISE: the copied config has an `[adapters]` table to name the harness binary in"
+    );
+    std::fs::write(&path, out).expect("the config writes");
 }
 
 fn fixture_with(prepare: impl FnOnce(&Path)) -> tempfile::TempDir {
@@ -424,6 +467,8 @@ struct Seen {
     unscripted: Vec<Key>,
     /// Each dispatch's inputs whose catalog source is `artifact:<Kind>`, as `(key, source, value)`.
     artifact_inputs: Vec<(Key, String, serde_json::Value)>,
+    /// Each dispatch's resolved inputs, as `(key, inputs)` (added 2026-11-08, ADR-0204).
+    inputs: Vec<(Key, Vec<(String, serde_json::Value)>)>,
 }
 
 /// **The scripted harness**: a response per key, **no default response**. An unscripted dispatch
@@ -471,6 +516,29 @@ impl ScriptedLane {
             .iter()
             .filter(|(_, s, _)| *s == source)
             .map(|(k, _, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+
+    /// The input `name` of every dispatch of `(activity, step)`, in dispatch order (added
+    /// 2026-11-08, ADR-0204): what the kernel resolved for the step, e.g. a tool step's output.
+    pub(super) fn input_of(
+        &self,
+        activity: &str,
+        step: &str,
+        name: &str,
+    ) -> Vec<serde_json::Value> {
+        self.seen
+            .lock()
+            .expect("unpoisoned")
+            .inputs
+            .iter()
+            .filter(|(k, _)| k.0 == activity && k.1 == step)
+            .filter_map(|(_, inputs)| {
+                inputs
+                    .iter()
+                    .find(|(n, _)| n == name)
+                    .map(|(_, v)| v.clone())
+            })
             .collect()
     }
 
@@ -663,6 +731,7 @@ impl Harness for ScriptedLane {
         {
             let mut seen = self.seen.lock().expect("unpoisoned");
             seen.artifact_inputs.extend(inputs);
+            seen.inputs.push((key.clone(), spec.inputs.clone()));
             seen.visited.push(key.clone());
         }
         let result = match response {

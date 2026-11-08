@@ -34,16 +34,13 @@ const FIXED_LIB: &str = "//! The lane proofs' fixture crate, fixed by the lane.\
 #[cfg(test)]\nmod tests {\n    use super::word_count;\n\n    #[test]\n    fn counts_single_spaced_words() {\n        \
 assert_eq!(word_count(\"one two three\"), 3);\n    }\n}\n";
 
-/// The reproduction the investigator writes: red over the defect, green after the fix.
-const REPRO_TEST: &str = "#[test]\nfn repro_empty_text_has_no_words() {\n    \
-assert_eq!(rk_lane_fixture::word_count(\"\"), 0);\n}\n";
-/// The repro's command: the kernel's one selection parser reads the tokens after ` -- `.
-const REPRO_NAME: &str = "cargo test -- repro_empty_text_has_no_words";
-
-/// The investigator's discriminating test: red over the defect, green after the fix.
-const HYPOTHESIS_TEST: &str = "#[test]\nfn hypothesis_doubled_space_is_one_separator() {\n    \
-assert_eq!(rk_lane_fixture::word_count(\"one  two\"), 2);\n}\n";
-const HYPOTHESIS_NAME: &str = "cargo test -- hypothesis_doubled_space_is_one_separator";
+/// *(Rewritten 2026-11-08, s8 repro-pair route; ADR-0204, proposed; plan Decision D9.)* The
+/// investigator's `command` is prose of the 2026-11-08 relaunch's shape, and it writes no file: the
+/// repro the lane runs is the fix item's committed pair ([`rig::REPRO_SOURCE`]), placed by
+/// `minimal-repro@2`'s `place`. ~~The reproduction the investigator writes, and its
+/// discriminating test, each red over the defect and green after the fix.~~
+const AGENT_PROSE: &str = "Append the repro (crates/rk-lane-fixture/tests/it/words.rs) and run \
+`cargo test -p rk-lane-fixture --test it -- words::repro_empty_text_has_no_words --exact`";
 
 /// The implementer's failing test at `red`, for the Spec's one criterion.
 const RED_TEST: &str = "#[test]\nfn red_ac_1_leading_space_is_not_a_word() {\n    \
@@ -132,27 +129,26 @@ fn fix_script() -> BTreeMap<Key, Response> {
         contributing_factors: Vec::new(),
         confidence: lane::Confidence::High,
         summary: t("split(' ') counts separators, not words"),
-        discriminating_test: HYPOTHESIS_NAME.to_owned(),
-        rationale: t("the doubled-space test fails before the fix"),
+        discriminating_test: AGENT_PROSE.to_owned(),
+        rationale: t("the placed repro fails before the fix"),
     };
     BTreeMap::from([
         (
-            key("minimal-repro@1", "attempt", 0),
+            key("minimal-repro@2", "attempt", 0),
             Response::of(&lane::ReproAttempt {
                 status: lane::ReproStatus::Reproduced,
-                command: REPRO_NAME.to_owned(),
+                command: AGENT_PROSE.to_owned(),
                 observed: t("word_count(\"\") is 1"),
                 notes: t("deterministic"),
-                rationale: t("the repro test fails"),
-            })
-            .writing("crates/rk-lane-fixture/tests/repro.rs", REPRO_TEST),
+                rationale: t("the placed repro fails"),
+            }),
         ),
         (
-            key("minimal-repro@1", "reduce", 0),
+            key("minimal-repro@2", "reduce", 0),
             Response::of(&lane::ReproCase {
                 status: lane::ReproStatus::Reproduced,
                 steps: vec![t("call word_count(\"\")")],
-                command: REPRO_NAME.to_owned(),
+                command: AGENT_PROSE.to_owned(),
                 expected: t("0"),
                 observed: t("1"),
                 confidence: lane::Confidence::High,
@@ -160,21 +156,17 @@ fn fix_script() -> BTreeMap<Key, Response> {
             }),
         ),
         (
-            key("root-cause@5", "hypothesise", 0),
+            key("root-cause@6", "hypothesise", 0),
             Response::of(&lane::HypothesisLog {
                 status: lane::HypothesisStatus::Confirmed,
                 entries: vec![t("split(' ') yields an empty piece per extra space")],
-                discriminating_test: HYPOTHESIS_NAME.to_owned(),
+                discriminating_test: AGENT_PROSE.to_owned(),
                 root_cause,
                 summary: t("split(' ') counts separators"),
-                rationale: t("the discriminating test fails"),
-            })
-            .writing(
-                "crates/rk-lane-fixture/tests/hypothesis.rs",
-                HYPOTHESIS_TEST,
-            ),
+                rationale: t("the placed repro fails"),
+            }),
         ),
-        (key("root-cause@5", "adversary", 0), no_findings()),
+        (key("root-cause@6", "adversary", 0), no_findings()),
         (key("fix-spec@2", "draft", 0), Response::of(&fix_spec())),
         (
             key("fix-spec@2", "self-check", 0),
@@ -328,6 +320,180 @@ fn fix_lane_verify_completed_names_the_rust_adapter() {
     assert!(
         adapters.iter().all(|a| *a == "rk-adapter-toolchain-rust"),
         "a verify pass ran on another adapter: {adapters:?}"
+    );
+}
+
+/// The last `kind` artifact `item` journalled, as landed on `rk-run/<item>`.
+#[cfg(test)]
+fn landed_artifact(root: &std::path::Path, item: &str, kind: &str) -> serde_json::Value {
+    let write = rig::artifact_writes(root, item, kind)
+        .pop()
+        .unwrap_or_else(|| panic!("{item} journalled no {kind} write"));
+    let path = write
+        .get("path")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_else(|| panic!("the {kind} write names its path"));
+    let run_ref = crate::lane_e2e::run_ref(item);
+    let blob = rig::blob_at(root, &run_ref, path)
+        .unwrap_or_else(|| panic!("the {kind} `{path}` is not landed on {run_ref}"));
+    serde_json::from_slice(&blob).unwrap_or_else(|e| panic!("the landed {kind} is JSON: {e}"))
+}
+
+/// The `<sha> <subject>` of each commit on `<fork>..rk-run/<item>`, oldest first.
+#[cfg(test)]
+fn run_subjects(root: &std::path::Path, item: &str) -> Vec<String> {
+    let range = format!(
+        "{}..{}",
+        rig::fork_point(root, item),
+        crate::lane_e2e::run_ref(item)
+    );
+    crate::lane_e2e::git_read(root, &["log", "--reverse", "--format=%H %s", &range])
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .collect()
+}
+
+/// **The fix lane reproduces through the committed pair, never through agent prose** (ADR-0204,
+/// proposed; added 2026-11-08, s8 repro-pair route; plan test 28). Every agent `command` and
+/// `discriminating_test` in the script is the 2026-11-08 relaunch's kind of prose, and no agent
+/// writes a file, so the lane can only reproduce through `place`: (a) `place` commits on
+/// `rk-run/<item>` at the step grain, with the pair appended to `tests/it/words.rs`; (b) the
+/// placed test ran red, one failed and none passed; (c) the committed `ReproCase.command` is the
+/// placement's; (d) verify confirmed it passing; (e) the landed tree keeps the repro.
+#[test]
+fn fix_lane_reproduces_through_the_committed_pair_not_agent_prose() {
+    let repo = rig::fixture();
+    let root = repo.path();
+    let harness = rig::ScriptedLane::new(root, FIX_ITEM, fix_script());
+    rig::walk_to_close(root, FIX_ITEM, &harness, 16);
+
+    // (a) the step-grain commit, and the bytes it placed.
+    let prefix = format!("rk step {FIX_ITEM} minimal-repro@2 place ");
+    let subjects = run_subjects(root, FIX_ITEM);
+    let place = subjects
+        .iter()
+        .find_map(|l| l.split_once(' ').filter(|(_, s)| s.starts_with(&prefix)))
+        .map(|(sha, _)| sha.to_owned())
+        .unwrap_or_else(|| panic!("no `{prefix}...` commit on rk-run/{FIX_ITEM}: {subjects:#?}"));
+    let placed =
+        rig::blob_at(root, &place, rig::REPRO_FILE).expect("words.rs is at place's commit");
+    let placed = String::from_utf8(placed).expect("words.rs is UTF-8");
+    assert!(
+        placed.ends_with(rig::REPRO_SOURCE),
+        "place's commit does not end {} with the committed repro:\n{placed}",
+        rig::REPRO_FILE
+    );
+
+    // (b) the placed test, and only it, ran red: what `confirm` produced, as `attempt` read it.
+    let runs = harness.input_of("minimal-repro@2", "attempt", "run");
+    let [report] = runs.as_slice() else {
+        panic!("`attempt` was dispatched with one confirm report, not {runs:?}");
+    };
+    let count = |name: &str| report.get(name).and_then(serde_json::Value::as_u64);
+    assert_eq!(
+        (count("failed"), count("passed")),
+        (Some(1), Some(0)),
+        "minimal-repro's confirm did not run the placed test red alone: {report}"
+    );
+
+    // (c) the committed ReproCase carries the placement's command, not the agent's prose.
+    let placement = crate::support::journal_rows(root, FIX_ITEM)
+        .into_iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::ActivityCommitted)
+        .find(|e| e.payload.get("step_id").and_then(serde_json::Value::as_str) == Some("place"))
+        .and_then(|e| {
+            e.payload
+                .pointer("/result/command")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .expect("place committed a ReproPlacement with a command");
+    assert_eq!(placement, rig::REPRO_COMMAND, "the placement's command");
+    let case = landed_artifact(root, FIX_ITEM, "ReproCase");
+    assert_eq!(
+        case.get("command").and_then(serde_json::Value::as_str),
+        Some(placement.as_str()),
+        "the committed ReproCase's command is not the placement's: {case}"
+    );
+
+    // (d) verify's confirmation ran the placed repro green.
+    let confirmation = landed_artifact(root, FIX_ITEM, "ConfirmationResult");
+    assert_eq!(
+        confirmation
+            .get("status")
+            .and_then(serde_json::Value::as_str),
+        Some("passing"),
+        "verify's ConfirmationResult: {confirmation}"
+    );
+
+    // (e) the landed tree keeps the repro.
+    let run_ref = crate::lane_e2e::run_ref(FIX_ITEM);
+    let landed = rig::blob_at(root, &run_ref, rig::REPRO_FILE).expect("words.rs is landed");
+    assert!(
+        String::from_utf8_lossy(&landed).ends_with(rig::REPRO_SOURCE),
+        "the landed {} lost the repro",
+        rig::REPRO_FILE
+    );
+}
+
+/// **With no repro pair, the fix lane refuses at `place`, by name** (ADR-0204, proposed; added
+/// 2026-11-08; plan test 29), through the binary arm so stderr is the operator's: the `run`
+/// process exits on the refusal's row (`Unsupported`), its stderr names
+/// `.redkiln/intake/rk-lane-fix.repro.toml`, no fixture child is spawned (so no `minimal-repro`
+/// agent step read a confirm report), no `place` commit exists, and `words.rs` on `rk-run/<item>`
+/// is the fixture's.
+#[test]
+fn fix_lane_without_a_repro_pair_refuses_at_place_by_name() {
+    let repo = rig::binary_fixture_without_repro_pair();
+    let root = repo.path();
+    rig::write_child_script(root, Vec::new());
+    let mut out = rig::spawn_run(root, FIX_ITEM);
+    for _ in 0..8 {
+        if out.status.code() != Some(0) {
+            break;
+        }
+        let (_, kind) = rig::awaited_gate(root, FIX_ITEM)
+            .unwrap_or_else(|| panic!("the run exited 0 at no gate and without refusing"));
+        let (option, attach) = rig::first_option(root, FIX_ITEM, &kind);
+        let answered = rig::spawn_answer(root, FIX_ITEM, &option, &attach);
+        assert_eq!(
+            answered.status.code(),
+            Some(0),
+            "the `{kind}` gate's answer"
+        );
+        out = rig::spawn_run(root, FIX_ITEM);
+    }
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+        out.status.code(),
+        Some(Exit::Unsupported.code()),
+        "the run did not stop on place's refusal; stderr:\n{stderr}"
+    );
+    let looked_for = format!(".redkiln/intake/{FIX_ITEM}.repro.toml");
+    assert!(
+        stderr.contains(&looked_for),
+        "the run's stderr does not name `{looked_for}`:\n{stderr}"
+    );
+    assert_eq!(
+        rig::children_spawned(root),
+        0,
+        "an agent step was dispatched past the refusal"
+    );
+    let prefix = format!("rk step {FIX_ITEM} minimal-repro@2 place ");
+    let subjects = run_subjects(root, FIX_ITEM);
+    assert!(
+        subjects.iter().all(|l| !l.contains(&prefix)),
+        "a refused place committed: {subjects:#?}"
+    );
+
+    let fork = rig::fork_point(root, FIX_ITEM);
+    let run_ref = crate::lane_e2e::run_ref(FIX_ITEM);
+    assert_eq!(
+        rig::blob_at(root, &run_ref, rig::REPRO_FILE),
+        rig::blob_at(root, &fork, rig::REPRO_FILE),
+        "{} moved on {run_ref} with no pair to place",
+        rig::REPRO_FILE
     );
 }
 

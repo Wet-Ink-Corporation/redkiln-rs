@@ -1,0 +1,6 @@
+//! The lane fixture crate's one integration binary (`s8j` §8j.4; ADR-0204, proposed; added
+//! 2026-11-08, s8 repro-pair route). `repro_place` appends the fix item's committed repro to a
+//! module of this binary, so the binary exists before any lane runs. Stored as `main.rs.in` and
+//! renamed when `lane_proof`'s rig materialises the fixture.
+
+mod words;

@@ -17,7 +17,8 @@ How it runs (from the repository root, in the operator's Git Bash, inside step 1
     nd_check "the s8j mutants" || exit 1
 
 Other modes: `--self-test` (the synthetic controls, no cargo), `--list`, `--check-anchors <rev>` (every anchor
-asserted once against `git show <rev>:<file>`, no tree touched), `--only <id>` (repeatable).
+asserted once against `git show <rev>:<file>`, no tree touched), `--only <id>` (repeatable). *(Added 2026-11-08,
+ADR-0204.)* `--kernel` runs KERNEL_MUTANTS instead: mutants outside S8J_MUTANTS whose tests are rk-kernel's.
 
 The discipline, for every mutant:
 - every anchor is asserted EXACTLY ONCE in its file before anything is mutated; a missing or repeated anchor is a
@@ -58,6 +59,7 @@ DEFAULT_TIMEOUT = 3600
 C2 = "origin/claude/s8j-afk-batch-2-tg23uw-c2"
 C3 = "origin/claude/s8j-afk-batch-2-tg23uw-c3"
 C4 = "origin/claude/s8j-afk-batch-2-tg23uw-c4"
+BRANCH = "origin/claude/project-thread-bzyg5t"   # added 2026-11-08: the repro-pair route's branch
 
 
 def _it(*names):
@@ -65,7 +67,7 @@ def _it(*names):
     return {"package": "rk-cli", "target": ["--test", "it"], "names": list(names)}
 
 
-# The ten mutants, in step 1b's S8J_MUTANTS order. `anchor_from` names the branch the anchor was read from (with
+# The ~~ten~~ twelve mutants (two added 2026-11-08, ADR-0204), in step 1b's S8J_MUTANTS order. `anchor_from` names the branch the anchor was read from (with
 # `git show <branch>:<file>`) when the code was not yet on the integration branch. An entry whose anchor is TBD
 # makes the driver refuse to run: its `file` is a hint read from build/phase-0-to-1, not a confirmed site.
 MUTANTS = [
@@ -228,6 +230,60 @@ MUTANTS = [
         "anchor_from": C3,
         "note": "",
         "tests": [_it("run::a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load")],
+    },
+    # *(added 2026-11-08, s8 repro-pair route; ADR-0204, proposed; plan Decision D9.)* The fix lane reproduces
+    # from the committed repro pair, never from an agent's command.
+    {
+        "id": "M-repro-pair-ignored",
+        "section": "8j.4",
+        "change": "the committed ReproCase takes the agent's command, not the placement's",
+        "file": ".redkiln/catalog/minimal-repro.toml",
+        "anchor": ' command = "${place.outputs.command}", ',
+        "replacement": ' command = "${reduce.outputs.command}", ',
+        "anchor_from": BRANCH,
+        "note": "the plan named confirm's selection going back to ${attempt.outputs.command}; at @2 attempt reads"
+                " ${confirm.outputs}, so that edit is a dependency cycle the loader refuses, a kill for the wrong"
+                " reason. This site leaves the catalog valid and puts the agent's prose on ReproCase.command, which"
+                " root-cause@6's confirm refuses (parse_selection)",
+        "tests": [_it("lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose")],
+    },
+    {
+        "id": "M-repro-place-noop",
+        "section": "8j.4",
+        "change": "repro_place answers its placement without appending the repro",
+        "file": "crates/rk-adapter-toolchain-rust/src/verbs/repro.rs",
+        "anchor": (
+            "        out.write_all(block.as_bytes())\n"
+            "            .map_err(|e| io(format!(\"{VERB}: the append to {} failed: {e}\", target.path)))?;\n"
+        ),
+        "replacement": "        drop(out);\n",
+        "anchor_from": BRANCH,
+        "note": "the placed command then selects no test: confirm is not red, so the triage gate opens",
+        "tests": [_it("lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose")],
+    },
+]
+
+# *(added 2026-11-08, s8 repro-pair route; ADR-0204, proposed; plan Decision D9.)* Mutants whose tests are not in
+# step 1b's R_TESTS (rk-cli's `it` binary), so they are not in S8J_MUTANTS: run with `--kernel`. Their result lines
+# go to the same results file and step 1b reads none of them.
+KERNEL_MUTANTS = [
+    {
+        "id": "M-selection-shell-accepted",
+        "section": "8j.4",
+        "change": "parse_selection's shell-syntax arm never fires",
+        "file": "crates/rk-kernel/src/runtime/reference/selection.rs",
+        "anchor": "        .find(|(_, c)| SHELL_SYNTAX.contains(c))\n",
+        "replacement": "        .find(|(_, c)| false && SHELL_SYNTAX.contains(c))\n",
+        "anchor_from": BRANCH,
+        "note": "the 2026-11-08 prose then parses to its tail tokens, and a backtick, dollar or semicolon is accepted",
+        "tests": [{
+            "package": "rk-kernel",
+            "target": ["--test", "it"],
+            "names": [
+                "test_selection::parse_selection_refuses_the_2026_11_08_prose_by_name",
+                "test_selection::parse_selection_refuses_a_backtick_a_dollar_and_a_semicolon",
+            ],
+        }],
     },
 ]
 
@@ -618,24 +674,26 @@ def main(argv=None):
     ap.add_argument("--check-anchors", metavar="REV", help="assert every anchor once at REV; touch nothing")
     ap.add_argument("--only", action="append", default=[], metavar="ID", help="run only this mutant (repeatable)")
     ap.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="seconds per cargo command")
+    ap.add_argument("--kernel", action="store_true", help="use KERNEL_MUTANTS, outside S8J_MUTANTS (2026-11-08)")
     args = ap.parse_args(argv)
+    table = KERNEL_MUTANTS if args.kernel else MUTANTS
     root = Path(__file__).resolve().parent.parent.parent
     install_signal_handlers()
     try:
         if args.self_test:
             return self_test()
         if args.list:
-            for m in MUTANTS:
+            for m in table:
                 names = [n for g in m["tests"] for n in g["names"]]
                 anchor = TBD if is_tbd(m) else f"from {m['anchor_from']}"
                 print(f"{m['id']}\t§{m['section']}\t{m['file']}\t{anchor}\t{' '.join(names)}")
             return 0
         if args.check_anchors:
-            return check_anchors(root, args.check_anchors, MUTANTS, sys.stdout)
+            return check_anchors(root, args.check_anchors, table, sys.stdout)
         if not (root / "Cargo.toml").is_file() or not (root / "runbook").is_dir():
             raise Refused(f"{root} is not the redkiln-rs repository root")
         check_wrapper()
-        rc = Driver(root, MUTANTS, timeout=args.timeout).run(only=args.only)
+        rc = Driver(root, table, timeout=args.timeout).run(only=args.only)
         check_trap()
         return rc
     except RestoreMismatch as exc:

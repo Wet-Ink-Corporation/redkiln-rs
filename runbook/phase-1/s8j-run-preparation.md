@@ -1278,6 +1278,18 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    stage's selection shows it empty, so no one anchor makes *"a `stage_empty` stage mints no trailer"*. The
    mutant drops the advance's mark for every stage instead; the two trailer tests must still kill it.
 
+   *(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed; D21-174; plan Decision D9, approved by Ryan
+   2026-11-08.)* The fix lane now reproduces from the item's committed repro pair (§8j.4's two new proofs), so the
+   block below runs ~~the fifteen tests Checkpoint 8j (2) selects~~ **seventeen**: Checkpoint 8j (2)'s fifteen plus
+   `lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose` and
+   `lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name`. `R_TESTS` gains the two, the count line reads
+   ~~`15 passed`~~ `17 passed`, and `S8J_MUTANTS` gains `M-repro-pair-ignored` and `M-repro-place-noop` (twelve, from
+   ten). The third new mutant, `M-selection-shell-accepted`, is killed by `rk-kernel`'s `test_selection` tests, which
+   are not in `R_TESTS`, so it is not in `S8J_MUTANTS`: it is run with `python runbook/tools/s8j-mutants.py --kernel`
+   and step 1b reads no line of it. Checkpoint 8j (2) is unchanged (it passed at the stage's close and its fifteen
+   are a subset of these seventeen). The code lines below are edited in place, because a shell line cannot carry a
+   strike; the values they replaced are the struck ones in this note.
+
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
@@ -1296,16 +1308,16 @@ tdir=target/s8j-proofs; rm -rf "$tdir"; mkdir -p "$tdir" || { echo "FAIL: cannot
 wrapped() { nodispatch env -u FIX_ITEM -u STORY_ITEM -u ITEM "$@"; }
 out=$(wrapped cargo build --workspace 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
-R_TESTS="lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order lane_proof::fix_lane_verify_completed_names_the_rust_adapter lane_proof::story_lane_spec_is_landed_and_journalled lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order lane_proof::human_root_is_attached_through_the_pack_question_on_both_lanes lane_proof::gate_then_answer_then_second_process_continues_binary_arm lane_proof::boundary_hold_stops_the_lane_at_analysis_to_specification lane_proof::boundary_hold_answered_lets_the_next_process_enter_specification lane_proof::boundary_hold_changes_requested_does_not_advance processes::the_two_human_root_questions_load_and_each_attaches_its_kind processes::every_human_kind_a_lane_demands_is_attached_by_exactly_one_question processes::the_step_four_gate_on_a_human_kind_is_bound_to_its_question run::a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load run::every_binary_spawn_withholds_or_supplies_the_launch_record"
+R_TESTS="lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order lane_proof::fix_lane_verify_completed_names_the_rust_adapter lane_proof::story_lane_spec_is_landed_and_journalled lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order lane_proof::human_root_is_attached_through_the_pack_question_on_both_lanes lane_proof::gate_then_answer_then_second_process_continues_binary_arm lane_proof::boundary_hold_stops_the_lane_at_analysis_to_specification lane_proof::boundary_hold_answered_lets_the_next_process_enter_specification lane_proof::boundary_hold_changes_requested_does_not_advance processes::the_two_human_root_questions_load_and_each_attaches_its_kind processes::every_human_kind_a_lane_demands_is_attached_by_exactly_one_question processes::the_step_four_gate_on_a_human_kind_is_bound_to_its_question run::a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load run::every_binary_spawn_withholds_or_supplies_the_launch_record lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name"
 out=$(wrapped cargo test -p rk-cli --test it -- $R_TESTS --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the fixture proofs did not pass (rc=$rc) — no spend (D21-40 decision 2)"; printf '%s\n' "$out" | tail -30; exit 1; }
 for t in $R_TESTS; do printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok"; exit 1; }; done
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 15 passed; 0 failed' || { echo "FAIL: the proofs did not run exactly 15 tests"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 17 passed; 0 failed' || { echo "FAIL: the proofs did not run exactly 17 tests"; exit 1; }
 nd_check "the fixture proofs" || { echo "FAIL: a claude process ran under the proofs — no spend (D21-40 decision 2)"; exit 1; }
 # The mutant driver (Python, never the shell; sha256-verified restores) writes <id><TAB>killed|SURVIVED<TAB><HEAD sha>.
 res=target/s8j-mutants/results.tsv
 test -s "$res" || { echo "FAIL: no mutant results at $res — run the §8j.2–§8j.4 mutant driver at this HEAD first"; exit 1; }
-S8J_MUTANTS="M-seed-record M-land-empty M-fixture-toolchain M-skip-empty-stage-trailer M-spec-digest-pre-render M-worktree-under-git M-attach-dropped M-hold-ignored M-hold-spent-refires M-hold-unordered-accepted"
+S8J_MUTANTS="M-seed-record M-land-empty M-fixture-toolchain M-skip-empty-stage-trailer M-spec-digest-pre-render M-worktree-under-git M-attach-dropped M-hold-ignored M-hold-spent-refires M-hold-unordered-accepted M-repro-pair-ignored M-repro-place-noop"
 for m in $S8J_MUTANTS; do
   r=$(awk -F '\t' -v m="$m" -v h="$head" '$1==m && $3==h {s=$2} END {print s}' "$res")
   [ "$r" = killed ] || { echo "FAIL: mutant $m is '${r:-unrun}' at $head — a survivor blocks, and a result at another HEAD is not this code's"; exit 1; }
