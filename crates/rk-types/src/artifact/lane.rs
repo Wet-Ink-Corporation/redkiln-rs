@@ -297,7 +297,11 @@ pub struct Postmortem {
     pub status: Text,
 }
 
-/// One attempt to reproduce a defect. `command` is the selection a later step re-runs.
+// Dated 2026-11-08 (ADR-0204 decision 4, proposed; plan Decision D9): the doc line below is the
+// schema `description` the model sees. It read "`command` is the selection a later step re-runs";
+// `minimal-repro@2` runs the placed repro instead, so the text changes and the shape does not.
+/// One attempt to reproduce a defect. `command`: the placed repro's command, copied from the
+/// `placed` input; no step runs this value.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReproAttempt {

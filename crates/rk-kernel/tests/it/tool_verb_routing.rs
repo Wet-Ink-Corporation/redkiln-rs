@@ -477,6 +477,15 @@ fn every_decode_table_kind_refuses_an_undecodable_value_naming_it() {
             "ReleaseTag",
             serde_json::json!({ "tag": "v0", "target": "s", "rollback_target": "none" }),
         ),
+        // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed.)* A list
+        // extension: `repro_place`'s output.
+        (
+            "ReproPlacement",
+            serde_json::json!({ "path": "crates/a/tests/it/m.rs", "test": "m::t",
+                                "command": "cargo test -p a --test it -- m::t --exact",
+                                "expect": "e", "source_sha256": "s", "spec_sha256": "s",
+                                "appended": true }),
+        ),
     ];
     for (kind, valid) in kinds {
         // CONTROL: a value that decodes as the row's kind walks, so the refusal below is the
@@ -952,4 +961,69 @@ fn a_row_input_the_step_leaves_undeclared_is_supplied_by_the_routing() {
         0,
         "CONTROL: the unsupplied row reached the port"
     );
+}
+
+/// The shipped registry's `repro_place` row, as written.
+#[cfg(test)]
+fn shipped_repro_place_row() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../.redkiln/registry.toml")
+        .canonicalize()
+        .unwrap_or_else(|e| panic!("the shipped registry resolves: {e}"));
+    std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("{} reads: {e}", path.display()))
+        .lines()
+        .find(|l| l.starts_with("repro_place "))
+        .unwrap_or_else(|| panic!("the shipped registry has a `repro_place` row"))
+        .to_owned()
+}
+
+/// **`repro_place` with no `pair` row input bound refuses before the port, naming the verb and
+/// `pair`** (ADR-0204 decision 2, proposed; added 2026-11-08, s8 repro-pair route). With the
+/// envelope bound, the port is reached and its `ReproPlacement` decodes.
+#[test]
+fn repro_place_with_no_pair_bound_refuses_before_the_port_naming_it() {
+    let ctx = Context::new();
+    let row = shipped_repro_place_row();
+    let placement = || {
+        CountingToolchain::with_verb_output(VerbOutput {
+            kind: "ReproPlacement".to_owned(),
+            value: serde_json::json!({ "path": "crates/a/tests/it/m.rs", "test": "m::t",
+                                       "command": "cargo test -p a --test it -- m::t --exact",
+                                       "expect": "e", "source_sha256": "s", "spec_sha256": "s",
+                                       "appended": true }),
+        })
+    };
+
+    let (rt, tc) = rt_routed(
+        "repro-place-unbound",
+        placement(),
+        ToolRouting::new(registry(&row, ""), ToolchainValues::default()),
+    );
+    let e = failed(
+        rt.execute_step(&tool_step("place", "repro_place"), &ctx)
+            .expect("a value"),
+    );
+    let rendered = format!("{e:?}");
+    assert!(
+        rendered.contains("toolchain:repro_place") && rendered.contains("`pair`"),
+        "the refusal names the verb and its unbound `pair`: {rendered}"
+    );
+    assert_eq!(tc.calls(), 0, "an unbound `pair` reached the port");
+
+    // CONTROL: the envelope bound as the row input reaches the port, and the output decodes.
+    let (rt, tc) = rt_routed(
+        "repro-place-bound",
+        placement(),
+        ToolRouting::new(registry(&row, ""), ToolchainValues::default()).with_row_input(
+            "repro_place",
+            "pair",
+            serde_json::json!({ "state": "absent", "looked_for": [] }),
+        ),
+    );
+    let v = rt
+        .execute_step(&tool_step("place", "repro_place"), &ctx)
+        .expect("a value");
+    assert_eq!(v, StepVerdict::Continue, "CONTROL: {v:?}");
+    assert_eq!(tc.calls(), 1, "CONTROL: the port was reached once");
 }

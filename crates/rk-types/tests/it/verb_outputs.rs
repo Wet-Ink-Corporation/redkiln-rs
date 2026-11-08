@@ -7,7 +7,8 @@
 //! *(Added 2026-09-26, s8c.)*
 
 use rk_types::verb_output::{
-    BuildArtifact, BuildReport, ItemRefs, ReleaseTag, ScanReport, SetupResult, SmokeResult,
+    BuildArtifact, BuildReport, ItemRefs, ReleaseTag, ReproPlacement, ScanReport, SetupResult,
+    SmokeResult,
 };
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -95,6 +96,20 @@ fn samples() -> Vec<(&'static str, Value)> {
                 "rollback_target": "none"
             }),
         ),
+        // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed.)* `repro_place`'s
+        // output joins the table, a list extension.
+        (
+            "ReproPlacement",
+            json!({
+                "path": "crates/rk-cli/tests/it/doctor.rs",
+                "test": "doctor::s8j_repro",
+                "command": "cargo test -p rk-cli --test it -- doctor::s8j_repro --exact",
+                "expect": "AC-377",
+                "source_sha256": "ab",
+                "spec_sha256": "cd",
+                "appended": true
+            }),
+        ),
     ]
 }
 
@@ -115,6 +130,7 @@ fn parse_as(name: &str, value: &Value) -> Result<(), String> {
         "SetupResult" => parses::<SetupResult>(value),
         "ItemRefs" => parses::<ItemRefs>(value),
         "ReleaseTag" => parses::<ReleaseTag>(value),
+        "ReproPlacement" => parses::<ReproPlacement>(value),
         other => panic!("no such verb output `{other}` in this test's table"),
     }
 }
@@ -158,7 +174,13 @@ fn at<'a>(value: &'a mut Value, path: &str) -> &'a mut serde_json::Map<String, V
 #[test]
 fn every_verb_output_refuses_unknown_fields_and_has_no_default() {
     let all = samples();
-    assert_eq!(all.len(), 7, "the seven verb outputs of s8c §8c.4");
+    // *(dated 2026-11-08, ADR-0204 decision 3.)* ~~`7`, "the seven verb outputs of s8c §8c.4"~~:
+    // `ReproPlacement` is the eighth, a list extension (plan test 11).
+    assert_eq!(
+        all.len(),
+        8,
+        "the seven verb outputs of s8c §8c.4, and ADR-0204's ReproPlacement"
+    );
     for (name, sample) in &all {
         parse_as(name, sample).unwrap_or_else(|e| panic!("{name}'s sample must parse: {e}"));
         let mut paths = Vec::new();
@@ -219,6 +241,7 @@ fn every_verb_output_refuses_unknown_fields_and_has_no_default() {
         ("SetupResult", schemars::schema_for!(SetupResult)),
         ("ItemRefs", schemars::schema_for!(ItemRefs)),
         ("ReleaseTag", schemars::schema_for!(ReleaseTag)),
+        ("ReproPlacement", schemars::schema_for!(ReproPlacement)),
     ];
     for (name, schema) in schemas {
         let text = serde_json::to_string(&schema).expect("the schema serialises");
@@ -227,6 +250,22 @@ fn every_verb_output_refuses_unknown_fields_and_has_no_default() {
             "{name}'s schema carries a oneOf: {text}"
         );
     }
+}
+
+/// **`ReproPlacement`'s schema is pinned** (ADR-0204 decision 3, proposed; added 2026-11-08). It is
+/// a verb output, not in `EXPORTED`, so its golden is named `verb_output__`, not `exported__`: the
+/// `exported__` set is exactly what agents are presented (`schema_snapshot`).
+#[test]
+fn repro_placement_schema_snapshot() {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_snapshot_path("snapshots");
+    settings.set_prepend_module_to_snapshot(false);
+    settings.bind(|| {
+        insta::assert_json_snapshot!(
+            "verb_output__ReproPlacement",
+            schemars::schema_for!(ReproPlacement)
+        );
+    });
 }
 
 /// **`ScanReport.unrated` is a required member** (D21-43 N25: *"`sca-scan` requires `unrated == 0`

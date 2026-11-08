@@ -186,10 +186,21 @@ fn a_forward_ref_is_licensed_by_a_back_edge_a_repeat_body_or_an_escalate_re_entr
 /// **Every shipped forward ref is licensed, over a census read from inside this binary.** Prints
 /// exactly one `FORWARD_REFS total=<n> letter=<a> repeat=<b> escalate=<c> unlicensed=<d>` line, which
 /// Checkpoint 8d (6b) reads. `n > 0` over a non-zero count of activities walked (D21-42 13a),
-/// `n = a + b + c + d`, `d = 0`, and `c > 0` because the lanes' own `minimal-repro` and
-/// `tdd-red-green-refactor` refs ride the escalate licence. D21-57: the `${adversary.outputs?}`
-/// back-edges the localisation and spec-form chains depend on (`root-cause`,
+/// `n = a + b + c + d`, `d = 0`, and `c > 0` because the lanes' own ~~`minimal-repro` and~~
+/// `tdd-red-green-refactor` refs ride the escalate licence. *(Corrected 2026-11-08, s8 repro-pair
+/// route; ADR-0204 decision 4, proposed: `minimal-repro@2` has no repeat, no escalate and no
+/// `${triage-gate.answer?}` ref, so its one escalate-licensed ref left the census, which read
+/// `total=74 letter=61 repeat=3 escalate=10` before and `total=73 letter=61 repeat=3 escalate=9`
+/// after; `escalate > 0` still holds through `tdd-red-green-refactor`.)* D21-57: the `${adversary.outputs?}`
+/// back-edges the localisation and spec-form chains depend on (~~`root-cause`,~~
 /// `differential-debugging`, `instrumented-trace-analysis`, `user-story-ac`) stay licensed.
+/// *(Dated 2026-11-08, Ryan's ruling, D21-174 item 4; ADR-0204.)* `root-cause@6` has no back-edge
+/// any more: its `policy` continues and its `not-reproduced` gate opens instead of the loop-back,
+/// so `hypothesise`'s `findings = "${adversary.outputs?}"`, which only that loop could bind, is
+/// removed, and `root-cause` leaves this list. The census lost that letter-licensed ref, and
+/// `hypothesise`'s `${no-hypothesis.answer?}` moved from the letter licence (the loop-back) to the
+/// escalate licence (the `no-hypothesis` gate asks the question it escalates to): it read
+/// `total=73 letter=61 repeat=3 escalate=9` and reads `total=72 letter=59 repeat=3 escalate=10`.
 #[test]
 fn every_shipped_forward_ref_is_licensed_and_the_census_is_printed() {
     let dir = workspace_root().join(".redkiln").join("catalog");
@@ -208,7 +219,7 @@ fn every_shipped_forward_ref_is_licensed_and_the_census_is_printed() {
     );
     assert!(
         census.escalate > 0,
-        "the lanes' minimal-repro and tdd refs ride the escalate licence: {census:?}"
+        "the lanes' tdd refs ride the escalate licence: {census:?}"
     );
     let named: Vec<String> = refused.iter().map(ToString::to_string).collect();
     assert_eq!(
@@ -218,9 +229,9 @@ fn every_shipped_forward_ref_is_licensed_and_the_census_is_printed() {
         census.unlicensed,
         named.join("\n  ")
     );
-    // D21-57: the adversary back-edges stay licensed.
+    // D21-57: the adversary back-edges stay licensed. (`root-cause` left this list 2026-11-08,
+    // D21-174 item 4: it has no back-edge.)
     for id in [
-        "root-cause",
         "differential-debugging",
         "instrumented-trace-analysis",
         "user-story-ac",

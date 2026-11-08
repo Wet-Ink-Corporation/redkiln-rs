@@ -5,7 +5,7 @@ expression: schema
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ReproAttempt",
-  "description": "One attempt to reproduce a defect. `command` is the selection a later step re-runs.",
+  "description": "One attempt to reproduce a defect. `command`: the placed repro's command, copied from the\n`placed` input; no step runs this value.",
   "type": "object",
   "properties": {
     "status": {

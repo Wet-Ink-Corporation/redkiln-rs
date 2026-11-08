@@ -215,11 +215,30 @@ class TheTable(unittest.TestCase):
                 self.assertTrue(g["names"], m["id"])
                 self.assertLessEqual(set(g["names"]), fifteen, m["id"])
 
+    # *(added 2026-11-08, s8 repro-pair route; ADR-0204, proposed; plan Decision D9.)*
+    def test_the_kernel_mutants_are_outside_step_1bs_list_and_run_rk_kernel(self):
+        line = re.search(r'^S8J_MUTANTS="([^"]+)"$', self.text, re.M)
+        listed = set(line.group(1).split())
+        self.assertTrue(mut.KERNEL_MUTANTS)
+        for m in mut.KERNEL_MUTANTS:
+            self.assertNotIn(m["id"], listed, m["id"])
+            self.assertNotIn(m["id"], [n["id"] for n in mut.MUTANTS], m["id"])
+            for g in m["tests"]:
+                self.assertEqual((g["package"], g["target"]), ("rk-kernel", ["--test", "it"]), m["id"])
+                self.assertTrue(g["names"], m["id"])
+
+    def test_every_anchor_is_once_in_the_working_tree(self):
+        for m in mut.MUTANTS + mut.KERNEL_MUTANTS:
+            if mut.is_tbd(m):
+                continue
+            data = mut.rel_path(HERE.parent.parent, m["file"]).read_bytes()
+            mut.mutate_bytes(data, m)
+
     def test_the_results_path_is_the_one_step_1b_reads(self):
         self.assertIn(f"res={mut.RESULTS_REL}\n", self.text)
 
     def test_every_entry_names_its_source_branch_and_tbd_is_paired(self):
-        for m in mut.MUTANTS:
+        for m in mut.MUTANTS + mut.KERNEL_MUTANTS:
             self.assertTrue(m["anchor_from"].startswith("origin/"), m["id"])
             self.assertEqual(m["anchor"] == mut.TBD, m["replacement"] == mut.TBD, m["id"])
 

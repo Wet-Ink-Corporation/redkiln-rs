@@ -30,3 +30,4 @@ Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo te
 ## Decisions
 | Date | Decision | Rule | Decided by |
 |---|---|---|---|
+| 2026-11-08 | Add `runtime::reference::{parse_selection, check_selection_token, SelectionRefusal}`: the one selection parser refuses a multiline, control, shell-syntax, filterless or empty command by name, and `selection_of` is its `.ok()`; the `ReproPlacement` decode arm (ADR-0204, proposed; D21-174) | ERR-01, API-02 | Ryan Britton (plan D4, D5, D12, 2026-11-08) |

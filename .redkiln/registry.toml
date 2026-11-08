@@ -46,6 +46,15 @@ backlog        = { outputs = "BacklogSnapshot", live = true, timeout = "build_ti
 # `timeout` are spikes/p9/registry.toml's own (`Workspace` / `Verdict`, `build_timeout`).
 shallow_clone  = { outputs = "Workspace", live = false, timeout = "build_timeout", inputs = ["sha"], route = "review_clone", side_effecting = true }
 verdict_record = { outputs = "Verdict", live = false, timeout = "build_timeout", inputs = ["findings", "override"], route = "review_confirm", side_effecting = true }
+# (dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed) `repro_place` appends the item's committed
+# repro pair (.redkiln/intake/<item>.repro.{toml,rs}) to its target in the run tree and answers a `ReproPlacement`
+# naming the one plain command that runs it. It is on the existing `toolchain` route, so no route is added and
+# nothing is superseded (ADR-0170 decision 1 provides for a later record to add a row). `pair` is a row input the
+# composition root binds (the `ReproPairInput` envelope), so an absent or invalid pair refuses at `place`, by name.
+# `side_effecting = true`: it writes the run tree, so `place` is a step-grain act that commits to rk-run/<item>
+# (ADR-0188 decision 2) and is served, not re-run, on re-entry. `build_timeout` is an existing measured key; the
+# verb spawns nothing, so the key only bounds the step.
+repro_place    = { outputs = "ReproPlacement", live = false, timeout = "build_timeout", inputs = ["pair"], route = "toolchain", side_effecting = true }
 
 # ---- The source tables (D21-43 N14; ADR-0170 decision 8). Each checklist/atom entry declares exactly one of `path`
 # (relative to this directory) or `unauthored`; each feed exactly one of `verb` or `unprovided`. Only the 14 keys the

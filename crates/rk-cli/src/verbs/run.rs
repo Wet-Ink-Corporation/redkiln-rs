@@ -968,6 +968,20 @@ fn run_lane(
             .fold(routing, |r, (verb, input, value)| {
                 r.with_row_input(verb, input, value)
             });
+        // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 2, proposed.)* The item's
+        // committed repro pair, read from the RUN TREE (the frozen commit's bytes) and always bound
+        // as `repro_place.pair` for the Rust adapter: an absent or invalid pair is an envelope
+        // value that `place` refuses by name. Under the Node adapter the verb is refused by its
+        // name anyway, so nothing is bound.
+        let routing = if chosen.adapter.as_deref().and_then(toolchain_of) == Some("rust") {
+            routing.with_row_input(
+                "repro_place",
+                "pair",
+                crate::repro_pair::row_input(&owned, resolved.item.id()),
+            )
+        } else {
+            routing
+        };
         let toolchain = chosen.toolchain;
         // *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decision 2, proposed.)* The review
         // routes: `shallow_clone`'s clone of THIS repository (its common dir, whose object store the
@@ -3060,6 +3074,20 @@ fn resume_and_read(
                 );
                 return Ok(Exit::ConfigError);
             };
+            // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 7, proposed.)* The class
+            // is named, so a refusal reaches the operator by name (`place`'s names the pair's
+            // paths); the 2026-11-08 relaunch stopped with only the exit code. The exit is the
+            // class's row whether or not the line is written.
+            let named = {
+                use std::io::Write as _;
+                writeln!(
+                    std::io::stderr().lock(),
+                    "redkiln: the step's class: {class:?}"
+                )
+            };
+            if named.is_err() {
+                // stderr is closed, so the exit code is the only channel left.
+            }
             return Ok(Exit::from(class));
         }
         // 🛑 **ADR-0144. AN EXPLICIT ARM, BECAUSE THE CATCH-ALL BELOW IS THE DEFECT.**

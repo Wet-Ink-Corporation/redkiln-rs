@@ -1,0 +1,8 @@
+//! `word_count` over single-spaced text: passes over the planted defect. The fix item's repro is
+//! appended here, in the run tree only. Stored as `words.rs.in` and renamed when `lane_proof`'s rig
+//! materialises the fixture.
+
+#[test]
+fn single_spaced_words_are_counted() {
+    assert_eq!(rk_lane_fixture::word_count("one two"), 2);
+}

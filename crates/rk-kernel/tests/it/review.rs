@@ -1336,9 +1336,15 @@ fn ac303_confirm_step_survives_escalation() {
     // moves from `forward` to `back-edge` and none is lost: the twenty confirm checks and zero
     // violations stand. The four `forward` are the review family's `verdict` rows, class A's
     // included, which read the reviewer through `record` (D21-57).
+    // *(dated 2026-11-08, Ryan's ruling, D21-174 item 4; ADR-0204)* RE-PINNED (4, 16) → (4, 15),
+    // measured from inside this binary after the catalog edit [`left: (4, 15)`]. Cause:
+    // `root-cause@6`'s `policy` continues instead of looping back to `hypothesise`, and `hypothesise`
+    // no longer reads `${adversary.outputs?}`, so the reviewer's Findings reach the check by no
+    // back-edge and `root-cause` leaves the confirm checks (nineteen, zero violations). Its stop is
+    // now the `not-reproduced` gate.
     assert_eq!(
         (green.forward, green.back_edge),
-        (4, 16),
+        (4, 15),
         "the confirm checks' dependence classes over {SHIPPED_CATALOG} moved: {:?}",
         green.confirm_checks
     );

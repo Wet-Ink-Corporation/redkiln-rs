@@ -89,6 +89,10 @@ use crate::report::os_killed;
 use crate::run::{self, Run};
 use crate::{Config, DEFAULT_PNPM, RustToolchain, build};
 
+// *(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed.)* `repro_place`'s handler, reached
+// only through [`run_verb`].
+mod repro;
+
 /// The build a `smoke` call makes before its rows.
 const SMOKE_BUILD: [&str; 3] = ["build", "--workspace", "--message-format=json"];
 
@@ -100,8 +104,12 @@ const SETUP_ARGS: [&str; 4] = ["install", "--frozen-lockfile", "--prefer-offline
 
 /// Route one call (the module doc).
 ///
+/// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed.)* A fifth verb,
+/// `repro_place`, is routed to `verbs::repro`, whose module doc describes it.
+///
 /// # Errors
-/// `Unsupported { capability: "<verb>" }` for every verb but the four; each handler's own errors.
+/// `Unsupported { capability: "<verb>" }` for every verb but the five; each handler's own
+/// errors.
 pub fn run_verb(tc: &RustToolchain, call: &VerbCall<'_>) -> Result<VerbOutput, StepError> {
     let cfg = tc.config().bounded(call.bound);
     match call.verb {
@@ -109,6 +117,8 @@ pub fn run_verb(tc: &RustToolchain, call: &VerbCall<'_>) -> Result<VerbOutput, S
         "sca_scan" => sca_scan(tc, &cfg, call.inputs),
         "package" => package(tc, &cfg, call.inputs),
         "setup" => setup(tc, &cfg, call.inputs),
+        // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed.)*
+        "repro_place" => repro::repro_place(&cfg, call.inputs),
         other => Err(StepError::Unsupported {
             capability: other.to_owned(),
         }),

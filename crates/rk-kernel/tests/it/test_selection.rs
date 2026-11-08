@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 
 use rk_kernel::catalog::StepKind;
 use rk_kernel::runtime::Runtime;
+use rk_kernel::runtime::reference::{SelectionRefusal, check_selection_token, parse_selection};
 use rk_kernel::runtime::step::ToolRouting;
 use rk_kernel::workflow::memo::ToolchainValues;
 use rk_ports::harness::Harness;
@@ -526,4 +527,205 @@ fn inside_the_changeset_producer_affected_resolves_over_the_run_branch_diff() {
         );
     }
     assert_eq!(walked, 3, "the refusal table walked");
+}
+
+// ---- ADR-0204 decision 6 (proposed; dated 2026-11-08, s8 repro-pair route): `parse_selection` is
+// the ONE parser, and it refuses more. ADR-0173 stands. -------------------------------------------
+//
+// The 2026-11-08 relaunch 3 stopped at exit 14: `minimal-repro@1`'s `confirm` read an investigator's
+// prose as a command, and `selection_of` split it after ` -- ` into libtest arguments, so the
+// prose's closing backtick reached `--list` as part of `--exact`. A selection is now refused by
+// name, before the port, unless it is a plain command.
+
+/// The shape of the investigator's `ReproAttempt.command` on 2026-11-08 (relaunch 3, rc 14). The
+/// full string lives in the operator's store; what is kept here are its failing features: prose
+/// with a parenthesis before the separator, and a closing backtick glued to `--exact`.
+const PROSE_2026_11_08: &str = "Append the repro (crates/rk-cli/tests/it/doctor.rs) and run \
+     `cargo test -p rk-cli --test it -- \
+     doctor::s8j_repro_a_pack_missing_a_margin_window_is_a_doctor_error --exact`";
+
+#[test]
+fn parse_selection_reads_the_plain_tail_after_the_separator() {
+    assert_eq!(
+        parse_selection("cargo test -p rk-cli --test it -- doctor::x --exact"),
+        Ok(vec!["doctor::x".to_owned(), "--exact".to_owned()])
+    );
+}
+
+#[test]
+fn parse_selection_refuses_the_2026_11_08_prose_by_name() {
+    let refused = parse_selection(PROSE_2026_11_08);
+    assert_eq!(
+        refused,
+        Err(SelectionRefusal::ShellSyntax {
+            found: '(',
+            at: PROSE_2026_11_08
+                .find('(')
+                .expect("the prose holds a parenthesis"),
+        })
+    );
+    assert_eq!(
+        rk_kernel::runtime::reference::selection_of(PROSE_2026_11_08),
+        None
+    );
+}
+
+#[test]
+fn parse_selection_refuses_a_backtick_a_dollar_and_a_semicolon() {
+    for (command, found, at) in [
+        ("cargo test -- `x`", '`', 14),
+        ("cargo test -- $HOME", '$', 14),
+        ("cargo test -- a; rm -rf b", ';', 15),
+    ] {
+        assert_eq!(
+            parse_selection(command),
+            Err(SelectionRefusal::ShellSyntax { found, at }),
+            "{command}"
+        );
+    }
+}
+
+#[test]
+fn parse_selection_refuses_a_newline_as_multiline() {
+    assert_eq!(
+        parse_selection("cargo test -- a\ncargo test -- b"),
+        Err(SelectionRefusal::Multiline)
+    );
+    assert_eq!(
+        parse_selection("cargo test -- a\r"),
+        Err(SelectionRefusal::Multiline)
+    );
+}
+
+#[test]
+fn parse_selection_refuses_a_control_byte() {
+    assert_eq!(
+        parse_selection("cargo test -- a\tb"),
+        Err(SelectionRefusal::Control { at: 15 })
+    );
+    assert_eq!(
+        parse_selection("cargo test -- a\u{1b}[0m"),
+        Err(SelectionRefusal::Control { at: 15 })
+    );
+}
+
+#[test]
+fn parse_selection_refuses_no_filter_and_an_empty_filter() {
+    assert_eq!(
+        parse_selection("cargo test"),
+        Err(SelectionRefusal::NoFilter)
+    );
+    assert_eq!(
+        parse_selection("cargo test -- "),
+        Err(SelectionRefusal::EmptyFilter)
+    );
+    assert_eq!(
+        parse_selection("cargo test --    "),
+        Err(SelectionRefusal::EmptyFilter)
+    );
+}
+
+#[test]
+fn each_selection_refusal_renders_its_variant_name_first() {
+    for (refusal, name) in [
+        (SelectionRefusal::Multiline, "Multiline"),
+        (SelectionRefusal::Control { at: 3 }, "Control"),
+        (
+            SelectionRefusal::ShellSyntax { found: '|', at: 4 },
+            "ShellSyntax",
+        ),
+        (SelectionRefusal::NoFilter, "NoFilter"),
+        (SelectionRefusal::EmptyFilter, "EmptyFilter"),
+        (
+            SelectionRefusal::BadToken {
+                token: "a b".to_owned(),
+            },
+            "BadToken",
+        ),
+    ] {
+        assert!(refusal.to_string().starts_with(name), "{refusal}");
+    }
+}
+
+#[test]
+fn check_selection_token_accepts_a_name_and_refuses_whitespace_shell_and_empty() {
+    assert_eq!(check_selection_token("doctor::x"), Ok(()));
+    // A `-`-led token is a libtest flag, not a name: `tests_added` must not inject one.
+    for token in [
+        "",
+        "a b",
+        "a;b",
+        "`a`",
+        "a\u{7}",
+        "--include-ignored",
+        "--ignored",
+        "--list",
+        "-q",
+    ] {
+        assert_eq!(
+            check_selection_token(token),
+            Err(SelectionRefusal::BadToken {
+                token: token.to_owned()
+            }),
+            "{token:?}"
+        );
+    }
+}
+
+mod parse_selection_properties {
+    use proptest::prelude::*;
+    use rk_kernel::runtime::reference::{parse_selection, selection_of};
+
+    const SHELL: &[char] = &[
+        '`', '$', ';', '|', '&', '<', '>', '(', ')', '{', '}', '"', '\'', '\\',
+    ];
+
+    proptest! {
+        #[test]
+        fn selection_of_is_parse_selection_ok(command in "\\PC{0,40}( -- \\PC{0,20})?") {
+            prop_assert_eq!(selection_of(&command), parse_selection(&command).ok());
+        }
+
+        #[test]
+        fn any_shell_character_is_refused(
+            head in "[a-z :-]{0,20}",
+            shell in proptest::sample::select(SHELL),
+            tail in "[a-z :-]{0,20}",
+        ) {
+            let command = format!("{head} -- x{shell}{tail}");
+            prop_assert!(parse_selection(&command).is_err(), "{}", command);
+        }
+    }
+}
+
+/// **A prose `${…}` command refuses by name, naming the refusal, and never reaches the port.**
+#[test]
+fn selection_plan_refuses_a_prose_string_naming_the_refusal() {
+    let (report, tc, _) = walk(
+        Vec::new(),
+        serde_json::json!({"command": PROSE_2026_11_08}),
+        "${write.outputs.command}",
+    );
+    assert_eq!(tc.calls.load(Ordering::SeqCst), 0, "{:?}", tc.selections());
+    let e = refusal(&report);
+    assert!(
+        e.contains("`run-tests`") && e.contains("inputs.selection") && e.contains("ShellSyntax"),
+        "the refusal names the step, its selection and the refusal: {e}"
+    );
+}
+
+/// **A list element with whitespace refuses by name (D5), naming the element.**
+#[test]
+fn selection_plan_refuses_a_list_element_with_whitespace_naming_it() {
+    let (report, tc, _) = walk(
+        Vec::new(),
+        serde_json::json!({"tests_added": ["ac601_fails_before", "run ac601 --exact"]}),
+        "${write.outputs.tests_added}",
+    );
+    assert_eq!(tc.calls.load(Ordering::SeqCst), 0, "{:?}", tc.selections());
+    let e = refusal(&report);
+    assert!(
+        e.contains("BadToken") && e.contains("run ac601 --exact"),
+        "the refusal names the element: {e}"
+    );
 }

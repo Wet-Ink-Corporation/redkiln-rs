@@ -4,9 +4,10 @@
 //! `rk-kernel`'s and landed at cycle 1 as `ac436_keywords_unreachable_from_admissibility_evaluator`;
 //! this is the CLI half and asserts the search finds what the field declares.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use rk_kernel::catalog::Catalog;
+use rk_kernel::catalog::{Catalog, InputValue, StepKind};
 
 use rk_cli::verbs::catalog;
 
@@ -120,4 +121,99 @@ fn ac436_catalog_search_finds_by_keyword() {
     let mut matched: Vec<u8> = Vec::new();
     catalog::search(&catalog, needle, &mut matched);
     assert_eq!(String::from_utf8_lossy(&matched).trim(), "brew-report");
+}
+
+/// The known violators of the read-only-role rule, each `(activity, step)`: an investigator
+/// output that a `toolchain:test` selection reads (ADR-0204, proposed; plan Decision D13). No lane
+/// selects either. They are tracked by the issue owed in ADR-0204 § "Owed issue (D13)"; when one
+/// is fixed it leaves this list, because the assertion is exact.
+const KNOWN_READ_ONLY_SELECTIONS: [(&str, &str); 2] = [
+    ("differential-debugging", "confirm"),
+    ("instrumented-trace-analysis", "confirm"),
+];
+
+/// The tools a role's card grants, read from `.redkiln/cards/<role>.json`.
+#[cfg(test)]
+fn card_tools(root: &Path, role: &str) -> BTreeSet<String> {
+    let path = root
+        .join(".redkiln")
+        .join("cards")
+        .join(format!("{role}.json"));
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("the card {} reads: {e}", path.display()));
+    let card: serde_json::Value = serde_json::from_str(&text)
+        .unwrap_or_else(|e| panic!("the card {} parses: {e}", path.display()));
+    card.get("tools")
+        .and_then(serde_json::Value::as_array)
+        .unwrap_or_else(|| panic!("the card {} has a `tools` array", path.display()))
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .collect()
+}
+
+/// **No `toolchain:test` selection reads the output of a step whose role cannot write** (ADR-0204,
+/// proposed; added 2026-11-08, s8 repro-pair route). The 2026-11-08 relaunch stopped because
+/// `minimal-repro@1`'s `confirm` ran the investigator's prose: a read-only role (Read, Glob, Grep,
+/// StructuredOutput) can neither write a test nor run a command, so a selection fed by its output
+/// names prose or a test that does not exist. For every activity and every `toolchain:test` step
+/// whose `inputs.selection` reads `${<step>.outputs…}`, the source step is a tool step, or an agent
+/// step whose role card grants `Write` or `Edit`. The violators are exactly the two known ones.
+#[test]
+fn no_test_selection_reads_a_read_only_roles_output() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut walked = 0_usize;
+    let mut violators = BTreeSet::new();
+    for dir in ["catalog", "catalog-extended"] {
+        let catalog = Catalog::from_dir(&root.join(".redkiln").join(dir))
+            .unwrap_or_else(|e| panic!("the shipped {dir} loads: {e}"));
+        for activity in catalog.activities() {
+            for step in &activity.steps {
+                if step.run.as_deref() != Some("toolchain:test") {
+                    continue;
+                }
+                walked += 1;
+                let Some(InputValue::Text(selection)) = step.inputs.get("selection") else {
+                    continue;
+                };
+                let Some(source) = selection
+                    .strip_prefix("${")
+                    .and_then(|rest| rest.split_once(".outputs"))
+                    .map(|(source, _)| source)
+                else {
+                    continue;
+                };
+                let source_step = activity
+                    .steps
+                    .iter()
+                    .find(|s| s.id == source)
+                    .unwrap_or_else(|| {
+                        panic!("{}: `{source}` is a step of the activity", activity.id)
+                    });
+                if source_step.kind != StepKind::Agent {
+                    continue;
+                }
+                let role = source_step.role.as_deref().unwrap_or_else(|| {
+                    panic!("{}: the agent step `{source}` has a role", activity.id)
+                });
+                let tools = card_tools(&root, role);
+                if !tools.contains("Write") && !tools.contains("Edit") {
+                    violators.insert((activity.id.clone(), step.id.clone()));
+                }
+            }
+        }
+    }
+    assert!(
+        walked > 10,
+        "PREMISE: the walk met the shipped `toolchain:test` steps, not a handful: {walked}"
+    );
+    let known: BTreeSet<(String, String)> = KNOWN_READ_ONLY_SELECTIONS
+        .iter()
+        .map(|(a, s)| ((*a).to_owned(), (*s).to_owned()))
+        .collect();
+    assert_eq!(
+        violators, known,
+        "a `toolchain:test` selection reads a read-only role's output (ADR-0204; the 2026-11-08 \
+         rc 14): the source step's card grants neither Write nor Edit"
+    );
 }

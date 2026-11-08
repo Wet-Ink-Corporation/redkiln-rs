@@ -301,3 +301,26 @@ pub struct ReleaseTag {
     /// The previous release's tag, or `none`.
     pub rollback_target: String,
 }
+
+/// `repro_place`'s output: what was appended where, and the one command that runs it (ADR-0204
+/// decision 3, proposed; added 2026-11-08, s8 repro-pair route). A `toolchain` row, the Rust
+/// adapter's.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReproPlacement {
+    /// The repo-relative file the repro was appended to.
+    pub path: String,
+    /// `<module>::<test>`, the test's full path inside its target.
+    pub test: String,
+    /// The plain command; its ` -- ` tail is the selection (`selection_of`).
+    pub command: String,
+    /// The pair's expected failure substring.
+    pub expect: String,
+    /// sha256 of the appended bytes, so the journal names what ran.
+    pub source_sha256: String,
+    /// sha256 of the `.repro.toml` as read.
+    pub spec_sha256: String,
+    /// `true` when this call wrote; `false` when the target already ended with the bytes
+    /// (re-entry).
+    pub appended: bool,
+}

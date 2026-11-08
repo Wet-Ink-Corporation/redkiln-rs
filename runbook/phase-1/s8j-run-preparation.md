@@ -962,6 +962,23 @@ folds the spawn sites into that helper. Two lints over one rule would drift, so 
 §8j.6 step 1b and Checkpoint 8j (2) select `s8h`'s lint beside this stage's fourteen tests, because 7c's split
 (§8j.6 step 2) relies on it.
 
+*(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed; D21-174; plan Decision D9)* **Two proofs and three
+mutants are added.** `s8` stopped at relaunch 3 (rc 14) because `minimal-repro@1` ran an investigator's prose as a
+test selection, and these proofs had passed only because the fake's `attempt` and `hypothesise` wrote test files no
+read-only card can write. The fix lane's script now answers every agent `command` and `discriminating_test` with prose
+and writes no file from an investigator step, and the rig commits the fix item's repro pair:
+- `lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose`: `place` commits the pair on
+  `rk-run/<item>`, the placed test ran red (one failed, none passed), the committed `ReproCase.command` is the
+  placement's, verify's `ConfirmationResult` is `passing`, and the landed tree keeps the repro.
+- `lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name` (binary arm): the run exits on the refusal's
+  row, its stderr names `.redkiln/intake/rk-lane-fix.repro.toml`, and no child is spawned.
+
+| Mutant | Change | Killed by |
+|---|---|---|
+| `M-repro-pair-ignored` | the committed `ReproCase` takes the agent's command, not the placement's | the first proof |
+| `M-repro-place-noop` | `repro_place` answers without appending | the first proof |
+| `M-selection-shell-accepted` | `parse_selection`'s shell-syntax arm never fires | `rk-kernel`'s `test_selection` (2026-11-08 prose; backtick, dollar, semicolon); run with `--kernel`, outside `S8J_MUTANTS` |
+
 🛑 **What this section does not claim.**
 
 - It does not claim AC-473 or AC-521. Those are claimed by real runs on this repository, which are `s8`'s.
@@ -1005,6 +1022,12 @@ the ledger, and a fresh item is minted."*
      items, so a private function such as C3's is reachable.
    - A repro that needs fixture files writes them into a temporary directory itself, as C4's does. The pair carries
      no directory.
+   *(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed; D21-174)* The repro is still never committed into a
+   crate on the integration branch before `s8`. The fix lane now **reads** the pair: `minimal-repro@2`'s `place` step
+   (`toolchain:repro_place`) appends it in the run tree exactly as `kind` says, and commits it on `rk-run/<item>` at
+   the step grain, where it lands with the fix as its regression test. Until now the attached BugReport, which
+   points at both, was the only route by which the pair reached a run; it still points at both. ADR-0204 supersedes
+   ADR-0200 decision 4's *"Nothing reads the directory"* for the pair only.
 4. **One crate, low blast radius.** The fix touches one crate's `src/`, in about one function.
 5. **Present at least three to the operator.** For each, give the file, the quoted code, the contract it breaks
    (quoted from its own doc, an ADR or the register), the red output from step 3, and why it is outside the run.
@@ -1278,6 +1301,18 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    stage's selection shows it empty, so no one anchor makes *"a `stage_empty` stage mints no trailer"*. The
    mutant drops the advance's mark for every stage instead; the two trailer tests must still kill it.
 
+   *(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed; D21-174; plan Decision D9, approved by Ryan
+   2026-11-08.)* The fix lane now reproduces from the item's committed repro pair (§8j.4's two new proofs), so the
+   block below runs ~~the fifteen tests Checkpoint 8j (2) selects~~ **seventeen**: Checkpoint 8j (2)'s fifteen plus
+   `lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose` and
+   `lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name`. `R_TESTS` gains the two, the count line reads
+   ~~`15 passed`~~ `17 passed`, and `S8J_MUTANTS` gains `M-repro-pair-ignored` and `M-repro-place-noop` (twelve, from
+   ten). The third new mutant, `M-selection-shell-accepted`, is killed by `rk-kernel`'s `test_selection` tests, which
+   are not in `R_TESTS`, so it is not in `S8J_MUTANTS`: it is run with `python runbook/tools/s8j-mutants.py --kernel`
+   and step 1b reads no line of it. Checkpoint 8j (2) is unchanged (it passed at the stage's close and its fifteen
+   are a subset of these seventeen). The code lines below are edited in place, because a shell line cannot carry a
+   strike; the values they replaced are the struck ones in this note.
+
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
@@ -1296,16 +1331,16 @@ tdir=target/s8j-proofs; rm -rf "$tdir"; mkdir -p "$tdir" || { echo "FAIL: cannot
 wrapped() { nodispatch env -u FIX_ITEM -u STORY_ITEM -u ITEM "$@"; }
 out=$(wrapped cargo build --workspace 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
-R_TESTS="lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order lane_proof::fix_lane_verify_completed_names_the_rust_adapter lane_proof::story_lane_spec_is_landed_and_journalled lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order lane_proof::human_root_is_attached_through_the_pack_question_on_both_lanes lane_proof::gate_then_answer_then_second_process_continues_binary_arm lane_proof::boundary_hold_stops_the_lane_at_analysis_to_specification lane_proof::boundary_hold_answered_lets_the_next_process_enter_specification lane_proof::boundary_hold_changes_requested_does_not_advance processes::the_two_human_root_questions_load_and_each_attaches_its_kind processes::every_human_kind_a_lane_demands_is_attached_by_exactly_one_question processes::the_step_four_gate_on_a_human_kind_is_bound_to_its_question run::a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load run::every_binary_spawn_withholds_or_supplies_the_launch_record"
+R_TESTS="lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order lane_proof::fix_lane_verify_completed_names_the_rust_adapter lane_proof::story_lane_spec_is_landed_and_journalled lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order lane_proof::human_root_is_attached_through_the_pack_question_on_both_lanes lane_proof::gate_then_answer_then_second_process_continues_binary_arm lane_proof::boundary_hold_stops_the_lane_at_analysis_to_specification lane_proof::boundary_hold_answered_lets_the_next_process_enter_specification lane_proof::boundary_hold_changes_requested_does_not_advance processes::the_two_human_root_questions_load_and_each_attaches_its_kind processes::every_human_kind_a_lane_demands_is_attached_by_exactly_one_question processes::the_step_four_gate_on_a_human_kind_is_bound_to_its_question run::a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load run::every_binary_spawn_withholds_or_supplies_the_launch_record lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name"
 out=$(wrapped cargo test -p rk-cli --test it -- $R_TESTS --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the fixture proofs did not pass (rc=$rc) — no spend (D21-40 decision 2)"; printf '%s\n' "$out" | tail -30; exit 1; }
 for t in $R_TESTS; do printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok"; exit 1; }; done
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 15 passed; 0 failed' || { echo "FAIL: the proofs did not run exactly 15 tests"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 17 passed; 0 failed' || { echo "FAIL: the proofs did not run exactly 17 tests"; exit 1; }
 nd_check "the fixture proofs" || { echo "FAIL: a claude process ran under the proofs — no spend (D21-40 decision 2)"; exit 1; }
 # The mutant driver (Python, never the shell; sha256-verified restores) writes <id><TAB>killed|SURVIVED<TAB><HEAD sha>.
 res=target/s8j-mutants/results.tsv
 test -s "$res" || { echo "FAIL: no mutant results at $res — run the §8j.2–§8j.4 mutant driver at this HEAD first"; exit 1; }
-S8J_MUTANTS="M-seed-record M-land-empty M-fixture-toolchain M-skip-empty-stage-trailer M-spec-digest-pre-render M-worktree-under-git M-attach-dropped M-hold-ignored M-hold-spent-refires M-hold-unordered-accepted"
+S8J_MUTANTS="M-seed-record M-land-empty M-fixture-toolchain M-skip-empty-stage-trailer M-spec-digest-pre-render M-worktree-under-git M-attach-dropped M-hold-ignored M-hold-spent-refires M-hold-unordered-accepted M-repro-pair-ignored M-repro-place-noop"
 for m in $S8J_MUTANTS; do
   r=$(awk -F '\t' -v m="$m" -v h="$head" '$1==m && $3==h {s=$2} END {print s}' "$res")
   [ "$r" = killed ] || { echo "FAIL: mutant $m is '${r:-unrun}' at $head — a survivor blocks, and a result at another HEAD is not this code's"; exit 1; }
@@ -2422,6 +2457,11 @@ in `runbook/phase-1/s8-exit-criterion.md`, under *"After a failed first real run
 archive `rk-run/<item>` and the store, mint a fresh item by §8j.5's route, and re-run this checkpoint's (3) and (12)
 against it. 🛑 It is a **DRAFT awaiting the operator's approval of its text before the freeze**, and nothing in it
 may be run until then. It changes none of this checkpoint's assertions.
+*(dated 2026-11-08, s8 repro-pair route; ADR-0204, proposed; D21-174)* **(4) is a pre-launch gate.** It asserts the
+reserved defect is red at HEAD and absent from the crate, which holds until the item's run lands. Once `rk-run/<item>`
+is merged, the placed repro is in the crate and green, so (4) is retired for that item, as the checkpoint as a whole
+already is after the first launch. Before the next paid launch on the new frozen sha it is re-run once (free): the
+repro is still red at HEAD and still absent from the crate.
 
 **At stage open, the chain is run once whole with its failures neutralised** *(added 2026-09-24, D21-47; review
 finding 5).* A checkpoint that has never been run whole accumulates assertions that cannot be satisfied. Checkpoint

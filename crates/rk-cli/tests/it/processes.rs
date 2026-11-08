@@ -794,3 +794,31 @@ fn the_step_four_gate_on_a_human_kind_is_bound_to_its_question() {
         );
     }
 }
+
+/// **A premise for s8: the reserved fix item's shipped repro pair validates, and its target
+/// exists** (ADR-0204 decision 2, proposed; added 2026-11-08, s8 repro-pair route). The real
+/// `.redkiln/intake/rk-fix-doctor-margin.repro.{toml,rs}`, read by the composition root's reader,
+/// is `Present`, and `repro_place` would append it to `crates/rk-cli/tests/it/doctor.rs`, which
+/// the crate holds.
+#[test]
+fn the_reserved_fix_items_shipped_pair_validates() {
+    let root = workspace_root();
+    let pair = match rk_cli::repro_pair::read(&root, "rk-fix-doctor-margin") {
+        rk_types::repro_pair::ReproPairInput::Present(pair) => pair,
+        other => panic!("the shipped pair must validate: {other:?}"),
+    };
+    assert_eq!(
+        (pair.krate(), pair.module(), pair.target()),
+        ("rk-cli", "doctor", &rk_types::repro_pair::ReproTarget::It)
+    );
+    assert!(
+        root.join("crates/rk-cli/tests/it/doctor.rs").is_file(),
+        "the pair's target, crates/rk-cli/tests/it/doctor.rs, exists"
+    );
+    let doctor = std::fs::read_to_string(root.join("crates/rk-cli/tests/it/doctor.rs"))
+        .expect("doctor.rs reads");
+    assert!(
+        !doctor.contains(&format!("fn {}(", pair.test())),
+        "PREMISE (Checkpoint 8j (4)): the repro is not committed into the crate"
+    );
+}

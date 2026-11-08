@@ -1,6 +1,6 @@
 [activity]
 id           = "root-cause"
-version      = 5   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
+version      = 6   # bumped 2026-11-08 (s8 repro-pair route, ADR-0072; ADR-0204 decision 4, proposed; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["RootCause"]
 requires     = ["ReproCase"]
@@ -21,7 +21,7 @@ rationale    = "SRE ch.12 hypothetico-deductive loop, confirmed by a discriminat
 id      = "hypothesise"
 kind    = "agent"
 role    = "investigator"
-inputs  = { repro = "artifact:ReproCase", telemetry = "toolchain:logs?", hint = "${no-hypothesis.answer?}", findings = "${adversary.outputs?}" }
+inputs  = { repro = "artifact:ReproCase", telemetry = "toolchain:logs?", hint = "${no-hypothesis.answer?}" }
 outputs = "value:HypothesisLog"
 timeout_secs = 900
 retry   = { max = 2 }
@@ -36,11 +36,13 @@ question = "root-cause.no-hypothesis"
 when    = "${hypothesise.outputs.status} != 'confirmed'"
 inputs  = { log = "${hypothesise.outputs}" }
 
+# The placed, trusted repro command (ADR-0204 decision 4): a read-only investigator cannot write or run a
+# discriminating test, so `confirm` re-runs the committed repro, and `policy`'s `report.failed > 0` holds on it.
 [[step]]
 id      = "confirm"
 kind    = "tool"
 run     = "toolchain:test"
-inputs  = { selection = "${hypothesise.outputs.discriminating_test}" }
+inputs  = { selection = "artifact:ReproCase.command" }
 outputs = "value:TestReport"
 timeout_secs = "${toolchain.test_timeout}"
 retry   = { max = 1 }
@@ -55,12 +57,23 @@ outputs = "value:Findings"
 timeout_secs = 1200
 retry   = { max = 1 }
 
+# Dated 2026-11-08 (Ryan, D21-174 item 4; ADR-0204): `policy` no longer loops back to `hypothesise`, because `confirm`
+# re-runs the committed repro, which no new hypothesis can change. The catalog's `on_false` grammar has no gate form
+# (continue, fail, deviate, `{ to, max }`), so the check continues and `not-reproduced` opens the gate on its negation,
+# the confirmation-test pattern. Its question is `repro.cannot-reproduce`: the committed repro did not fail here.
 [[step]]
 id      = "policy"
 kind    = "check"
 inputs  = { report = "${confirm.outputs}", findings = "${adversary.outputs?}" }
 expr    = "report.failed > 0"
-on_false = { to = "hypothesise", max = 2 }
+on_false = "continue"
+
+[[step]]
+id      = "not-reproduced"
+kind    = "gate"
+question = "repro.cannot-reproduce"
+inputs  = { report = "${confirm.outputs}", log = "${hypothesise.outputs}" }
+when    = "${confirm.outputs.failed} == 0"
 
 [[step]]
 id      = "signoff"
@@ -72,5 +85,5 @@ inputs  = { summary = "${hypothesise.outputs.summary}", findings = "${adversary.
 [[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { RootCause = "${hypothesise.outputs.root_cause}" }
-evidence  = ["${confirm}", "${adversary?}", "${signoff?}"]
+artifacts = { RootCause = { cause = "${hypothesise.outputs.root_cause.cause}", contributing_factors = "${hypothesise.outputs.root_cause.contributing_factors}", confidence = "${hypothesise.outputs.root_cause.confidence}", summary = "${hypothesise.outputs.root_cause.summary}", discriminating_test = "artifact:ReproCase.command", rationale = "${hypothesise.outputs.root_cause.rationale}" } }   # composing emit (§9c.34): `discriminating_test` is the committed repro's command, never an agent's
+evidence  = ["${confirm}", "${adversary?}", "${not-reproduced?}", "${signoff?}"]

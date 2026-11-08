@@ -1,6 +1,9 @@
 # s8j section 8j.5 step 3: the reserved fix item's repro pair. `kind = "it"` appends the paired
 # repro file to `crates/<crate>/tests/it/<module>.rs` in a throwaway tree, never in the crate, and
 # selects `<module>::<test>` under `--test it`. `expect` is a substring of the red failure.
+# Dated 2026-11-08, ADR-0204 (proposed): `minimal-repro@2`'s `place` step (`toolchain:repro_place`)
+# reads this pair from the run tree, appends it there and commits it on `rk-run/<item>`; it is still
+# never committed into the crate on the integration branch.
 kind   = "it"
 crate  = "rk-cli"
 module = "doctor"

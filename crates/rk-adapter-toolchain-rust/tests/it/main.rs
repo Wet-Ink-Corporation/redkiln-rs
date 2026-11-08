@@ -16,6 +16,7 @@
 //! | `bound` | `a_step_bound_tighter_than_construction_fires_first`, `the_construction_bound_caps_a_larger_step_bound` | `min(step, construction)`, and `Timeout` naming the bound that fired (§8c.6, record B = ADR-0171 decision 4; *added 2026-09-26, s8c P5*) |
 //! | `affected` | `affected_set_is_touched_crates_plus_reverse_dependency_closure`, `a_path_in_no_package_runs_the_whole_suite_with_a_reason`, `no_recorded_whole_suite_runs_the_whole_suite_probe_unverified`, `a_package_set_that_lists_no_test_escalates_selection_empty`, `a_named_selection_the_adapter_does_not_declare_is_refused_by_name` | the Rust `Affected` rules over the workspace fixture and the pure `affected_packages` (§8c.3, record T decision 7; *added 2026-09-26, s8c P5*) |
 //! | `verbs` | `smoke_runs_each_checklist_row_against_the_built_binary`, `a_failing_smoke_row_is_a_failing_result_not_an_error`, `sca_scan_counts_an_unrated_advisory_as_unrated_never_zero`, `sca_scan_records_the_advisory_database_commit`, `sca_scan_refuses_a_non_git_database`, `sca_scan_refuses_a_deny_db_path_with_other_than_one_database`, `sca_scan_refuses_a_database_moved_mid_scan`, `package_digests_only_the_declared_binaries_of_a_locked_release_build`, `setup_installs_each_declared_node_project_offline`, `a_failing_setup_is_refused_naming_the_project`, `an_empty_setup_set_is_ok_with_no_projects`, `an_undeclared_verb_is_refused_by_name` | the four verb handlers behind `run_verb` and the bare-name refusal (§8c.4, record V = ADR-0170 decisions 4-7, D21-62 C; *added 2026-09-26, s8c P5*) |
+//! | `repro` | `an_it_pair_is_appended_to_its_module_file_and_named_by_command`, `a_unit_pair_is_appended_to_its_src_file_under_lib`, `a_second_place_is_idempotent`, `a_prior_different_fn_of_the_test_name_is_refused`, `a_missing_target_is_refused_naming_it`, `an_absent_pair_is_refused_naming_the_intake_paths`, `an_invalid_pair_is_refused_with_its_reason`, `no_pair_input_is_refused_naming_it`, `a_target_symlinked_outside_the_root_is_refused` (POSIX) | `repro_place` over a temp project root: the append, the command, idempotence and the by-name refusals (ADR-0204 decisions 1-3, proposed; *added 2026-11-08, s8 repro-pair route*) |
 //!
 //! **The process environment is read ONCE, at `support`'s edge** (`std::env::vars()` projected to
 //! the two names the measured list carries) — the composition root's job, done here because no
@@ -33,6 +34,7 @@ mod nextest_lines;
 mod pack;
 mod registry;
 mod report;
+mod repro;
 mod runner;
 mod selection;
 mod support;

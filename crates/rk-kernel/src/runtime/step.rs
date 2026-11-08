@@ -111,8 +111,8 @@ use std::collections::BTreeMap;
 use rk_ports::toolchain::{Selection, StepBound, VerbCall, VerbOutput};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verb_output::{
-    BacklogSnapshot, BuildArtifact, BuildReport, BuildStatus, ItemRefs, ReleaseTag, ScanReport,
-    SetupResult, SmokeResult, SmokeStatus,
+    BacklogSnapshot, BuildArtifact, BuildReport, BuildStatus, ItemRefs, ReleaseTag, ReproPlacement,
+    ScanReport, SetupResult, SmokeResult, SmokeStatus,
 };
 
 use super::activity::{ActivityReport, Decision, DecisionKind, StepAt};
@@ -1076,6 +1076,11 @@ fn decode_verb_value(expected: &str, output: &VerbOutput, verdict: bool) -> Resu
             .map(|_| ())
             .map_err(undecodable),
         "ReleaseTag" => serde_json::from_value::<ReleaseTag>(value)
+            .map(|_| ())
+            .map_err(undecodable),
+        // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed.)* `repro_place`'s
+        // output.
+        "ReproPlacement" => serde_json::from_value::<ReproPlacement>(value)
             .map(|_| ())
             .map_err(undecodable),
         other => Err(decode(format!(
