@@ -16,9 +16,7 @@
 # `slice` is the id without its `rk-fix-` prefix (s8e section 8e.8). `[trial] activity` is
 # ADR-0195 decision 4's spelling (s8j section 8j.1(e)). `cos = "standard"` is stated because
 # `bug-standard`'s `applies` reads it.
-# *(dated 2026-11-08, D21-163 step 4; D21-174 item 5)* This item's first run stopped at relaunch 3 (rc 14). It is archived at
-# `refs/archive/s8-failed-2026-11-08/rk-fix-doctor-margin` and `<git common dir>/redkiln/archive/2026-11-08-rk-fix-doctor-margin/`.
-# Criterion (1) now runs `rk-fix-doctor-margin-2`, the same defect under a fresh id.
+# *(dated 2026-11-08, D21-163 step 4; D21-174 item 5)* Superseded by rk-fix-doctor-margin-2; archived at refs/archive/s8-failed-2026-11-08/ and <gcd>/redkiln/archive/2026-11-08-rk-fix-doctor-margin/.
 id          = "rk-fix-doctor-margin"
 kind        = "bug"
 stage       = "triage"
