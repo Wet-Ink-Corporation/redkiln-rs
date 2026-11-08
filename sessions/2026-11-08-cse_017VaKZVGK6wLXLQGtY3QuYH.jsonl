@@ -175,3 +175,6 @@
 {"t":"2026-11-08T22:32:11.567Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-allowed-red","fp":"b11726a65d620378","ms":2030,"cached":true,"pid":10901}
 {"t":"2026-11-08T22:34:18.993Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":11340,"timeoutMs":1200000}
 {"t":"2026-11-08T22:34:21.264Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"b11726a65d620378","ms":2266,"cached":true,"pid":11340}
+{"t":"2026-11-08T22:35:26.118Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"temper:rust-architect","event":"subagent-start","type":"temper:rust-architect"}
+{"t":"2026-11-08T22:35:38.266Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":11818,"timeoutMs":1200000}
+{"t":"2026-11-08T22:35:40.849Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"b11726a65d620378","ms":2579,"cached":true,"pid":11818}
