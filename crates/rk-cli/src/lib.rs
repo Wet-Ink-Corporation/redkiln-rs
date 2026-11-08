@@ -41,8 +41,9 @@ pub mod no_dispatch;
 pub mod processes;
 pub mod release_tag;
 pub mod repo;
-/// The item's committed repro pair, read from the run tree and bound as the row input
-/// `repro_place.pair` (ADR-0204 decision 2, proposed; added 2026-11-08).
+/// The item's committed repro pair, read from the run tree.
+///
+/// Bound as the row input `repro_place.pair` (ADR-0204 decision 2, proposed; added 2026-11-08).
 pub mod repro_pair;
 // The review input and the `Binary` human-gate route (`s8i` §8i.8; ADR-0199, proposed).
 pub mod review_input;

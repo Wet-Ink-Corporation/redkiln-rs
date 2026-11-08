@@ -1053,14 +1053,15 @@ impl Rig<'_> {
             .pack
             .require_attempt_cap()
             .expect("the shipped pack declares its attempt cap");
+        let toolchain: Arc<dyn Toolchain> = Arc::new(LaneToolchain {
+            path: self.lane.path,
+            repro_red: stage == "analysis",
+        });
         let rt = Runtime::new(
             ports_with_toolchain(
                 Arc::new(harness_for(activity)) as Arc<dyn Harness>,
                 &self.db,
-                Arc::new(LaneToolchain {
-                    path: self.lane.path,
-                    repro_red: stage == "analysis",
-                }) as Arc<dyn Toolchain>,
+                toolchain,
             ),
             &format!("lane-walk-{}-{stage}", self.lane.name),
             stage,

@@ -27,9 +27,10 @@ pub mod event;
 pub mod event_kind;
 pub mod registry;
 pub mod repro;
-/// The item's committed repro pair, `.redkiln/intake/<item>.repro.{toml,rs}` (ADR-0204 decision 2,
-/// proposed; added 2026-11-08): the spec DTO, the validated pair and the `repro_place.pair`
-/// envelope.
+/// The item's committed repro pair, `.redkiln/intake/<item>.repro.{toml,rs}`.
+///
+/// The spec DTO, the validated pair and the `repro_place.pair` envelope (ADR-0204 decision 2,
+/// proposed; added 2026-11-08).
 pub mod repro_pair;
 pub mod retention;
 /// The review gate's record types (Step 7b-ii): the reviewed-tree outcome and the quarantine.
