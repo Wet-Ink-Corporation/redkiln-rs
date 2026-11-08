@@ -105,10 +105,10 @@ const SETUP_ARGS: [&str; 4] = ["install", "--frozen-lockfile", "--prefer-offline
 /// Route one call (the module doc).
 ///
 /// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 3, proposed.)* A fifth verb,
-/// `repro_place`, is routed to `crate::repro`, whose module doc describes it.
+/// `repro_place`, is routed to `verbs::repro`, whose module doc describes it.
 ///
 /// # Errors
-/// `Unsupported { capability: "<verb>" }` for every verb but the ~~four~~ five; each handler's own
+/// `Unsupported { capability: "<verb>" }` for every verb but the five; each handler's own
 /// errors.
 pub fn run_verb(tc: &RustToolchain, call: &VerbCall<'_>) -> Result<VerbOutput, StepError> {
     let cfg = tc.config().bounded(call.bound);

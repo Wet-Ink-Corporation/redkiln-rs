@@ -244,3 +244,47 @@ fn a_target_symlinked_outside_the_root_is_refused() {
         "nothing is written outside the root"
     );
 }
+
+#[test]
+fn an_over_cap_target_is_refused() {
+    let root = project();
+    let module = root.path().join("crates/demo/tests/it/words.rs");
+    let over = rk_git::landing::MAX_LANDED_BLOB_BYTES.saturating_add(1);
+    let big = "/".repeat(usize::try_from(over).expect("the cap fits usize"));
+    std::fs::write(&module, &big).expect("writes");
+    let why = unsupported(place(root.path(), &present(spec("it", "words", None))));
+    assert!(
+        why.contains("crates/demo/tests/it/words.rs") && why.contains("landing bound"),
+        "{why}"
+    );
+    assert_eq!(
+        std::fs::metadata(&module).expect("stat").len(),
+        over,
+        "nothing is written"
+    );
+}
+
+#[test]
+fn a_directory_target_is_refused() {
+    let root = project();
+    let dir = root.path().join("crates/demo/tests/it/folder.rs");
+    std::fs::create_dir(&dir).expect("a directory where the module file would be");
+    let why = unsupported(place(root.path(), &present(spec("it", "folder", None))));
+    assert!(
+        why.contains("crates/demo/tests/it/folder.rs") && why.contains("not a regular file"),
+        "{why}"
+    );
+    assert!(dir.is_dir(), "the directory is left as it was");
+}
+
+#[test]
+fn a_target_holding_the_block_before_later_edits_is_already_placed() {
+    let root = project();
+    let module = root.path().join("crates/demo/tests/it/words.rs");
+    let prior = format!("{MODULE_BEFORE}\n{REPRO}\n#[test]\nfn added_later() {{}}\n");
+    std::fs::write(&module, &prior).expect("writes");
+    let placed = place(root.path(), &present(spec("it", "words", None))).expect("placed");
+    assert!(!placed.appended, "the block is already in the file");
+    assert_eq!(placed.test, "words::repro_red");
+    assert_eq!(std::fs::read_to_string(&module).expect("reads"), prior);
+}

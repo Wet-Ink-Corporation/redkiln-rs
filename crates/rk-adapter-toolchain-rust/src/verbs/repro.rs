@@ -20,9 +20,9 @@
 //! reason. The target must exist as a regular file whose canonical path stays under the canonical
 //! project root (no symlink escape). It is read capped at the landing bound
 //! ([`rk_git::landing::MAX_LANDED_BLOB_BYTES`], ADR-0188 decision 5), and the file after the append
-//! must fit it too. If it already ends with the appended block, the placement is answered with
-//! `appended: false` and nothing is written (re-entry). If it holds `fn <test>(` anywhere else, it
-//! is refused. Otherwise `"\n" + source` (with a trailing newline added when the source lacks one)
+//! must fit it too. If it already holds the appended block anywhere (a re-entry, possibly after
+//! later edits below it), the placement is answered with `appended: false` and nothing is written.
+//! If it holds `fn <test>(` otherwise, it is refused. Otherwise `"\n" + source` (with a trailing newline added when the source lacks one)
 //! is appended with one `write_all`.
 //!
 //! **Refusal classes.** A precondition refusal is `Unsupported` (`RetryClass::Never`), not
@@ -136,13 +136,14 @@ fn place(root: &Path, pair: &ReproPair) -> Result<ReproPlacement, StepError> {
     if !block.ends_with('\n') {
         block.push('\n');
     }
-    let appended = if existing.ends_with(block.as_bytes()) {
+    // A prior placement may have been followed by later edits, so the block anywhere is placed.
+    let appended = if contains(&existing, block.as_bytes()) {
         false
     } else {
         let needle = format!("fn {}(", pair.test());
         if contains(&existing, needle.as_bytes()) {
             return Err(unsupported(format!(
-                "{} already holds `{needle}`, and not as the pair's bytes at its end; a second \
+                "{} already holds `{needle}`, and not as the pair's bytes; a second \
                  test of that name would not compile, so it is refused rather than appended",
                 target.path
             )));
