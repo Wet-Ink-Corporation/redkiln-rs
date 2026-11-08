@@ -7976,3 +7976,7 @@ The records are ADR-0204 (proposed), `.redkiln/CHANGELOG.md`'s `minimal-repro@2`
 amendments to `runbook/phase-1/s8-exit-criterion.md` and `runbook/phase-1/s8j-run-preparation.md`, and
 `runbook/PROGRESS.md` row 8. No evidence line is written by this route: `runbook/phase-1/s8j-evidence.txt` is the
 operator's.
+
+*(dated 2026-11-08, Ryan; D21-163 step 4, D21-174 item 5)* The fresh fix item, the same defect under a new id:
+
+reserved-fix-item: rk-fix-doctor-margin-2 rk-cli:doctor::rules::margin
