@@ -3078,10 +3078,13 @@ fn resume_and_read(
             // is named, so a refusal reaches the operator by name (`place`'s names the pair's
             // paths); the 2026-11-08 relaunch stopped with only the exit code. The exit is the
             // class's row whether or not the line is written.
-            let named = std::io::Write::write_fmt(
-                &mut std::io::stderr().lock(),
-                format_args!("redkiln: the step's class: {class:?}\n"),
-            );
+            let named = {
+                use std::io::Write as _;
+                writeln!(
+                    std::io::stderr().lock(),
+                    "redkiln: the step's class: {class:?}"
+                )
+            };
             if named.is_err() {
                 // stderr is closed, so the exit code is the only channel left.
             }

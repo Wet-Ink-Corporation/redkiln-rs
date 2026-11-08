@@ -1082,10 +1082,7 @@ fn a_run_that_stopped_at_a_failed_step_is_named_not_an_error() {
     assert_eq!(exit, rk_cli::exit::Exit::Success, "explain refused:\n{out}");
     assert!(
         out.lines().any(|l| l
-            == format!(
-                "run: {STOPPED_RUN} (no run record: the run stopped at a failed step before its \
-                 record was written)"
-            )),
+            == format!("run: {STOPPED_RUN} (no run record: the run did not write its record)")),
         "the stopped run is named:\n{out}"
     );
     let stopped = out

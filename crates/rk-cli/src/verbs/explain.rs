@@ -126,7 +126,11 @@ pub fn run_with(
     };
     let Some(run_id) = found else {
         if !stopped.is_empty() {
-            return stopped_only(out, &stopped, landing_block(exec, worktree, store, item)?);
+            return Ok(stopped_only(
+                out,
+                &stopped,
+                landing_block(exec, worktree, store, item)?,
+            ));
         }
         eprintln!("redkiln: no recorded resolution for `{item}`; explain does not recompute");
         return Ok(Exit::NoRecord);
@@ -375,17 +379,10 @@ fn recorded_run(
 
 /// The newest run stopped and no earlier run has a record: the stopped block, then the landing
 /// block, exit `0`.
-///
-/// # Errors
-/// [`Halt::PoisonedLock`] is raised by the caller's landing read, never here.
-fn stopped_only(
-    out: &mut dyn Write,
-    stopped: &str,
-    landing: Result<String, Exit>,
-) -> Result<Exit, Halt> {
+fn stopped_only(out: &mut dyn Write, stopped: &str, landing: Result<String, Exit>) -> Exit {
     let block = match landing {
         Ok(block) => block,
-        Err(exit) => return Ok(exit),
+        Err(exit) => return exit,
     };
     if let Err(e) = out.write_all(format!("{stopped}{block}").as_bytes()) {
         let warning = writeln!(
@@ -395,9 +392,9 @@ fn stopped_only(
         if warning.is_err() {
             // stderr is closed too, so the exit code is the only channel left.
         }
-        return Ok(Exit::ConfigError);
+        return Exit::ConfigError;
     }
-    Ok(Exit::Success)
+    Exit::Success
 }
 
 /// The whole rendering, from a `&RecordedRun` and **nothing else**.

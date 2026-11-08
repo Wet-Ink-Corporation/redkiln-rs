@@ -348,7 +348,7 @@ fn run_subjects(root: &std::path::Path, item: &str) -> Vec<String> {
         crate::lane_e2e::run_ref(item)
     );
     crate::lane_e2e::git_read(root, &["log", "--reverse", "--format=%H %s", &range])
-        .unwrap_or_default()
+        .expect("git log over the run range")
         .lines()
         .map(str::to_owned)
         .collect()

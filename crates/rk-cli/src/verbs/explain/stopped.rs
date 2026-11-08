@@ -2,12 +2,13 @@
 //! plan Decision D7; added 2026-11-08, s8 repro-pair route).
 //!
 //! `run` writes the run record (`replay::write_run`) only on success, so a run that stopped at a
-//! failed step leaves `activity_committed` rows naming its run id and no `runs/<id>/run.json`. A
-//! partial record would be a format migration, and the `RecordedRun` it needs does not exist on the
+//! failed step leaves `activity_committed` rows naming its run id and no `runs/<id>/run.json`. The
+//! `landing.refused-path` gate and the `Overage` exit skip the record too, so the line names only
+//! the missing record, not its cause. A partial record would be a format migration, and the `RecordedRun` it needs does not exist on the
 //! error path, so `explain` reads the journal instead:
 //!
 //! ```text
-//! run: <id> (no run record: the run stopped at a failed step before its record was written)
+//! run: <id> (no run record: the run did not write its record)
 //! stopped: <kind> <class, capability, status and step members, compact JSON in that order>
 //! last recorded run:
 //! ```
@@ -65,10 +66,7 @@ pub(super) fn run_ids(rows: &[Event], item: &str) -> Vec<String> {
 
 /// The `run:` line for the stopped run `id`, and its `stopped:` line when a failure row follows.
 pub(super) fn block(rows: &[Event], item: &str, id: &str) -> String {
-    let mut text = format!(
-        "run: {id} (no run record: the run stopped at a failed step before its record was \
-         written)\n"
-    );
+    let mut text = format!("run: {id} (no run record: the run did not write its record)\n");
     let after = rows
         .iter()
         .rposition(|e| {
@@ -147,8 +145,7 @@ mod tests {
         ];
         assert_eq!(
             block(&rows, "i", "x"),
-            "run: x (no run record: the run stopped at a failed step before its record was \
-             written)\nstopped: step_refused {\"class\":\"unsupported\",\"capability\":\"c\"}\n"
+            "run: x (no run record: the run did not write its record)\nstopped: step_refused {\"class\":\"unsupported\",\"capability\":\"c\"}\n"
         );
     }
 
