@@ -3,14 +3,15 @@
 //!
 //! *(Added 2026-11-08, s8 repro-pair route.)* The fix lane reproduces from the item's committed
 //! pair, not from agent prose. `rk-cli` reads both files from the run tree (the frozen commit's
-//! bytes), parses the TOML into [`ReproPairSpec`], validates it into [`ReproPair`], and binds the
-//! result as the row input `repro_place.pair` inside the [`ReproPairInput`] envelope. The envelope
-//! is always bound, so an absent or invalid pair is refused at `place`, by name, and never at load
-//! for every item and stage.
+//! bytes), parses the TOML into [`ReproPairSpec`](crate::repro_pair::ReproPairSpec), validates it
+//! into [`ReproPair`](crate::repro_pair::ReproPair), and binds the result as the row input
+//! `repro_place.pair` inside the [`ReproPairInput`](crate::repro_pair::ReproPairInput) envelope.
+//! The envelope is always bound, so an absent or invalid pair is refused at `place`, by name, and
+//! never at load for every item and stage.
 //!
-//! "Parse, don't validate" (API-03): a [`ReproPair`] has private fields and is built only through
-//! [`ReproPair::new`] or a deserialise that runs the same validation, so a decoded pair is never
-//! one `new` would refuse.
+//! "Parse, don't validate" (API-03): a [`ReproPair`](crate::repro_pair::ReproPair) has private
+//! fields and is built only through [`ReproPair::new`](crate::repro_pair::ReproPair::new) or a
+//! deserialise that runs the same validation, so a decoded pair is never one `new` would refuse.
 
 use std::fmt;
 

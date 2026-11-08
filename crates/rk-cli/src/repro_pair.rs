@@ -3,12 +3,14 @@
 //!
 //! `run` reads `.redkiln/intake/<item>.repro.toml` and `.repro.rs` from the **run tree**, which is
 //! the fork commit plus the run's commits, so the bytes are the committed, frozen ones (CODE_PATHS
-//! includes `.redkiln`). It parses the TOML into [`ReproPairSpec`], validates it into a
+//! includes `.redkiln`). It parses the TOML into
+//! [`ReproPairSpec`](rk_types::repro_pair::ReproPairSpec), validates it into a
 //! [`rk_types::repro_pair::ReproPair`], and binds the result as the row input `repro_place.pair`.
 //! It always binds the envelope: an absent or invalid pair is refused at `place`, by name, and never
 //! at load for every item and stage.
 //!
-//! Both reads are capped at [`REPRO_PAIR_MAX_BYTES`] (H-13). Each reads one byte past the cap, so
+//! Both reads are capped at
+//! [`REPRO_PAIR_MAX_BYTES`](rk_types::repro_pair::REPRO_PAIR_MAX_BYTES) (H-13). Each reads one byte past the cap, so
 //! "too large" is told apart from "exactly the cap".
 
 use std::io::Read;
