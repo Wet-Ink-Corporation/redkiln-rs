@@ -130,13 +130,17 @@ pub fn selection_of(command: &str) -> Option<Vec<String>> {
     parse_selection(command).ok()
 }
 
-/// One name from a `${…}` list (`tests_added`): non-empty, with no whitespace, no control
-/// character and no shell syntax.
+/// One name from a `${…}` list (`tests_added`): non-empty, not led by `-`, with no whitespace, no
+/// control character and no shell syntax.
+///
+/// A `-`-led token is a libtest flag (`--include-ignored`, `--ignored`, `--list`), not a name, so a
+/// list cannot widen or replace the run it selects.
 ///
 /// # Errors
 /// [`SelectionRefusal::BadToken`] carrying the token.
 pub fn check_selection_token(token: &str) -> Result<(), SelectionRefusal> {
     let bad = token.is_empty()
+        || token.starts_with('-')
         || token
             .chars()
             .any(|c| c.is_whitespace() || c.is_control() || SHELL_SYNTAX.contains(&c));

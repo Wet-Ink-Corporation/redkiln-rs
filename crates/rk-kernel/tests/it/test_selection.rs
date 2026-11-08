@@ -650,7 +650,18 @@ fn each_selection_refusal_renders_its_variant_name_first() {
 #[test]
 fn check_selection_token_accepts_a_name_and_refuses_whitespace_shell_and_empty() {
     assert_eq!(check_selection_token("doctor::x"), Ok(()));
-    for token in ["", "a b", "a;b", "`a`", "a\u{7}"] {
+    // A `-`-led token is a libtest flag, not a name: `tests_added` must not inject one.
+    for token in [
+        "",
+        "a b",
+        "a;b",
+        "`a`",
+        "a\u{7}",
+        "--include-ignored",
+        "--ignored",
+        "--list",
+        "-q",
+    ] {
         assert_eq!(
             check_selection_token(token),
             Err(SelectionRefusal::BadToken {
