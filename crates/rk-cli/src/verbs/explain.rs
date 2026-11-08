@@ -25,6 +25,8 @@ use rk_git::git_exec::GitExec;
 use rk_git::path::WorktreePath;
 use rk_ports::event_store::EventStore;
 
+mod stopped;
+
 use crate::cli::{Cli, ExplainArgs};
 use crate::exit::{Exit, Halt};
 use crate::verbs::{EntryReconciler, Startup};
@@ -113,16 +115,24 @@ pub fn run_with(
 ) -> Result<Exit, Halt> {
     let (_, _, _) = (reconciler, exec, worktree);
 
-    let found = match recorded_run_id(store, item)? {
+    // *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 7, proposed; plan Decision D7.)*
+    // A run that stopped at a failed step never reached `write_run`, so the newest run id the
+    // journal names may have no `run.json`. `stopped` names that run and its failure row, and
+    // `found` is then the newest EARLIER run with a record; `render` is unchanged (AC-432).
+    let runs = common_dir.join("redkiln").join("runs");
+    let (stopped, found) = match recorded_run(store, item, &runs)? {
         Ok(found) => found,
         Err(exit) => return Ok(exit),
     };
     let Some(run_id) = found else {
+        if !stopped.is_empty() {
+            return stopped_only(out, &stopped, landing_block(exec, worktree, store, item)?);
+        }
         eprintln!("redkiln: no recorded resolution for `{item}`; explain does not recompute");
         return Ok(Exit::NoRecord);
     };
 
-    let dir = common_dir.join("redkiln").join("runs").join(&run_id);
+    let dir = runs.join(&run_id);
     let recorded = match rk_kernel::replay::read_run(&dir) {
         Ok(run) => run,
         Err(e) => {
@@ -138,7 +148,7 @@ pub fn run_with(
             return Ok(Exit::ConfigError);
         }
     };
-    if let Err(e) = out.write_all(rendered.as_bytes()) {
+    if let Err(e) = out.write_all(format!("{stopped}{rendered}").as_bytes()) {
         eprintln!("redkiln: the resolution could not be written: {e}");
         return Ok(Exit::ConfigError);
     }
@@ -337,12 +347,19 @@ fn landing_block(
 /// AC-432 is about, an item for which nothing was ever recorded. Folding the middle one into
 /// `Ok(None)` would report a broken store as `5`, which reads as a statement about the ITEM.
 ///
+/// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 7, proposed.)* ~~`recorded_run_id`,
+/// the newest run id~~: the item's distinct run ids, newest first ([`stopped::run_ids`]). When the
+/// newest has no `run.json` (the run stopped at a failed step before `write_run`), the first member
+/// is the stopped block ([`stopped::block`]) and the second is the newest earlier run whose record
+/// exists. Otherwise the block is empty and the second is the newest run, as before.
+///
 /// # Errors
 /// [`Halt::PoisonedLock`] naming this verb.
-fn recorded_run_id(
+fn recorded_run(
     store: &Arc<Mutex<dyn EventStore>>,
     item: &str,
-) -> Result<Result<Option<String>, Exit>, Halt> {
+    runs: &Path,
+) -> Result<Result<(String, Option<String>), Exit>, Halt> {
     let guard = store::acquire(store, "explain")?;
     let read = guard.query(rk_kernel::runtime::journal_query(item));
     drop(guard);
@@ -353,17 +370,34 @@ fn recorded_run_id(
             return Ok(Err(Exit::ConfigError));
         }
     };
-    Ok(Ok(rows
-        .iter()
-        .rev()
-        .filter(|e| e.kind == rk_types::event_kind::EventKind::ActivityCommitted)
-        .filter(|e| e.payload.get("item").and_then(serde_json::Value::as_str) == Some(item))
-        .find_map(|e| {
-            e.payload
-                .get("run_id")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-        })))
+    Ok(Ok(stopped::resolve(&rows, item, runs)))
+}
+
+/// The newest run stopped and no earlier run has a record: the stopped block, then the landing
+/// block, exit `0`.
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] is raised by the caller's landing read, never here.
+fn stopped_only(
+    out: &mut dyn Write,
+    stopped: &str,
+    landing: Result<String, Exit>,
+) -> Result<Exit, Halt> {
+    let block = match landing {
+        Ok(block) => block,
+        Err(exit) => return Ok(exit),
+    };
+    if let Err(e) = out.write_all(format!("{stopped}{block}").as_bytes()) {
+        let warning = writeln!(
+            std::io::stderr().lock(),
+            "redkiln: the resolution could not be written: {e}"
+        );
+        if warning.is_err() {
+            // stderr is closed too, so the exit code is the only channel left.
+        }
+        return Ok(Exit::ConfigError);
+    }
+    Ok(Exit::Success)
 }
 
 /// The whole rendering, from a `&RecordedRun` and **nothing else**.

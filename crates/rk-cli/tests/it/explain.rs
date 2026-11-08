@@ -1033,3 +1033,113 @@ fn explain_prints_the_landed_commit_and_the_merge_command() {
     );
     check("at the lane's end");
 }
+
+// *(dated 2026-11-08, s8 repro-pair route; ADR-0204 decision 7, proposed; plan Decision D7.)* A run
+// that stops at a failed step never reaches `write_run`, so the newest run id the journal names
+// has no `run.json`. `explain` names that run and its failure row instead of erroring, then
+// renders the newest earlier run that has a record.
+
+/// The stopped run's id, newer than every fixture's.
+const STOPPED_RUN: &str = "analysis-f9b24b27126beb68";
+
+/// Append the rows a run that stopped at a refused step leaves: its `activity_committed` row (the
+/// step-grain commit before the failure) and the `step_refused` row, both keyed to `item`.
+#[cfg(test)]
+fn append_stopped_run(root: &std::path::Path, item: &str) {
+    let discovered = rk_cli::repo::discover(Some(root)).expect("the repository discovers");
+    let mut store = rk_adapter_sqlite::SqliteStore::open(&discovered.exec, &discovered.worktree)
+        .expect("the store opens");
+    let rows = [
+        rk_types::event::Event::new(
+            rk_types::event_kind::EventKind::ActivityCommitted,
+            serde_json::json!({
+                "activity_id_at_version": "minimal-repro@1", "attempt": 1, "item": item,
+                "run_id": STOPPED_RUN, "step_id": "attempt", "at": 1_760_000_100,
+            }),
+        ),
+        rk_types::event::Event::new(
+            rk_types::event_kind::EventKind::StepRefused,
+            serde_json::json!({
+                "class": "unsupported", "capability": "the `tool` step `confirm` names toolchain:test",
+                "at": 1_760_000_101,
+            }),
+        ),
+    ];
+    for row in rows {
+        rk_ports::event_store::EventStore::append(&mut store, row.with_item(item))
+            .unwrap_or_else(|e| panic!("the stopped run's row appends: {e:?}"));
+    }
+}
+
+/// **A run that stopped at a failed step is named, not an error**: the store holds its
+/// `activity_committed` row and its `step_refused` row, and no `runs/<id>/run.json` exists. Exit
+/// 0, a `run: <id> (no run record` line, and a `stopped:` line naming the refusal.
+#[test]
+fn a_run_that_stopped_at_a_failed_step_is_named_not_an_error() {
+    let repo = temp_repo_initialised();
+    append_stopped_run(repo.path(), "explain-stopped");
+    let (exit, out) = landing_explain_output(repo.path(), "explain-stopped");
+    assert_eq!(exit, rk_cli::exit::Exit::Success, "explain refused:\n{out}");
+    assert!(
+        out.lines().any(|l| l
+            == format!(
+                "run: {STOPPED_RUN} (no run record: the run stopped at a failed step before its \
+                 record was written)"
+            )),
+        "the stopped run is named:\n{out}"
+    );
+    let stopped = out
+        .lines()
+        .find(|l| l.starts_with("stopped: "))
+        .unwrap_or_else(|| panic!("a `stopped:` line:\n{out}"));
+    assert!(
+        stopped.starts_with("stopped: step_refused {")
+            && stopped.contains("\"class\":\"unsupported\"")
+            && stopped.contains("toolchain:test"),
+        "the failure row's kind and members: {stopped}"
+    );
+    assert!(
+        !out.contains("last recorded run:"),
+        "no earlier run has a record:\n{out}"
+    );
+}
+
+/// **The newest recorded run is rendered after a stopped one**: run Y (`two-activities`) has a
+/// record, and run X, newer, stopped. X is named first, then Y's unchanged rendering follows.
+#[test]
+fn the_newest_recorded_run_is_rendered_after_a_stopped_one() {
+    let (repo, item) = repo_with_record("two-activities");
+    append_stopped_run(repo.path(), &item);
+    let (exit, out) = landing_explain_output(repo.path(), &item);
+    assert_eq!(exit, rk_cli::exit::Exit::Success, "explain refused:\n{out}");
+    let lines: Vec<&str> = out.lines().collect();
+    let at = |prefix: &str| {
+        lines
+            .iter()
+            .position(|l| l.starts_with(prefix))
+            .unwrap_or_else(|| panic!("no line starts `{prefix}`:\n{out}"))
+    };
+    let stopped = at(&format!("run: {STOPPED_RUN} (no run record"));
+    let marker = at("last recorded run:");
+    let recorded = at("run: implement-03eb5f5b45b9b732");
+    assert!(
+        stopped < marker && marker < recorded,
+        "the stopped run, then the marker, then the recorded run's render:\n{out}"
+    );
+    assert!(
+        out.contains(&rendered("two-activities")),
+        "the recorded run's render is the unchanged `render` (AC-432):\n{out}"
+    );
+}
+
+/// A temp repository, initialised, with an empty store.
+#[cfg(test)]
+fn temp_repo_initialised() -> tempfile::TempDir {
+    let repo = temp_repo();
+    assert_eq!(
+        run_init(repo.path()).status.code(),
+        Some(0),
+        "the repository initialises"
+    );
+    repo
+}
