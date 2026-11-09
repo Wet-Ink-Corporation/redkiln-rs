@@ -203,3 +203,5 @@
 {"t":"2026-11-09T00:00:37.944Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"temper:rust-implementer","event":"deny-shell-write","via":"shell-reader","cmd":"python3 - <<…"}
 {"t":"2026-11-09T00:07:44.221Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":18463,"timeoutMs":1200000}
 {"t":"2026-11-09T00:07:50.568Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"0ba511240f43c8bc","ms":6342,"cached":false,"pid":18463,"steps":{"fmt":2108,"scan":498,"manifests":125,"clippy":3440}}
+{"t":"2026-11-09T00:07:57.630Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":19357,"timeoutMs":1200000}
+{"t":"2026-11-09T00:08:15.418Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"298b0b41b8a905a5","ms":17784,"cached":false,"pid":19357,"steps":{"fmt":2176,"scan":550,"manifests":109,"clippy":14769}}
