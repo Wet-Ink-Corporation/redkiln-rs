@@ -351,25 +351,25 @@ No new threads, tasks, locks or I/O. The check is O(feeds × elements) over a va
 ## Test list (red first, in this order)
 
 rk-kernel, `tests/it/test_selection.rs`:
-- [ ] 1. `selection_feeds_of_tdd_red_is_the_tests_added_field`: the shipped `tdd@4` gives `{red: [path tests_added, reader red-verify]}` and nothing for `green` or `refactor`.
-- [ ] 2. `selection_feeds_of_a_string_ref_is_its_path`: a crafted activity whose `confirm` reads `${attempt.outputs.command}` gives `{attempt: [command]}`.
-- [ ] 3. `selection_feeds_skips_a_plain_ref_to_a_for_each_step`.
-- [ ] 4. `check_feeds_refuses_a_spaced_token_naming_field_index_and_reader`: `{"tests_added":["ok","doctor test"]}` gives `Token { index: 1, why: BadToken }`.
-- [ ] 5. `check_feeds_refuses_prose_naming_the_variant`, `.._a_missing_or_non_string_field`, and `check_feeds_passes_an_empty_list_and_plain_tokens`.
-- [ ] 6. Property (proptest): for every string `s`, `check_feeds({"f":[s]})` is `Ok` iff `check_selection_token(s)` is `Ok`.
+- [x] 1. `selection_feeds_of_tdd_red_is_the_tests_added_field`: the shipped `tdd@4` gives `{red: [path tests_added, reader red-verify]}` and nothing for `green` or `refactor`.
+- [x] 2. `selection_feeds_of_a_string_ref_is_its_path`: a crafted activity whose `confirm` reads `${attempt.outputs.command}` gives `{attempt: [command]}`.
+- [x] 3. `selection_feeds_skips_a_plain_ref_to_a_for_each_step`.
+- [x] 4. `check_feeds_refuses_a_spaced_token_naming_field_index_and_reader`: `{"tests_added":["ok","doctor test"]}` gives `Token { index: 1, why: BadToken }`.
+- [x] 5. `check_feeds_refuses_prose_naming_the_variant`, `.._a_missing_or_non_string_field`, and `check_feeds_passes_an_empty_list_and_plain_tokens`.
+- [x] 6. Property (proptest): for every string `s`, `check_feeds({"f":[s]})` is `Ok` iff `check_selection_token(s)` is `Ok`.
 
 rk-kernel, `tests/it/` (activity loop; the scripted-harness suites):
-- [ ] 7. `a_bad_feed_value_is_a_schema_failure_and_is_redispatched`: answers `[bad, good]`. One `step_failed {class:"schema"}` row, two dispatches, the good value committed.
-- [ ] 8. `a_bad_feed_value_twice_refuses_as_schema_and_commits_nothing`: `Schema { attempts: 2 }`, no `activity_committed` for the step.
-- [ ] 9. `the_reprompt_carries_the_refusal_as_refused` (D6): the second spec's inputs hold `refused` naming the token.
-- [ ] 10. `a_committed_bad_value_is_served_not_rechecked`: re-entry over a journal whose committed `red` row holds `"doctor test"` serves it and dispatches nothing (Invariant 5).
-- [ ] 11. `a_tool_step_failure_after_a_commit_appends_one_error_row`: a refused verb after an agent commit gives exactly one `step_refused` carrying `step_id`, `activity_id_at_version` and `capability`. An agent dispatch failure adds no second row.
+- [x] 7. `a_bad_feed_value_is_a_schema_failure_and_is_redispatched`: answers `[bad, good]`. One `step_failed {class:"schema"}` row, two dispatches, the good value committed.
+- [x] 8. `a_bad_feed_value_twice_refuses_as_schema_and_commits_nothing`: `Schema { attempts: 2 }`, no `activity_committed` for the step.
+- [x] 9. `the_reprompt_carries_the_refusal_as_refused` (D6): the second spec's inputs hold `refused` naming the token.
+- [x] 10. `a_committed_bad_value_is_served_not_rechecked`: re-entry over a journal whose committed `red` row holds `"doctor test"` serves it and dispatches nothing (Invariant 5).
+- [x] 11. `a_tool_step_failure_after_a_commit_appends_one_error_row`: a refused verb after an agent commit gives exactly one `step_refused` carrying `step_id`, `activity_id_at_version` and `capability`. An agent dispatch failure adds no second row.
 
 rk-kernel, catalog and selection:
-- [ ] 12. `selection::repro_green_refactor_is_chosen_for_a_bug_with_a_repro`: `has_repro = true` chooses `repro-green-refactor`, `false` chooses `tdd-red-green-refactor`, a story chooses `tdd`, and `null` gives an abstention (Invariant 1).
-- [ ] 13. `selection::no_shipped_step_declares_the_reserved_input_refused`.
-- [ ] 14. `on_false_exec::tdd_red_named_loops_back_on_an_all_empty_red`: two elements `[]`, then a named test, gives one loop-back and no `Unsupported`.
-- [ ] 15. `lane_walk`: the `FIX` implement row becomes `("repro-green-refactor", Walks), ("change-summary", Walks)`. `LaneToolchain` answers `red-proof` red and the verifies green. `STORY` is unchanged at 13/0 (Decision D9).
+- [x] 12. `selection::repro_green_refactor_is_chosen_for_a_bug_with_a_repro`: `has_repro = true` chooses `repro-green-refactor`, `false` chooses `tdd-red-green-refactor`, a story chooses `tdd`, and `null` gives an abstention (Invariant 1).
+- [x] 13. `selection::no_shipped_step_declares_the_reserved_input_refused`.
+- [x] 14. `on_false_exec::tdd_red_named_loops_back_on_an_all_empty_red`: two elements `[]`, then a named test, gives one loop-back and no `Unsupported`.
+- [x] 15. `lane_walk`: the `FIX` implement row becomes `("repro-green-refactor", Walks), ("change-summary", Walks)`. `LaneToolchain` answers `red-proof` red and the verifies green. `STORY` is unchanged at 13/0 (Decision D9).
 
 rk-cli:
 - [ ] 16. `run::a_walk_ending_refusal_names_its_capability_on_stderr`: a pack-min pack whose tool step names an unrouted verb after an agent commit. stderr holds `the step's class: Unsupported { capability: "` and the verb, and the store holds the `step_refused` row. Red before: the generic sentence only, and no row.
@@ -548,3 +548,38 @@ About 12 non-Rust files:
 
 - 2026-11-08: plan written. Nothing implemented. Next: the operator decides D1-D14, then test 1.
 - 2026-11-08 23:51Z: Ryan approved D1-D14 as recommended (card "Approve all recommendations"). Build starts at test 1.
+- 2026-11-09, package 1 (tests 1-6): `selection_feeds`, `check_feeds`, `SelectionFeed`, `FeedRefusal` in
+  `runtime/reference/selection.rs`, re-exported beside `parse_selection`. Red: `E0432 unresolved imports
+  rk_kernel::runtime::reference::{FeedRefusal, check_feeds, selection_feeds}`. Tests live in a new
+  `rk-kernel/tests/it/selection_feeds.rs` rather than `test_selection.rs` (already 731 lines; CRF-02).
+- 2026-11-09, package 2 (tests 7-10, 9b): the check in `run_activity_at`'s loop before `commit_at`, `StepAt::feeds`,
+  `WalkEnv::feeds`, and the `refused` re-prompt spec (`with_refused`). Red: `a_bad_feed_value_is_a_schema_failure_and_is_redispatched`
+  `left: 1` dispatch (the bad value committed); `the_reprompt_carries_the_refusal_as_refused` no `refused`. Tests in
+  `rk-kernel/tests/it/feed_check.rs`.
+- 2026-11-09, dated note (deviation, narrowest option): four existing kernel tests drove an agent-produced bad
+  selection to the TOOL step's refusal, which the feed check now refuses at the agent step:
+  `test_selection::{an_unresolvable_selection_refuses_and_never_runs_the_whole_suite (its "no such field" case),
+  selection_plan_refuses_a_prose_string_naming_the_refusal, selection_plan_refuses_a_list_element_with_whitespace_naming_it}`
+  and `on_false_exec::a_tool_dispatch_that_fails_at_the_port_charges_its_pass` (its pre-port arm). Their assertions
+  are kept: the three `test_selection` cases now reach the tool step through a SERVED `write` row (Invariant 5's
+  belt; the one "commit stands" assertion reads `served() == 1` for the served case), and the `on_false_exec` arm uses
+  the optional `${draft.outputs.nope?}`, which is no feed.
+- 2026-11-09, package 3 (test 11): `Runtime::end_walk` appends one `error_row` with `step_id` and
+  `activity_id_at_version` when the walk ends on `Halt::Failed`/`Halt::Stop` at a non-agent step. Red: no row.
+  Note: an agent step's pre-dispatch refusal (no per-step spec, an input clash, an unbound role family) is
+  `Halt::Stop` at an agent step and so gets no row under the plan's rule; recorded, not widened.
+- 2026-11-09, package 4 (tests 12-15): `repro-green-refactor@1`, `tdd-red-green-refactor@4`, both packs' rows,
+  CHANGELOG rows. Red for 12: `assertion left == right failed: Changeset` with the new file moved aside. D9 re-pins as
+  measured: shipped activities 102 -> 103 (conformance, emit_binding, forward_ref_lint, memo, verb_registry,
+  lattice x3, reference_resolver, quality_block x2, source_registry), `ac527` check steps 94 -> **97** (the plan said
+  96; `still-green` in the new activity is the third), rigor survey `(15, 2060, 1729)` -> `(15, 2100, 1774)`.
+  `lane_walk`'s `LaneToolchain` answers the repro red once at implement (`red-proof`) and green after; the fix lane
+  walks 14/0 with `repro-green-refactor` and no gate, the story lane 13/0 unchanged.
+- 2026-11-09, dated note (the plan's premise is false; D2 is kept as approved): **`has_repro = null` on a bug does
+  NOT open an `unknown_facet:has_repro` gate.** Step 4 (`select/step4.rs` `step4`) records a `null` `applicable_if`
+  as `Picked::abstained` and still chooses the lowest ADMISSIBLE rank, and no `require` row reads `has_repro`, so
+  step 2 opens nothing. Measured: a null-`has_repro` bug selects `tdd-red-green-refactor`, exactly today's choice.
+  Test 12 pins that. Whether step 4 should gate on a lower-rank abstention is an operator decision (an AC-079 and
+  ADR-0103 question), not taken here. The `-3` item keeps `has_repro = true` (restart step 4), so the lane is not
+  affected.
+
