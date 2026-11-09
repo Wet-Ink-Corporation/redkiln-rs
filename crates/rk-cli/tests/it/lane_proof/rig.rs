@@ -438,9 +438,15 @@ pub(super) type Key = (String, String, usize);
 
 /// One scripted response: the typed value, and the files the double writes inside the run-owned
 /// worktree before it answers (a failing test at `red`, the fix at `green`).
+///
+/// *(dated 2026-11-08; ADR-0205, proposed; plan test 17.)* `retry` is the answer to the NEXT
+/// dispatch of the same key: a re-prompt keeps its visit (the visit counts committed rows), so
+/// without it a fixture could not model "a bad answer, then a good one on the re-prompt". A key with
+/// one response behaves as before.
 pub(super) struct Response {
     value: serde_json::Value,
     writes: Vec<(String, String)>,
+    retry: Option<Box<Self>>,
 }
 
 impl Response {
@@ -450,6 +456,7 @@ impl Response {
         Self {
             value: serde_json::to_value(value).expect("an rk-types value serialises"),
             writes: Vec::new(),
+            retry: None,
         }
     }
 
@@ -458,6 +465,23 @@ impl Response {
         self.writes.push((path.to_owned(), contents.to_owned()));
         self
     }
+
+    /// This response first, then `next` for the following dispatch of the same key (a re-prompt
+    /// within the visit). Chains: `a.then_on_retry(b.then_on_retry(c))`.
+    pub(super) fn then_on_retry(mut self, next: Self) -> Self {
+        self.retry = Some(Box::new(next));
+        self
+    }
+}
+
+/// Take `key`'s response from `script`, leaving its `retry` (if any) under the same key for the
+/// next dispatch of that key.
+fn take_response(script: &mut BTreeMap<Key, Response>, key: &Key) -> Option<Response> {
+    let mut response = script.remove(key)?;
+    if let Some(next) = response.retry.take() {
+        script.insert(key.clone(), *next);
+    }
+    Some(response)
 }
 
 /// What the harness saw: the visited keys in order, and every dispatch no response was scripted for.
@@ -602,8 +626,9 @@ impl ScriptedLane {
             .inputs
             .iter()
             .map(|(name, _)| name.as_str())
-            // The binder's own keys (`item`, `worktree`), which no catalog step declares.
-            .filter(|name| !matches!(*name, "item" | "worktree"))
+            // The binder's own keys (`item`, `worktree`), which no catalog step declares, and the
+            // kernel's re-prompt input `refused` (ADR-0205, proposed; plan D6).
+            .filter(|name| !matches!(*name, "item" | "worktree" | "refused"))
             .collect();
         let candidates: Vec<&AgentStep> = self
             .catalog
@@ -726,7 +751,7 @@ fn agent_steps(root: &Path) -> BTreeMap<String, Vec<AgentStep>> {
 impl Harness for ScriptedLane {
     fn dispatch(&self, spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
         let key = self.key_of(spec, store);
-        let response = self.script.lock().expect("unpoisoned").remove(&key);
+        let response = take_response(&mut self.script.lock().expect("unpoisoned"), &key);
         let inputs = self.artifact_inputs(&key, spec);
         {
             let mut seen = self.seen.lock().expect("unpoisoned");
@@ -1417,4 +1442,47 @@ pub(super) fn walk_binary_to_close(root: &Path, item: &str, max_runs: usize) -> 
         story_stages(root, item),
         walk.gates
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::{Key, Response, take_response};
+
+    fn answer(n: u32) -> Response {
+        Response::of(&serde_json::json!({ "n": n }))
+    }
+
+    /// **Test 17.** A key's retries answer its next dispatches in order, and then it is spent; a
+    /// key with one response is spent after one dispatch, as before.
+    #[test]
+    fn then_on_retry_answers_the_next_dispatch_of_the_same_key() {
+        let red: Key = ("tdd-red-green-refactor@4".to_owned(), "red".to_owned(), 0);
+        let green: Key = ("tdd-red-green-refactor@4".to_owned(), "green".to_owned(), 0);
+        let mut script = BTreeMap::from([
+            (
+                red.clone(),
+                answer(0).then_on_retry(answer(1).then_on_retry(answer(2))),
+            ),
+            (green.clone(), answer(9)),
+        ]);
+        let values: Vec<serde_json::Value> = (0..4)
+            .filter_map(|_| take_response(&mut script, &red))
+            .map(|r| r.value)
+            .collect();
+        assert_eq!(
+            values,
+            vec![
+                serde_json::json!({"n": 0}),
+                serde_json::json!({"n": 1}),
+                serde_json::json!({"n": 2}),
+            ]
+        );
+        assert_eq!(
+            take_response(&mut script, &green).map(|r| r.value),
+            Some(serde_json::json!({"n": 9}))
+        );
+        assert!(script.is_empty(), "every response is consumed");
+    }
 }
