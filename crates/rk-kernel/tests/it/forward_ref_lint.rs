@@ -207,7 +207,8 @@ fn every_shipped_forward_ref_is_licensed_and_the_census_is_printed() {
     let catalog = Catalog::from_dir(&dir).expect("the shipped catalog parses");
     let (census, refused) = forward_ref_census(&catalog);
     println!("{census}");
-    assert_eq!(census.activities, 102, "premise: the whole shipped catalog");
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
+    assert_eq!(census.activities, 103, "premise: the whole shipped catalog");
     assert!(
         census.total > 0,
         "a census over nothing is Halt 8's shape: {census:?}"

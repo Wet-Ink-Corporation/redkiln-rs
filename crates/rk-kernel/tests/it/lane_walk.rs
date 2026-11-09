@@ -404,9 +404,25 @@ fn happy(kind: &str) -> Json {
 /// placed repro's state: red at `analysis` (before the fix), green from `implement` on (the fix
 /// landed). `minimal-repro@2`'s `confirm` and `root-cause@6`'s `confirm` run it red, and
 /// verify's `confirmation-test` runs the same command green.
+///
+/// *(dated 2026-11-08; ADR-0205, proposed; plan test 15.)* `repro_red_runs` replaces the flag: how
+/// many repro runs still answer red. `analysis` is red throughout, `implement` is red once
+/// (`repro-green-refactor@1`'s `red-proof`, before `green` lands the fix) and green after, and
+/// every later stage is green.
 struct LaneToolchain {
     path: &'static str,
-    repro_red: bool,
+    repro_red_runs: std::sync::atomic::AtomicU32,
+}
+
+impl LaneToolchain {
+    /// Whether this repro run answers red, spending one red run.
+    fn repro_is_red(&self) -> bool {
+        use std::sync::atomic::Ordering;
+        // SeqCst: a test fake, read and written by one walk thread; ordering is not load-bearing.
+        self.repro_red_runs
+            .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+            .is_ok()
+    }
 }
 
 /// The repro the rig's `repro_place` answers: a test whose last path segment starts `repro_`.
@@ -456,9 +472,11 @@ impl Toolchain for LaneToolchain {
             Selection::Affected { changed, .. } => changed.clone(),
             Selection::WholeSuite { .. } => vec!["whole-suite".to_owned()],
         };
-        let failing = names.iter().any(|n| {
-            n.starts_with("red_") || n.starts_with("hypothesis_") || (self.repro_red && is_repro(n))
-        });
+        let repro_red = names.iter().any(|n| is_repro(n)) && self.repro_is_red();
+        let failing = repro_red
+            || names
+                .iter()
+                .any(|n| n.starts_with("red_") || n.starts_with("hypothesis_"));
         let n = u32::try_from(names.len().max(1)).expect("a handful of names");
         let (passed, failed) = if failing { (0, n) } else { (n, 0) };
         TestOutcome::new(
@@ -1055,7 +1073,11 @@ impl Rig<'_> {
             .expect("the shipped pack declares its attempt cap");
         let toolchain: Arc<dyn Toolchain> = Arc::new(LaneToolchain {
             path: self.lane.path,
-            repro_red: stage == "analysis",
+            repro_red_runs: std::sync::atomic::AtomicU32::new(match stage {
+                "analysis" => u32::MAX,
+                "implement" => 1,
+                _ => 0,
+            }),
         });
         let rt = Runtime::new(
             ports_with_toolchain(
@@ -1497,7 +1519,10 @@ const FIX: Lane = Lane {
             selected: &[
                 // *(dated 2026-09-27, F3-D2174; D21-74 ruling 2.)* Was `Refuses("no committed
                 // `emit` binding of `Changeset`")`: `affected` now reads the run branch.
-                ("tdd-red-green-refactor", Verdict::Walks),
+                // *(dated 2026-11-08; ADR-0205, proposed; D21-177; plan D1, D9.)* A bug with
+                // `has_repro = true` implements against its committed repro: was
+                // `("tdd-red-green-refactor", Verdict::Walks)`.
+                ("repro-green-refactor", Verdict::Walks),
                 ("change-summary", Verdict::Walks),
             ],
         },

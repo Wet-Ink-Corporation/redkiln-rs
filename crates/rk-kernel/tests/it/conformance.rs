@@ -1037,7 +1037,8 @@ fn the_check_arm_has_no_receiver_and_so_cannot_reach_a_port() {
 #[test]
 fn shipped_pack_loads() {
     // The shipped pack's activity count, pinned rather than floored — see the anchor below.
-    const SHIPPED_ACTIVITIES: usize = 102;
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
+    const SHIPPED_ACTIVITIES: usize = 103;
 
     let root = workspace_root();
     let pack_dir = root.join(".redkiln");

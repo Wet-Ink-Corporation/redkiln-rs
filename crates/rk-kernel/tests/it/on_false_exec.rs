@@ -2240,3 +2240,66 @@ fn a_replayed_true_check_is_marked_run_for_the_emit_evidence() {
         "the completion row carries `c`'s evidence pointer"
     );
 }
+
+/// **Test 14 (Invariant 7; ADR-0205, proposed; plan D4).** The shipped `tdd@4` red loop (`red`,
+/// `red-named`, `red-verify`, `red-check`): two `red` copies that each name no test loop back from
+/// `red-named` once, and the second pass's named test reaches `red-verify`, so no `Unsupported`
+/// refusal of an empty selection ends the walk. Red before `red-named` existed: `red-verify`
+/// refused the empty list and the walk ended.
+#[test]
+fn tdd_red_named_loops_back_on_an_all_empty_red() {
+    let catalog = rk_kernel::catalog::Catalog::from_dir(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.redkiln/catalog"),
+    )
+    .expect("the shipped catalog loads");
+    let tdd = catalog
+        .activities()
+        .iter()
+        .find(|a| a.id == "tdd-red-green-refactor")
+        .expect("the shipped catalog carries tdd");
+    let mut steps: Vec<Step> = tdd
+        .steps
+        .iter()
+        .take_while(|s| s.id != "green")
+        .cloned()
+        .collect();
+    assert_eq!(
+        steps.iter().map(|s| s.id.as_str()).collect::<Vec<_>>(),
+        vec!["red", "red-named", "red-verify", "red-check"],
+        "PREMISE: tdd@4's red loop"
+    );
+    // The rig binds no `${toolchain.*}` values; the step bounds are not this test's subject.
+    for s in &mut steps {
+        s.timeout_secs = None;
+    }
+    steps.push(step("emit", StepKind::Emit));
+    let none = serde_json::json!({"summary": "the criterion already holds", "tests_added": []});
+    let named = serde_json::json!({"summary": "red", "tests_added": ["red_t1"]});
+    let rig = Rig::new(vec![none.clone(), none.clone(), none, named], vec![(0, 1)]);
+    rig.seed(crate::reference_resolver::emitted_row(
+        "fix-spec@2",
+        "Spec",
+        serde_json::json!({"acceptance_criteria": ["AC-1", "AC-2"]}),
+    ));
+    let report = rig.walk(&steps);
+    assert!(
+        report.completed() && report.step_error().is_none(),
+        "the walk completes with no refusal: {}",
+        refusal(&report)
+    );
+    assert_eq!(rig.harness.dispatches(), 4, "two copies, twice");
+    assert_eq!(
+        rig.tests.selections(),
+        vec![Selection::Filter(vec!["red_t1".to_owned()])],
+        "`red-verify` ran once, over the named test, never over an empty list"
+    );
+    assert_eq!(
+        rig.decisions()
+            .iter()
+            .filter(|(step, _, d)| step == "red-named" && d["holds"] == serde_json::json!(false))
+            .count(),
+        1,
+        "one loop-back: {:?}",
+        rig.decisions()
+    );
+}

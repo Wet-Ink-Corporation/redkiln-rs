@@ -286,9 +286,14 @@ fn rigor_monotonicity() {
     // apart. 1729 is the measured count of ordered rigor pairs at which both ends selected, over
     // 2060 contexts and 15 families [measured 2026-09-13]; each of the four admissibility guttings
     // above moves it by 30–140% while leaving every other assertion in this test green.
+    //
+    // *(Re-pinned 2026-11-08, measured: `repro-green-refactor@1` joins `implement-loop` with
+    // `applicable_if = "has_repro"`, so the family is checked over more contexts; was
+    // `(15, 2060, 1729)`. The p9 historical reading below is unchanged. ADR-0205, proposed; plan
+    // D9.)*
     assert_eq!(
         (survey.families, survey.contexts_checked, survey.comparisons),
-        (15, 2060, 1729),
+        (15, 2100, 1774),
         "the shipped catalog's survey is pinned by its SHAPE and not only by its verdict. If the \
          catalog changed, re-derive these three off the new reading and record it — do not widen \
          the assertion (golden constraint 9)"

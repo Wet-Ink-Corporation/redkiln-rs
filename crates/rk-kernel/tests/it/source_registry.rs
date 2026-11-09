@@ -249,7 +249,8 @@ fn walked_inputs(dir: &Path) -> Vec<(String, String)> {
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("toml"))
         .collect();
     files.sort();
-    assert_eq!(files.len(), 102, "premise: the shipped catalog's 102 files");
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
+    assert_eq!(files.len(), 103, "premise: the shipped catalog's 103 files");
     for path in files {
         let text = std::fs::read_to_string(&path).expect("a catalog file");
         let doc = rk_kernel::toml_subset::parse(&text)
