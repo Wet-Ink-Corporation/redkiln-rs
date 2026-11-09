@@ -1738,6 +1738,7 @@ impl super::Runtime {
             loops: Loops::default(),
             dispatched: 0,
         };
+        let feeds = super::reference::selection_feeds(steps);
         let env = WalkEnv {
             item,
             activity: activity_id_at_version,
@@ -1749,6 +1750,7 @@ impl super::Runtime {
             gate,
             cap,
             now,
+            feeds: &feeds,
         };
         let mut pc = 0_usize;
         while let Some(step) = steps.get(pc) {
@@ -1820,6 +1822,7 @@ impl super::Runtime {
                 step_id: last,
                 iteration_path: &base,
                 family: None,
+                feeds: &[],
             },
             None,
             now,
@@ -1844,6 +1847,7 @@ impl super::Runtime {
             step_id: &step.id,
             iteration_path: path,
             family: None,
+            feeds: &[],
         };
         let key = at.commit_key(item, activity_id_at_version);
         // 🛑 **R1 (M8): A `side_effecting` TOOL STEP ALREADY COMMITTED IS SERVED, NEVER
@@ -2134,8 +2138,12 @@ impl super::Runtime {
             Ok(family) => family,
             Err(cause) => return Ok(Flow::Halt(Halt::Stop(cause))),
         };
+        // *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; plan D5.)* THIS
+        // step's selection feeds, derived once per activation: a fresh value that fails one is
+        // `Schema` inside the dispatch loop, before any commit.
         let at = StepAt {
             family: family.as_ref(),
+            feeds: e.feeds.get(&step.id).map_or(&[], Vec::as_slice),
             ..at
         };
         // **The `agent` arm.** The dispatch, its retry loop and AC-012's commit race
@@ -2498,6 +2506,7 @@ impl super::Runtime {
             step_id: &repeating.id,
             iteration_path: &pass_path,
             family: None,
+            feeds: &[],
         };
         let key = at.commit_key(e.item, e.activity);
         let replayed = super::activity::journaled_decision(&w.journal, &key, DecisionKind::Until);
@@ -2651,10 +2660,12 @@ impl super::Runtime {
         let mut report = self.run_activity_at(
             (act.item, act.activity_id_at_version, act.step_id),
             own,
+            // A standalone step has no activity's steps beside it, so it has no feeds.
             Some(StepAt {
                 step_id: &step.id,
                 iteration_path: iteration,
                 family: family.as_ref(),
+                feeds: &[],
             }),
             cap,
             now,
@@ -3096,6 +3107,8 @@ struct WalkEnv<'a> {
     gate: GateSite<'a>,
     cap: AttemptCap,
     now: JournaledNow,
+    /// Each agent step's selection feeds (ADR-0205, proposed), derived once per activation.
+    feeds: &'a BTreeMap<String, Vec<super::reference::SelectionFeed>>,
 }
 
 /// The loops' state: the loop-back base frame, the counts each bound is checked against, the

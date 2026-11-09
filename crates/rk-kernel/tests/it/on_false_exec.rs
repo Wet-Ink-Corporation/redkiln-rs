@@ -626,7 +626,9 @@ fn a_tool_dispatch_that_fails_at_the_port_charges_its_pass() {
 
     // A PRE-PORT REFUSAL: the selection does not resolve, the port is never reached.
     let rig = Rig::new(draft(), vec![(1, 0)]);
-    let report = rig.walk(&steps("${draft.outputs.nope}"));
+    // *(dated 2026-11-08, ADR-0205, proposed.)* Optional, so it is no selection feed: a mandatory
+    // `${draft.outputs.nope}` is now refused at `draft` itself as `Schema`, before this arm's tool.
+    let report = rig.walk(&steps("${draft.outputs.nope?}"));
     let e = refusal(&report);
     assert!(
         e.contains("`t`") && !report.completed() && rig.tests.selections().is_empty(),
@@ -2158,6 +2160,7 @@ fn a_decision_is_journaled_at_most_once_per_commit_key_and_kind() {
         step_id: "c",
         iteration_path: &path,
         family: None,
+        feeds: &[],
     };
     let check_true = Decision {
         kind: DecisionKind::Check,

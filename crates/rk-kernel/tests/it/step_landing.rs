@@ -173,6 +173,7 @@ fn commit_step(fx: &Fx) {
         step_id: "edit",
         iteration_path: &path,
         family: None,
+        feeds: &[],
     };
     let typed = Typed::new(
         SchemaId::new("ImplReport"),

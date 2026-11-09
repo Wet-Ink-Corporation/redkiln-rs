@@ -83,6 +83,7 @@ use rk_types::event_kind::EventKind;
 use rk_types::typed::Typed;
 
 use super::marks::RetryAtMark;
+use super::reference::SelectionFeed;
 use super::{Runtime, RuntimeError};
 use crate::workflow::breaker::{BreakerDecision, BreakerState, FamilyKey, JournaledNow};
 use crate::workflow::envelope::AttemptCap;
@@ -104,6 +105,11 @@ pub struct StepAt<'a> {
     /// breaker is bound (D-7's key). `None` is a runtime with no breaker binding — the kernel's
     /// machinery suites — and a non-agent step.
     pub family: Option<&'a FamilyKey>,
+    /// *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; D21-177; plan D5, D8.)*
+    /// The agent step's selection feeds ([`super::reference::selection_feeds`]): a fresh dispatch
+    /// whose value fails one is a `StepError::Schema`, re-prompted under AC-031's limit and never
+    /// committed. Empty for every non-agent step and for a step whose output feeds no selection.
+    pub feeds: &'a [SelectionFeed],
 }
 
 impl StepAt<'_> {
@@ -991,6 +997,13 @@ impl Runtime {
         // activation's DISPATCH ordinal — the `dispatch` rows the journal holds for it before this
         // loop, plus this loop's own — so its cap check and its backoff ceiling count dispatches.
         let prior_dispatches = dispatches_of(&self.journal(item)?, item, activity_id_at_version);
+        // *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; plan D5, D6.)* The
+        // step's selection feeds, and the re-prompt's spec: `None` until a `Schema` failure is
+        // re-prompted, then the walk's spec plus the input `refused` (AC-031's "carrying the
+        // validation error"). An owned spec per re-prompt, because the harness takes
+        // `&ActivitySpec` and the walk's spec is borrowed.
+        let feeds = at.map_or(&[][..], |at| at.feeds);
+        let mut reprompt: Option<rk_types::activity::ActivitySpec> = None;
 
         loop {
             // **R4 (ADR-0176 decision 4; AC-033..AC-035).** Before an agent step's dispatch, the
@@ -1005,8 +1018,14 @@ impl Runtime {
                 report.breaker = decision;
                 return Ok(report);
             }
-            let dispatched =
-                self.dispatch_once_at(item, activity_id_at_version, step_id, attempt, spec, at)?;
+            let dispatched = self.dispatch_once_at(
+                item,
+                activity_id_at_version,
+                step_id,
+                attempt,
+                reprompt.as_ref().unwrap_or(spec),
+                at,
+            )?;
             let Some(result) = dispatched.result else {
                 // Another attempt committed between the fold above and the pre-flight inside
                 // `dispatch_once`. Nothing was dispatched and nothing was appended.
@@ -1023,23 +1042,36 @@ impl Runtime {
                     // attributed to a schema and the spec demanded one. No text is parsed and no
                     // structure is recovered from prose — [`boundary_prose_extraction_rule`] is
                     // what says so about this file rather than about this line.
-                    if typed.schema == spec.schema {
-                        let commit = self.commit_at(&key, at, &typed, now)?;
-                        if commit.is_committed() {
-                            report.appended += 1;
+                    //
+                    // *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; plan
+                    // D5.)* Then the step's selection feeds, before the commit: a fresh value
+                    // naming a test the one parser refuses is a `Schema` failure here, never a
+                    // walk-ending refusal at the tool step. A served value never reaches this
+                    // line (`already` above), so a committed row is never re-checked.
+                    let refusal = if typed.schema == spec.schema {
+                        match super::reference::check_feeds(&typed.value, feeds) {
+                            Ok(()) => {
+                                let commit = self.commit_at(&key, at, &typed, now)?;
+                                if commit.is_committed() {
+                                    report.appended += 1;
+                                }
+                                report.commit = Some(commit);
+                                report.outcome = Some(Ok(typed));
+                                return Ok(report);
+                            }
+                            Err(why) => why.to_string(),
                         }
-                        report.commit = Some(commit);
-                        report.outcome = Some(Ok(typed));
-                        return Ok(report);
-                    }
-                    report.schema_failures += 1;
-                    StepError::Schema {
-                        attempts: report.schema_failures,
-                        last_error: format!(
+                    } else {
+                        format!(
                             "the returned value validated against `{}` and the activity spec demands `{}`",
                             typed.schema.as_str(),
                             spec.schema.as_str()
-                        ),
+                        )
+                    };
+                    report.schema_failures += 1;
+                    StepError::Schema {
+                        attempts: report.schema_failures,
+                        last_error: refusal,
                     }
                 }
                 Err(error) => error,
@@ -1077,6 +1109,14 @@ impl Runtime {
             if decision.authorises_redispatch() {
                 // **AC-011.** `attempt + 1`, and never a number already used.
                 attempt = attempt.saturating_add(1);
+                // **D6 (ADR-0205, proposed).** A `Schema` re-prompt carries its refusal as the
+                // input `refused`; every other re-dispatch re-sends the walk's spec.
+                reprompt = match (&decision, &error) {
+                    (RetryDecision::Reprompt { .. }, StepError::Schema { last_error, .. }) => {
+                        Some(with_refused(spec, last_error))
+                    }
+                    _ => None,
+                };
                 continue;
             }
             report.outcome = Some(Err(error));
@@ -1142,6 +1182,24 @@ impl Runtime {
         }
         Ok(None)
     }
+}
+
+/// The input a `Schema` re-prompt carries its refusal under (ADR-0205, proposed; plan D6). No
+/// catalog step declares an input of this name (`selection::no_shipped_step_declares_the_reserved_input_refused`).
+const REFUSED_INPUT: &str = "refused";
+
+/// The re-prompt's spec: `spec` plus `refused = last_error`, replacing any earlier `refused`.
+fn with_refused(
+    spec: &rk_types::activity::ActivitySpec,
+    last_error: &str,
+) -> rk_types::activity::ActivitySpec {
+    let mut own = spec.clone();
+    own.inputs.retain(|(name, _)| name != REFUSED_INPUT);
+    own.inputs.push((
+        REFUSED_INPUT.to_owned(),
+        serde_json::Value::String(last_error.to_owned()),
+    ));
+    own
 }
 
 /// **R4 (ADR-0176 decisions 1-3): the error row the KERNEL writes** — `StepError::event()`'s arm.
