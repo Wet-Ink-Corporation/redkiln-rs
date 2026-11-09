@@ -15,6 +15,7 @@
 # `bug-standard`. `hold_before = "specification"` is the boundary hold. `slice` is the id without its `rk-fix-`
 # prefix (s8e section 8e.8). `[trial] activity` is ADR-0195 decision 4's spelling. `cos = "standard"` is read by
 # `bug-standard`'s `applies`.
+# *(dated 2026-11-09, D21-163 step 4; plan s8-repro-aware-implement-2026-11-08.md, restart step 4)* Superseded by rk-fix-doctor-margin-3; to be archived at refs/archive/s8-failed-2026-11-08b/ and <gcd>/redkiln/archive/2026-11-08b-rk-fix-doctor-margin-2/ (restart steps 2-3, the operator's).
 id          = "rk-fix-doctor-margin-2"
 kind        = "bug"
 stage       = "triage"
