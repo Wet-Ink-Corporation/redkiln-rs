@@ -372,8 +372,8 @@ rk-kernel, catalog and selection:
 - [x] 15. `lane_walk`: the `FIX` implement row becomes `("repro-green-refactor", Walks), ("change-summary", Walks)`. `LaneToolchain` answers `red-proof` red and the verifies green. `STORY` is unchanged at 13/0 (Decision D9).
 
 rk-cli:
-- [ ] 16. `run::a_walk_ending_refusal_names_its_capability_on_stderr`: a pack-min pack whose tool step names an unrouted verb after an agent commit. stderr holds `the step's class: Unsupported { capability: "` and the verb, and the store holds the `step_refused` row. Red before: the generic sentence only, and no row.
-- [ ] 17. Rig: `Response::then_on_retry(Response)`, a per-key answer sequence indexed by the dispatch ordinal within a visit, so a re-prompt can answer differently (survey 11). Its own unit test is in `lane_proof/rig.rs`'s `#[cfg(test)]`.
+- [x] 16. `run::a_walk_ending_refusal_names_its_capability_on_stderr`: a pack-min pack whose tool step names an unrouted verb after an agent commit. stderr holds `the step's class: Unsupported { capability: "` and the verb, and the store holds the `step_refused` row. Red before: the generic sentence only, and no row.
+- [x] 17. Rig: `Response::then_on_retry(Response)`, a per-key answer sequence indexed by the dispatch ordinal within a visit, so a re-prompt can answer differently (survey 11). Its own unit test is in `lane_proof/rig.rs`'s `#[cfg(test)]`.
 - [ ] 18. **`lane_proof::fix_lane_with_an_improvising_implementer_lands_through_the_repro`, the reproduction of THIS failure.**
   - The script models the real card. `tdd-red-green-refactor@3` (also `@4`) `red` visit 0 writes `FIXED_LIB` into `src/lib.rs` and answers `tests_added = ["word count test"]`, `status = "implemented"`, as the operator's for_each:0 and :1 did. `repro-green-refactor@1` `green` writes `FIXED_LIB` and the AC's named test, `tests_added = [RED_NAME]`.
   - Red before the fix: the run exits 19 (`Unsupported`, `doctor`-shaped token), and `src/lib.rs` is committed by a `red` step.
@@ -583,3 +583,19 @@ About 12 non-Rust files:
   ADR-0103 question), not taken here. The `-3` item keeps `has_repro = true` (restart step 4), so the lane is not
   affected.
 
+- 2026-11-09, package 5 (test 16): `run`'s `StepFailedAfterCommit` arm writes the class line through `writeln!` on a
+  locked stderr. The test lives in a new rk-cli `tests/it/step_refused.rs`, not `run::` (that suite's helpers build
+  no pack-min pack). Its premise checks exit 19 and the sentence; the error names the DAG node `emit-report`, not
+  the tool step, so the premise does not pin a step id. Red: no `the step's class` line.
+- 2026-11-09, package 6 (tests 17-20): `Response::then_on_retry` and the per-key sequence in `lane_proof/rig.rs`
+  (unit test 17 in its `#[cfg(test)] mod tests`); `key_of` ignores the `refused` input, so a re-prompt keeps its
+  key. Tests 18 and 19 are in a new `lane_proof/improvising.rs`. `fix_script` keys `repro-green-refactor@1`
+  `green` and `refactor`; `story_script` keys `tdd-red-green-refactor@4`. **Not verified locally:** the walks
+  that go to close (18, 19 and the existing fix and story proofs) stop in this container at `sca-scan`, a transport
+  error because `cargo-audit` is not installed. Both lanes were seen to pass implement and verify locally. Red
+  before the fix was not produced for 18 and 19 against the old code; their mutants (`M-repro-aware-unselected`,
+  `M-feed-check-off`) are the red evidence, run by the operator in §8j.6 step 1b.
+- 2026-11-09, records: ADR-0205 (proposed) and its README row; D21-177 with the title move; the s8 restart note
+  (`-2` → `-3`, not taken); `PROGRESS.md` row 8; the two charters' Decisions rows; §8j.4 and step 1b amended
+  (`R_TESTS` 20; `S8J_MUTANTS` gains `M-repro-aware-unselected` and `M-step-class-silent`, with `M-feed-check-off`
+  under `--kernel`, killer test 7). The `-3` mint, the evidence lines and the owed issue are the operator's.

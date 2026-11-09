@@ -1492,5 +1492,21 @@ checkpoint line.)*
 >   `rk-run/rk-story-harden-spike-pack`, and no fresh story item is minted by `s8j` §8j.5.
 >   *(dated 2026-10-18, D21-163: answered — a failed story-item run (1b) takes steps 1-3 only (stop and record,
 >   archive the ref, archive the store) and then stops. Any re-run of it is a separate operator decision.)*
+>
+> *(dated 2026-11-09, s8 repro-aware implement; ADR-0205, proposed; D21-177)* **`rk-fix-doctor-margin-2` → `-3`.**
+> The `-2` run exited 19 at `tdd-red-green-refactor@3`'s `red-verify` (`Unsupported` from `check_selection_token`
+> on `"doctor test"`). Its run ref carries d5de724, an unreviewed fix committed by a `red` step. That commit is never
+> merged, cherry-picked or used as a reference for the lane's fix; it stays only as archived evidence. The restart
+> takes steps 1-6 above, as listed for this item in `spikes/plans/s8-repro-aware-implement-2026-11-08.md`
+> § "Restarting the item's run". Each step is the operator's, with its own go-ahead, and none is taken by this note.
+> The item-specific points are:
+> - The archive uses the `b` suffix (`refs/archive/s8-failed-2026-11-08b/rk-fix-doctor-margin-2`, archive directory
+>   `2026-11-08b-rk-fix-doctor-margin-2`), because `s8-failed-2026-11-08/` already holds `-1`'s archive.
+> - `-3`'s item file keeps `has_repro = true`, which selects `repro-green-refactor@1` at implement.
+> - `-3`'s repro test is widened to assert all three of the BugReport's cases, still one `fn` (D13 A). Checkpoint 8j
+>   (4) proves the widened test red.
+> - Step 5's re-freeze runs §8j.6 step 1b as amended (20 proofs, the old twelve mutants plus the new ones) and
+>   re-measures D10's guard at the new sha (D12 B).
+> - s8 criterion (3) kill and resume is re-run on `-3` (D11 A).
 
 ---

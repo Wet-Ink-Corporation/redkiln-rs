@@ -31,3 +31,4 @@ Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo te
 | Date | Decision | Rule | Decided by |
 |---|---|---|---|
 | 2026-11-08 | Add `repro_pair` (read the item's committed `.redkiln/intake/<item>.repro.{toml,rs}` from the run tree, capped, and bind it as the `repro_place.pair` row input when the adapter is rust), `explain`'s stopped-run block (`verbs/explain/stopped.rs`), and `run`'s stderr line naming a failed step's class (ADR-0204, proposed; D21-174) | API-14, H-13, ERR-04 | Ryan Britton (plan D1, D7, D12, 2026-11-08) |
+| 2026-11-09 | `run`'s `StepFailedAfterCommit` arm writes `redkiln: the step's class: <class>` after the sentence, through `writeln!` on a locked stderr; the exit code is unchanged (ADR-0205, proposed; D21-177) | ERR-04, H-06 | Ryan Britton (plan D7, 2026-11-08) |
