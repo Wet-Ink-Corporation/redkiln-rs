@@ -1767,7 +1767,7 @@ impl super::Runtime {
                             step.id
                         ),
                     };
-                    return Ok(w.halt(now, Halt::Failed(cause)));
+                    return self.end_walk(w, &env, step, Halt::Failed(cause));
                 }
                 w.loops.repeat = Some(Repeat {
                     start: index,
@@ -1799,10 +1799,10 @@ impl super::Runtime {
             pc = match flow {
                 Flow::Next => match self.after_step(&mut w, &env, steps, index)? {
                     Ok(next) => next,
-                    Err(halt) => return Ok(w.halt(now, halt)),
+                    Err(halt) => return self.end_walk(w, &env, step, halt),
                 },
                 Flow::Jump(target) => target,
-                Flow::Halt(halt) => return Ok(w.halt(now, halt)),
+                Flow::Halt(halt) => return self.end_walk(w, &env, step, halt),
                 Flow::Complete(outcome) => return Ok(w.report.with_completion(outcome)),
             };
         }
@@ -1828,6 +1828,37 @@ impl super::Runtime {
             now,
         )?;
         Ok(w.report.with_completion(outcome))
+    }
+
+    /// **The walk ends at `step` without completing** (ADR-0205, proposed; plan D7 option J1).
+    ///
+    /// A step's failure or the walk's refusal at a step that is not an `agent` step appends one
+    /// error row through the one mapping, `StepError::event()` (AC-360): `Unsupported` becomes
+    /// `step_refused`, a recorded halt, and every other class `step_failed`, which changes no
+    /// state. The row carries `step_id` and `activity_id_at_version` beside the members
+    /// [`super::activity::error_row`] writes. An `agent` step's dispatch failure already has its
+    /// row from the dispatch loop, so none is added for it.
+    fn end_walk(
+        &self,
+        w: Walk,
+        e: &WalkEnv<'_>,
+        step: &Step,
+        halt: Halt,
+    ) -> Result<ActivityReport, super::RuntimeError> {
+        if let Halt::Failed(err) | Halt::Stop(err) = &halt
+            && step.kind != StepKind::Agent
+        {
+            let mut row = super::activity::error_row(err, None, e.now);
+            if let Some(map) = row.payload.as_object_mut() {
+                map.insert("step_id".to_owned(), serde_json::json!(step.id));
+                map.insert(
+                    "activity_id_at_version".to_owned(),
+                    serde_json::json!(e.activity),
+                );
+            }
+            self.append(row)?;
+        }
+        Ok(w.halt(e.now, halt))
     }
 
     /// **One step at one iteration path** — the guard, the inputs, and the kind's arm (R1, R2, R3).
