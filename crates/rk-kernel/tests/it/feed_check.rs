@@ -86,11 +86,9 @@ fn run_red(
     Arc<RecordingHarness>,
 ) {
     let h = Arc::new(RecordingHarness::scripted(script));
-    let rt = Runtime::new(
-        ports(Arc::clone(&h) as Arc<dyn Harness>, db),
-        "run-feed",
-        STAGE,
-    );
+    // A second handle on the one harness: the walk holds one, the test reads the other.
+    let harness: Arc<dyn Harness> = Arc::<RecordingHarness>::clone(&h);
+    let rt = Runtime::new(ports(harness, db), "run-feed", STAGE);
     let feeds = red_feeds();
     let path = IterationPath::root();
     let at_red = StepAt {
@@ -237,10 +235,7 @@ fn a_committed_bad_value_is_served_not_rechecked() {
     let feeds = red_feeds();
     {
         let rt = Runtime::new(
-            ports(
-                Arc::new(CountingHarness::scripted(Vec::new())) as Arc<dyn Harness>,
-                &db,
-            ),
+            ports(Arc::new(CountingHarness::scripted(Vec::new())), &db),
             "run-before",
             STAGE,
         );
