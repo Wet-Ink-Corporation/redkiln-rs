@@ -294,9 +294,10 @@ fn every_shipped_activity_has_one_last_emit_whose_artifacts_equal_provides() {
         "EMIT_BINDING activities={walked} failures={}",
         failures.len()
     );
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
     assert_eq!(
-        walked, 102,
-        "the census walked {walked} activities, not the shipped 102"
+        walked, 103,
+        "the census walked {walked} activities, not the shipped 103"
     );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

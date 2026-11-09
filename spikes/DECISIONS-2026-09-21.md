@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-08 (D21-1 … D21-176), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-09 (D21-1 … D21-177), and what they license
+
+*(Title moved 2026-11-09, D21-177: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-176)"**; `D21-177` is appended with this move.)*
 
 *(Title moved 2026-11-08, D21-174: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-173)"**; `D21-174` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 173 before the append, the last `D21-173`; 174 after.)*
 
@@ -8019,3 +8021,52 @@ The block now writes the capture before the kill. On a non-zero taskkill it fail
 the capture is re-taken by `explain` with the ref unmoved. It holds the same committed steps and the same
 `output_digest`s the lost one held, and it is marked with a provenance file beside it. `runbook/` is not a code
 path, so the frozen sha `a6d2f76` is unmoved.
+
+## D21-177 · `s8`: the fix lane implements against the committed repro; agent selections are refused at the agent step as `Schema`; a walk-ending failure reaches stderr and the journal (ADR-0205, proposed)
+
+*(dated 2026-11-09, agent; the operator's ruling 2026-11-08 22:34Z and his approval of the plan's D1-D14 at 23:51Z,
+both on cards; plan `spikes/plans/s8-repro-aware-implement-2026-11-08.md`)*
+
+**What happened.** The operator's run of `rk-fix-doctor-margin-2` exited 19. `tdd-red-green-refactor@3`'s `red`
+for_each:0 committed the fix and named no test, for_each:1 named `"doctor test"`, and `red-verify` refused that token
+as `Unsupported` from `check_selection_token`. No journal row and no stderr class line named the step.
+
+**The ruling.** Ryan, card 2026-11-08 22:34Z: *"Repro-aware tdd plus hardening"*. The plan's D1-D14 were approved as
+recommended on 2026-11-08 at 23:51Z (card "Approve all recommendations"). Their outcomes:
+
+1. **D1 C, D2 A, D3 A.** Implement for a bug with a placed repro is a new `implement-loop` member,
+   `repro-green-refactor@1`, rank 15, `applicable_if = "has_repro"`. It re-proves the repro red at entry and opens
+   `repro.cannot-reproduce` when it is not. This departs from the ruling's literal "tdd@4" for the repro path; `tdd`
+   still goes to `@4` for the hardening.
+2. **D4 i + `red-named`.** `tdd-red-green-refactor@4` gives `red`, `green` and `refactor` a `task` literal, and
+   `red-named` loops back on an all-empty red. Option ii (`toolchain:test_scope`) is an owed issue for the operator
+   to file (ADR-0205's Consequences). Option iii is rejected.
+3. **D5 i, D6 A.** The kernel checks selection-feeding agent fields before commit as `Schema`. Every `Schema`
+   re-prompt carries the reserved input `refused`.
+4. **D7 J1.** A walk ending at a non-agent step appends one `error_row`, and `run` names the class on stderr.
+5. **D8, D9, D14.** The public API additions, the test re-pins as measured, and the catalog versions, as listed in
+   the plan.
+6. **D10 A.** The record is ADR-0205, at `proposed`. It answers ADR-0204's owed issue "D4, option c".
+7. **D11 A (the (3) ruling).** s8 criterion (3) kill and resume is re-run on `rk-fix-doctor-margin-3`, because this
+   change touches `run_activity_at`'s dispatch-to-commit path.
+8. **D12 B.** D21-174 item 3's ruling stands for §8j.6's paid steps, guarded by
+   `git diff --quiet 1810fddc5c96a58bb6fc069cc7bcb0ff04003820 HEAD -- crates/rk-adapter-claude crates/rk-containment .redkiln/cards tools/live-run.sh`,
+   re-measured at the new sha. This change touches none of those paths.
+9. **D13 A (the repro-scope ruling).** `-3`'s repro test is widened to assert all three of the BugReport's cases
+   (the missing window, `[margins]` absent, a non-integer), still one `fn`, and Checkpoint 8j (4) is re-proved red
+   on the widened test. That is the operator's mint step, not code.
+
+**Measured deviations from the plan** (each is a dated note in the plan's Progress):
+
+- **A bug with `has_repro = null` keeps `tdd-red-green-refactor` and opens no gate.** The plan said it opens
+  `unknown_facet:has_repro`. Step 4 records the abstention and picks the lowest admissible rank. D2 is kept as
+  approved. Whether step 4 should gate on a lower-rank abstention is open for the operator. `-3` keeps
+  `has_repro = true`, so the lane is not affected.
+- `quality_block::ac527` check steps moved 94 → **97**, not 96: `still-green` is a third check step.
+- Four existing kernel tests drove a bad agent selection to the tool step's refusal. They now reach it through a
+  served row, or an optional reference, with their assertions kept.
+- An agent step's own pre-dispatch stop gets no error row under D7's "non-agent" rule.
+- Test 16 lives in rk-cli `step_refused::`, not `run::`, so `R_TESTS` is 20.
+
+**Not done here.** The restart's operator steps (record, archive, mint `-3`, re-freeze, re-check, launch) and every
+evidence line. `runbook/phase-1/s8-exit-criterion.md` carries the dated restart note.

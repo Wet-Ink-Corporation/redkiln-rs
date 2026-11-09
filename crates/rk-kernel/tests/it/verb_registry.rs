@@ -172,9 +172,10 @@ fn shipped() -> VerbRegistry {
 fn shipped_catalog() -> Catalog {
     let catalog = Catalog::from_dir(&workspace_root().join(".redkiln").join("catalog"))
         .expect("the shipped catalog loads");
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
     assert_eq!(
         catalog.len(),
-        102,
+        103,
         "premise: this is the shipped catalog and not a subset of it"
     );
     catalog

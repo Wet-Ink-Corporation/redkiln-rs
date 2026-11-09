@@ -94,6 +94,8 @@ mod run_worktree;
 mod schemas;
 mod slice_verdict;
 mod status;
+#[cfg(test)] // its helpers are test code (rust-craft TST-14)
+mod step_refused;
 mod story_axis;
 mod support;
 mod surface;

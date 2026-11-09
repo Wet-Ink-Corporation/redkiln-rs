@@ -837,6 +837,9 @@ timeout_secs = 5400
 [activity.relative-estimation]
 timeout_secs = 1800
 
+[activity.repro-green-refactor]
+timeout_secs = 10800   # added 2026-11-08 (ADR-0205, proposed; D21-177)
+
 [activity.risk-register]
 timeout_secs = 2400
 

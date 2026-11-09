@@ -716,7 +716,8 @@ fn every_shipped_step_reference_is_in_the_resolver_grammar() {
         catalog.len()
     );
     assert!(
-        walked > 1_000 && catalog.len() == 102,
+        // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205; plan D9).
+        walked > 1_000 && catalog.len() == 103,
         "the census walked {walked} references over {} activities — a census over (nearly) nothing \
          is Halt 8",
         catalog.len()

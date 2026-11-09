@@ -979,6 +979,28 @@ and writes no file from an investigator step, and the rig commits the fix item's
 | `M-repro-place-noop` | `repro_place` answers without appending | the first proof |
 | `M-selection-shell-accepted` | `parse_selection`'s shell-syntax arm never fires | `rk-kernel`'s `test_selection` (2026-11-08 prose; backtick, dollar, semicolon); run with `--kernel`, outside `S8J_MUTANTS` |
 
+*(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; D21-177; plan Decision D9, approved by Ryan
+2026-11-08 23:51Z)* **Three proofs and three mutants are added.** The operator's run of `rk-fix-doctor-margin-2` exited
+19 because `tdd-red-green-refactor@3`'s `red` was never told it was a red step: one element committed the fix and
+another named `"doctor test"`, which `red-verify` refused as `Unsupported`. These proofs had passed only because the
+fake's `red` did what the real card would not. A bug with a placed repro now implements through
+`repro-green-refactor@1`, an agent step's selection-feeding output is checked at the agent step (`Schema`, re-prompted
+with `refused`), and a walk-ending failure reaches stderr and the journal:
+- `lane_proof::improvising::fix_lane_with_an_improvising_implementer_lands_through_the_repro`: `tdd`'s `red` is
+  scripted as the operator's run had it and is never visited; implement's `red-proof` ran the repro red (one failed,
+  none passed), verify's `ConfirmationResult` is `passing`, and no `verify.ac-discriminates` gate opens.
+- `lane_proof::improvising::story_lane_red_with_a_bad_test_name_is_reprompted_as_schema`: `tdd@4`'s `red` answers a
+  prose name, then the bare one on the re-prompt; the lane lands with one `step_failed {class: "schema"}` row, and the
+  re-prompt's inputs carry `refused`.
+- `step_refused::a_walk_ending_refusal_names_its_capability_on_stderr` (binary arm): a tool step's refusal after an
+  agent commit writes `the step's class: Unsupported { capability: "…" }` to stderr and one `step_refused` row.
+
+| Mutant | Change | Killed by |
+|---|---|---|
+| `M-repro-aware-unselected` | `repro-green-refactor.toml` `method_rank = 15` → `25`, so `tdd` is chosen | the improvising-implementer proof |
+| `M-step-class-silent` | the `StepFailedAfterCommit` arm's class line is not written | the stderr proof |
+| `M-feed-check-off` | `check_feeds` checks no feed | `rk-kernel`'s `feed_check` (test 7); run with `--kernel`, outside `S8J_MUTANTS` |
+
 🛑 **What this section does not claim.**
 
 - It does not claim AC-473 or AC-521. Those are claimed by real runs on this repository, which are `s8`'s.
@@ -1313,6 +1335,15 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    are a subset of these seventeen). The code lines below are edited in place, because a shell line cannot carry a
    strike; the values they replaced are the struck ones in this note.
 
+   *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; D21-177; plan Decision D9, approved by Ryan
+   2026-11-08 23:51Z.)* The block now runs ~~seventeen~~ **twenty**: the seventeen above plus §8j.4's three new
+   proofs, `lane_proof::improvising::fix_lane_with_an_improvising_implementer_lands_through_the_repro`,
+   `lane_proof::improvising::story_lane_red_with_a_bad_test_name_is_reprompted_as_schema` and
+   `step_refused::a_walk_ending_refusal_names_its_capability_on_stderr` (the plan named the last `run::`; it is its own
+   module, and it joins because `M-step-class-silent` names it). The count line reads ~~`17 passed`~~ `20 passed`, and
+   `S8J_MUTANTS` gains `M-repro-aware-unselected` and `M-step-class-silent` (fourteen, from twelve). `M-feed-check-off`
+   is killed by `rk-kernel`'s `feed_check` test, so it is run with `--kernel` and step 1b reads no line of it.
+
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
@@ -1331,16 +1362,16 @@ tdir=target/s8j-proofs; rm -rf "$tdir"; mkdir -p "$tdir" || { echo "FAIL: cannot
 wrapped() { nodispatch env -u FIX_ITEM -u STORY_ITEM -u ITEM "$@"; }
 out=$(wrapped cargo build --workspace 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
-R_TESTS="lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order lane_proof::fix_lane_verify_completed_names_the_rust_adapter lane_proof::story_lane_spec_is_landed_and_journalled lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order lane_proof::human_root_is_attached_through_the_pack_question_on_both_lanes lane_proof::gate_then_answer_then_second_process_continues_binary_arm lane_proof::boundary_hold_stops_the_lane_at_analysis_to_specification lane_proof::boundary_hold_answered_lets_the_next_process_enter_specification lane_proof::boundary_hold_changes_requested_does_not_advance processes::the_two_human_root_questions_load_and_each_attaches_its_kind processes::every_human_kind_a_lane_demands_is_attached_by_exactly_one_question processes::the_step_four_gate_on_a_human_kind_is_bound_to_its_question run::a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load run::every_binary_spawn_withholds_or_supplies_the_launch_record lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name"
+R_TESTS="lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order lane_proof::fix_lane_verify_completed_names_the_rust_adapter lane_proof::story_lane_spec_is_landed_and_journalled lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order lane_proof::human_root_is_attached_through_the_pack_question_on_both_lanes lane_proof::gate_then_answer_then_second_process_continues_binary_arm lane_proof::boundary_hold_stops_the_lane_at_analysis_to_specification lane_proof::boundary_hold_answered_lets_the_next_process_enter_specification lane_proof::boundary_hold_changes_requested_does_not_advance processes::the_two_human_root_questions_load_and_each_attaches_its_kind processes::every_human_kind_a_lane_demands_is_attached_by_exactly_one_question processes::the_step_four_gate_on_a_human_kind_is_bound_to_its_question run::a_hold_naming_a_stage_the_pack_does_not_order_is_refused_at_load run::every_binary_spawn_withholds_or_supplies_the_launch_record lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose lane_proof::fix_lane_without_a_repro_pair_refuses_at_place_by_name lane_proof::improvising::fix_lane_with_an_improvising_implementer_lands_through_the_repro lane_proof::improvising::story_lane_red_with_a_bad_test_name_is_reprompted_as_schema step_refused::a_walk_ending_refusal_names_its_capability_on_stderr"
 out=$(wrapped cargo test -p rk-cli --test it -- $R_TESTS --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the fixture proofs did not pass (rc=$rc) — no spend (D21-40 decision 2)"; printf '%s\n' "$out" | tail -30; exit 1; }
 for t in $R_TESTS; do printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok"; exit 1; }; done
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 17 passed; 0 failed' || { echo "FAIL: the proofs did not run exactly 17 tests"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 20 passed; 0 failed' || { echo "FAIL: the proofs did not run exactly 20 tests"; exit 1; }
 nd_check "the fixture proofs" || { echo "FAIL: a claude process ran under the proofs — no spend (D21-40 decision 2)"; exit 1; }
 # The mutant driver (Python, never the shell; sha256-verified restores) writes <id><TAB>killed|SURVIVED<TAB><HEAD sha>.
 res=target/s8j-mutants/results.tsv
 test -s "$res" || { echo "FAIL: no mutant results at $res — run the §8j.2–§8j.4 mutant driver at this HEAD first"; exit 1; }
-S8J_MUTANTS="M-seed-record M-land-empty M-fixture-toolchain M-skip-empty-stage-trailer M-spec-digest-pre-render M-worktree-under-git M-attach-dropped M-hold-ignored M-hold-spent-refires M-hold-unordered-accepted M-repro-pair-ignored M-repro-place-noop"
+S8J_MUTANTS="M-seed-record M-land-empty M-fixture-toolchain M-skip-empty-stage-trailer M-spec-digest-pre-render M-worktree-under-git M-attach-dropped M-hold-ignored M-hold-spent-refires M-hold-unordered-accepted M-repro-pair-ignored M-repro-place-noop M-repro-aware-unselected M-step-class-silent"
 for m in $S8J_MUTANTS; do
   r=$(awk -F '\t' -v m="$m" -v h="$head" '$1==m && $3==h {s=$2} END {print s}' "$res")
   [ "$r" = killed ] || { echo "FAIL: mutant $m is '${r:-unrun}' at $head — a survivor blocks, and a result at another HEAD is not this code's"; exit 1; }

@@ -118,6 +118,19 @@ fn walk(
     Arc<SelectionToolchain>,
     Vec<rk_types::event::Event>,
 ) {
+    walk_answering(seed, vec![ok_typed(wrote)], selection)
+}
+
+/// [`walk`], with `write`'s whole script supplied.
+fn walk_answering(
+    seed: Vec<rk_types::event::Event>,
+    script: Vec<Result<rk_types::typed::Typed, StepError>>,
+    selection: &str,
+) -> (
+    rk_kernel::runtime::activity::ActivityReport,
+    Arc<SelectionToolchain>,
+    Vec<rk_types::event::Event>,
+) {
     let (q, a) = counters();
     let db = store(&q, &a);
     for e in seed {
@@ -126,7 +139,7 @@ fn walk(
     let tc = Arc::new(SelectionToolchain::default());
     let rt = Runtime::new(
         ports_with_toolchain(
-            Arc::new(CountingHarness::scripted(vec![ok_typed(wrote)])) as Arc<dyn Harness>,
+            Arc::new(CountingHarness::scripted(script)),
             &db,
             Arc::clone(&tc) as Arc<dyn Toolchain>,
         ),
@@ -150,6 +163,23 @@ fn walk(
         )
         .expect("a value");
     (report, tc, journal(&db))
+}
+
+/// `write`'s committed step row holding `value`, as an earlier run left it.
+///
+/// *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; plan Decision D5.)* A FRESH
+/// `write` value that is not a selection is refused at `write` itself as `Schema` (`feed_check::`).
+/// A SERVED value is never re-checked (Invariant 5), so the tool step's own refusal stays the belt
+/// for it; the cases that pin that belt walk over this row.
+fn served_write(value: serde_json::Value) -> rk_types::event::Event {
+    rk_types::event::Event::new(
+        rk_types::event_kind::EventKind::ActivityCommitted,
+        serde_json::json!({
+            "item": crate::runtime::ITEM, "activity_id_at_version": crate::runtime::AID,
+            "attempt": 1, "step_id": "write", "iteration_path": [], "at": 50, "run_id": "r",
+            "result": value, "schema": crate::runtime::SCHEMA,
+        }),
+    )
 }
 
 /// **A step-output selection resolves and reaches the port as NAMED TESTS** — and `"affected"`
@@ -259,9 +289,10 @@ fn an_unresolvable_selection_refuses_and_never_runs_the_whole_suite() {
         )]
     };
     let cases: Vec<(&str, Vec<rk_types::event::Event>, serde_json::Value, &str)> = vec![
+        // *(dated 2026-11-08, ADR-0205, proposed.)* Served: a fresh `{}` is refused at `write`.
         (
             "a step output that has no such field",
-            Vec::new(),
+            vec![served_write(serde_json::json!({}))],
             serde_json::json!({}),
             "${write.outputs.tests_added}",
         ),
@@ -304,6 +335,9 @@ fn an_unresolvable_selection_refuses_and_never_runs_the_whole_suite() {
     ];
     let walked = cases.len();
     for (name, seed, wrote, selection) in cases {
+        let served = seed
+            .iter()
+            .any(|e| e.payload.get("step_id") == Some(&serde_json::json!("write")));
         let (report, tc, _) = walk(seed, wrote, selection);
         assert_eq!(
             tc.calls.load(Ordering::SeqCst),
@@ -319,8 +353,10 @@ fn an_unresolvable_selection_refuses_and_never_runs_the_whole_suite() {
                 && e.contains("never reaches"),
             "{name}: the refusal must name the step and its selection: {e}"
         );
-        assert!(
-            report.committed(),
+        // A served `write` is a commit that stands as surely as a fresh one (`holds_a_commit`).
+        assert_eq!(
+            (report.committed(), report.served()),
+            if served { (false, 1) } else { (true, 0) },
             "{name}: the agent step's commit stands: {report:?}"
         );
     }
@@ -701,9 +737,12 @@ mod parse_selection_properties {
 /// **A prose `${…}` command refuses by name, naming the refusal, and never reaches the port.**
 #[test]
 fn selection_plan_refuses_a_prose_string_naming_the_refusal() {
+    // Served (ADR-0205, proposed): a fresh prose `command` is refused at `write` as `Schema`.
     let (report, tc, _) = walk(
-        Vec::new(),
-        serde_json::json!({"command": PROSE_2026_11_08}),
+        vec![served_write(
+            serde_json::json!({"command": PROSE_2026_11_08}),
+        )],
+        serde_json::json!({}),
         "${write.outputs.command}",
     );
     assert_eq!(tc.calls.load(Ordering::SeqCst), 0, "{:?}", tc.selections());
@@ -717,9 +756,12 @@ fn selection_plan_refuses_a_prose_string_naming_the_refusal() {
 /// **A list element with whitespace refuses by name (D5), naming the element.**
 #[test]
 fn selection_plan_refuses_a_list_element_with_whitespace_naming_it() {
+    // Served (ADR-0205, proposed): a fresh spaced name is refused at `write` as `Schema`.
     let (report, tc, _) = walk(
-        Vec::new(),
-        serde_json::json!({"tests_added": ["ac601_fails_before", "run ac601 --exact"]}),
+        vec![served_write(
+            serde_json::json!({"tests_added": ["ac601_fails_before", "run ac601 --exact"]}),
+        )],
+        serde_json::json!({}),
         "${write.outputs.tests_added}",
     );
     assert_eq!(tc.calls.load(Ordering::SeqCst), 0, "{:?}", tc.selections());
@@ -728,4 +770,61 @@ fn selection_plan_refuses_a_list_element_with_whitespace_naming_it() {
         e.contains("BadToken") && e.contains("run ac601 --exact"),
         "the refusal names the element: {e}"
     );
+}
+
+/// The error rows (`step_refused`, `step_failed`) a journal holds.
+fn error_rows(events: &[rk_types::event::Event]) -> Vec<&rk_types::event::Event> {
+    use rk_types::event_kind::EventKind;
+    events
+        .iter()
+        .filter(|e| matches!(e.kind, EventKind::StepRefused | EventKind::StepFailed))
+        .collect()
+}
+
+/// **Test 11 (ADR-0205, proposed; plan D7 option J1).** A tool step's refusal that ends the walk
+/// after an agent commit appends exactly one `step_refused` row, carrying the step, the activation
+/// and the capability text; an agent dispatch's failure keeps its one row from the dispatch loop
+/// and gains no second.
+#[test]
+fn a_tool_step_failure_after_a_commit_appends_one_error_row() {
+    use rk_types::event_kind::EventKind;
+    // An empty list passes the feed check (an element may name no test) and the tool step refuses.
+    let (report, tc, events) = walk(
+        Vec::new(),
+        serde_json::json!({"tests_added": []}),
+        "${write.outputs.tests_added}",
+    );
+    assert!(
+        report.committed() && tc.selections().is_empty(),
+        "{report:?}"
+    );
+    let rows = error_rows(&events);
+    assert_eq!(rows.len(), 1, "{events:#?}");
+    let row = rows.first().expect("one row");
+    assert_eq!(row.kind, EventKind::StepRefused);
+    assert_eq!(
+        row.payload.get("step_id"),
+        Some(&serde_json::json!("run-tests"))
+    );
+    assert_eq!(
+        row.payload.get("activity_id_at_version"),
+        Some(&serde_json::json!(crate::runtime::AID))
+    );
+    let capability = row
+        .payload
+        .get("capability")
+        .and_then(serde_json::Value::as_str)
+        .expect("a step_refused row carries its capability");
+    assert!(capability.contains("`run-tests`"), "{capability}");
+
+    // An agent dispatch's own failure: its one row, and no second from the walk.
+    let (report, _, events) = walk_answering(
+        Vec::new(),
+        vec![Err(StepError::Unsupported {
+            capability: "the scripted refusal".to_owned(),
+        })],
+        "${write.outputs.tests_added}",
+    );
+    assert!(!report.committed(), "{report:?}");
+    assert_eq!(error_rows(&events).len(), 1, "{events:#?}");
 }

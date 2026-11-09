@@ -1003,9 +1003,10 @@ fn ac018_live_verb_may_not_memoise() {
     // `s8c`'s. What is asserted here is the count walked, and then zero.
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
         .expect("the shipped catalog loads through the per-step `memo` parse path");
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
     assert_eq!(
         shipped.len(),
-        102,
+        103,
         "premise: this is the shipped catalog and not a subset of it"
     );
     let steps: usize = shipped.activities().iter().map(|a| a.steps.len()).sum();

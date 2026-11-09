@@ -1738,6 +1738,7 @@ impl super::Runtime {
             loops: Loops::default(),
             dispatched: 0,
         };
+        let feeds = super::reference::selection_feeds(steps);
         let env = WalkEnv {
             item,
             activity: activity_id_at_version,
@@ -1749,6 +1750,7 @@ impl super::Runtime {
             gate,
             cap,
             now,
+            feeds: &feeds,
         };
         let mut pc = 0_usize;
         while let Some(step) = steps.get(pc) {
@@ -1765,7 +1767,7 @@ impl super::Runtime {
                             step.id
                         ),
                     };
-                    return Ok(w.halt(now, Halt::Failed(cause)));
+                    return self.end_walk(w, &env, step, Halt::Failed(cause));
                 }
                 w.loops.repeat = Some(Repeat {
                     start: index,
@@ -1797,10 +1799,10 @@ impl super::Runtime {
             pc = match flow {
                 Flow::Next => match self.after_step(&mut w, &env, steps, index)? {
                     Ok(next) => next,
-                    Err(halt) => return Ok(w.halt(now, halt)),
+                    Err(halt) => return self.end_walk(w, &env, step, halt),
                 },
                 Flow::Jump(target) => target,
-                Flow::Halt(halt) => return Ok(w.halt(now, halt)),
+                Flow::Halt(halt) => return self.end_walk(w, &env, step, halt),
                 Flow::Complete(outcome) => return Ok(w.report.with_completion(outcome)),
             };
         }
@@ -1820,11 +1822,43 @@ impl super::Runtime {
                 step_id: last,
                 iteration_path: &base,
                 family: None,
+                feeds: &[],
             },
             None,
             now,
         )?;
         Ok(w.report.with_completion(outcome))
+    }
+
+    /// **The walk ends at `step` without completing** (ADR-0205, proposed; plan D7 option J1).
+    ///
+    /// A step's failure or the walk's refusal at a step that is not an `agent` step appends one
+    /// error row through the one mapping, `StepError::event()` (AC-360): `Unsupported` becomes
+    /// `step_refused`, a recorded halt, and every other class `step_failed`, which changes no
+    /// state. The row carries `step_id` and `activity_id_at_version` beside the members
+    /// [`super::activity::error_row`] writes. An `agent` step's dispatch failure already has its
+    /// row from the dispatch loop, so none is added for it.
+    fn end_walk(
+        &self,
+        w: Walk,
+        e: &WalkEnv<'_>,
+        step: &Step,
+        halt: Halt,
+    ) -> Result<ActivityReport, super::RuntimeError> {
+        if let Halt::Failed(err) | Halt::Stop(err) = &halt
+            && step.kind != StepKind::Agent
+        {
+            let mut row = super::activity::error_row(err, None, e.now);
+            if let Some(map) = row.payload.as_object_mut() {
+                map.insert("step_id".to_owned(), serde_json::json!(step.id));
+                map.insert(
+                    "activity_id_at_version".to_owned(),
+                    serde_json::json!(e.activity),
+                );
+            }
+            self.append(row)?;
+        }
+        Ok(w.halt(e.now, halt))
     }
 
     /// **One step at one iteration path** — the guard, the inputs, and the kind's arm (R1, R2, R3).
@@ -1844,6 +1878,7 @@ impl super::Runtime {
             step_id: &step.id,
             iteration_path: path,
             family: None,
+            feeds: &[],
         };
         let key = at.commit_key(item, activity_id_at_version);
         // 🛑 **R1 (M8): A `side_effecting` TOOL STEP ALREADY COMMITTED IS SERVED, NEVER
@@ -2134,8 +2169,12 @@ impl super::Runtime {
             Ok(family) => family,
             Err(cause) => return Ok(Flow::Halt(Halt::Stop(cause))),
         };
+        // *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; plan D5.)* THIS
+        // step's selection feeds, derived once per activation: a fresh value that fails one is
+        // `Schema` inside the dispatch loop, before any commit.
         let at = StepAt {
             family: family.as_ref(),
+            feeds: e.feeds.get(&step.id).map_or(&[], Vec::as_slice),
             ..at
         };
         // **The `agent` arm.** The dispatch, its retry loop and AC-012's commit race
@@ -2498,6 +2537,7 @@ impl super::Runtime {
             step_id: &repeating.id,
             iteration_path: &pass_path,
             family: None,
+            feeds: &[],
         };
         let key = at.commit_key(e.item, e.activity);
         let replayed = super::activity::journaled_decision(&w.journal, &key, DecisionKind::Until);
@@ -2651,10 +2691,12 @@ impl super::Runtime {
         let mut report = self.run_activity_at(
             (act.item, act.activity_id_at_version, act.step_id),
             own,
+            // A standalone step has no activity's steps beside it, so it has no feeds.
             Some(StepAt {
                 step_id: &step.id,
                 iteration_path: iteration,
                 family: family.as_ref(),
+                feeds: &[],
             }),
             cap,
             now,
@@ -3096,6 +3138,8 @@ struct WalkEnv<'a> {
     gate: GateSite<'a>,
     cap: AttemptCap,
     now: JournaledNow,
+    /// Each agent step's selection feeds (ADR-0205, proposed), derived once per activation.
+    feeds: &'a BTreeMap<String, Vec<super::reference::SelectionFeed>>,
 }
 
 /// The loops' state: the loop-back base frame, the counts each bound is checked against, the

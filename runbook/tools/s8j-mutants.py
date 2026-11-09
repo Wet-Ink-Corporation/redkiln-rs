@@ -67,7 +67,7 @@ def _it(*names):
     return {"package": "rk-cli", "target": ["--test", "it"], "names": list(names)}
 
 
-# The ~~ten~~ twelve mutants (two added 2026-11-08, ADR-0204), in step 1b's S8J_MUTANTS order. `anchor_from` names the branch the anchor was read from (with
+# The ~~ten~~ ~~twelve~~ fourteen mutants (two added 2026-11-08, ADR-0204; two more 2026-11-08, ADR-0205), in step 1b's S8J_MUTANTS order. `anchor_from` names the branch the anchor was read from (with
 # `git show <branch>:<file>`) when the code was not yet on the integration branch. An entry whose anchor is TBD
 # makes the driver refuse to run: its `file` is a hint read from build/phase-0-to-1, not a confirmed site.
 MUTANTS = [
@@ -261,6 +261,30 @@ MUTANTS = [
         "note": "the placed command then selects no test: confirm is not red, so the triage gate opens",
         "tests": [_it("lane_proof::fix_lane_reproduces_through_the_committed_pair_not_agent_prose")],
     },
+    # *(added 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; D21-177; plan Decision D9.)* A bug with a
+    # placed repro implements against it, and a walk-ending failure names its class on stderr.
+    {
+        "id": "M-repro-aware-unselected",
+        "section": "8j.4",
+        "change": "repro-green-refactor's method_rank 15 -> 25, so tdd (20) is chosen for the fix item",
+        "file": ".redkiln/catalog/repro-green-refactor.toml",
+        "anchor": "method_rank  = 15   #",
+        "replacement": "method_rank  = 25   #",
+        "anchor_from": BRANCH,
+        "note": "tdd's improvising red then answers a prose name, is refused as Schema, and its re-prompt is unscripted",
+        "tests": [_it("lane_proof::improvising::fix_lane_with_an_improvising_implementer_lands_through_the_repro")],
+    },
+    {
+        "id": "M-step-class-silent",
+        "section": "8j.4",
+        "change": "run's StepFailedAfterCommit arm writes the sentence and not the class line",
+        "file": "crates/rk-cli/src/verbs/run.rs",
+        "anchor": "                .and_then(|()| writeln!(err, \"redkiln: the step's class: {class:?}\"))\n",
+        "replacement": "",
+        "anchor_from": BRANCH,
+        "note": "the arm still compiles: `named` is the first writeln's result, and the exit is still the class's row",
+        "tests": [_it("step_refused::a_walk_ending_refusal_names_its_capability_on_stderr")],
+    },
 ]
 
 # *(added 2026-11-08, s8 repro-pair route; ADR-0204, proposed; plan Decision D9.)* Mutants whose tests are not in
@@ -282,6 +306,25 @@ KERNEL_MUTANTS = [
             "names": [
                 "test_selection::parse_selection_refuses_the_2026_11_08_prose_by_name",
                 "test_selection::parse_selection_refuses_a_backtick_a_dollar_and_a_semicolon",
+            ],
+        }],
+    },
+    # *(added 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; plan Decision D9.)* Its killer is a kernel
+    # test, so it runs here, beside M-selection-shell-accepted.
+    {
+        "id": "M-feed-check-off",
+        "section": "8j.4",
+        "change": "check_feeds checks no feed",
+        "file": "crates/rk-kernel/src/runtime/reference/selection.rs",
+        "anchor": "    feeds.iter().try_for_each(|feed| check_feed(value, feed))\n",
+        "replacement": "    feeds.iter().take(0).try_for_each(|feed| check_feed(value, feed))\n",
+        "anchor_from": BRANCH,
+        "note": "a bad agent-produced test name is then committed and refused at the tool step, the 2026-11-08 exit 19",
+        "tests": [{
+            "package": "rk-kernel",
+            "target": ["--test", "it"],
+            "names": [
+                "feed_check::a_bad_feed_value_is_a_schema_failure_and_is_redispatched",
             ],
         }],
     },

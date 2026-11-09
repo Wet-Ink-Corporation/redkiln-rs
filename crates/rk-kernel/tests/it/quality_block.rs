@@ -608,14 +608,18 @@ fn d2_severity_only_predicates_load() {
 fn ac527_empty_set_terminal_condition() {
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
         .expect("the shipped catalog loads");
-    assert_eq!(shipped.len(), 102, "premise: the whole shipped catalog");
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
+    assert_eq!(shipped.len(), 103, "premise: the whole shipped catalog");
     let (report, violations) = walk(&shipped);
     assert!(
         report.check_steps_walked > 0 && report.predicates_parsed == report.check_steps_walked,
         "the count walked comes first: a rule over zero check steps refuses nothing — {report:?}"
     );
+    // *(Re-pinned 2026-11-08, measured: 97; ADR-0205, proposed; plan D9.)* `tdd@4` gains
+    // `red-named` and `repro-green-refactor@1` adds `red-holds` and `still-green`; none reads
+    // `findings`. Was 94. (The plan estimated 96 before `still-green` was counted.)
     assert_eq!(
-        report.check_steps_walked, 94,
+        report.check_steps_walked, 97,
         "every check step carrying an `expr` in `.redkiln/catalog` is walked: {report:?}"
     );
     assert_eq!(
@@ -1283,7 +1287,8 @@ fn reads_severity(expr_src: &str) -> bool {
 fn the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged() {
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
         .expect("the shipped catalog loads");
-    assert_eq!(shipped.len(), 102, "premise: the whole shipped catalog");
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
+    assert_eq!(shipped.len(), 103, "premise: the whole shipped catalog");
     let mut walked = 0usize;
     let mut severity: Vec<String> = Vec::new();
     for a in shipped.activities() {

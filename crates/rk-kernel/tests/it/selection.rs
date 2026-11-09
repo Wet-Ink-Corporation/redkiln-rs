@@ -1789,3 +1789,86 @@ fn no_check_step_reads_a_toolchain_lint_output() {
         violations.join("\n  ")
     );
 }
+
+// ---- s8 repro-aware implement *(dated 2026-11-08; ADR-0205, proposed; D21-177; plan D1, D2, D6)*.
+
+/// **Test 12 (Invariant 1).** Over the shipped catalog and packs: a bug with `has_repro = true`
+/// selects `repro-green-refactor` for `Changeset` and `ImplReport`; `has_repro = false`, and every
+/// story, selects `tdd-red-green-refactor`; `has_repro = null` on a bug keeps `tdd` (measured; see
+/// the dated note below).
+#[test]
+fn repro_green_refactor_is_chosen_for_a_bug_with_a_repro() {
+    let s = shipped_sel("bug-standard.toml");
+    let bug = shipped_item(&s, "bug", "low", false, ("rust", "text"));
+    let with = shipped_select(&s, &s.pack, "implement", &bug);
+    for kind in ["Changeset", "ImplReport"] {
+        assert_eq!(
+            producers_for(&with, kind),
+            vec!["repro-green-refactor"],
+            "{kind}"
+        );
+    }
+
+    let without = bug.clone().with_facet_bool("has_repro", false);
+    let sel = shipped_select(&s, &s.pack, "implement", &without);
+    for kind in ["Changeset", "ImplReport"] {
+        assert_eq!(
+            producers_for(&sel, kind),
+            vec!["tdd-red-green-refactor"],
+            "{kind}"
+        );
+    }
+
+    // *(dated 2026-11-08, measured; the plan's Invariant 1 third clause does not hold.)* Step 4
+    // records a lower-rank producer whose `applicable_if` is `null` as an abstention
+    // (`Picked::abstained`) and still chooses the lowest ADMISSIBLE rank, so a bug with a null
+    // `has_repro` keeps today's `tdd`, and no step-2 `unknown_facet` gate opens (no `require` row
+    // reads `has_repro`). Pinned as measured; whether step 4 should gate on it is an operator
+    // decision recorded in the plan, not taken here.
+    let unknown = bug.with_facet_null("has_repro");
+    let sel = shipped_select(&s, &s.pack, "implement", &unknown);
+    assert_eq!(
+        producers_for(&sel, "Changeset"),
+        vec!["tdd-red-green-refactor"],
+        "a null `has_repro` keeps today's producer"
+    );
+    assert!(
+        sel.gates().iter().all(|g| g.axis != "has_repro"),
+        "{:?}",
+        sel.gates()
+    );
+
+    let s = shipped_sel("story.toml");
+    let story = shipped_item(&s, "story", "low", false, ("rust", "text"));
+    let sel = shipped_select(&s, &s.pack, "implement", &story);
+    // A story's `Changeset` also has `docs-update` beside it; `ImplReport` is tdd's alone.
+    assert_eq!(
+        producers_for(&sel, "ImplReport"),
+        vec!["tdd-red-green-refactor"],
+        "a story keeps tdd (repro-green-refactor tags only kind:bug)"
+    );
+}
+
+/// **Test 13 (Invariant 6; D6).** `refused` is the input a `Schema` re-prompt carries its
+/// refusal under, so no shipped step declares an input of that name.
+#[test]
+fn no_shipped_step_declares_the_reserved_input_refused() {
+    let red = workspace_root().join(".redkiln");
+    let mut checked = 0_usize;
+    for dir in ["catalog", "catalog-extended"] {
+        let catalog = Catalog::from_dir(&red.join(dir))
+            .unwrap_or_else(|e| panic!("the shipped {dir} loads: {e:?}"));
+        for activity in catalog.activities() {
+            for step in &activity.steps {
+                checked += 1;
+                assert!(
+                    !step.inputs.contains_key("refused"),
+                    "{}/{} declares the reserved input `refused`",
+                    activity.id,
+                    step.id
+                );
+            }
+        }
+    }
+    assert!(checked > 400, "the lint read the shipped steps: {checked}");
+}

@@ -3139,10 +3139,23 @@ fn resume_and_read(
             activity_id_at_version,
             class,
         }) => {
-            eprintln!(
-                "redkiln: the activation `{activity_id_at_version}` committed, and the later step \
-                 `{step_id}` of its walk then failed. The commit stands; the run does not."
-            );
+            // *(dated 2026-11-08, s8 repro-aware implement; ADR-0205, proposed; D21-177; plan
+            // D7.)* The class is named with its capability text, the `NotCommitted` arm's
+            // spelling: the operator's 2026-11-08 run stopped at exit 19 with the sentence alone.
+            // The exit is the class's row whether or not the lines are written.
+            let named = {
+                use std::io::Write as _;
+                let mut err = std::io::stderr().lock();
+                writeln!(
+                    err,
+                    "redkiln: the activation `{activity_id_at_version}` committed, and the later \
+                     step `{step_id}` of its walk then failed. The commit stands; the run does not."
+                )
+                .and_then(|()| writeln!(err, "redkiln: the step's class: {class:?}"))
+            };
+            if named.is_err() {
+                // stderr is closed, so the exit code is the only channel left.
+            }
             return Ok(Exit::from(&class));
         }
         Err(e) => {

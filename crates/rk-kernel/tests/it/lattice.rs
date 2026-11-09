@@ -298,7 +298,8 @@ fn shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged() {
     }
     let control = lattice::load(&Sources::under(&probe));
     assert!(
-        control.as_ref().is_ok_and(|i| i.catalog().len() == 102),
+        // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205; plan D9).
+        control.as_ref().is_ok_and(|i| i.catalog().len() == 103),
         "control: the copied shipped tree must load: {:?}",
         control.err()
     );
@@ -395,7 +396,8 @@ fn shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged() {
     .expect("the prefix-form control activity is written");
     let bound_var = lattice::load(&Sources::under(&probe));
     assert!(
-        bound_var.as_ref().is_ok_and(|i| i.catalog().len() == 103),
+        // Re-pinned 103 → 104 2026-11-08 (the shipped 103 plus this probe; ADR-0205; plan D9).
+        bound_var.as_ref().is_ok_and(|i| i.catalog().len() == 104),
         "`any(s in surfaces, s == 'auth')` reads no unregistered root and must load: {:?}",
         bound_var.err()
     );
@@ -551,7 +553,8 @@ fn p6_lattice_over_the_shipped_pack() {
         contexts > 0 && pairs > 0,
         "the shipped run walked zero contexts or pairs (Halt 8)"
     );
-    assert_eq!(report.catalog_len(), 102);
+    // Re-pinned 102 → 103 2026-11-08 (`repro-green-refactor@1`; ADR-0205, proposed; plan D9).
+    assert_eq!(report.catalog_len(), 103);
     assert!(
         report.toolchains().contains(&"rust") && report.surface_rows() == 6,
         "the shipped run did not walk rust and the six surfaces rows"

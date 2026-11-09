@@ -1,6 +1,6 @@
 [activity]
 id           = "tdd-red-green-refactor"
-version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
+version      = 4   # bumped 2026-11-08 (ADR-0205, proposed; D21-177; .redkiln/CHANGELOG.md)
 stage        = "implement"
 provides     = ["Changeset", "ImplReport"]
 requires     = ["Spec"]
@@ -21,10 +21,19 @@ id      = "red"
 kind    = "agent"
 role    = "implementer"
 for_each = "artifact:Spec.acceptance_criteria"
-inputs  = { ac = "${item}", spec = "artifact:Spec", last = "${red-verify.outputs?}" }
+inputs  = { task = "Red step of test-driven development for ONE acceptance criterion (ac). Write a test that fails because the behaviour is missing. Do not change production code. List the test in tests_added as a bare test path with no spaces. If the criterion already holds, write no test and say so in summary.", ac = "${item}", spec = "artifact:Spec", last = "${red-verify.outputs?}" }
 outputs = "value:ImplReport"
 timeout_secs = "${toolchain.implement_timeout}"
 retry   = { max = 1 }
+
+# Dated 2026-11-08 (ADR-0205, proposed; D21-177; plan Decision D4): an all-empty `tests_added` loops back to `red`
+# instead of reaching `red-verify`, whose selection refuses an empty list.
+[[step]]
+id      = "red-named"
+kind    = "check"
+inputs  = { names = "${red.outputs[*].tests_added}" }
+expr    = "names.len() > 0"
+on_false = { to = "red", max = 2 }
 
 [[step]]
 id      = "red-verify"
@@ -46,7 +55,7 @@ on_false = { to = "red", max = 2 }
 id      = "green"
 kind    = "agent"
 role    = "implementer"
-inputs  = { spec = "artifact:Spec", red = "${red.outputs}", last = "${green-verify.outputs?}", hint = "${green-gate.answer?}" }
+inputs  = { task = "Green step of test-driven development: change the production code so the failing tests named in red pass, without editing or deleting them. List any test you added in tests_added as a bare test path with no spaces.", spec = "artifact:Spec", red = "${red.outputs}", last = "${green-verify.outputs?}", hint = "${green-gate.answer?}" }
 outputs = "value:ImplReport"
 timeout_secs = "${toolchain.implement_timeout}"
 retry   = { max = 2 }
@@ -75,7 +84,7 @@ id      = "refactor"
 kind    = "agent"
 role    = "implementer"
 when    = "rigor >= recommended"
-inputs  = { impl = "${green.outputs}", kb = "kb:refactoring-catalog", last = "${refactor-verify.outputs?}" }
+inputs  = { task = "Refactor step: improve the structure of the change (impl) without changing its behaviour. Every test must stay green. List any test you added in tests_added as a bare test path with no spaces.", impl = "${green.outputs}", kb = "kb:refactoring-catalog", last = "${refactor-verify.outputs?}" }
 outputs = "value:ImplReport"
 timeout_secs = "${toolchain.implement_timeout}"
 retry   = { max = 1 }

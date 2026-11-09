@@ -16,6 +16,8 @@
 //! `cargo` time (ADR-0137 decision 3).
 
 #[cfg(test)]
+mod improvising;
+#[cfg(test)]
 mod rig;
 
 use std::collections::BTreeMap;
@@ -172,21 +174,16 @@ fn fix_script() -> BTreeMap<Key, Response> {
             key("fix-spec@2", "self-check", 0),
             Response::of(&self_check("fix-scope")),
         ),
+        // *(dated 2026-11-08; ADR-0205, proposed; plan test 20, Decision D9.)* A bug with a placed
+        // repro implements through `repro-green-refactor@1`: `green` lands the fix and the AC's
+        // named test together. Were `tdd-red-green-refactor@3`'s `red` (the test), `green` (the
+        // fix) and `refactor`.
         (
-            key("tdd-red-green-refactor@3", "red", 0),
-            Response::of(&impl_report(
-                &[RED_NAME],
-                &["crates/rk-lane-fixture/tests/red.rs"],
-            ))
-            .writing("crates/rk-lane-fixture/tests/red.rs", RED_TEST),
+            key("repro-green-refactor@1", "green", 0),
+            repro_green_landing_the_fix(),
         ),
         (
-            key("tdd-red-green-refactor@3", "green", 0),
-            Response::of(&impl_report(&[], &["crates/rk-lane-fixture/src/lib.rs"]))
-                .writing("crates/rk-lane-fixture/src/lib.rs", FIXED_LIB),
-        ),
-        (
-            key("tdd-red-green-refactor@3", "refactor", 0),
+            key("repro-green-refactor@1", "refactor", 0),
             Response::of(&impl_report(&[], &[])),
         ),
         (key("adversarial-review@4", "review", 0), no_findings()),
@@ -194,6 +191,20 @@ fn fix_script() -> BTreeMap<Key, Response> {
     .into_iter()
     .chain(closeout_script())
     .collect()
+}
+
+/// `repro-green-refactor@1`'s `green` as its `task` asks: the fix, and the test the Spec's one
+/// criterion names by its verification, listed in `tests_added`.
+fn repro_green_landing_the_fix() -> Response {
+    Response::of(&impl_report(
+        &[RED_NAME],
+        &[
+            "crates/rk-lane-fixture/src/lib.rs",
+            "crates/rk-lane-fixture/tests/red.rs",
+        ],
+    ))
+    .writing("crates/rk-lane-fixture/src/lib.rs", FIXED_LIB)
+    .writing("crates/rk-lane-fixture/tests/red.rs", RED_TEST)
 }
 
 /// **The fix lane reaches a kernel-made content checkpoint commit on `rk-run/<item>`** (D21-41
@@ -546,18 +557,20 @@ fn story_script() -> BTreeMap<Key, Response> {
             key("docs-update@5", "self-check", 0),
             Response::of(&self_check("docs-diataxis")),
         ),
+        // *(dated 2026-11-08; ADR-0205, proposed; plan test 20, Decision D9.)* Re-keyed
+        // `tdd-red-green-refactor@3` -> `@4`; the responses are unchanged.
         (
-            key("tdd-red-green-refactor@3", "red", 0),
+            key("tdd-red-green-refactor@4", "red", 0),
             Response::of(&impl_report(&[STORY_RED_NAME], &[STORY_RED_PATH]))
                 .writing(STORY_RED_PATH, STORY_RED_TEST),
         ),
         (
-            key("tdd-red-green-refactor@3", "green", 0),
+            key("tdd-red-green-refactor@4", "green", 0),
             Response::of(&impl_report(&[], &["crates/rk-lane-fixture/src/lib.rs"]))
                 .writing("crates/rk-lane-fixture/src/lib.rs", FIXED_LIB),
         ),
         (
-            key("tdd-red-green-refactor@3", "refactor", 0),
+            key("tdd-red-green-refactor@4", "refactor", 0),
             Response::of(&impl_report(&[], &[])),
         ),
         (key("adversarial-review@4", "review", 0), no_findings()),

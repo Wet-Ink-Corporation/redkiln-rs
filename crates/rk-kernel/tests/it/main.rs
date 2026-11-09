@@ -310,6 +310,8 @@ mod facet_provenance;
 mod facet_registry;
 mod facet_stability;
 mod feed;
+#[cfg(test)] // its helpers are test code (rust-craft TST-14)
+mod feed_check;
 mod forward_ref_lint;
 mod fsm;
 mod gate_request;
@@ -351,6 +353,8 @@ mod root_input;
 mod runtime;
 mod second_agent;
 mod selection;
+#[cfg(test)] // its helpers are test code (rust-craft TST-14)
+mod selection_feeds;
 mod short_circuit;
 mod source_registry;
 mod step_bound;

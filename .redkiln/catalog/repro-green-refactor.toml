@@ -1,0 +1,135 @@
+[activity]
+id           = "repro-green-refactor"
+version      = 1   # added 2026-11-08 (ADR-0205, proposed; D21-177; .redkiln/CHANGELOG.md)
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["Spec", "ReproCase"]
+derived_from = ["Spec", "ReproCase"]
+tags         = ["kind:bug", "change:text"]
+applicable_if = "has_repro"
+method_rank  = 15   # implement loop family: test-after(10) < repro-green-refactor(15) < tdd(20) < bdd-outside-in(30)
+family       = "implement-loop"
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 12, tokens = 800_000, wall_clock_secs = 10800 }
+deviation_ok = []
+keywords     = ["repro-driven fix", "make it pass", "regression test first"]
+rationale    = "Agans rule 9 and ADR-0204: the committed repro is the red proof; re-proved red at the implement baseline, the change is done when it and the affected suite are green."
+
+# Dated 2026-11-08 (ADR-0205, proposed; D21-177; plan Decision D3): the committed repro is re-proved red at the
+# implement baseline before any agent runs. The catalog's `on_false` grammar has no gate form, so the check continues
+# and `not-red` opens `repro.cannot-reproduce` on its negation, the confirmation-test and root-cause@6 pattern.
+[[step]]
+id      = "red-proof"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "artifact:ReproCase.command" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "red-holds"
+kind    = "check"
+inputs  = { report = "${red-proof.outputs}" }
+expr    = "report.failed > 0 and report.passed == 0"
+on_false = "continue"
+
+[[step]]
+id      = "not-red"
+kind    = "gate"
+question = "repro.cannot-reproduce"
+when    = "${red-proof.outputs.failed} == 0 or ${red-proof.outputs.passed} > 0"
+inputs  = { report = "${red-proof.outputs}" }
+
+# The `task` literal is the agent's whole description of the step (ADR-0205; plan section 1).
+[[step]]
+id      = "green"
+kind    = "agent"
+role    = "implementer"
+inputs  = { task = "Fix the defect so the committed repro (repro.command) passes. It fails now (red). Do not edit or delete the repro test. For each criterion in spec, add or extend a test named by its verification, and list every test you added in tests_added as a bare test path with no spaces (for example doctor::margin_absent_window_is_an_error).", spec = "artifact:Spec", repro = "artifact:ReproCase", red = "${red-proof.outputs}", last = "${green-verify.outputs?}", repro_last = "${repro-verify.outputs?}", hint = "${green-gate.answer?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+repeat  = { until = "${green-verify.outputs.status} == 'passing' and ${repro-verify.outputs.status} == 'passing'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "tdd.green-exhausted" }
+
+[[step]]
+id      = "repro-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "artifact:ReproCase.command" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green-gate"
+kind    = "gate"
+question = "tdd.green-exhausted"
+when    = "${green-verify.outputs.status} != 'passing' or ${repro-verify.outputs.status} != 'passing'"
+inputs  = { report = "${green-verify.outputs}", repro = "${repro-verify.outputs}", impl = "${green.outputs}" }
+
+[[step]]
+id      = "refactor"
+kind    = "agent"
+role    = "implementer"
+when    = "rigor >= recommended"
+inputs  = { task = "Refactor step: improve the structure of the change (impl) without changing its behaviour. The committed repro and every test must stay green. List any test you added in tests_added as a bare test path with no spaces.", impl = "${green.outputs}", kb = "kb:refactoring-catalog", last = "${refactor-verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "refactor-verify"
+kind    = "tool"
+run     = "toolchain:test"
+when    = "rigor >= recommended"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "refactor-repro"
+kind    = "tool"
+run     = "toolchain:test"
+when    = "rigor >= recommended"
+inputs  = { selection = "artifact:ReproCase.command" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "still-green"
+kind    = "check"
+when    = "rigor >= recommended"
+inputs  = { report = "${refactor-verify.outputs}", repro = "${refactor-repro.outputs}" }
+expr    = "report.status == 'passing' and repro.status == 'passing'"
+on_false = { to = "refactor", max = 2 }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${green.outputs}" }
+evidence  = ["${red-proof}", "${not-red?}", "${repro-verify}", "${green-verify}", "${refactor-verify?}", "${refactor-repro?}", "${green-gate?}"]
