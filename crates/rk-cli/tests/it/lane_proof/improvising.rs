@@ -44,8 +44,8 @@ fn schema_failures(root: &std::path::Path, item: &str) -> usize {
 /// `red` (at `@3` and `@4`) is scripted as the operator's run had it. Under the plan it is never
 /// selected for a bug with a placed repro: implement is `repro-green-refactor@1`, whose
 /// `red-proof` runs the committed repro red (one failed, none passed) before any agent, and whose
-/// `green` lands the fix with the criterion's named test. Verify confirms the repro passing and
-/// opens no `verify.ac-discriminates` gate (survey 12). Red before the plan: the run exited 19 at
+/// `green` lands the fix with the criterion's named test. Verify confirms the repro passing, and
+/// the gates are the fix lane's own. Red before the plan: the run exited 19 at
 /// `red-verify` (`Unsupported`, the prose token), with `lib.rs` committed by a `red` step.
 #[test]
 fn fix_lane_with_an_improvising_implementer_lands_through_the_repro() {
@@ -101,12 +101,23 @@ fn fix_lane_with_an_improvising_implementer_lands_through_the_repro() {
         Some("passing"),
         "verify's ConfirmationResult: {confirmation}"
     );
-    assert!(
-        walk.gates
-            .iter()
-            .all(|(kind, _)| kind != "verify.ac-discriminates"),
-        "no AC-discrimination gate opens: {:?}",
-        walk.gates
+    // *(dated 2026-11-09; plan test 18, deviation recorded in its Progress.)* The plan's survey 12
+    // premise was wrong: the AC ledger reads each criterion's declared `mutation`, not its
+    // `verification` (`rk_kernel::verify::ledger::ac_status`). The fixture Spec declares none, so
+    // AC-1 is `unpinned` and `verify.ac-discriminates` opens on every fixture fix walk, as it did
+    // before the plan. What the improvising keys must not change is the lane's gates: exactly the
+    // fix lane's own, in order, and no `step_refused` halt in place of any of them.
+    let kinds: Vec<&str> = walk.gates.iter().map(|(kind, _)| kind.as_str()).collect();
+    assert_eq!(
+        kinds,
+        [
+            "unknown_facet:change",
+            "human_root:BugReport",
+            "hold:specification",
+            "verify.ac-discriminates",
+            "closure.signoff",
+        ],
+        "the improvising walk's gates are the fix lane's, in order"
     );
     let run_ref = crate::lane_e2e::run_ref(FIX_ITEM);
     assert_eq!(

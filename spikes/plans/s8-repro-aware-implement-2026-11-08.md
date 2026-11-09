@@ -599,3 +599,11 @@ About 12 non-Rust files:
   (`-2` → `-3`, not taken); `PROGRESS.md` row 8; the two charters' Decisions rows; §8j.4 and step 1b amended
   (`R_TESTS` 20; `S8J_MUTANTS` gains `M-repro-aware-unselected` and `M-step-class-silent`, with `M-feed-check-off`
   under `--kernel`, killer test 7). The `-3` mint, the evidence lines and the owed issue are the operator's.
+- 2026-11-09, dated note (deviation, test 18's last assertion): CI on `b3f332f` failed test 18 at "no
+  AC-discrimination gate opens". Survey 12's premise was wrong: the AC ledger reads each criterion's declared
+  `mutation`, not its `verification` (`rk_kernel::verify::ledger::ac_status`). The fixture Spec declares none, so
+  AC-1 is `unpinned` and `verify.ac-discriminates` opens on every fixture fix walk, before the plan as after. The
+  assertion now pins the walk's gates to the fix lane's own, in order (`unknown_facet:change`,
+  `human_root:BugReport`, `hold:specification`, `verify.ac-discriminates`, `closure.signoff`). For `-3`: unless
+  fix-spec declares a mutation per AC, verify will open `verify.ac-discriminates`, an operator gate as before; the
+  Risks line on the AC ledger is answered by this.
