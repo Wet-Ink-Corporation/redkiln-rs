@@ -8070,3 +8070,7 @@ recommended on 2026-11-08 at 23:51Z (card "Approve all recommendations"). Their 
 
 **Not done here.** The restart's operator steps (record, archive, mint `-3`, re-freeze, re-check, launch) and every
 evidence line. `runbook/phase-1/s8-exit-criterion.md` carries the dated restart note.
+
+*(dated 2026-11-09, Ryan; plan `spikes/plans/s8-repro-aware-implement-2026-11-08.md` restart step 4. Written by Claude at Ryan's instruction in the s8 thread, 2026-11-09 05:27Z.)* The fix item minted again after `rk-fix-doctor-margin-2`'s rc 19 stop, the same defect under a new id, its repro widened to the BugReport's three cases (D13):
+
+reserved-fix-item: rk-fix-doctor-margin-3 rk-cli:doctor::rules::margin
