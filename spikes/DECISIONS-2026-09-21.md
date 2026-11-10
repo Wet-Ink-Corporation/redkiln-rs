@@ -1,6 +1,7 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-09 (D21-1 … D21-177), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-10 (D21-1 … D21-178), and what they license
 
 *(Title moved 2026-11-09, D21-177: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-176)"**; `D21-177` is appended with this move.)*
+*(Title moved 2026-11-10, D21-178: it read **"2026-09-21 … 2026-11-09 (D21-1 … D21-177)"**; `D21-178` is appended with this move.)*
 
 *(Title moved 2026-11-08, D21-174: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-173)"**; `D21-174` is appended with this move. Measured: `grep -c '^## D21-'` over this file → 173 before the append, the last `D21-173`; 174 after.)*
 
@@ -8074,3 +8075,44 @@ evidence line. `runbook/phase-1/s8-exit-criterion.md` carries the dated restart 
 *(dated 2026-11-09, Ryan; plan `spikes/plans/s8-repro-aware-implement-2026-11-08.md` restart step 4. Written by Claude at Ryan's instruction in the s8 thread, 2026-11-09 05:27Z.)* The fix item minted again after `rk-fix-doctor-margin-2`'s rc 19 stop, the same defect under a new id, its repro widened to the BugReport's three cases (D13):
 
 reserved-fix-item: rk-fix-doctor-margin-3 rk-cli:doctor::rules::margin
+
+## D21-178 · `s8`: `[toolchain.rust]`'s four measured timeouts re-taken at `1511ddb` (test 1980, build 360, scan 180, setup 60)
+
+*(dated 2026-11-10, agent; the operator's choice "Re-measure (ADR-0170 rule)" on a card, 2026-11-09 18:41Z, s8 thread)*
+
+**What happened.** `rk-fix-doctor-margin-3`'s (3) resume (2026-11-09 14:56Z) ran specification, design and planning,
+and `repro-green-refactor@1` re-proved the repro red, committed the fix (`bd832b8`) and turned the repro green
+(`repro-verify` 1 passed / 0 failed). Its `green-verify` then failed `Timeout { after_secs: 360 }`, rc 12: selection
+`affected` resolved to the whole suite (`whole-suite / probe-unverified`, the bootstrap with no record at the pin), and
+the nextest run child was cut at about test 1,026 of 1,583 while the `rk-cli` lane-proof tests ran past 180 s each.
+`test_timeout = 360` was taken on 2026-09-26 at `2f3f6ab`, when the same child read 161 s. Stopped under D21-40
+decision 2; no relaunch.
+
+**The reading.** §8c.5's script, extracted from the stage file at `1511ddb`, n = 3, on the operator's box through
+`runbook/tools/nodispatch.sh` (`CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`), 2026-11-10 04:23Z to 05:25Z, every pass rc 0.
+Two deviations, both said: `rust-src` was removed first (ruling R6; with it installed `rk-kernel`'s
+`ui::trybuild_pins_the_reason_each_kernel_fixture_fails` reads three `$RUST/core` excerpts its `.stderr` files lack,
+which turned two earlier attempts red), and the extraction's five failure-path `printf … | tail -20` lines also write
+the full output to a file (sha256 stock `2d6304ce…718c`, patched `1f25f5e7…efd7`; no timed line differs). The lines:
+
+```
+MEASURED pin=1511ddbc8dd032901048911e252090b07d9fe1f9 path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=2 setup_downloaded=0 list_cold=315 list_ignored=8 run=757 doc=18 build_cold=113 scan=61 (audit=39 deny=22) audit_db=309392b18f6b17022f82c701f300433126901068 deny_db=309392b18f6b17022f82c701f300433126901068
+MEASURED pin=1511ddbc8dd032901048911e252090b07d9fe1f9 path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=2 setup_downloaded=0 list_cold=214 list_ignored=8 run=565 doc=9 build_cold=114 scan=62 (audit=32 deny=30) audit_db=309392b18f6b17022f82c701f300433126901068 deny_db=309392b18f6b17022f82c701f300433126901068
+MEASURED pin=1511ddbc8dd032901048911e252090b07d9fe1f9 path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=2 setup_downloaded=0 list_cold=179 list_ignored=7 run=972 doc=19 build_cold=155 scan=64 (audit=33 deny=31) audit_db=309392b18f6b17022f82c701f300433126901068 deny_db=309392b18f6b17022f82c701f300433126901068
+```
+
+**The ruling.** ADR-0170 decision 10's rule, unchanged: `test_timeout` **1980** (slowest child 972 s, pass 3's run;
+2 × 972 = 1944), `build_timeout` **360** (155 s), `scan_timeout` **180** (64 s; it read 1-2 s in September, so the
+old 60 would also have cut `sca_scan`), `setup_timeout` **60** (2 s, unchanged). `.redkiln/registry.toml` carries the
+readings at the new pin with the old values kept as a dated comment. 1980 is under `toolchain_timeout_secs`' default
+3600 (`rk-cli`'s `DEFAULT_TOOLCHAIN_TIMEOUT_SECS`), so ADR-0171's `min` leaves it in force. The run child varied
+565-972 s across passes; the rule takes the maximum, never a mean.
+
+**What it licenses, and what it does not.** `.redkiln/` is in CODE_PATHS, so the frozen code sha moves and `-3`
+cannot continue: the restart follows D21-163's route again (archive `-3` with its `bd832b8`, mint `-4`, step 1b and the
+evidence at the new sha, the CP8j re-check, preflight), each paid launch under its own Go. `rust-src` stays removed
+from the operator's toolchain for every launch and resume until Checkpoint 8 closes (ruling R6 applied to `s8`'s paid
+runs; it was on the box on 2026-11-09, as the 18:43Z attempt's trybuild failure shows [inferred for the 14:56Z run],
+so `-3`'s `green-verify` would likely also have gone red on that case). Nothing here
+re-derives `implement_timeout`, `repro_timeout` or `review_timeout`.
+

@@ -1508,5 +1508,17 @@ checkpoint line.)*
 > - Step 5's re-freeze runs §8j.6 step 1b as amended (20 proofs, the old twelve mutants plus the new ones) and
 >   re-measures D10's guard at the new sha (D12 B).
 > - s8 criterion (3) kill and resume is re-run on `-3` (D11 A).
+>
+> *(dated 2026-11-10, s8; D21-178)* **`rk-fix-doctor-margin-3` → `-4`.** `-3`'s (3) resume exited 12 at
+> `repro-green-refactor@1`'s `green-verify`, `Timeout { after_secs: 360 }` in the whole suite's nextest run child, after
+> its `green` committed the fix (`bd832b8`) and `repro-verify` read the repro green. Criterion (3) itself held: the 13
+> commits through `3cd3ed6` are untouched and the resume began at specification. The cure is D21-178's re-measured
+> `[toolchain.rust]` values, which move the frozen sha. The restart takes steps 1-6 above again, each the operator's
+> with its own go-ahead:
+> - The archive uses the `c` suffix (`refs/archive/s8-failed-2026-11-08c/rk-fix-doctor-margin-3`, archive directory
+>   `2026-11-08c-rk-fix-doctor-margin-3`), continuing the `-2` series. `bd832b8` stays archived evidence only.
+> - `-4` is `-3` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
+> - Every launch and resume of `-4` runs with `rust-src` removed (ruling R6), and the operator's preflight checks it.
+> - Criterion (3) kill and resume is re-run on `-4`.
 
 ---
