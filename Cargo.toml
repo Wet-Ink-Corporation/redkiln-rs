@@ -38,7 +38,7 @@ gix        = "=0.87.1"    # exact (ADR-0084, unchanged by ADR-0100); read path o
 # remote $ref) and rk-types' validation tests compile local schemas too, so no resolver feature is needed anywhere.
 jsonschema = { version = "=0.56.0", default-features = false }    # exact: weekly cadence. Format validation is OPT-IN — call
                           # .should_validate_formats(true) wherever the design relies on format checks
-rusqlite   = "=0.40.2"    # exact: carries the one-writer semantics ADR-0105 clause 7 depends on
+rusqlite   = "=0.41.1"    # exact: carries the one-writer semantics ADR-0105 clause 7 depends on
 yaml_serde = "=0.10.7"    # exact; redkiln-migrate ONLY — the one crate that may depend on a YAML reader
 # ADDED 2026-09-18 (Step 7c Slice 2, ADR-0127 decision 5): the two binding layers rk-containment's one
 # `#![allow(unsafe_code)]` module calls — a Job Object on Windows, a process group on POSIX. Both are 0.x, so
