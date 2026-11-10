@@ -8121,3 +8121,7 @@ SQLite CVE, medium 6.8) in `libsqlite3-sys` 0.38.2, newer than the last green ru
 The operator chose on a card (2026-11-10 06:19Z) to move the exact pin `rusqlite = "=0.40.2"` to `"=0.41.1"`
 (`libsqlite3-sys` 0.39.1) in this same re-freeze (H-16; ADR-0100 decision 2's deliberate pin bump). The lockfile moves
 only those two crates; `rk-store` and `rk-adapter-sqlite` build clippy-clean and pass their tests (116 passed).
+
+*(dated 2026-11-10, Ryan; D21-163 step 4, D21-178. Written by Claude in the s8 thread, as on 2026-11-09 at Ryan's instruction.)* The fix item minted a fourth time after `rk-fix-doctor-margin-3`'s rc 12 stop at `green-verify`, the same defect under a new id, its repro `-3`'s unchanged.
+
+reserved-fix-item: rk-fix-doctor-margin-4 rk-cli:doctor::rules::margin

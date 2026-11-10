@@ -73,3 +73,21 @@ mutant M-step-class-silent killed 2026-11-08
 ci 42558819487 a4cd5d61b84cebd9ea4fa2f2d6d79c0ed2458d86 2026-11-08
 story-item rk-story-harden-spike-pack a4cd5d61b84cebd9ea4fa2f2d6d79c0ed2458d86
 fix-item rk-fix-doctor-margin-3 a4cd5d61b84cebd9ea4fa2f2d6d79c0ed2458d86
+fixture-proofs 3f4aa62848f552d2573f763dc6c9ff29d0724e71 pass 2026-11-10
+mutant M-seed-record killed 2026-11-10
+mutant M-land-empty killed 2026-11-10
+mutant M-fixture-toolchain killed 2026-11-10
+mutant M-skip-empty-stage-trailer killed 2026-11-10
+mutant M-spec-digest-pre-render killed 2026-11-10
+mutant M-worktree-under-git killed 2026-11-10
+mutant M-attach-dropped killed 2026-11-10
+mutant M-hold-ignored killed 2026-11-10
+mutant M-hold-spent-refires killed 2026-11-10
+mutant M-hold-unordered-accepted killed 2026-11-10
+mutant M-repro-pair-ignored killed 2026-11-10
+mutant M-repro-place-noop killed 2026-11-10
+mutant M-repro-aware-unselected killed 2026-11-10
+mutant M-step-class-silent killed 2026-11-10
+ci 42773173785 3f4aa62848f552d2573f763dc6c9ff29d0724e71 2026-11-10
+story-item rk-story-harden-spike-pack 3f4aa62848f552d2573f763dc6c9ff29d0724e71
+fix-item rk-fix-doctor-margin-4 3f4aa62848f552d2573f763dc6c9ff29d0724e71
