@@ -8116,3 +8116,8 @@ runs; it was on the box on 2026-11-09, as the 18:43Z attempt's trybuild failure 
 so `-3`'s `green-verify` would likely also have gone red on that case). Nothing here
 re-derives `implement_timeout`, `repro_timeout` or `review_timeout`.
 
+**Added the same day: the SQLite advisory.** This PR's CI failed only at `cargo audit`, on RUSTSEC-2026-0459 (a C
+SQLite CVE, medium 6.8) in `libsqlite3-sys` 0.38.2, newer than the last green run, so the base branch fails it too.
+The operator chose on a card (2026-11-10 06:19Z) to move the exact pin `rusqlite = "=0.40.2"` to `"=0.41.1"`
+(`libsqlite3-sys` 0.39.1) in this same re-freeze (H-16; ADR-0100 decision 2's deliberate pin bump). The lockfile moves
+only those two crates; `rk-store` and `rk-adapter-sqlite` build clippy-clean and pass their tests (116 passed).
