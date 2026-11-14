@@ -206,8 +206,8 @@ pub struct ChangeRecord {
 // an object, and both members are required (Record A decision 6). The doc comments below are
 // what the agent reads in the exported schema, so they say what to write, not this history.
 
-/// One debt the change took on: a shortcut, a deferred fix or a known gap, and where it sits.
-/// Each becomes its own tracked tech-debt item.
+/// One technical debt: a shortcut, a deferred fix or a known gap, and where it sits.
+/// Where a step files the register, each becomes its own tracked tech-debt item.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DebtItem {
@@ -221,7 +221,7 @@ pub struct DebtItem {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DebtRegisterEntry {
-    /// The debts the change took on, one entry each; empty when it took on none.
+    /// The debts recorded, one entry each; empty when there are none.
     pub items: Vec<DebtItem>,
     pub interest: Text,
     pub remediation: Text,

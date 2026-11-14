@@ -9,10 +9,10 @@ expression: schema
   "type": "object",
   "properties": {
     "items": {
-      "description": "The debts the change took on, one entry each; empty when it took on none.",
+      "description": "The debts recorded, one entry each; empty when there are none.",
       "type": "array",
       "items": {
-        "description": "One debt the change took on: a shortcut, a deferred fix or a known gap, and where it sits.\nEach becomes its own tracked tech-debt item.",
+        "description": "One technical debt: a shortcut, a deferred fix or a known gap, and where it sits.\nWhere a step files the register, each becomes its own tracked tech-debt item.",
         "type": "object",
         "properties": {
           "title": {
