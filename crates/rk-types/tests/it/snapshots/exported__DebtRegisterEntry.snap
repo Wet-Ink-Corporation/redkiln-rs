@@ -9,10 +9,26 @@ expression: schema
   "type": "object",
   "properties": {
     "items": {
+      "description": "The debts the change took on, one entry each; empty when it took on none.",
       "type": "array",
       "items": {
-        "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
-        "type": "string"
+        "description": "One debt the change took on: a shortcut, a deferred fix or a known gap, and where it sits.\nEach becomes its own tracked tech-debt item.",
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "The shortcut or debt, in one line.",
+            "type": "string"
+          },
+          "location": {
+            "description": "Where it sits: the files, module or rule the shortcut is in.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "location"
+        ]
       }
     },
     "interest": {

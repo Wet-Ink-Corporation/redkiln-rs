@@ -1520,5 +1520,16 @@ checkpoint line.)*
 > - `-4` is `-3` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
 > - Every launch and resume of `-4` runs with `rust-src` removed (ruling R6), and the operator's preflight checks it.
 > - Criterion (3) kill and resume is re-run on `-4`.
+>
+> *(dated 2026-11-14, s8; D21-179)* **`rk-fix-doctor-margin-4` → `-5`.** `-4` passed implement, verify (all five ACs
+> answered `discriminates`), review (`override-approve` over two advisory findings) and release, and stopped in closeout
+> with rc 19. `debt-logging@1`'s `file` step, `toolchain:item_create`, refused the extract's `items`, which the exported
+> `DebtRegisterEntry` schema typed as strings. D21-179 makes each item an object (`DebtItem { title, location }`). That
+> moves the frozen sha, so the restart takes steps 1-6 above again, each the operator's with its own go-ahead:
+> - The archive uses the `d` suffix (`refs/archive/s8-failed-2026-11-08d/rk-fix-doctor-margin-4`, archive directory
+>   `2026-11-08d-rk-fix-doctor-margin-4`). `-4`'s run ref `46b4eb8` stays archived evidence only.
+> - `-5` is `-4` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
+> - Every launch and resume of `-5` runs with `rust-src` removed (ruling R6).
+> - Criterion (3) kill and resume is re-run on `-5`.
 
 ---

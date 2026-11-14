@@ -3767,6 +3767,53 @@ fn step_committed(root: &Path, activity: &str, step: &str) -> Vec<Event> {
         .collect()
 }
 
+/// **D21-179: `debt-logging` files the items a schema-valid extract returns.** *(Added 2026-11-14,
+/// `s8` restart route after `rk-fix-doctor-margin-4` stopped at closeout, RC 19.)* The extract's
+/// value is built from the shipped `DebtRegisterEntry` type, so it has the one shape a real agent
+/// can return under the exported schema. A hand-written literal can take a shape the schema forbids.
+/// `file` must commit the `ItemRefs` naming both minted ids, and the run must exit `Success`.
+#[test]
+fn debt_logging_files_the_items_a_schema_valid_extract_returns() {
+    let repo = closeout_lane("DebtRegisterEntry", "debt-logging", DEBT_LOGGING);
+    let root = repo.path();
+    let item = THROUGH_ITEM;
+    let t = rk_types::text::Text::new;
+    let items = ["a shortcut", "a second"]
+        .into_iter()
+        .map(|title| rk_types::artifact::lane::DebtItem {
+            title: t(title),
+            location: t("crates/rk-cli/src/doctor/rules.rs"),
+        })
+        .collect();
+    let entry = rk_types::artifact::lane::DebtRegisterEntry {
+        items,
+        interest: t("each later margin rule repeats the parse"),
+        remediation: t("share one margins parser with the loader"),
+        summary: t("two shortcuts taken"),
+    };
+    let value = serde_json::to_value(&entry).expect("a DebtRegisterEntry serialises");
+    let extract = Ok(Typed::new(
+        rk_types::typed::SchemaId::new("DebtRegisterEntry"),
+        value,
+    ));
+    let lane = ScriptedFactory::new(vec![lane_e2e::implement(), lane_e2e::review(), extract]);
+
+    let exit = run(root, item, &lane);
+
+    let files = step_committed(root, "debt-logging@1", "file");
+    let ids: Vec<String> = [1, 2].iter().map(|n| format!("{item}-debt-{n}")).collect();
+    assert_eq!(
+        (exit, files.len()),
+        (Exit::Success, 1),
+        "a schema-valid DebtRegisterEntry must pass `item_create` (rows: {files:?})"
+    );
+    assert_eq!(
+        files[0].payload["result"],
+        serde_json::json!({ "ids": ids }),
+        "the committed `ItemRefs` names both minted ids"
+    );
+}
+
 /// **D21-47 cross #6: `debt-logging` walks past `file` through `item_create`'s `store`-route
 /// handler** (`s8f` §8f.7). A `FakeHarness` `extract` outputs two items; the activity walks past
 /// `file` to its `emit`; the `file` step commits the `ItemRefs` value naming both ids; and the run
@@ -3779,7 +3826,13 @@ fn debt_logging_walks_past_file_through_item_create() {
     let item = THROUGH_ITEM;
     let extract = Ok(Typed::new(
         rk_types::typed::SchemaId::new("DebtRegisterEntry"),
-        serde_json::json!({ "items": [{ "title": "a shortcut" }, { "title": "a second" }] }),
+        // *(Changed 2026-11-14, D21-179: each item gains the `location` the schema now requires; the
+        // literal read `[{ "title": "a shortcut" }, { "title": "a second" }]`, a shape the old
+        // `Vec<Text>` schema forbade.)*
+        serde_json::json!({ "items": [
+            { "title": "a shortcut", "location": "src" },
+            { "title": "a second", "location": "src" }
+        ] }),
     ));
     let lane = ScriptedFactory::new(vec![lane_e2e::implement(), lane_e2e::review(), extract]);
     assert_eq!(run(root, item, &lane), Exit::Success);
