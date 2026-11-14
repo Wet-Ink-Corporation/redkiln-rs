@@ -200,11 +200,29 @@ pub struct ChangeRecord {
     pub summary: Text,
 }
 
+// *(Added 2026-11-14, D21-179.)* The p9 stand-in lists `DebtRegisterEntry.items` as free text, and
+// this file transcribed it as `Vec<Text>`. A string is not an item entry `toolchain:item_create`
+// (`rk_store::item_write`) can file, so `rk-fix-doctor-margin-4` stopped at closeout. The item is
+// an object, and both members are required (Record A decision 6). The doc comments below are
+// what the agent reads in the exported schema, so they say what to write, not this history.
+
+/// One technical debt: a shortcut, a deferred fix or a known gap, and where it sits.
+/// Where a step files the register, each becomes its own tracked tech-debt item.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DebtItem {
+    /// The shortcut or debt, in one line.
+    pub title: Text,
+    /// Where it sits: the files, module or rule the shortcut is in.
+    pub location: Text,
+}
+
 /// A technical-debt register entry.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DebtRegisterEntry {
-    pub items: Vec<Text>,
+    /// The debts recorded, one entry each; empty when there are none.
+    pub items: Vec<DebtItem>,
     pub interest: Text,
     pub remediation: Text,
     pub summary: Text,

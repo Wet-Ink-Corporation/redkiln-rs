@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-10 (D21-1 … D21-178), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-11-14 (D21-1 … D21-179), and what they license
+
+*(Title moved 2026-11-14, D21-179: it read **"2026-09-21 … 2026-11-10 (D21-1 … D21-178)"**; `D21-179` is appended with this move.)*
 
 *(Title moved 2026-11-09, D21-177: it read **"2026-09-21 … 2026-11-08 (D21-1 … D21-176)"**; `D21-177` is appended with this move.)*
 *(Title moved 2026-11-10, D21-178: it read **"2026-09-21 … 2026-11-09 (D21-1 … D21-177)"**; `D21-178` is appended with this move.)*
@@ -8125,3 +8127,33 @@ only those two crates; `rk-store` and `rk-adapter-sqlite` build clippy-clean and
 *(dated 2026-11-10, Ryan; D21-163 step 4, D21-178. Written by Claude in the s8 thread, as on 2026-11-09 at Ryan's instruction.)* The fix item minted a fourth time after `rk-fix-doctor-margin-3`'s rc 12 stop at `green-verify`, the same defect under a new id, its repro `-3`'s unchanged.
 
 reserved-fix-item: rk-fix-doctor-margin-4 rk-cli:doctor::rules::margin
+
+## D21-179 · `s8`: `DebtRegisterEntry.items` becomes a list of objects, so `debt-logging`'s `file` step can file them
+
+*(dated 2026-11-14, Ryan's card 15:09Z; written by Claude in the s8 thread.)*
+
+**What happened.** `rk-fix-doctor-margin-4` passed review and release and stopped in closeout with RC 19 (D21-40
+decision 2: no relaunch). The failing step was `debt-logging@1`'s `file`: `toolchain:item_create` refused the extract's
+`items` because *"entry 1 is \"crates/rk-cli/src/doctor/rules.rs: margin() …\""*. The exported schema declared
+`items: Vec<Text>`, so a real agent can only return strings. `rk_store::item_write::write_items` takes only objects
+(it reads an optional `id`, `facets` and `kind`). The landing test `debt_logging_walks_past_file_through_item_create`
+passed because its fake harness returned `[{ "title": … }]`, a value the schema forbids. The story lane's closeout
+selects `debt-logging` too, so `(1b)` would have stopped at the same step.
+
+**The ruling.** The operator chose structured items over loosening `item_create`. `rk-types` gains
+`artifact::lane::DebtItem { title, location }` (`deny_unknown_fields`, both required, Record A decision 6), and
+`DebtRegisterEntry.items` is `Vec<DebtItem>`. `item_create` is unchanged: each item is an object without an `id`, so
+ids are minted as `<item>-debt-<n>`, and the entry digest in `[provenance]` covers both members. The schema snapshot
+`exported__DebtRegisterEntry.snap` moves with it (ADR-0084: a changed snapshot is a schema change). The new test
+`landing::debt_logging_files_the_items_a_schema_valid_extract_returns` builds the extract from the Rust type itself,
+and was red on the old type with `-4`'s exact refusal. The old test's literal gains `location`.
+
+**The seam audit.** Every catalog `tool` step whose input reads an `agent` step's output was listed. On the fix and
+story lanes the seams are `verdict_record` ← `Findings` (ran in `-4`'s review), `test` ← `ImplReport.tests_added`
+(`tdd-red-green-refactor@4`, D21-177) and `item_create` ← `DebtRegisterEntry` (this ruling).
+`problem-record`'s `item_create` ← `ProblemRecord` needs a `Postmortem`, which neither lane produces.
+
+**What it licenses.** `crates/` is in CODE_PATHS, so the frozen sha moves and `-4` cannot continue. The restart takes
+D21-163's route a fourth time: archive `-4` (run ref `46b4eb8`), mint `rk-fix-doctor-margin-5`, step 1b and the evidence
+at the new sha, the CP8j re-check and preflight, each paid launch under its own Go. `-4`'s review finding on the `u16`
+upper bound is issue #143, outside this item.

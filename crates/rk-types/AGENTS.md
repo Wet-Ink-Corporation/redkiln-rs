@@ -31,3 +31,4 @@ Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo te
 | Date | Decision | Rule | Decided by |
 |---|---|---|---|
 | 2026-11-08 | Add `repro_pair` (the `.repro.toml` DTO, the validated `ReproPair`, the `ReproPairInput` envelope, `ReproPairError`) and `verb_output::ReproPlacement`; manual `Display`/`Error`, no `thiserror` (ADR-0204, proposed; plan D12) | H-16, API-03, ERR-01 | Ryan Britton |
+| 2026-11-14 | `artifact::lane::DebtItem { title, location }`; `DebtRegisterEntry.items` is `Vec<DebtItem>` (was `Vec<Text>`), so `debt-logging`'s `item_create` can file each item (D21-179; schema snapshot moved) | H-16 | Ryan Britton (card 2026-11-14) |
