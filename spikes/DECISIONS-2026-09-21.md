@@ -8157,3 +8157,7 @@ story lanes the seams are `verdict_record` ← `Findings` (ran in `-4`'s review)
 D21-163's route a fourth time: archive `-4` (run ref `46b4eb8`), mint `rk-fix-doctor-margin-5`, step 1b and the evidence
 at the new sha, the CP8j re-check and preflight, each paid launch under its own Go. `-4`'s review finding on the `u16`
 upper bound is issue #143, outside this item.
+
+*(dated 2026-11-15, Ryan; D21-163 step 4, D21-179. Written by Claude in the s8 thread, as for `-3` and `-4`.)* The fix item minted a fifth time after `rk-fix-doctor-margin-4`'s rc 19 stop at closeout (`debt-logging@1`'s `file` step refused the `DebtRegisterEntry` items), the same defect under a new id, its repro `-4`'s unchanged.
+
+reserved-fix-item: rk-fix-doctor-margin-5 rk-cli:doctor::rules::margin
