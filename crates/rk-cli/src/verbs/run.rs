@@ -1478,7 +1478,7 @@ pub fn through_step_seven(
         .reconciler
         .reconcile(&repo.exec, &repo.worktree, entry)
         .map_err(|e| {
-            // `GitError`'s `Display` (#16), as doctor's reconcile arm renders it.
+            // `GitError`'s `Display`, as doctor's reconcile arm renders it.
             told(
                 &mut std::io::stderr().lock(),
                 &format!("redkiln: reconcile at entry refused: {e}"),

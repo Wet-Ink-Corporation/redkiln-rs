@@ -140,7 +140,7 @@ pub struct Outcome {
 /// Why a rebuild refused. Every arm is exit `3` and every arm refuses **before** the rename.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RebuildError {
-    /// A read through the wrapper failed. Carries `GitError`'s `Display` form (#16).
+    /// A read through the wrapper failed. Carries `GitError`'s `Display` form.
     Git(String),
     /// The rebuilt events do not fold: a payload the kernel refuses.
     Fold(String),

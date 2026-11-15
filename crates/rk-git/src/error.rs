@@ -83,7 +83,7 @@ pub enum GitError {
 }
 
 /// The most stderr characters a rendering carries. `Debug` keeps the full bytes for the record;
-/// `Display` is for an operator's terminal, so a runaway child cannot flood it (#16).
+/// `Display` is for an operator's terminal, so a runaway child cannot flood it.
 const STDERR_SHOWN_CHARS: usize = 2_000;
 
 /// Stderr as an operator reads it: lossy UTF-8, trailing whitespace trimmed, bounded.
@@ -106,7 +106,7 @@ impl std::fmt::Display for Stderr<'_> {
     }
 }
 
-/// The operator-facing rendering (#16). Read-only over the variants: nothing in this crate
+/// The operator-facing rendering. Read-only over the variants: nothing in this crate
 /// branches on it, as nothing branches on `NonZeroExit`'s stderr.
 impl std::fmt::Display for GitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

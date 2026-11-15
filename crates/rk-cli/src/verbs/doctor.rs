@@ -112,8 +112,8 @@ pub fn run_to(
         .reconciler
         .reconcile(&repo.exec, &repo.worktree, Entry::Doctor)
     {
-        // `GitError`'s `Display` (#16): the op, the code and the stderr as text, where `{e:?}`
-        // printed stderr as byte integers. `run.rs`'s own reconcile arm renders it the same way.
+        // `GitError`'s `Display`: the op, the code and the stderr as text. `run.rs`'s own
+        // reconcile arm renders it the same way.
         // Exit 3 either way: a stderr that cannot be written has nowhere else to report to.
         return Ok(
             match writeln!(

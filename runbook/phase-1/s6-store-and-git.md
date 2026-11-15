@@ -488,5 +488,7 @@ at n=3, and its 65-min arm, 24-h arm and all three controls are unrun. Build the
 > The amendment adds `impl Display for GitError` (the op, the exit code, and the stderr as lossy UTF-8 bounded to 2,000
 > characters) and `impl std::error::Error for GitError`, both additive. No variant, no field and no `is_precondition`
 > arm changes, and nothing in `rk-git` branches on the rendering. Checkpoint 6 re-opens no row: its blocks read no
-> `GitError` rendering. The `{e:?}` sites in `rk-cli` that carried a `GitError` (`verbs/doctor.rs` and `verbs/run.rs`
-> reconcile at entry, `repo.rs`, `doctor/rebuild.rs`) now carry `{e}`.
+> `GitError` rendering. In `rk-cli`, the sites issue #16 listed now carry `{e}`: `verbs/doctor.rs` and `verbs/run.rs`
+> reconcile at entry, `repo.rs` and `doctor/rebuild.rs`'s git reads. Four other `GitError` sites still print `{e:?}` and
+> are left to a follow-up: `verbs/answer.rs` (the recorded worktree's authorisation and the tree hash, both exit 3),
+> `change_deriver.rs` (the `HEAD..<run ref>` read) and `review_pass.rs` (the review clone).

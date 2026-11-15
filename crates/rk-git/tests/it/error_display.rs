@@ -63,9 +63,9 @@ fn stderr_is_lossy_and_bounded() {
         "a long stderr is truncated with a marker: {:?}",
         shown.chars().rev().take(40).collect::<String>()
     );
-    assert!(
-        shown.chars().count() < 2_200,
-        "the rendering is bounded: {} chars",
-        shown.chars().count()
+    assert_eq!(
+        shown.matches('x').count(),
+        1_999,
+        "exactly 2,000 stderr characters are shown: the replacement character and 1,999 `x`"
     );
 }
