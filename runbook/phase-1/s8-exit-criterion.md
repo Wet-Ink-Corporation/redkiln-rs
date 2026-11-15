@@ -1531,5 +1531,14 @@ checkpoint line.)*
 > - `-5` is `-4` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
 > - Every launch and resume of `-5` runs with `rust-src` removed (ruling R6).
 > - Criterion (3) kill and resume is re-run on `-5`.
+>
+> *(dated 2026-11-15, s8; operator ruling, Ryan)* **Go-ahead per restart, not per block.** From this date, "its own
+> go-ahead" in the launch, kill and resume blocks above (and in the restart notes) is read as follows. Paid s8
+> dispatches (launch, kill, resume and the relaunches a gate needs) may be run by an agent through the Claude desktop
+> Terminal panel on the operator's machine. That shell is a plain terminal, so the blocks' Claude-spawned-shell guard
+> still holds. One go from the operator in the thread for each restart covers that restart's launches and gate
+> relaunches. Merges and gate decisions stay with the operator, each on its own card. D21-40 decision 2 is unchanged:
+> a run that exits non-zero is stopped and reported, and nothing is spent again without a fresh decision from the
+> operator. The blocks themselves are not edited.
 
 ---
