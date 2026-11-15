@@ -348,7 +348,8 @@ pub enum EnvelopeRefusal {
     TokenAppetiteReached {
         /// The item the rows are keyed to.
         item: String,
-        /// The sum of the four `Usage` counters over its `dispatch_completed` rows.
+        /// The sum of the four `Usage` counters over its `dispatch_completed` rows. `u64::MAX` when
+        /// a row's `usage` was present but malformed: the fail-closed charge, not a measurement.
         sum: Tokens,
         /// The pack's appetite.
         appetite: Tokens,
