@@ -63,7 +63,12 @@ unknown key is still counted.
 
 - A sentence quoting `Story:` or `Gate:` on a line inside a prose paragraph no longer moves tier-1 state or raises
   drift.
-- Every trailer redkiln writes is still read, because the write path puts trailers in a paragraph of their own.
+- Every trailer redkiln writes today is still read, because every trailer commit's message is subject-only
+  (`landing::commit` with no body), so git puts the trailer in a paragraph of its own. **Precondition:** git appends
+  `--trailer` to an existing final block it recognises more loosely than this rule (`Key:value` with no space,
+  `Key : value`, or a paragraph that is at least 25% trailers with a `Signed-off-by:`). A future caller that passes a
+  body ending in such a block would have redkiln's own trailer read as prose. Such a caller needs a successor record
+  or a body that ends in prose.
 - A hand-made commit that mixes prose and trailer lines in one paragraph loses those trailers.
 - A trailer-only paragraph quoted on its own (blank lines both sides) still reads as a trailer. That is a residual this
   rule accepts: it is how git-style trailer blocks look, and the predecessor history depends on reading them.
