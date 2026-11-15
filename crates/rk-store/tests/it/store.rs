@@ -269,6 +269,67 @@ fn a_newer_schema_is_refused_too() {
     assert!(err.to_string().contains("NEWER"));
 }
 
+/// A file that is not a database (#17). Opening is lazy, so the first statement is what fails.
+fn not_a_database(
+    dir: &std::path::Path,
+) -> Result<rusqlite::Connection, Box<dyn std::error::Error>> {
+    let path = dir.join("not-a-db.sqlite3");
+    std::fs::write(&path, [0x5a_u8; 4096])?;
+    Ok(rusqlite::Connection::open(&path)?)
+}
+
+/// #17: a failing identity probe is an error, never "no identity". `establish` reads `None` as a
+/// fresh store, so a swallowed probe error would skip the AC-179 refusal.
+#[test]
+fn a_failing_identity_probe_is_an_error_not_an_absent_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tmp();
+    let conn = not_a_database(dir.path())?;
+
+    let got = identity::read(&conn);
+
+    assert!(
+        matches!(got, Err(StoreError::Sqlite(_))),
+        "a failing probe must be Err(StoreError::Sqlite), got {got:?}"
+    );
+    Ok(())
+}
+
+/// #17: `establish` propagates the probe failure instead of migrating and stamping. A guard, not
+/// the regression: on a non-database file `apply` would fail after the swallowed probe too, so
+/// this passed before the fix; it pins the end-to-end refusal.
+#[test]
+fn establish_refuses_a_store_whose_identity_probe_fails() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tmp();
+    let conn = not_a_database(dir.path())?;
+
+    let got = rk_store::migrate::establish(&conn, &ident("a", "/x"));
+
+    assert!(
+        matches!(got, Err(StoreError::Sqlite(_))),
+        "establish must not treat a failing probe as a fresh store, got {got:?}"
+    );
+    Ok(())
+}
+
+/// Control for #17: a database with no identity table still reads as `None`, so the fix keeps
+/// "absent" apart from "failed".
+#[test]
+fn control_a_database_without_the_identity_table_reads_as_none()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tmp();
+    let conn = rusqlite::Connection::open(dir.path().join("empty.sqlite3"))?;
+
+    let got = identity::read(&conn);
+
+    assert!(
+        matches!(got, Ok(None)),
+        "no identity table means no identity, got {got:?}"
+    );
+    Ok(())
+}
+
 /// Control: a matching identity opens. Without it, a `check` that refused everything would pass.
 #[test]
 fn control_a_matching_identity_is_accepted() {

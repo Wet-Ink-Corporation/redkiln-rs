@@ -16,7 +16,7 @@
 
 use std::path::Path;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 
 use crate::conn::StoreError;
 
@@ -65,13 +65,16 @@ pub fn initialise(conn: &Connection, identity: &Identity) -> Result<(), StoreErr
 /// # Errors
 /// [`StoreError::Sqlite`] on any failure other than an absent table or row.
 pub fn read(conn: &Connection) -> Result<Option<Identity>, StoreError> {
-    let exists: bool = conn
+    // No row is the only "absent"; every other failure (busy, locked, not a database, I/O) is
+    // propagated, because `migrate::establish` reads `None` as a fresh store (AC-179; #17).
+    let exists = conn
         .query_row(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='rk_identity'",
             [],
-            |_| Ok(true),
+            |_| Ok(()),
         )
-        .unwrap_or(false);
+        .optional()?
+        .is_some();
     if !exists {
         return Ok(None);
     }
