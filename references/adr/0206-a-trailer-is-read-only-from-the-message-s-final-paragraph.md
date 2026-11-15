@@ -74,6 +74,9 @@ let one prose line silently delete a real trailer block, which is the failure `0
 
 Pinned by `rk-git`'s grammar tests: a trailer-shaped line in an earlier paragraph is ignored, the same line in the
 final paragraph is read, trailing blank lines and CRLF line ends do not move the block, and a malformed line in the
-final paragraph is still surfaced. The F12 corpus replay (`corpus_f12.rs`) is the check that no measured trailer sat
-outside a final paragraph: its pinned counts must hold unchanged. Confidence: high for redkiln-written commits, where
-the write path guarantees the position. Legacy or hand-made history is covered only as far as F12 samples it.
+final paragraph is still surfaced. The F12 corpus replay (`corpus_f12.rs`, behind `--features corpus`) is the check
+that no measured legacy trailer sat outside a final paragraph: its pinned counts must hold unchanged. **It was not run
+when this record was written**, because the corpus is not reachable from the build container or a hosted runner. It is
+owed before the change merges (`cargo test -p rk-git --features corpus` on a machine with the pinned corpus).
+Confidence: high for redkiln-written commits, where the write path guarantees the position. For legacy history it is
+unverified until that run.

@@ -8321,3 +8321,7 @@ is added. Within the final paragraph, malformed lines are still surfaced (AC-165
 
 **What it licenses.** A change to `crates/rk-git/src/trailer/grammar.rs`. `crates/` is in CODE_PATHS, so the PR is
 held unmerged until Checkpoint 8 passes, like the other post-M5 hardening PRs.
+
+**Owed before merge.** The F12 corpus replay (`cargo test -p rk-git --features corpus`) was not run: the corpus is not
+reachable from the build container. Its pinned counts (74 slices, 15 ever rejected) must hold, or a legacy commit put a
+trailer outside its final paragraph and this ruling needs revisiting.
