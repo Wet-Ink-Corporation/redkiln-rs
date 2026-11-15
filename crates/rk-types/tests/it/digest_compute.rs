@@ -34,15 +34,21 @@ fn a_valid_digest_round_trips_through_json() -> Result<(), serde_json::Error> {
 #[test]
 fn deserialising_refuses_what_from_hex_refuses() {
     let good = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
-    let short = &good[..63];
+    let short = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015a";
     let upper = good.to_ascii_uppercase();
     let non_hex = good.replacen('a', "g", 1);
+    let cases = [
+        (short, "a digest is 64 lowercase hex characters, got 63"),
+        (upper.as_str(), "byte 0 is outside [0-9a-f]"),
+        (non_hex.as_str(), "byte 1 is outside [0-9a-f]"),
+    ];
 
-    for bad in [short, upper.as_str(), non_hex.as_str()] {
+    for (bad, why) in cases {
         let got = serde_json::from_value::<Digest>(serde_json::Value::String(bad.to_owned()));
+        let refused = got.as_ref().map_err(ToString::to_string);
         assert!(
-            got.is_err(),
-            "`{bad}` must not deserialise into a Digest, got {got:?}"
+            matches!(&refused, Err(msg) if msg.contains(why)),
+            "`{bad}` must be refused with `{why}`, got {refused:?}"
         );
     }
 }
