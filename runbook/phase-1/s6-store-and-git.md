@@ -489,6 +489,7 @@ at n=3, and its 65-min arm, 24-h arm and all three controls are unrun. Build the
 > characters) and `impl std::error::Error for GitError`, both additive. No variant, no field and no `is_precondition`
 > arm changes, and nothing in `rk-git` branches on the rendering. Checkpoint 6 re-opens no row: its blocks read no
 > `GitError` rendering. In `rk-cli`, the sites issue #16 listed now carry `{e}`: `verbs/doctor.rs` and `verbs/run.rs`
-> reconcile at entry, `repo.rs` and `doctor/rebuild.rs`'s git reads. Four other `GitError` sites still print `{e:?}` and
-> are left to a follow-up: `verbs/answer.rs` (the recorded worktree's authorisation and the tree hash, both exit 3),
-> `change_deriver.rs` (the `HEAD..<run ref>` read) and `review_pass.rs` (the review clone).
+> reconcile at entry, `repo.rs` and `doctor/rebuild.rs`'s git reads. Other `rk-cli` sites still print a `GitError` with
+> `{e:?}` and are left to the follow-up, GitHub issue #152, which lists them (among them `verbs/answer.rs`,
+> `verbs/run.rs`'s worktree-path and tree-hash refusals, `verbs/explain.rs`, `change_deriver.rs`, `review_pass.rs` and
+> `release_tag.rs`).
