@@ -448,3 +448,34 @@ fn a_quoted_story_line_in_prose_moves_no_tier_one_state() {
         "a mid-body quote changed what reconcile derives"
     );
 }
+
+/// ADR-0206 decision 2: a line whose key contains whitespace (a tab here) is neither a trailer
+/// line nor a continuation, so it makes its whole paragraph prose.
+#[test]
+fn a_key_containing_a_tab_makes_its_paragraph_prose() {
+    assert_eq!(
+        parse_body("Prose.\n\nStory\tX: demo/s-1\nStory: demo/s-2\n"),
+        Vec::<ParsedTrailer>::new(),
+        "a paragraph with a tab-bearing key was read as a trailer paragraph"
+    );
+}
+
+/// ADR-0206 decision 2: continuation lines alone qualify a paragraph but are never read, and a
+/// paragraph may start with one (unlike git, which needs a trailer first).
+#[test]
+fn continuation_lines_are_never_read_and_may_lead_a_trailer_paragraph() {
+    assert_eq!(
+        parse_body("Prose.\n\n  only a continuation\n\tand another\n"),
+        Vec::<ParsedTrailer>::new(),
+        "a continuation-only paragraph produced trailers"
+    );
+    assert_eq!(
+        parse_body("Prose.\n\n  a leading continuation\nStory: demo/s-1\n"),
+        vec![ParsedTrailer::Story {
+            project: "demo".into(),
+            slug: "s-1".into(),
+            stage: None,
+        }],
+        "a leading continuation line disqualified the trailer paragraph"
+    );
+}

@@ -12,8 +12,8 @@
 //!   trailer line or an indented continuation, so a trailer-shaped line quoted in prose is prose.
 //!   Not git's final-paragraph rule: the predecessor's history puts `Slice-Verdict:` in a
 //!   paragraph followed by another, and AC-444's F12 replay needs it read.
-//! * **Column 0, case-sensitive.** Anchored with `strip_prefix`, never `trim_start` — an indented
-//!   or lower-cased mention inside prose is prose, not a trailer.
+//! * **Column 0, case-sensitive.** A key containing any whitespace is rejected, and nothing calls
+//!   `trim_start` — an indented or lower-cased mention inside prose is prose, not a trailer.
 //! * **An unknown key is counted, not drift.** Design §5.4's last row says unknown keys are
 //!   *"ignored and counted"*; `Fix:`, `Slice-Repair:` and `Baseline-Repair:` are the old redkiln's
 //!   keys, read by `redkiln-migrate` only and **not emitted by `rk-git`**. Folding them into
