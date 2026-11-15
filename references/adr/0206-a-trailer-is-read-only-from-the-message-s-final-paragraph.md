@@ -84,5 +84,8 @@ Pinned by `rk-git`'s grammar tests:
 - a quoted `Story:` in prose moves no state through `reconcile`.
 
 The F12 corpus replay is the check against legacy history: its pinned counts (74 slices, 15 ever rejected) must hold.
-It runs only on a machine with the pinned corpus. **Option 1 failed it (4 and 2). Option 2 is owed a run before
-merge.**
+It runs only on a machine with the pinned corpus. **Option 1 failed it (4 and 2). Option 2 passed it** on Ryan's PC
+(2026-11-15 17:09Z, head `18ff53c`): 74 slices, 15 ever rejected, 16 sealed more than once, as at base. Against base,
+F reads 11 fewer trailer-bearing commits, 427 fewer unknown keys and 9 fewer legacy `Gate:` drift rows (14 to 5): lines
+in mixed prose paragraphs, now prose. Whether those 9 were real legacy trailers was not inspected; AC-444 does not
+pin them.

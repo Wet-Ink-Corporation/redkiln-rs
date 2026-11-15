@@ -8328,5 +8328,9 @@ trailer paragraph are still surfaced (AC-165) and unknown keys still counted.
 **What it licenses.** A change to `crates/rk-git/src/trailer/grammar.rs`. `crates/` is in CODE_PATHS, so the PR is
 held unmerged until Checkpoint 8 passes, like the other post-M5 hardening PRs.
 
-**Owed before merge.** The F12 replay must pass with F (74 slices, 15 ever rejected). If it does not, the card's stated
-fallback is B.
+**The check, run.** The F12 replay under F, on Ryan's PC at 17:09Z (head `18ff53c`, rc 0, 3 of 3 corpus tests): **74
+slices, 15 ever rejected, 16 sealed more than once**, the same as base. What moved, against base `51134da`:
+trailer-bearing commits 1686 to 1675, unknown trailer keys 2456 to 2029, legacy `Gate:` drift 14 to 5, total drift 54
+to 44. Those are trailer-shaped lines in mixed prose paragraphs that F now reads as prose. AC-444 pins only the slice
+and rejection counts and `legacy_gate > 0`, all of which hold. Whether the 9 dropped legacy `Gate:` rows were real
+trailers or quoted prose was not inspected.
