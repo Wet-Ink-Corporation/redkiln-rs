@@ -8161,3 +8161,20 @@ upper bound is issue #143, outside this item.
 *(dated 2026-11-15, Ryan; D21-163 step 4, D21-179. Written by Claude in the s8 thread, as for `-3` and `-4`.)* The fix item minted a fifth time after `rk-fix-doctor-margin-4`'s rc 19 stop at closeout (`debt-logging@1`'s `file` step refused the `DebtRegisterEntry` items), the same defect under a new id, its repro `-4`'s unchanged.
 
 reserved-fix-item: rk-fix-doctor-margin-5 rk-cli:doctor::rules::margin
+
+## D21-180 · A trailer is read only from the commit message's final paragraph (ADR-0206, proposed; GitHub issue #18)
+
+*(dated 2026-11-15, Ryan's decision card 15:34Z, option A "Final paragraph only"; Weigh-In wi-3f8ab271bf; written by
+Claude in the overnight-roadmap thread.)*
+
+**What happened.** The 2026-10-06 status-quo audit (appendix §4.2) found that `parse_body` read every column-0
+`Key: value` line anywhere in a commit body as a trailer, so a quoted `Story:` or `Gate:` line in prose could mint a
+phantom tier-1 signal or a spurious `Malformed` drift row. `0155` clause 3 named column 0, `": "` and case as the only
+gates, so narrowing the parser needed a record.
+
+**The ruling.** Option A of three (A final paragraph only, B keep and name the residual, C delegate to
+`git interpret-trailers --parse`). ADR-0206 supersedes `0155` clause 3 in part: the three gates stand, and position
+is added. Within the final paragraph, malformed lines are still surfaced (AC-165) and unknown keys still counted.
+
+**What it licenses.** A change to `crates/rk-git/src/trailer/grammar.rs`. `crates/` is in CODE_PATHS, so the PR is
+held unmerged until Checkpoint 8 passes, like the other post-M5 hardening PRs.

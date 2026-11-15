@@ -6,8 +6,10 @@
 //! was *accepted*, and a slice rejected at review looks identical in commit history to one that
 //! passed. **Resume from `Story:` alone is forbidden.**
 //!
-//! Two rules here are easy to lose and are each pinned by a test:
+//! Three rules here are easy to lose and are each pinned by a test:
 //!
+//! * **Final paragraph only** (ADR-0206). A trailer-shaped line quoted earlier in the message is
+//!   prose, as it is for git.
 //! * **Column 0, case-sensitive.** Anchored with `strip_prefix`, never `trim_start` — an indented
 //!   or lower-cased mention inside prose is prose, not a trailer.
 //! * **An unknown key is counted, not drift.** Design §5.4's last row says unknown keys are
@@ -223,12 +225,14 @@ pub enum MalformedReason {
 
 /// Parse the trailer lines out of one commit message body.
 ///
-/// Anchored at column 0 and case-sensitive on the key. Returns every line that looks like a
-/// trailer, classified — including the malformed ones, because AC-165 requires them surfaced.
+/// Only the body's **final paragraph** is read (ADR-0206): a trailer-shaped line quoted in an
+/// earlier paragraph is prose. Within that paragraph, anchored at column 0 and case-sensitive on
+/// the key. Returns every line there that looks like a trailer, classified — including the
+/// malformed ones, because AC-165 requires them surfaced.
 #[must_use]
 pub fn parse_body(body: &str) -> Vec<ParsedTrailer> {
     let mut out = Vec::new();
-    for line in body.lines() {
+    for line in final_paragraph(body) {
         // Column 0: no `trim_start`. An indented mention inside prose must not register.
         let Some((key_raw, value_raw)) = line.split_once(": ") else {
             continue;
@@ -244,6 +248,22 @@ pub fn parse_body(body: &str) -> Vec<ParsedTrailer> {
         out.push(classify(key, value));
     }
     out
+}
+
+/// The lines of `body`'s last paragraph, in order: trailing blank lines are skipped, then the run
+/// of non-blank lines before them is taken. Blank means empty or whitespace only, as for git.
+/// The paragraph is not required to be all trailer-shaped (ADR-0206 decision 2): one prose line
+/// must not delete the trailers beside it.
+fn final_paragraph(body: &str) -> Vec<&str> {
+    let is_blank = |line: &&str| line.trim().is_empty();
+    let mut lines: Vec<&str> = body
+        .lines()
+        .rev()
+        .skip_while(is_blank)
+        .take_while(|line| !is_blank(line))
+        .collect();
+    lines.reverse();
+    lines
 }
 
 fn classify(key: TrailerKey, value: &str) -> ParsedTrailer {

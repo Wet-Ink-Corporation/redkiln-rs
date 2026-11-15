@@ -318,3 +318,95 @@ fn rk_git_emits_no_legacy_keys() {
         );
     }
 }
+
+/// ADR-0206 (issue #18): a trailer is read only from the message's final paragraph. A
+/// trailer-shaped line quoted in an earlier paragraph is prose: not a trailer, not `UnknownKey`,
+/// not `Malformed`.
+#[test]
+fn a_trailer_shaped_line_in_an_earlier_paragraph_is_prose() {
+    let body = "Story: demo/s-1 was quoted in this paragraph\nNote: so was this\n\n\
+                The closing paragraph is prose.\n";
+    assert_eq!(
+        parse_body(body),
+        Vec::<ParsedTrailer>::new(),
+        "a line outside the final paragraph registered as a trailer"
+    );
+}
+
+/// ADR-0206: the final paragraph is still read, and only it.
+#[test]
+fn only_the_final_paragraph_is_read() {
+    let body = "Note: mid-body, not a trailer\n\nStory: demo/s-1\n";
+    assert_eq!(
+        parse_body(body),
+        vec![ParsedTrailer::Story {
+            project: "demo".into(),
+            slug: "s-1".into(),
+            stage: None,
+        }],
+        "the final paragraph's trailer was lost, or an earlier paragraph's line was read"
+    );
+}
+
+/// ADR-0206: trailing blank (or whitespace-only) lines and CRLF line ends do not move the block.
+#[test]
+fn trailing_blank_lines_and_crlf_do_not_move_the_final_paragraph() {
+    for body in [
+        "Note: earlier\n\nStory: demo/s-1\n\n \n\t\n",
+        "Note: earlier\r\n\r\nStory: demo/s-1\r\n",
+    ] {
+        assert_eq!(
+            parse_body(body),
+            vec![ParsedTrailer::Story {
+                project: "demo".into(),
+                slug: "s-1".into(),
+                stage: None,
+            }],
+            "the final paragraph moved for {body:?}"
+        );
+    }
+}
+
+/// ADR-0206 decision 2: a prose line inside the final paragraph does not delete its trailers, and
+/// a malformed known-key line there is still surfaced (AC-165).
+#[test]
+fn the_final_paragraph_keeps_its_trailers_beside_prose_and_surfaces_malformed_lines() {
+    let body = "Prose first.\n\nan aside without a separator\nStory: demo/s-1\n\
+                Slice-Verdict: sl-1 approved\n";
+    let parsed = parse_body(body);
+    assert_eq!(parsed.len(), 2, "expected exactly two entries: {parsed:?}");
+    assert_eq!(
+        parsed.first(),
+        Some(&ParsedTrailer::Story {
+            project: "demo".into(),
+            slug: "s-1".into(),
+            stage: None,
+        }),
+        "the final paragraph's trailer was dropped beside a prose line: {parsed:?}"
+    );
+    assert!(
+        matches!(
+            parsed.get(1),
+            Some(ParsedTrailer::Malformed {
+                why: MalformedReason::UnqualifiedSliceVerdict,
+                ..
+            })
+        ),
+        "the malformed line in the final paragraph was not surfaced: {parsed:?}"
+    );
+}
+
+/// ADR-0206 through `reconcile`: a quoted `Story:` in an earlier paragraph moves no tier-1 state
+/// and raises no drift.
+#[test]
+fn a_quoted_story_line_mid_body_moves_no_tier_one_state() {
+    let quoted = reconcile(&[commit(
+        "aaa",
+        "Story: demo/s-9 is quoted here\n\nThe body ends in prose.\n",
+    )]);
+    assert_eq!(
+        quoted,
+        reconcile(&[]),
+        "a mid-body quote changed what reconcile derives"
+    );
+}
