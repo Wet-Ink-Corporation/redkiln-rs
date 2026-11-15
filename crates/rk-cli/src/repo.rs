@@ -44,12 +44,10 @@ pub struct Repo {
 
 /// Why the repository could not be resolved. Every arm is exit `3`.
 ///
-/// Each carries `rk_git::error::GitError`'s **`Debug`** rendering, not its `Display` one, because
-/// that type has no `Display` — it is a closed enum matched exhaustively by its own crate and never
-/// formatted there. Carrying the `Debug` form keeps every field (the op, the exit code, the
-/// verbatim stderr) in the diagnostic, which is what makes a refusal here actionable; rendering it
-/// prettily is a job for whoever gives `GitError` a `Display`, and doing that would edit a closed
-/// crate (§7d.15).
+/// A `GitError` arm carries that error's **`Display`** rendering (#16): the op, the exit code and
+/// the stderr as lossy, bounded text, which is what makes a refusal here actionable. It replaced
+/// the `Debug` rendering, which printed stderr as byte integers. The `tempfile` and common-dir
+/// arms still carry their own errors' `Debug` forms.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RepoError {
     /// git is absent, too old, or unparsable — ADR-0091 decision 4's floor.
@@ -87,22 +85,22 @@ pub fn discover(cwd_arg: Option<&Path>) -> Result<Repo, RepoError> {
     // (1) The version floor, before any wrapper exists.
     let cwd = cwd_arg.unwrap_or_else(|| Path::new("."));
     let toolchain =
-        rk_git::version::assert_at_startup(cwd).map_err(|e| RepoError::Git(format!("{e:?}")))?;
+        rk_git::version::assert_at_startup(cwd).map_err(|e| RepoError::Git(e.to_string()))?;
 
     // (2) The bootstrap wrapper. Its hooks directory lives under the OS temp directory and is kept
     // alive for exactly as long as the bootstrap is used.
     let boot = tempfile::tempdir().map_err(|e| RepoError::Bootstrap(format!("{e:?}")))?;
     let bootstrap = GitExec::new(boot.path().join("hooks-empty"), toolchain)
-        .map_err(|e| RepoError::Bootstrap(format!("{e:?}")))?;
+        .map_err(|e| RepoError::Bootstrap(e.to_string()))?;
 
     // (3) The one `"."` read, through the wrapper.
-    let here = WorktreePath::new(cwd).map_err(|e| RepoError::Git(format!("{e:?}")))?;
+    let here = WorktreePath::new(cwd).map_err(|e| RepoError::Git(e.to_string()))?;
     let toplevel = bootstrap
         .run(GitOp::RevParse, &here, ["rev-parse", "--show-toplevel"])
-        .map_err(|e| RepoError::Git(format!("{e:?}")))?
+        .map_err(|e| RepoError::Git(e.to_string()))?
         .stdout_trimmed();
     let worktree =
-        WorktreePath::new(Path::new(&toplevel)).map_err(|e| RepoError::Git(format!("{e:?}")))?;
+        WorktreePath::new(Path::new(&toplevel)).map_err(|e| RepoError::Git(e.to_string()))?;
 
     // (4) The common dir, through the reader the store adapter already ships.
     let common_dir = rk_adapter_sqlite::path::common_dir(&bootstrap, &worktree)
@@ -110,7 +108,7 @@ pub fn discover(cwd_arg: Option<&Path>) -> Result<Repo, RepoError> {
 
     // (5) The working wrapper. From here the bootstrap and its temp directory are done.
     let exec = GitExec::new(common_dir.join("redkiln").join("hooks-empty"), toolchain)
-        .map_err(|e| RepoError::Bootstrap(format!("{e:?}")))?;
+        .map_err(|e| RepoError::Bootstrap(e.to_string()))?;
 
     Ok(Repo {
         worktree,
