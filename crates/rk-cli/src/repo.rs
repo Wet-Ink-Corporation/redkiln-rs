@@ -44,10 +44,9 @@ pub struct Repo {
 
 /// Why the repository could not be resolved. Every arm is exit `3`.
 ///
-/// A `GitError` arm carries that error's **`Display`** rendering (#16): the op, the exit code and
-/// the stderr as lossy, bounded text, which is what makes a refusal here actionable. It replaced
-/// the `Debug` rendering, which printed stderr as byte integers. The `tempfile` and common-dir
-/// arms still carry their own errors' `Debug` forms.
+/// A `GitError` arm carries that error's **`Display`** rendering: the op, the exit code and the
+/// stderr as lossy, bounded text, which is what makes a refusal here actionable. The `tempfile`
+/// and common-dir arms carry their own errors' `Debug` forms.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RepoError {
     /// git is absent, too old, or unparsable — ADR-0091 decision 4's floor.
