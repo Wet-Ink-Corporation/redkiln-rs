@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// `Serialize` and the schema stay transparent (the bare string); `Deserialize` is written by hand
 /// so that it goes through [`Digest::from_hex`] and a malformed digest is refused at the read
-/// boundary, not compared or used as a key later (#19).
+/// boundary, not compared or used as a key later.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, schemars::JsonSchema)]
 #[serde(transparent)]
 pub struct Digest(String);
