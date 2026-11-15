@@ -8162,9 +8162,9 @@ upper bound is issue #143, outside this item.
 
 reserved-fix-item: rk-fix-doctor-margin-5 rk-cli:doctor::rules::margin
 
-## D21-180 · A trailer is read only from the commit message's final paragraph (ADR-0206, proposed; GitHub issue #18)
+## D21-180 · A trailer is read only from a trailer paragraph (ADR-0206, proposed; GitHub issue #18)
 
-*(dated 2026-11-15, Ryan's decision card 15:34Z, option A "Final paragraph only"; Weigh-In wi-3f8ab271bf; written by
+*(dated 2026-11-15, Ryan's decision cards 15:34Z (option A) and 17:05Z (option F); Weigh-In wi-3f8ab271bf; written by
 Claude in the overnight-roadmap thread.)*
 
 **What happened.** The 2026-10-06 status-quo audit (appendix §4.2) found that `parse_body` read every column-0
@@ -8172,13 +8172,18 @@ Claude in the overnight-roadmap thread.)*
 phantom tier-1 signal or a spurious `Malformed` drift row. `0155` clause 3 named column 0, `": "` and case as the only
 gates, so narrowing the parser needed a record.
 
-**The ruling.** Option A of three (A final paragraph only, B keep and name the residual, C delegate to
-`git interpret-trailers --parse`). ADR-0206 supersedes `0155` clause 3 in part: the three gates stand, and position
-is added. Within the final paragraph, malformed lines are still surfaced (AC-165) and unknown keys still counted.
+**The first ruling failed its check.** Ryan chose A (final paragraph only, git's rule) at 15:34Z. The F12 corpus replay
+(`cargo test -p rk-git --features corpus`), run on his PC at 17:04Z in a scratch clone beside the live `-5` run,
+rebuilt **4 slices and 2 ever rejected** with A, against **74 and 15** at base `51134da` (rc 0). The predecessor's
+`Slice-Verdict:` trailers sit in a paragraph followed by another, so A breaks AC-444.
+
+**The ruling.** Option F of three (F any all-trailer paragraph, B revert and name the residual, D final paragraph for
+live reads and whole body for legacy reads). ADR-0206 supersedes `0155` clause 3 in part: the three gates stand, and a
+paragraph is read only when every line in it is a trailer line or an indented continuation. Malformed lines in a
+trailer paragraph are still surfaced (AC-165) and unknown keys still counted.
 
 **What it licenses.** A change to `crates/rk-git/src/trailer/grammar.rs`. `crates/` is in CODE_PATHS, so the PR is
 held unmerged until Checkpoint 8 passes, like the other post-M5 hardening PRs.
 
-**Owed before merge.** The F12 corpus replay (`cargo test -p rk-git --features corpus`) was not run: the corpus is not
-reachable from the build container. Its pinned counts (74 slices, 15 ever rejected) must hold, or a legacy commit put a
-trailer outside its final paragraph and this ruling needs revisiting.
+**Owed before merge.** The F12 replay must pass with F (74 slices, 15 ever rejected). If it does not, the card's stated
+fallback is B.

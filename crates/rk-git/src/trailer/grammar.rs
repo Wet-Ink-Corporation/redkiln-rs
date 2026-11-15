@@ -8,8 +8,10 @@
 //!
 //! Three rules here are easy to lose and are each pinned by a test:
 //!
-//! * **Final paragraph only** (ADR-0206). A trailer-shaped line quoted earlier in the message is
-//!   prose, as it is for git.
+//! * **Trailer paragraphs only** (ADR-0206). A paragraph is read only when every line in it is a
+//!   trailer line or an indented continuation, so a trailer-shaped line quoted in prose is prose.
+//!   Not git's final-paragraph rule: the predecessor's history puts `Slice-Verdict:` in a
+//!   paragraph followed by another, and AC-444's F12 replay needs it read.
 //! * **Column 0, case-sensitive.** Anchored with `strip_prefix`, never `trim_start` — an indented
 //!   or lower-cased mention inside prose is prose, not a trailer.
 //! * **An unknown key is counted, not drift.** Design §5.4's last row says unknown keys are
@@ -225,45 +227,43 @@ pub enum MalformedReason {
 
 /// Parse the trailer lines out of one commit message body.
 ///
-/// Only the body's **final paragraph** is read (ADR-0206): a trailer-shaped line quoted in an
-/// earlier paragraph is prose. Within that paragraph, anchored at column 0 and case-sensitive on
-/// the key. Returns every line there that looks like a trailer, classified — including the
-/// malformed ones, because AC-165 requires them surfaced.
+/// Only **trailer paragraphs** are read (ADR-0206): a paragraph every line of which is a trailer
+/// line or an indented continuation. A trailer-shaped line quoted inside a prose paragraph is
+/// prose. Within a trailer paragraph, anchored at column 0 and case-sensitive on the key. Returns
+/// every trailer line there, classified — including the malformed ones, because AC-165 requires
+/// them surfaced.
 #[must_use]
 pub fn parse_body(body: &str) -> Vec<ParsedTrailer> {
-    let mut out = Vec::new();
-    for line in final_paragraph(body) {
-        // Column 0: no `trim_start`. An indented mention inside prose must not register.
-        let Some((key_raw, value_raw)) = line.split_once(": ") else {
-            continue;
-        };
-        if key_raw.is_empty()
-            || key_raw.starts_with(char::is_whitespace)
-            || key_raw.contains(char::is_whitespace)
-        {
-            continue;
-        }
-        let key = TrailerKey::parse(key_raw);
-        let value = value_raw.trim_end();
-        out.push(classify(key, value));
-    }
-    out
+    trailer_paragraph_lines(body)
+        .into_iter()
+        .filter_map(trailer_parts)
+        .map(|(key_raw, value_raw)| classify(TrailerKey::parse(key_raw), value_raw.trim_end()))
+        .collect()
 }
 
-/// The lines of `body`'s last paragraph, in order: trailing blank lines are skipped, then the run
-/// of non-blank lines before them is taken. Blank means empty or whitespace only, as for git.
-/// The paragraph is not required to be all trailer-shaped (ADR-0206 decision 2): one prose line
-/// must not delete the trailers beside it.
-fn final_paragraph(body: &str) -> Vec<&str> {
-    let is_blank = |line: &&str| line.trim().is_empty();
-    let mut lines: Vec<&str> = body
-        .lines()
-        .rev()
-        .skip_while(is_blank)
-        .take_while(|line| !is_blank(line))
-        .collect();
-    lines.reverse();
+/// `line` split into key and value when it is a trailer line: column 0 (no `trim_start`, so an
+/// indented mention never registers), separator `": "`, and a non-empty key with no whitespace.
+fn trailer_parts(line: &str) -> Option<(&str, &str)> {
+    let (key_raw, value_raw) = line.split_once(": ")?;
+    if key_raw.is_empty() || key_raw.contains(char::is_whitespace) {
+        return None;
+    }
+    Some((key_raw, value_raw))
+}
+
+/// The lines of every trailer paragraph in `body`, in order. Paragraphs are split on blank lines
+/// (empty or whitespace only, as for git). A paragraph qualifies when each of its lines is a
+/// trailer line or an indented continuation; one prose line makes the whole paragraph prose.
+fn trailer_paragraph_lines(body: &str) -> Vec<&str> {
+    let is_trailer_or_continuation =
+        |line: &&str| trailer_parts(line).is_some() || line.starts_with(char::is_whitespace);
+    let lines: Vec<&str> = body.lines().collect();
     lines
+        .split(|line| line.trim().is_empty())
+        .filter(|paragraph| paragraph.iter().all(is_trailer_or_continuation))
+        .flatten()
+        .copied()
+        .collect()
 }
 
 fn classify(key: TrailerKey, value: &str) -> ParsedTrailer {
