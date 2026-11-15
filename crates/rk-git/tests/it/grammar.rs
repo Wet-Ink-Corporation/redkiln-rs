@@ -333,6 +333,33 @@ fn a_trailer_shaped_line_in_an_earlier_paragraph_is_prose() {
     );
 }
 
+/// ADR-0206: an empty or whitespace-only body has no final paragraph, so no trailers.
+#[test]
+fn an_empty_or_blank_body_has_no_trailers() {
+    for body in ["", " \n\t\n", "\r\n\r\n"] {
+        assert_eq!(
+            parse_body(body),
+            Vec::<ParsedTrailer>::new(),
+            "a blank body produced trailers: {body:?}"
+        );
+    }
+}
+
+/// ADR-0206: a body with no blank line is one paragraph, so a trailer after prose in it is read,
+/// as before this record.
+#[test]
+fn a_body_without_a_blank_line_is_one_paragraph() {
+    assert_eq!(
+        parse_body("Prose with no blank line after it.\nStory: demo/s-1\n"),
+        vec![ParsedTrailer::Story {
+            project: "demo".into(),
+            slug: "s-1".into(),
+            stage: None,
+        }],
+        "a single-paragraph body lost its trailer"
+    );
+}
+
 /// ADR-0206: the final paragraph is still read, and only it.
 #[test]
 fn only_the_final_paragraph_is_read() {
