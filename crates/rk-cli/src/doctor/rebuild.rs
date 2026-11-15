@@ -140,7 +140,7 @@ pub struct Outcome {
 /// Why a rebuild refused. Every arm is exit `3` and every arm refuses **before** the rename.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RebuildError {
-    /// A read through the wrapper failed. Carries `GitError`'s `Debug` form — it has no `Display`.
+    /// A read through the wrapper failed. Carries `GitError`'s `Display` form (#16).
     Git(String),
     /// The rebuilt events do not fold: a payload the kernel refuses.
     Fold(String),
@@ -334,11 +334,11 @@ pub fn run(
 ) -> Result<Outcome, RebuildError> {
     // ---- (1) THE GIT READS. Every call below is a read, which is AC-429's whole clause.
     let commits = rk_git::reconcile::read_commits(exec, worktree)
-        .map_err(|e| RebuildError::Git(format!("{e:?}")))?;
+        .map_err(|e| RebuildError::Git(e.to_string()))?;
     let (state, _drift) = rk_git::reconcile::reconcile(&commits);
     let head = exec
         .run(GitOp::RevParse, worktree, ["rev-parse", "HEAD"])
-        .map_err(|e| RebuildError::Git(format!("{e:?}")))?
+        .map_err(|e| RebuildError::Git(e.to_string()))?
         .stdout_trimmed();
 
     // ---- (2) THE SNAPSHOT git determines, the item records the legacy rule's third source.
