@@ -130,7 +130,7 @@ fn ac466_ac441_migrate_depends_on_no_harness_adapter_or_ports() {
         .collect();
     assert_eq!(
         anyhow_users,
-        ["redkiln-migrate"].into_iter().collect::<BTreeSet<&str>>(),
+        BTreeSet::from(["redkiln-migrate"]),
         "anyhow's workspace users are not exactly redkiln-migrate (ADR-0102 d6; issue #12)"
     );
 
