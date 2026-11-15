@@ -8,7 +8,7 @@ binary.
 
 ## Allowed dependencies
 - Workspace crates: `rk-types`, `rk-ports`, `rk-kernel`, `rk-store`, `rk-git`, `rk-containment`, `rk-adapter-claude`, `rk-adapter-sqlite`, `rk-adapter-toolchain-node`, `rk-adapter-toolchain-rust` (from `Cargo.toml`).
-- Third-party: `clap`, `anyhow`, `toml`, `ctrlc`, `serde`, `serde_json`, `tempfile`. Every pin and its reason is in the root `Cargo.toml` (ADR-0100 decision 2).
+- Third-party: `clap`, `toml`, `ctrlc`, `serde`, `serde_json`, `tempfile`. Every pin and its reason is in the root `Cargo.toml` (ADR-0100 decision 2).
 - Never: none (the composition root). No crate may depend on `rk-cli`.
 
 ## Public surface
@@ -32,3 +32,4 @@ Integration tests in `tests/it/`; unit tests beside the code. Run with `cargo te
 |---|---|---|---|
 | 2026-11-08 | Add `repro_pair` (read the item's committed `.redkiln/intake/<item>.repro.{toml,rs}` from the run tree, capped, and bind it as the `repro_place.pair` row input when the adapter is rust), `explain`'s stopped-run block (`verbs/explain/stopped.rs`), and `run`'s stderr line naming a failed step's class (ADR-0204, proposed; D21-174) | API-14, H-13, ERR-04 | Ryan Britton (plan D1, D7, D12, 2026-11-08) |
 | 2026-11-09 | `run`'s `StepFailedAfterCommit` arm writes `redkiln: the step's class: <class>` after the sentence, through `writeln!` on a locked stderr; the exit code is unchanged (ADR-0205, proposed; D21-177) | ERR-04, H-06 | Ryan Britton (plan D7, 2026-11-08) |
+| 2026-11-15 | Drop the unused `anyhow` dependency and `proptest` dev-dependency; neither was referenced in `src/` or `tests/` (GitHub issue #12; Weigh-In wi-7f77ac3c50) | H-16 | Ryan Britton (decision card, 2026-11-15) |

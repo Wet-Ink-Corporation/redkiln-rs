@@ -2584,12 +2584,10 @@ dependencies = [
 name = "rk-cli"
 version = "0.0.0"
 dependencies = [
- "anyhow",
  "assert_cmd",
  "clap",
  "ctrlc",
  "insta",
- "proptest",
  "rk-adapter-claude",
  "rk-adapter-sqlite",
  "rk-adapter-toolchain-node",
