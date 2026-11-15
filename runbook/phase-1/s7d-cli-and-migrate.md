@@ -3561,10 +3561,11 @@ echo "CP7D-END-OF-BLOCK reached"
 ```
 
 > **Amended 2026-11-15 (post-close; GitHub issue #12, Weigh-In wi-7f77ac3c50 decided A).** `rk-cli` declared
-> `anyhow` without using it and no longer depends on it, so a re-run of the walk above reads
-> `anyhow == ["redkiln-migrate"]`. ADR-0102 decision 6 still *permits* both binary crates, and `ci.yml`'s confinement
-> step is unchanged; `redkiln-migrate/tests/it/graph.rs` now pins the one actual user. Checkpoint 7d's pass at the time
-> stands.
+> `anyhow` without using it and no longer depends on it. **A re-run of the CP7D block above now fails by design**: first at
+> the manifest check (`crates/rk-cli/Cargo.toml` no longer names anyhow), then at
+> `assert anyhow == ["redkiln-migrate", "rk-cli"]`. ADR-0102 decision 6 still *permits* both binary crates, and
+> `ci.yml`'s confinement step is unchanged. The current instrument is `redkiln-migrate/tests/it/graph.rs`, which pins the
+> one actual user. Checkpoint 7d's pass at the time stands.
 
 ### 7d.18 Acceptance set
 
