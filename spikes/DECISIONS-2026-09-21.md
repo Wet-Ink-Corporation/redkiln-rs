@@ -8260,3 +8260,7 @@ what the 7c split or the probes measured moves.
 again: archive `-6` (suffix `f`), mint `rk-fix-doctor-margin-7` (in this PR, so one merge moves the sha once), step
 1b and the evidence at the new sha, the CP8j re-check and preflight, and the launches. After any guard-3 refusal the
 route is a restart, never a relaunch of the same run.
+
+*(dated 2026-11-16, Ryan; D21-163 step 4, D21-182. Written by Claude in the s8 thread, as for `-3` to `-6`.)* The fix item minted a seventh time after `rk-fix-doctor-margin-6`'s rc 17 stop in implement
+
+reserved-fix-item: rk-fix-doctor-margin-7 rk-cli:doctor::rules::margin
