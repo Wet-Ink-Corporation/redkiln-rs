@@ -8207,3 +8207,7 @@ green-verify (2026-11-15).
 the frozen sha once: `.redkiln/items/rk-fix-doctor-margin-6.toml` and `.redkiln/intake/rk-fix-doctor-margin-6.*` are
 `-5`'s, unchanged but for the id and their dated notes, and `-5` carries its superseded line. Its `reserved-fix-item:`
 line stays the operator's, in the evidence PR.
+
+*(dated 2026-11-16, Ryan; D21-163 step 4, D21-180. Written by Claude in the s8 thread, as for `-3`, `-4` and `-5`.)* The fix item minted a sixth time after `rk-fix-doctor-margin-5`'s rc 17 stop at closeout
+
+reserved-fix-item: rk-fix-doctor-margin-6 rk-cli:doctor::rules::margin
