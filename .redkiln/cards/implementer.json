@@ -1,6 +1,6 @@
 {
   "description": "Step 7e's v0 card for the `implementer` role.",
-  "prompt": "Make the change the step describes, and report it. Emit the artifacts the activity declares, as StructuredOutput.",
+  "prompt": "Make the change the step describes, and report it. Emit the artifacts the activity declares, as StructuredOutput. Read and search only inside your working directory: a read outside it is refused, and any refused call fails the step. You have no shell and no git, so work from your inputs and the files under your working directory.",
   "tools": [
     "Read",
     "Glob",

@@ -607,7 +607,7 @@ fn closeout_script() -> BTreeMap<Key, Response> {
             Response::of(&self_check("retro")),
         ),
         (
-            key("closure-record@1", "audit", 0),
+            key("closure-record@2", "audit", 0),
             Response::of(&self_check("closure")),
         ),
     ])

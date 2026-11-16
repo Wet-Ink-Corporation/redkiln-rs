@@ -1531,5 +1531,19 @@ checkpoint line.)*
 > - `-5` is `-4` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
 > - Every launch and resume of `-5` runs with `rust-src` removed (ruling R6).
 > - Criterion (3) kill and resume is re-run on `-5`.
+>
+> *(dated 2026-11-16, s8; D21-180)* **`rk-fix-doctor-margin-5` → `-6`.** `-5` passed implement, verify (AC-1 to AC-4
+> answered `discriminates`), review (`override-approve` over one advisory finding, issue #143) and release, and stopped
+> in closeout with rc 13, then rc 17 twice. The retro's self-check timed out once with no model response, then guard 3
+> failed it and `closure-record@1`'s audit on reads outside the worktree, which the CLI's session transcripts showed. The
+> audit also could not judge `tree-clean` or `links-reconciled` without git. D21-180 tells the five file-tool cards to
+> stay in their working directory and moves closeout to `closure-record@2`, which audits from its inputs. That moves the
+> frozen sha, so the restart takes steps 1-6 above again, each the operator's with its own go-ahead:
+> - The archive uses the `e` suffix (`refs/archive/s8-failed-2026-11-08e/rk-fix-doctor-margin-5`, archive directory
+>   `2026-11-08e-rk-fix-doctor-margin-5`). `-5`'s run ref `6c99d36` and later stay archived evidence only.
+> - `-6` is `-5` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
+> - Every launch and resume of `-6` runs with `rust-src` removed (ruling R6), the pinned CLI, and
+>   `GIT_CONFIG_PARAMETERS` unset.
+> - Criterion (3) kill and resume is re-run on `-6`.
 
 ---

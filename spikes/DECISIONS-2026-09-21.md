@@ -8161,3 +8161,49 @@ upper bound is issue #143, outside this item.
 *(dated 2026-11-15, Ryan; D21-163 step 4, D21-179. Written by Claude in the s8 thread, as for `-3` and `-4`.)* The fix item minted a fifth time after `rk-fix-doctor-margin-4`'s rc 19 stop at closeout (`debt-logging@1`'s `file` step refused the `DebtRegisterEntry` items), the same defect under a new id, its repro `-4`'s unchanged.
 
 reserved-fix-item: rk-fix-doctor-margin-5 rk-cli:doctor::rules::margin
+
+---
+
+## D21-180 · `s8`: agents are told to stay in their working directory, and `closure-record` audits from its inputs
+
+*(dated 2026-11-16, Ryan's card 05:06Z; written by Claude in the s8 thread.)*
+
+**What happened.** `rk-fix-doctor-margin-5` passed implement, verify (1590 tests), review (one advisory finding, issue
+#143, answered `override-approve`) and release, then stopped in closeout three times (D21-40 decision 2 each time):
+- relaunch 9: `lightweight-retro@2`'s `self-check` got no model response in its 120 s (`Cancelled { by: Timeout }`, rc 13);
+- relaunch 10: the retro re-ran and was refused as `NotIsolated { surface: Env }` (rc 17);
+- relaunch 11: the retro committed, and `closure-record@1`'s `audit` was refused the same way (rc 17).
+
+The store keeps only a digest of the denied `(tool, path)` pairs (issue #155). The CLI's own session transcripts showed
+them. The retro's `self-check` grepped `D:\repos\redkiln-rs`, and `audit` read
+`D:/repos/redkiln-rs/.git/worktrees/rk-fix-doctor-margin-5/HEAD` and globbed the main checkout for the release
+binary. All three are outside the worktree, so `blockReadsOutsideWorkingDirectories` refused them and guard 3 failed
+the dispatch. `audit` also reported `failed: 2` (`tree-clean`, `links-reconciled`): the reviewer card has Read, Glob
+and Grep and no shell, so it had no way to judge either. With `clean`'s `on_false = { to = "audit", max = 1 }` the
+walk refuses after one loop-back, so `closure-record@1` could not pass as written. It had never run live before.
+
+**The ruling.** The operator chose to fix the step and restart over relaxing guard 3 or retrying.
+- The five cards that carry file tools (`architect`, `implementer`, `investigator`, `reviewer`, `spec-author`) gain
+  one sentence: read and search only inside the working directory, because a read outside it is refused and any
+  refused call fails the step; there is no shell and no git, so work from the inputs and the files under the working
+  directory. Guard 3 and the read fence are unchanged.
+- `closure-record@2` (ADR-0072: bumped and changelogged): `audit` gains a `task` literal saying the same for this step,
+  and `changes = "artifact:ChangeSummary?"` (`requires` gains `"ChangeSummary?"`), so the change list is an input
+  rather than something to find.
+- `checklist:closure` restates `tree-clean` (the change the summary lists is present in the tree; uncommitted state is
+  the kernel's, which commits each step and refuses an unaccounted run-created path, ADR-0188) and `links-reconciled`
+  (repository paths resolve under the working directory, and named artifacts are inputs; links outside the repository
+  are listed, not followed).
+- `lane_proof`'s scripted key moves to `closure-record@2` with the version. The landing test's trimmed copy stays at
+  v1, because it is its own fixture.
+
+**What it licenses.** `.redkiln/` is in CODE_PATHS, so the frozen sha moves and `-5` cannot continue. The restart takes
+D21-163's route a fifth time: archive `-5`, mint `rk-fix-doctor-margin-6`, step 1b and the evidence at the new sha, the
+CP8j re-check and preflight, and each paid launch under its own Go. Every s8 script already clears
+`GIT_CONFIG_PARAMETERS`, the Terminal panel's `safe.bareRepository=explicit` that broke four git tests on `-5`'s first
+green-verify (2026-11-15).
+
+*(dated 2026-11-16, D21-180, the mint)* `rk-fix-doctor-margin-6` is minted in the same PR as the fix, so one merge moves
+the frozen sha once: `.redkiln/items/rk-fix-doctor-margin-6.toml` and `.redkiln/intake/rk-fix-doctor-margin-6.*` are
+`-5`'s, unchanged but for the id and their dated notes, and `-5` carries its superseded line. Its `reserved-fix-item:`
+line stays the operator's, in the evidence PR.
