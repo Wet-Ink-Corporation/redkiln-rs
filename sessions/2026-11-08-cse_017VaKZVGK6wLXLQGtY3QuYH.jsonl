@@ -402,3 +402,5 @@
 {"t":"2026-11-16T04:02:30.227Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"94650a683a157489","ms":2311,"cached":true,"pid":805}
 {"t":"2026-11-16T04:05:12.166Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":1132,"timeoutMs":1200000}
 {"t":"2026-11-16T04:05:14.191Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"94650a683a157489","ms":2022,"cached":true,"pid":1132}
+{"t":"2026-11-16T04:56:15.204Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":433,"timeoutMs":1200000}
+{"t":"2026-11-16T04:56:27.267Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"94650a683a157489","ms":12052,"cached":true,"pid":433}
