@@ -8207,3 +8207,29 @@ green-verify (2026-11-15).
 the frozen sha once: `.redkiln/items/rk-fix-doctor-margin-6.toml` and `.redkiln/intake/rk-fix-doctor-margin-6.*` are
 `-5`'s, unchanged but for the id and their dated notes, and `-5` carries its superseded line. Its `reserved-fix-item:`
 line stays the operator's, in the evidence PR.
+
+*(dated 2026-11-16, Ryan; D21-163 step 4, D21-180. Written by Claude in the s8 thread, as for `-3`, `-4` and `-5`.)* The fix item minted a sixth time after `rk-fix-doctor-margin-5`'s rc 17 stop at closeout
+
+reserved-fix-item: rk-fix-doctor-margin-6 rk-cli:doctor::rules::margin
+
+## D21-181 · `s8`: D10's guard is re-based to `66aee36`, so `-6`'s paid steps stand
+
+**What happened.** `-6`'s values step (2026-11-16) printed a non-empty D10 guard at `66aee36`. Its diff is the five
+file-tool cards under `.redkiln/cards/`, one line each: D21-180's sentence telling the agent to read and search only
+inside its working directory. `.redkiln/cards` is inside the guard, so D21-174 item 3's ruling (D12 B) no longer held,
+and §8j.7's letter would re-open §8j.6's paid steps (the 7c split and the three probes).
+
+**The ruling** (Ryan Britton, card 2026-11-16 07:30Z). The paid steps stand. The sentence is prompt text only. It
+changes neither the child's deny rules and `blockReadsOutsideWorkingDirectories` (`command.rs`
+`ChildSettings::from_chain`), nor guard 3's denial channel (`classify.rs`), nor anything the probes measured. That is
+the same test D21-174 applied. The guard's base moves from `1810fddc5c96a58bb6fc069cc7bcb0ff04003820` to the frozen
+sha `66aee36cd41c02ace63bfc4e32d288f47185e469`:
+
+```text
+git diff --quiet 66aee36cd41c02ace63bfc4e32d288f47185e469 HEAD -- crates/rk-adapter-claude crates/rk-containment .redkiln/cards tools/live-run.sh
+```
+
+It must exit 0 before each paid launch of `-6` and of the story run, or §8j.7 applies to the letter.
+
+**What it licenses.** `-6`'s evidence (step 1b at `66aee36`) and its CP8j re-check, preflight and launches, with the
+s8 scripts' guard re-pointed to the new base.
