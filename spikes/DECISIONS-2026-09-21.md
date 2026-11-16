@@ -8202,3 +8202,8 @@ D21-163's route a fifth time: archive `-5`, mint `rk-fix-doctor-margin-6`, step 
 CP8j re-check and preflight, and each paid launch under its own Go. Every s8 script already clears
 `GIT_CONFIG_PARAMETERS`, the Terminal panel's `safe.bareRepository=explicit` that broke four git tests on `-5`'s first
 green-verify (2026-11-15).
+
+*(dated 2026-11-16, D21-180, the mint)* `rk-fix-doctor-margin-6` is minted in the same PR as the fix, so one merge moves
+the frozen sha once: `.redkiln/items/rk-fix-doctor-margin-6.toml` and `.redkiln/intake/rk-fix-doctor-margin-6.*` are
+`-5`'s, unchanged but for the id and their dated notes, and `-5` carries its superseded line. Its `reserved-fix-item:`
+line stays the operator's, in the evidence PR.
