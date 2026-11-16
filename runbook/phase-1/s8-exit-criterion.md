@@ -1545,5 +1545,17 @@ checkpoint line.)*
 > - Every launch and resume of `-6` runs with `rust-src` removed (ruling R6), the pinned CLI, and
 >   `GIT_CONFIG_PARAMETERS` unset.
 > - Criterion (3) kill and resume is re-run on `-6`.
+>
+> *(dated 2026-11-16, s8; D21-182)* **`rk-fix-doctor-margin-6` → `-7`.** `-6` passed analysis, the (3) kill (killed
+> mid-graph after 18 s) and specification, design and planning, and stopped in implement with rc 17: guard 3 failed
+> `repro-green-refactor@1` on one Glob of `~/.cargo/registry/src` (the implementer looking for a dependency's source).
+> A relaunch did implement's work, but the `step_refused` row is a recorded halt, which outranks the stage advance
+> (`fsm::next_action` step 4, ADR-0154), so the stage cannot advance in that run. D21-182 tells the file-tool cards
+> that dependency sources are outside their working directory too, which moves the frozen sha again:
+> - The archive uses the `f` suffix (`refs/archive/s8-failed-2026-11-08f/rk-fix-doctor-margin-6`, archive directory
+>   `2026-11-08f-rk-fix-doctor-margin-6`).
+> - `-7` is `-6` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
+> - After any guard-3 refusal, relaunching the same run cannot advance its stage: the route is a restart.
+> - Criterion (3) kill and resume is re-run on `-7`.
 
 ---

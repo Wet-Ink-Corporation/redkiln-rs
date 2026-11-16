@@ -8233,3 +8233,30 @@ It must exit 0 before each paid launch of `-6` and of the story run, or §8j.7 a
 
 **What it licenses.** `-6`'s evidence (step 1b at `66aee36`) and its CP8j re-check, preflight and launches, with the
 s8 scripts' guard re-pointed to the new base.
+
+## D21-182 · `s8`: the file-tool cards rule out dependency sources; `-6` restarts as `-7`
+
+**What happened.** `-6` (frozen `66aee36`) passed analysis, the (3) kill (killed mid-graph after 18 s at `d507bfc`)
+and specification, design and planning, then stopped in implement with rc 17. The CLI transcript shows one denied
+call in four sessions: a `Glob` of `**/toml-*/src/value.rs` under `C:\Users\ryanm\.cargo\registry\src`, the
+implementer looking for a dependency's source. D21-180's sentence keeps agents out of the main checkout, but a
+dependency source is outside the worktree too, and guard 3 fails a step on any refusal.
+
+Ryan chose a relaunch (card, 15:42Z). It did implement's work (`repro-green-refactor@1` green, refactor, emit;
+`change-summary@2`) and exited 0 with no advance. The `step_refused` row is a recorded halt in the fold
+(`fsm::apply`, `StepRefused` sets `state.halt`), and `fsm::next_action` puts a recorded halt ahead of `AdvanceStage`
+(step 4, ADR-0154). Nothing in the fold clears it, so a run that took a guard-3 refusal can do work but never
+advance that stage. The same held `-5`'s closeout.
+
+**The ruling** (Ryan Britton, card 2026-11-16 17:54Z). The five file-tool cards (`architect`, `implementer`,
+`investigator`, `reviewer`, `spec-author`) add one sentence: dependency sources are outside the working directory
+too, so never read or search the cargo registry, `~/.cargo`, `~/.rustup`, a global `node_modules` or any other path
+outside it, and work from what the agent knows of a library's API and the code and tests in the worktree. Guard 3 and
+the read fence are unchanged; making guard 3 pass read-only refusals stays the fallback if `-7` meets another one.
+D10's guard is re-based to this change's merge sha, on D21-181's test: the sentence is prompt text only, and none of
+what the 7c split or the probes measured moves.
+
+**What it licenses.** `.redkiln/` is in CODE_PATHS, so the frozen sha moves. The restart takes D21-163's route
+again: archive `-6` (suffix `f`), mint `rk-fix-doctor-margin-7` (in this PR, so one merge moves the sha once), step
+1b and the evidence at the new sha, the CP8j re-check and preflight, and the launches. After any guard-3 refusal the
+route is a restart, never a relaunch of the same run.
