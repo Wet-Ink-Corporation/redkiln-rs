@@ -1,5 +1,7 @@
 # checklist:closure — read by closure-record/audit (s8c §8c.4; ADR-0170 decision 8, proposed).
 # Authored 2026-09-26 from the two passages named in `source`; every item restates one of their clauses.
+# (dated 2026-11-16, D21-180: `tree-clean` and `links-reconciled` restated so the audit can judge them from its
+# inputs and the worktree; the reviewer card has no shell and no git, and closure-record@1's live run failed both.)
 # The audit's `passed` / `failed` counts over these items are the ClosureRecord's `ac_coverage` / `uncovered`.
 
 source = "references/research/2026-09-07-activity-catalog-raw.md, the closure-record row: 'Formal close: AC coverage audit, tree clean, links reconciled, sign-off'; and .redkiln/catalog/closure-record.toml's rationale: 'The closeout command's audit: every AC covered, tree clean, links reconciled; a human signs at recommended and above.'"
@@ -10,11 +12,11 @@ text = "Every acceptance criterion of the item is covered. Name each one that is
 
 [[item]]
 id   = "tree-clean"
-text = "The working tree is clean: nothing the item changed is left uncommitted or untracked."
+text = "The item's change is complete in the tree: every file the change summary lists is present under the working directory and carries the change it describes. Uncommitted or untracked state is not read here: the kernel commits each step's tree and refuses to land a run-created path it cannot account for (ADR-0188), so judge only what the change summary and the files show."
 
 [[item]]
 id   = "links-reconciled"
-text = "Every link the item's artifacts carry is reconciled: each one resolves to what it names."
+text = "Every link the item's artifacts carry is reconciled: a repository path resolves to a file present under the working directory, and an artifact it names is among your inputs. A link outside the repository (a URL, an issue number) is listed in the notes, not followed, and is not by itself a failed item."
 
 [[item]]
 id   = "signoff-rigor"

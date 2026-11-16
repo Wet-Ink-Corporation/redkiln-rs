@@ -1,6 +1,6 @@
 {
   "description": "Step 7e's v0 card for the `architect` role.",
-  "prompt": "Record the architectural decision the step asks for. Emit the artifacts the activity declares, as StructuredOutput.",
+  "prompt": "Record the architectural decision the step asks for. Emit the artifacts the activity declares, as StructuredOutput. Read and search only inside your working directory: a read outside it is refused, and any refused call fails the step. You have no shell and no git, so work from your inputs and the files under your working directory.",
   "tools": [
     "Read",
     "Glob",
