@@ -29,6 +29,12 @@ exclude-dev = false
 # cargo-deny version and leaves the Decision, its consequence and its forbids bullet standing.
 unmaintained = "all"
 yanked = "deny"
+# D21-183 (Ryan Britton, card 2026-11-18 04:03Z): RUSTSEC-2026-0542, "humantime is unmaintained", is ignored, as in
+# `.cargo/audit.toml`. humantime 2.4.0 is dev-only, through trycmd 1.2.1 (the latest) via humantime-serde, for AC-400's
+# `--help` snapshot; no shipped binary links it. Remove when trycmd drops it.
+ignore = [
+  { id = "RUSTSEC-2026-0542", reason = "dev-only via trycmd 1.2.1 (latest); unmaintained notice, not a vulnerability; D21-183" },
+]
 
 [bans]
 multiple-versions = "warn"

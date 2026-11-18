@@ -1557,5 +1557,19 @@ checkpoint line.)*
 > - `-7` is `-6` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
 > - After any guard-3 refusal, relaunching the same run cannot advance its stage: the route is a restart.
 > - Criterion (3) kill and resume is re-run on `-7`.
+>
+> *(dated 2026-11-18, s8; D21-183)* **`rk-fix-doctor-margin-7` → `-8`.** `-7` passed analysis, the (3) kill,
+> specification, design, planning and implement with no refusal, and verify's AC-1 to AC-3 were answered. Two verify
+> passes then stopped with rc 14: the whole suite ran red (1587 passed, 2 failed). A read-only re-run of the suite
+> three times (`s8-r20`) was red twice, each time on 2 or 3 different `lane_e2e` and `slice_verdict` tests that spawn
+> `redkiln run` over the fixture child, at 32 s to 79 s: the test suite's 30 s spawn bound firing under full-suite load
+> on the operator's machine. D21-183 states a 180 s bound for those spawns (§7d.14's *"30 s unless stated"*), which
+> moves the frozen sha:
+> - The archive uses the `g` suffix (`refs/archive/s8-failed-2026-11-08g/rk-fix-doctor-margin-7`, archive directory
+>   `2026-11-08g-rk-fix-doctor-margin-7`).
+> - `-8` is `-7` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
+> - A red verify pass writes no `step_refused` row, so a relaunch re-runs the pass; but a flaky suite is fixed, not
+>   relaunched through.
+> - Criterion (3) kill and resume is re-run on `-8`.
 
 ---

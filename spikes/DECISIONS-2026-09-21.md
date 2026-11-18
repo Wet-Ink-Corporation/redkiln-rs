@@ -8264,3 +8264,40 @@ route is a restart, never a relaunch of the same run.
 *(dated 2026-11-16, Ryan; D21-163 step 4, D21-182. Written by Claude in the s8 thread, as for `-3` to `-6`.)* The fix item minted a seventh time after `rk-fix-doctor-margin-6`'s rc 17 stop in implement
 
 reserved-fix-item: rk-fix-doctor-margin-7 rk-cli:doctor::rules::margin
+
+## D21-183 · `s8`: fixture `run` spawns get a stated 180 s test bound; `-7` restarts as `-8`
+
+**What happened.** `-7` (frozen `4ee8639`) passed analysis, the (3) kill, specification, design, planning and
+implement with no refusal, and verify's AC-1 to AC-3 were answered. Two verify passes then stopped with rc 14: the
+whole suite ran red (1587 passed, 2 failed), with no `TestReport` and no `step_refused` row. A read-only re-run of the
+suite three times in `-7`'s worktree (`s8-r20`, `cargo nextest run --workspace --no-fail-fast --retries 0`, about 21
+minutes each) was red twice and green once. Run 1 failed `lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child`
+(57.5 s) and `lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one` (79.0 s). Run 3 failed
+`slice_verdict::approved_is_sealed_on_the_advance_path` (32.3 s), `slice_verdict::changes_requested_is_sealed_on_the_findings_block_path`
+(32.4 s) and `lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity` (34.5 s). None is a
+doctor test. Each spawns `redkiln run` over the fixture child through `support::output_bounded`, whose bound is 30 s
+plus a 2 s drain grace; alone each takes about a second. The failures cluster at the same point of each run (tests 519
+to 643 of 1586), the suite's busiest stretch.
+
+**The ruling** (Ryan Britton, card 2026-11-18 01:48Z, "Fix the flaky tests, restart -8"). §7d.14 bounds every
+process-spawning test at *"30 s unless stated"*. `support::output_bounded` now states 180 s (`FIXTURE_RUN_BOUND`)
+for a spawn of `redkiln run` with a fixture-child mode set, which is every lane run the suite makes (`lane_e2e`,
+`slice_verdict`, `review_pass`, `verify_pass`, `cost`, `run_worktree`, `run`), on `lane_proof`'s `RUN_BOUND` (600 s)
+precedent. `SPAWN_BOUND` stays 30 s, pinned by its own test, for every other spawn. A new test pins
+`SPAWN_BOUND < FIXTURE_RUN_BOUND <` the fixture child's 600 s `hold`, which is what the bound exists to catch. No
+test, assertion or retry setting is weakened, and no lint exception is added.
+
+**What it licenses.** The tests are in CODE_PATHS, so the frozen sha moves. The restart takes D21-163's route again:
+archive `-7` (suffix `g`), mint `rk-fix-doctor-margin-8` (in this PR, so one merge moves the sha once), step 1b and
+the evidence at the new sha, the CP8j re-check and preflight, and the launches. D10's guard base (`4ee8639`) is
+unchanged: nothing here touches `crates/rk-adapter-claude`, `crates/rk-containment`, `.redkiln/cards` or
+`tools/live-run.sh`. A red verify pass is relaunchable (no recorded halt), but a suite that flakes is fixed, not
+relaunched through.
+
+**Added the same day: the humantime advisory.** This PR's CI failed only at `cargo audit --deny unmaintained`, on
+RUSTSEC-2026-0542 (*"humantime is unmaintained"*), newly published, so the base branch fails it too. humantime 2.4.0 is
+a dev-dependency only, through `trycmd` 1.2.1 (AC-400's `--help` snapshot) via `humantime-serde`, and 1.2.1 is the
+latest `trycmd`. The operator chose on a card (2026-11-18 04:03Z) to ignore that one advisory, with its reason, in
+`.cargo/audit.toml` and in `deny.toml`'s `[advisories] ignore` (H-16, H-05). Every other advisory still fails both
+gates; the entries go when `trycmd` drops humantime or the test stops using it.
+
