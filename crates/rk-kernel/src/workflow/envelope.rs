@@ -101,6 +101,8 @@
 
 use std::fmt;
 
+use serde::Deserialize as _;
+
 use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
 
@@ -346,7 +348,8 @@ pub enum EnvelopeRefusal {
     TokenAppetiteReached {
         /// The item the rows are keyed to.
         item: String,
-        /// The sum of the four `Usage` counters over its `dispatch_completed` rows.
+        /// The sum of the four `Usage` counters over its `dispatch_completed` rows. `u64::MAX` when
+        /// a row's `usage` was present but malformed: the fail-closed charge, not a measurement.
         sum: Tokens,
         /// The pack's appetite.
         appetite: Tokens,
@@ -434,7 +437,9 @@ impl ItemEnvelope {
     /// `rk_types::usage::Usage`'s readers do — over the `dispatch_completed` rows keyed to `item`
     /// (D21-43 N17 Q2). A row whose `usage` is absent or `null` charges nothing, and a counter that
     /// did not arrive adds nothing: the sum is of what was reported, so a dispatch that reported
-    /// nothing is bounded by the CAP, which is why the cap exists beside the appetite.
+    /// nothing is bounded by the CAP, which is why the cap exists beside the appetite. A row whose
+    /// `usage` is present, not `null`, and does not deserialise charges `u64::MAX` (saturating), so
+    /// a malformed report fails closed at the appetite instead of charging nothing (#47).
     #[must_use]
     pub fn charged_tokens(events: &[Event], item: &str) -> Tokens {
         let mut sum: u64 = 0;
@@ -445,7 +450,12 @@ impl ItemEnvelope {
             let Some(usage) = e.payload.get("usage").filter(|u| !u.is_null()) else {
                 continue;
             };
-            let Ok(usage) = serde_json::from_value::<rk_types::usage::Usage>(usage.clone()) else {
+            // A present, non-null `usage` that does not deserialise is not "reported nothing": it
+            // charges the saturating maximum, so the next dispatch is refused by the appetite
+            // (fail closed, ADR-0198; #47). Saturating rather than a new refusal class keeps the
+            // two classes ADR-0198 fixes and the `Exit::Overage` path unchanged.
+            let Ok(usage) = rk_types::usage::Usage::deserialize(usage) else {
+                sum = u64::MAX;
                 continue;
             };
             let counters = [

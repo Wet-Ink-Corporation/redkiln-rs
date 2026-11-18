@@ -592,6 +592,39 @@ fn token_appetite_past_the_appetite_refuses_the_next_dispatch() {
     );
 }
 
+/// **#47: a `usage` that is present but malformed fails closed.** A non-null `usage` that does not
+/// deserialise (here a counter that is a string) is not a dispatch that reported nothing: it
+/// charges the saturating maximum, so the next dispatch is refused by the appetite before the port.
+/// Before the fix the row was skipped and charged 0, and the dispatch proceeded.
+#[test]
+fn a_malformed_usage_charges_the_maximum_and_refuses_the_next_dispatch() {
+    let store = counting_store();
+    seed(
+        &store,
+        completed(
+            Some(ITEM),
+            &serde_json::json!({ "input_tokens": "not a number" }),
+        ),
+    );
+    let h = harness(1);
+    let rt = enveloped(&store, &h);
+
+    let got = dispatch(&rt, 1);
+
+    assert_eq!(
+        got,
+        Err(RuntimeError::Envelope(
+            EnvelopeRefusal::TokenAppetiteReached {
+                item: ITEM.to_owned(),
+                sum: Tokens::new(u64::MAX),
+                appetite: Tokens::new(APPETITE),
+            }
+        )),
+        "a malformed usage charges the maximum, never 0"
+    );
+    assert_eq!(h.dispatches(), 0, "refused before the port");
+}
+
 /// **A dispatch with no `usage` still counts against the cap** (Record B decision 4: *"which is why
 /// the cap exists beside the appetite"*). Three dispatches whose `dispatch_completed` rows carry
 /// `usage: null` charge no token, and the fourth is refused by the CAP.
