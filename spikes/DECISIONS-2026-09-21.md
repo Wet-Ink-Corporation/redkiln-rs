@@ -8293,3 +8293,11 @@ the evidence at the new sha, the CP8j re-check and preflight, and the launches. 
 unchanged: nothing here touches `crates/rk-adapter-claude`, `crates/rk-containment`, `.redkiln/cards` or
 `tools/live-run.sh`. A red verify pass is relaunchable (no recorded halt), but a suite that flakes is fixed, not
 relaunched through.
+
+**Added the same day: the humantime advisory.** This PR's CI failed only at `cargo audit --deny unmaintained`, on
+RUSTSEC-2026-0542 (*"humantime is unmaintained"*), newly published, so the base branch fails it too. humantime 2.4.0 is
+a dev-dependency only, through `trycmd` 1.2.1 (AC-400's `--help` snapshot) via `humantime-serde`, and 1.2.1 is the
+latest `trycmd`. The operator chose on a card (2026-11-18 04:03Z) to ignore that one advisory, with its reason, in
+`.cargo/audit.toml` and in `deny.toml`'s `[advisories] ignore` (H-16, H-05). Every other advisory still fails both
+gates; the entries go when `trycmd` drops humantime or the test stops using it.
+

@@ -1,0 +1,9 @@
+# cargo-audit's project config (read from `.cargo/audit.toml` by `cargo audit --deny unmaintained`, CI's audit gate).
+#
+# D21-183 (Ryan Britton, card 2026-11-18 04:03Z): RUSTSEC-2026-0542, "humantime is unmaintained", is ignored. humantime
+# 2.4.0 reaches the graph only as a dev-dependency, through trycmd 1.2.1 (AC-400's `--help` snapshot test) via
+# humantime-serde; 1.2.1 is the latest trycmd, so no update drops it. The advisory is a maintenance notice, not a
+# vulnerability, and no shipped binary links it. Remove this entry when trycmd drops humantime or the test stops
+# using trycmd. Every other advisory, unmaintained ones included, still fails the gate.
+[advisories]
+ignore = ["RUSTSEC-2026-0542"]
