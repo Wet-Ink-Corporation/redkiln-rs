@@ -8301,3 +8301,6 @@ latest `trycmd`. The operator chose on a card (2026-11-18 04:03Z) to ignore that
 `.cargo/audit.toml` and in `deny.toml`'s `[advisories] ignore` (H-16, H-05). Every other advisory still fails both
 gates; the entries go when `trycmd` drops humantime or the test stops using it.
 
+*(dated 2026-11-17, Ryan; D21-163 step 4, D21-183. Written by Claude in the s8 thread, on Ryan's instruction of 2026-11-18 06:30Z, as for `-3` to `-7`.)* The fix item minted an eighth time after `rk-fix-doctor-margin-7`'s two rc 14 stops in verify
+
+reserved-fix-item: rk-fix-doctor-margin-8 rk-cli:doctor::rules::margin
