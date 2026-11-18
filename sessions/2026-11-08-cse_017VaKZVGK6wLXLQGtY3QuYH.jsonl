@@ -458,3 +458,5 @@
 {"t":"2026-11-18T06:58:34.612Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"3223b2fb963150ec","ms":2192,"cached":true,"pid":15060}
 {"t":"2026-11-18T07:00:58.766Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":15249,"timeoutMs":1200000}
 {"t":"2026-11-18T07:01:01.234Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"3223b2fb963150ec","ms":2461,"cached":true,"pid":15249}
+{"t":"2026-11-18T08:18:49.339Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"gate-start","pid":689,"timeoutMs":1200000}
+{"t":"2026-11-18T08:24:37.189Z","sid":"9414befb-221c-59d9-ae2a-22ba54874629","ccr":"cse_017VaKZVGK6wLXLQGtY3QuYH","agent":"main","event":"stop-blocked","reason":"gate","fp":"f829435061d08477","ms":347842,"cached":false,"pid":689,"steps":{"fmt":2387,"scan":737,"manifests":163,"clippy":2964,"test":341316}}
