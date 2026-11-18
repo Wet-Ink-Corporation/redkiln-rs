@@ -16,11 +16,35 @@
 use serde::{Deserialize, Serialize};
 
 /// A lowercase-hex SHA-256 digest.
-#[derive(
-    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, schemars::JsonSchema,
-)]
+///
+/// `Serialize` and the schema stay transparent (the bare string); `Deserialize` is written by hand
+/// so that it goes through [`Digest::from_hex`] and a malformed digest is refused at the read
+/// boundary, not compared or used as a key later.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, schemars::JsonSchema)]
 #[serde(transparent)]
 pub struct Digest(String);
+
+impl<'de> Deserialize<'de> for Digest {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        validate(&s).map_err(serde::de::Error::custom)?;
+        Ok(Self(s))
+    }
+}
+
+/// [`Digest::from_hex`]'s rules, shared with `Deserialize` so the owned string is kept, not copied.
+fn validate(s: &str) -> Result<(), DigestError> {
+    if s.len() != 64 {
+        return Err(DigestError::Length { got: s.len() });
+    }
+    if let Some(at) = s
+        .bytes()
+        .position(|b| !b.is_ascii_digit() && !(b'a'..=b'f').contains(&b))
+    {
+        return Err(DigestError::NotLowerHex { at });
+    }
+    Ok(())
+}
 
 /// Why a candidate hex string was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,18 +55,28 @@ pub enum DigestError {
     NotLowerHex { at: usize },
 }
 
+impl std::fmt::Display for DigestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Length { got } => {
+                write!(f, "a digest is 64 lowercase hex characters, got {got}")
+            }
+            Self::NotLowerHex { at } => {
+                write!(
+                    f,
+                    "a digest is lowercase hex, byte {at} is outside [0-9a-f]"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for DigestError {}
+
 impl Digest {
     /// The only constructor: 64 lowercase hex characters, or a refusal naming which rule failed.
     pub fn from_hex(s: &str) -> Result<Self, DigestError> {
-        if s.len() != 64 {
-            return Err(DigestError::Length { got: s.len() });
-        }
-        if let Some(at) = s
-            .bytes()
-            .position(|b| !b.is_ascii_digit() && !(b'a'..=b'f').contains(&b))
-        {
-            return Err(DigestError::NotLowerHex { at });
-        }
+        validate(s)?;
         Ok(Self(s.to_owned()))
     }
 
