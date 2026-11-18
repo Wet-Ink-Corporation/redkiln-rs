@@ -1210,25 +1210,135 @@ fn kill_tree(pid: u32) {
 /// [`try_output_bounded`], with the bound firing as a test failure. This is the call every test
 /// makes; `try_output_bounded` is for the bound's own positive control.
 ///
+/// A spawn of `redkiln run` with a fixture-child mode set takes [`FIXTURE_RUN_BOUND`] instead of
+/// [`SPAWN_BOUND`]: that spawn is a whole lane (D21-183).
+///
 /// # Panics
-/// If the child outlived [`SPAWN_BOUND`] — quoting what it had emitted, so the failure names where
-/// the child got to rather than only that it did not finish.
+/// If the child outlived its bound — quoting what it had emitted, so the failure names where the
+/// child got to rather than only that it did not finish.
 #[expect(
     clippy::disallowed_types,
     reason = "the parameter type is the spawn the caller built; see try_output_bounded"
 )]
 pub fn output_bounded(cmd: &mut std::process::Command) -> std::process::Output {
-    match try_output_bounded(cmd) {
+    if runs_a_fixture_lane(cmd.get_args(), cmd.get_envs()) {
+        failed_on_timeout(
+            try_output_within(cmd, FIXTURE_RUN_BOUND),
+            FIXTURE_RUN_BOUND,
+            "D21-183's stated bound for a fixture `run`. The fixture mode was set, so this is not \
+             the child's `hold` default: the lane itself did not finish",
+        )
+    } else {
+        failed_on_timeout(
+            try_output_bounded(cmd),
+            SPAWN_BOUND,
+            "§7d.14's bound. A child that neither exits nor closes stdout is the `hold` default \
+             of `rk-fixture-child-claude` when RK_FIXTURE_MODE is unset (s7d §7d.13)",
+        )
+    }
+}
+
+/// Whether a spawn is a fixture lane: its verb (the first argument after any `-C <root>`) is `run`,
+/// and it sets `RK_FIXTURE_MODE` (an `env_remove` reads as `None`, so it does not count).
+fn runs_a_fixture_lane<'a>(
+    args: impl IntoIterator<Item = &'a std::ffi::OsStr>,
+    envs: impl IntoIterator<Item = (&'a std::ffi::OsStr, Option<&'a std::ffi::OsStr>)>,
+) -> bool {
+    let mut args = args.into_iter();
+    let verb = loop {
+        match args.next() {
+            Some(a) if a == "-C" => {
+                args.next();
+            }
+            other => break other,
+        }
+    };
+    verb.is_some_and(|v| v == "run")
+        && envs
+            .into_iter()
+            .any(|(k, v)| k == "RK_FIXTURE_MODE" && v.is_some())
+}
+
+/// **The stated bound for a `redkiln run` that dispatches the fixture child**: §7d.14's *"30 s
+/// unless stated"*, stated by D21-183.
+///
+/// Such a run is a whole lane in one process: the store, a worktree, git commits and fixture-child
+/// dispatches. Under whole-suite load on Windows those runs outlived [`SPAWN_BOUND`]. The bound
+/// exists to catch a child that never ends, and it stays under the fixture child's 600 s `hold`
+/// (pinned by `the_fixture_run_bound_stays_under_the_hold`). `lane_proof`'s `RUN_BOUND` is the
+/// precedent for a stated, longer bound on a lane `run`.
+const FIXTURE_RUN_BOUND: Duration = Duration::from_secs(180);
+
+/// The fixture child's `hold` default: `HOLD_PARKS` (600) parks of `HOLD_PARK` (1 s), as the
+/// section above quotes `rk-fixture-child.rs`. It mirrors that file and must move with it.
+const FIXTURE_HOLD: Duration = Duration::from_secs(600);
+
+// The stated bound is longer than the default and still catches the hold it exists for.
+const _: () = assert!(
+    SPAWN_BOUND.as_secs() < FIXTURE_RUN_BOUND.as_secs()
+        && FIXTURE_RUN_BOUND.as_secs() < FIXTURE_HOLD.as_secs(),
+    "FIXTURE_RUN_BOUND must sit between SPAWN_BOUND and the fixture child's hold"
+);
+
+/// **Only a `run` that sets the fixture mode takes the stated bound** (D21-183): every other spawn,
+/// and a `run` with the mode unset or removed (the `hold` case the bound exists for), keeps 30 s.
+#[test]
+fn only_a_fixture_run_takes_the_lane_bound() {
+    use std::ffi::OsStr;
+    let mode = (OsStr::new("RK_FIXTURE_MODE"), Some(OsStr::new("exit:0")));
+    let removed = (OsStr::new("RK_FIXTURE_MODE"), None);
+    let run = ["-C", "/tmp/r", "run", "item"].map(OsStr::new);
+    let cases = [
+        ("run with the mode set", run.to_vec(), vec![mode], true),
+        ("run with no mode", run.to_vec(), vec![], false),
+        (
+            "run with the mode removed",
+            run.to_vec(),
+            vec![removed],
+            false,
+        ),
+        (
+            "answer whose option is `run`",
+            ["-C", "/tmp/r", "answer", "item", "run"]
+                .map(OsStr::new)
+                .to_vec(),
+            vec![mode],
+            false,
+        ),
+        (
+            "cost with the mode set",
+            ["-C", "/tmp/r", "cost", "item"].map(OsStr::new).to_vec(),
+            vec![mode],
+            false,
+        ),
+        (
+            "a root named run",
+            ["-C", "run", "status"].map(OsStr::new).to_vec(),
+            vec![mode],
+            false,
+        ),
+    ];
+    for (case, args, envs, want) in cases {
+        assert_eq!(runs_a_fixture_lane(args, envs), want, "{case}");
+    }
+}
+
+/// A bounded spawn's result, with the bound firing as a test failure. `which` names the bound and
+/// what its firing most likely means on that path.
+fn failed_on_timeout(
+    spawned: Result<std::process::Output, TimedOut>,
+    bound: Duration,
+    which: &str,
+) -> std::process::Output {
+    match spawned {
         Ok(out) => out,
         Err(TimedOut {
             after,
             stdout,
             stderr,
         }) => panic!(
-            "the spawned binary outlived §7d.14's {SPAWN_BOUND:?} bound (ran {after:?}) and its \
-             tree was killed. A child that neither exits nor closes stdout is the `hold` default \
-             of `rk-fixture-child-claude` when RK_FIXTURE_MODE is unset (s7d §7d.13).\n\
-             --- stdout ---\n{}\n--- stderr ---\n{}",
+            "the spawned binary outlived its {bound:?} bound (ran {after:?}) and its tree was \
+             killed: {which}.\n--- stdout ---\n{}\n--- stderr ---\n{}",
             String::from_utf8_lossy(&stdout),
             String::from_utf8_lossy(&stderr)
         ),
