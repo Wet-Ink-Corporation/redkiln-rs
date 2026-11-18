@@ -482,3 +482,14 @@ AC-266, AC-267, AC-271, AC-401 are PROVISIONAL on P8** — multi-step resume is 
 at n=3, and its 65-min arm, 24-h arm and all three controls are unrun. Build them; do not claim them.
 
 ---
+
+> *(dated 2026-11-15, post-close amendment for GitHub issue #16; v1.x hardening, applied after Checkpoint 8.)* `rk-git`
+> closed at Step 6 with `GitError` deriving only `Debug`, so `rk-cli`'s exit-3 paths printed `stderr` as byte integers.
+> The amendment adds `impl Display for GitError` (the op, the exit code, and the stderr as lossy UTF-8 bounded to 2,000
+> characters) and `impl std::error::Error for GitError`, both additive. No variant, no field and no `is_precondition`
+> arm changes, and nothing in `rk-git` branches on the rendering. Checkpoint 6 re-opens no row: its blocks read no
+> `GitError` rendering. In `rk-cli`, the sites issue #16 listed now carry `{e}`: `verbs/doctor.rs` and `verbs/run.rs`
+> reconcile at entry, `repo.rs` and `doctor/rebuild.rs`'s git reads. Other `rk-cli` sites still print a `GitError` with
+> `{e:?}` and are left to the follow-up, GitHub issue #152, which lists them (among them `verbs/answer.rs`,
+> `verbs/run.rs`'s worktree-path and tree-hash refusals, `verbs/explain.rs`, `change_deriver.rs`, `review_pass.rs` and
+> `release_tag.rs`).

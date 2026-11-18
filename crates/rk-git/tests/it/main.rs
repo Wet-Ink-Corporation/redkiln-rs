@@ -1,5 +1,6 @@
 mod corpus_f12;
 mod diff;
+mod error_display;
 mod gitops;
 mod grammar;
 mod landing;

@@ -112,10 +112,17 @@ pub fn run_to(
         .reconciler
         .reconcile(&repo.exec, &repo.worktree, Entry::Doctor)
     {
-        // `{e:?}`: `rk_git::error::GitError` implements no `Display` [measured 2026-09-20], and
-        // `run.rs`'s own reconcile arm renders it the same way.
-        eprintln!("redkiln: reconcile at entry refused: {e:?}");
-        return Ok(Exit::ConfigError);
+        // `GitError`'s `Display`: the op, the code and the stderr as text. `run.rs`'s own
+        // reconcile arm renders it the same way.
+        // Exit 3 either way: a stderr that cannot be written has nowhere else to report to.
+        return Ok(
+            match writeln!(
+                std::io::stderr().lock(),
+                "redkiln: reconcile at entry refused: {e}"
+            ) {
+                Ok(()) | Err(_) => Exit::ConfigError,
+            },
+        );
     }
 
     if args.rebuild {
