@@ -3560,6 +3560,13 @@ rm -rf "$TMP1" "$TMP2" "$TMP2.err" || { echo "FAIL: could not remove the temp re
 echo "CP7D-END-OF-BLOCK reached"
 ```
 
+> **Amended 2026-11-15 (post-close; GitHub issue #12, Weigh-In wi-7f77ac3c50 decided A).** `rk-cli` declared
+> `anyhow` without using it and no longer depends on it. **A re-run of the CP7D block above now fails by design**: first at
+> the manifest check (`crates/rk-cli/Cargo.toml` no longer names anyhow), then at
+> `assert anyhow == ["redkiln-migrate", "rk-cli"]`. ADR-0102 decision 6 still *permits* both binary crates, and
+> `ci.yml`'s confinement step is unchanged. The current instrument is `redkiln-migrate/tests/it/graph.rs`, which pins the
+> one actual user. Checkpoint 7d's pass at the time stands.
+
 ### 7d.18 Acceptance set
 
 The claimed set is the register's **cli-doctor** area — **AC-400..AC-439 plus AC-531 (41 in force; AC-428 is a re-issued
