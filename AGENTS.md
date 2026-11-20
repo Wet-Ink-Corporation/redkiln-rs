@@ -2,6 +2,8 @@
 
 A clean-break, single Rust binary (`redkiln`) that owns the loop: a deterministic kernel (stage selection, gate evaluation, budgets, retry, replay) that dispatches one harness process per activity. The design is `references/2026-09-08-architecture-design.md`, the decisions are the ADRs under `references/adr/`, and the build follows `RUNBOOK.md` and `runbook/`. Where this charter and those records disagree, the records win; this file is the workspace charter temper reads.
 
+**Picking up v1?** Start with `docs/HANDOFF.md`: the current state, the next step, who must act, and the standing rules.
+
 ## Crate map
 
 | Crate | Layer | Purpose | Depends on |
