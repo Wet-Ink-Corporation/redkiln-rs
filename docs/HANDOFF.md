@@ -111,9 +111,8 @@ together.
 - #23: mostly done. The undated "never run" comments in `crates/rk-containment` (`ffi.rs:37`, `:606`, `posix.rs:11`)
   are left for a comment-only PR after CP8.
 - #24 (the landing step) and #26 (what M5 certifies): needed for v1. Ryan decides them on cards.
-- #25, #33, #61, #62, #76: settled by D21-158, D21-159, D21-161 and D21-163, and proposed for closure in comments.
-  #90, outside #36, is in the same position. A card asked Ryan on 2026-11-20 whether to close all six. Agents never
-  close an issue they did not file (`docs/BACKLOG.md`).
+- #25, #33, #61, #62 and #76 (and #90, outside #36) were settled by D21-158, D21-159, D21-161 and D21-163, and closed
+  as completed on 2026-11-20 on Ryan's card.
 
 **v1.x issues filed during s8** (under #37): #155 (a guard-3 denial can't be read back; needs a decision), #162
 (the margin floor test lacks an exactly-2 assertion), #163 (a `step_refused` halt is never cleared), and #164 (fixture
