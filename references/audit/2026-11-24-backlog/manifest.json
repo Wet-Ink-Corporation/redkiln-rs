@@ -1,0 +1,100 @@
+{
+  "id": "2026-11-24",
+  "repo": "Wet-Ink-Corporation/redkiln-rs",
+  "labels": [],
+  "new": [],
+  "existing": [
+    {
+      "number": 133,
+      "type": "Task",
+      "labels": [
+        "area/kernel",
+        "area/cli",
+        "source/agent",
+        "needs/triage",
+        "prio/p3",
+        "size/m"
+      ],
+      "parent": "#37",
+      "comment": "Triage 2026-11-24 (agent, on Ryan's AFK task list): canonical `area/*` labels, `prio/*` and `size/*` proposed, parented to #37 (post-M5 hardening). `needs/triage` stays for a human. `area/rk-kernel` and `area/rk-cli` are not in `.github/labels.yml`; they are replaced by `area/kernel` and `area/cli`."
+    },
+    {
+      "number": 143,
+      "type": "Bug",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "needs/triage",
+        "prio/p2",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "Triage 2026-11-24 (agent, on Ryan's AFK task list): canonical `area/*` labels, `prio/*` and `size/*` proposed, parented to #37 (post-M5 hardening). `needs/triage` stays for a human. `area/rk-cli` is replaced by `area/cli`. p2 because doctor and `run` disagree on the same pack (the AC-377 parity class `-8` fixes for the malformed shapes)."
+    },
+    {
+      "number": 152,
+      "type": "Task",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "needs/triage",
+        "prio/p3",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "Triage 2026-11-24 (agent, on Ryan's AFK task list): canonical `area/*` labels, `prio/*` and `size/*` proposed, parented to #37 (post-M5 hardening). `needs/triage` stays for a human. Type set to Task (one PR); it follows #151, which lands in the v1.0.1 train."
+    },
+    {
+      "number": 162,
+      "type": "Bug",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "needs/triage",
+        "prio/p3",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "Triage 2026-11-24 (agent, on Ryan's AFK task list): parented to #37, `prio/p3`, `size/s`. **New evidence:** the `rk-fix-doctor-margin-8` run's implement step adds `margin_floor_of_two_is_lawful` (`crates/rk-cli/tests/it/doctor.rs:809` at `47fb9de`, run ref `rk-run/rk-fix-doctor-margin-8`). It asserts that a `seven_day = 2` margin yields no RK-D-MARGIN finding, which is this issue's exactly-2 assertion. If the run closes and lands, this issue is satisfied by it; re-check after Checkpoint 8 before closing. `needs/triage` stays for a human."
+    },
+    {
+      "number": 163,
+      "type": "Task",
+      "labels": [
+        "area/kernel",
+        "source/agent",
+        "needs/triage",
+        "prio/p2",
+        "size/m"
+      ],
+      "parent": "#37",
+      "comment": "Triage 2026-11-24 (agent, on Ryan's AFK task list): parented to #37, `prio/p2`, `size/m`. **Recommendation: schedule this for v1.0.x** (the first patch train after v1.0.0, `wi-cecc23c1ff`). Every `step_refused` halt in Step 8 (`-6`, D21-182) forced a full restart because the halt outranks the stage advance (`fsm::next_action` step 4, ADR-0154); a recorded operator route past it removes the most expensive failure mode the s8 runs hit. It needs a record (an ADR amendment), so it is a decision, not a drive-by fix. `needs/triage` stays for a human."
+    },
+    {
+      "number": 164,
+      "type": "Task",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "needs/triage",
+        "prio/p2",
+        "size/m"
+      ],
+      "parent": "#37",
+      "comment": "Triage 2026-11-24 (agent, on Ryan's AFK task list): canonical `area/*` labels, `prio/*` and `size/*` proposed, parented to #37 (post-M5 hardening). `needs/triage` stays for a human. p2: the flake policy `wi-0b4a407019` depends on this issue's flake list."
+    },
+    {
+      "number": 88,
+      "type": "Task",
+      "labels": [
+        "area/kernel",
+        "source/agent",
+        "needs/triage",
+        "prio/p3",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "Triage 2026-11-24 (agent, on Ryan's AFK task list): canonical `area/*` labels, `prio/*` and `size/*` proposed, parented to #37 (post-M5 hardening). `needs/triage` stays for a human."
+    }
+  ]
+}
