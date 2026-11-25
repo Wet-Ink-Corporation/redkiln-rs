@@ -1573,3 +1573,103 @@ checkpoint line.)*
 > - Criterion (3) kill and resume is re-run on `-8`.
 
 ---
+
+## Landing: v1.0.0 on `main`, then the held-PR train as v1.0.1
+
+*(dated 2026-11-24, agent-drafted from Ryan's decisions of 2026-11-20 and 2026-11-24; it records no pass, evidence or
+go-ahead. #24, #26.)* This section runs **only after Checkpoint 8 has passed**, meaning Ryan's pass lines are in
+`runbook/PROGRESS.md` and the DECISIONS entry is written. Nothing here is a Step 8 criterion, and no s8 block reads
+it. The decisions it carries out:
+
+| Decision | What it fixes here |
+|---|---|
+| `kb-decision-49a1fa0545` (#24) | `main` takes a **fresh `--no-ff` merge** of `build/phase-0-to-1`'s post-CP8 tip, made on `origin/main` `353ea01`. The unpushed local merge `f761899` is dropped |
+| `kb-decision-ed8ddcbb85` | v1.0.0 is a **workspace version bump in a post-freeze PR**, an **annotated tag on `main`**, and a **GitHub release** |
+| `wi-cecc23c1ff` (`kb-decision-405a986bc3`) | v1.0.0 = **the CP8-certified tree plus the version bump only**. The held PRs land afterwards as v1.0.1 |
+| `kb-decision-0b2d35a3cf` | Claude runs steps 2 to 4, as a one-time exception to "agents never push `main`", and only after Ryan's CP8 pass lines |
+| `kb-decision-a96d6b8999` (#26) | What v1.0.0 certifies is `runbook/INDEX.md`'s M5 row (hybrid (c)); the release notes say what it does not claim |
+
+**The order is fixed:** (1) the version-bump PR, (2) the fresh `--no-ff` merge to `main`, (3) the annotated `v1.0.0`
+tag on `main`, (4) the GitHub release, (5) the held-PR train as v1.0.1. Each step checks that the one before it
+landed.
+
+Known now: `origin/main` is `353ea01b87d96719e8334ef1385b638b6169db2f` and is an ancestor of `build/phase-0-to-1`, so
+the merge is conflict-free and its tree equals the post-CP8 tip's. Local `main` is
+`f7618996864e53693f55436c0cb42ec717512e21` (unpushed) and is reset away. `main`'s ruleset forbids deletion and
+non-fast-forward pushes and requires no status check. The twelve crates under `crates/` carry `version = "0.0.0"` on
+line 3 of their manifests; the fixture manifests under `tests/fixtures/` and `crates/*/tests/fixtures/` are not
+bumped. Not known until CP8 passes: the post-CP8 tip, which step 1 reads from the remote.
+
+**(1) The version-bump PR** (into `build/phase-0-to-1`; it moves CODE_PATHS, so it opens only after CP8):
+
+```bash
+cd D:/repos/redkiln-rs
+unset GIT_CONFIG_PARAMETERS
+git fetch origin
+git switch -c release/v1.0.0 origin/build/phase-0-to-1
+sed -i 's/^version = "0\.0\.0"$/version = "1.0.0"/' crates/*/Cargo.toml
+cargo update --workspace
+git diff --stat   # expect exactly 12 crates/*/Cargo.toml and Cargo.lock, one version line per crate
+test "$(git diff --name-only | grep -c '^crates/[^/]*/Cargo.toml$')" = 12 || { echo "STOP: not 12 manifests"; exit 1; }
+node "$TEMPER_CLI" gate
+git commit -am "release: v1.0.0 workspace version bump (kb-decision-ed8ddcbb85, wi-cecc23c1ff)"
+git push -u origin release/v1.0.0
+gh pr create -R Wet-Ink-Corporation/redkiln-rs --base build/phase-0-to-1 --head release/v1.0.0 \
+  --title "release: v1.0.0 workspace version bump" \
+  --body "The version bump that makes v1.0.0 (kb-decision-ed8ddcbb85, wi-cecc23c1ff). The CP8 tree plus this commit, nothing else. runbook/phase-1/s8-exit-criterion.md §Landing step 1."
+```
+
+Ryan merges it once `ci.yml` and `temper` are green. It is the only PR between Checkpoint 8 and the tag.
+
+**(2) The fresh `--no-ff` merge to `main`**:
+
+```bash
+cd D:/repos/redkiln-rs
+unset GIT_CONFIG_PARAMETERS
+git fetch origin
+test "$(git rev-parse origin/main)" = 353ea01b87d96719e8334ef1385b638b6169db2f || { echo "STOP: origin/main moved"; exit 1; }
+V1_TIP=$(git rev-parse origin/build/phase-0-to-1)
+git show "$V1_TIP:crates/rk-cli/Cargo.toml" | grep -qx 'version = "1.0.0"' || { echo "STOP: the version bump has not landed"; exit 1; }
+git switch main
+git reset --hard 353ea01b87d96719e8334ef1385b638b6169db2f   # drops the unpushed f761899 (kb-decision-49a1fa0545)
+git merge --no-ff "$V1_TIP" -m "Merge build/phase-0-to-1 into main: v1.0.0, Phase 1 exits (M5, Checkpoint 8)"
+test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse "$V1_TIP^{tree}")" || { echo "STOP: merge tree differs from the tip"; exit 1; }
+git push origin main
+```
+
+**(3) The annotated tag on `main`**:
+
+```bash
+cd D:/repos/redkiln-rs
+git fetch origin
+test "$(git rev-parse main)" = "$(git rev-parse origin/main)" || { echo "STOP: local main is not origin/main"; exit 1; }
+git tag -a v1.0.0 -m "redkiln-rs v1.0.0: Phase 1 exits (M5, Checkpoint 8 passed). What it certifies: runbook/INDEX.md, M5 row." origin/main
+git push origin v1.0.0
+```
+
+**(4) The GitHub release** (notes drafted at `docs/release-notes-v1.0.0.md`; fill its CP8 references first):
+
+```bash
+cd D:/repos/redkiln-rs
+gh release create v1.0.0 -R Wet-Ink-Corporation/redkiln-rs --verify-tag \
+  --title "redkiln-rs v1.0.0" --notes-file docs/release-notes-v1.0.0.md
+```
+
+**(5) The held-PR train as v1.0.1.** Each PR merges into `build/phase-0-to-1` in this order, rebased onto the branch's
+tip first and its touched crates' scoped tests run on base plus PR in a detached worktree (`git merge-tree` alone is
+not enough, as #98 and #99 showed). The order was rehearsed on `a6050cc` on 2026-11-24 (#36): inner crates first, then
+`rk-git`, then the dependency drop that rewrites `Cargo.lock`, then the runbook change.
+
+| # | PR | Crate | Why here |
+|---|---|---|---|
+| 1 | #149 | `rk-types` | Innermost layer; nothing else in the train touches it |
+| 2 | #148 | `rk-store` | Independent of the rest |
+| 3 | #150 | `rk-kernel` | Independent of the rest |
+| 4 | #151 | `rk-git`, `rk-cli` | `GitError` Display; #152 is its follow-up |
+| 5 | #154 | `rk-git` | Route F (`kb-decision-86637fe105`); re-run the corpus AC-444 check (`cargo test -p rk-git --features corpus`) on the merged tip before the v1.0.1 tag. Its D21 entry is numbered D21-184 at the rehearsal: renumber it if s8 has taken that id |
+| 6 | #153 | `rk-cli` | Drops `anyhow`/`proptest`; rewrites `Cargo.lock`, so it goes last of the code PRs |
+| 7 | #147 | runbook | One go-ahead per restart; runbook-only |
+
+Then a `release: v1.0.1 workspace version bump` PR (step 1's commands with `1.0.0` → `1.0.1` and
+`release/v1.0.1`), and steps 2 to 4 with `v1.0.1`, where step 2's guard reads the `v1.0.0` merge as `origin/main`
+instead of `353ea01`. #36 closes, and what is left under it moves to #37.
