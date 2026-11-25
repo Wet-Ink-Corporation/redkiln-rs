@@ -126,7 +126,9 @@ together.
 
 **v1.x issues filed during s8** (under #37): #155 (a guard-3 denial can't be read back; needs a decision), #162
 (the margin floor test lacks an exactly-2 assertion), #163 (a `step_refused` halt is never cleared), and #164 (fixture
-`run` spawns are slow under full-suite load on Windows; this also covers the flaky-suite history from `-7`).
+`run` spawns are slow under full-suite load on Windows; this also covers the flaky-suite history from `-7`). #167 (verify
+accepts a zero-match verification filter; `-8`'s AC-4 passed vacuously). Triage of 2026-11-24 put #88, #133, #143 and
+#152 under #37 too (`references/audit/2026-11-24-backlog/manifest.json`).
 
 **Labels fixed 2026-11-20:** #12 and #18 moved from `status/ready` to `status/in-progress`, since PRs #153 and #154
 exist.
