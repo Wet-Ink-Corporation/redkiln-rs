@@ -8304,3 +8304,33 @@ gates; the entries go when `trycmd` drops humantime or the test stops using it.
 *(dated 2026-11-17, Ryan; D21-163 step 4, D21-183. Written by Claude in the s8 thread, on Ryan's instruction of 2026-11-18 06:30Z, as for `-3` to `-7`.)* The fix item minted an eighth time after `rk-fix-doctor-margin-7`'s two rc 14 stops in verify
 
 reserved-fix-item: rk-fix-doctor-margin-8 rk-cli:doctor::rules::margin
+
+## D21-184 · A trailer is read only from a trailer paragraph (ADR-0206, proposed; GitHub issue #18)
+
+*(dated 2026-11-15, Ryan's decision cards 15:34Z (option A) and 17:05Z (option F); Weigh-In wi-3f8ab271bf; written by
+Claude in the overnight-roadmap thread.)*
+
+**What happened.** The 2026-10-06 status-quo audit (appendix §4.2) found that `parse_body` read every column-0
+`Key: value` line anywhere in a commit body as a trailer, so a quoted `Story:` or `Gate:` line in prose could mint a
+phantom tier-1 signal or a spurious `Malformed` drift row. `0155` clause 3 named column 0, `": "` and case as the only
+gates, so narrowing the parser needed a record.
+
+**The first ruling failed its check.** Ryan chose A (final paragraph only, git's rule) at 15:34Z. The F12 corpus replay
+(`cargo test -p rk-git --features corpus`), run on his PC at 17:04Z in a scratch clone beside the live `-5` run,
+rebuilt **4 slices and 2 ever rejected** with A, against **74 and 15** at base `51134da` (rc 0). The predecessor's
+`Slice-Verdict:` trailers sit in a paragraph followed by another, so A breaks AC-444.
+
+**The ruling.** Option F of three (F any all-trailer paragraph, B revert and name the residual, D final paragraph for
+live reads and whole body for legacy reads). ADR-0206 supersedes `0155` clause 3 in part: the three gates stand, and a
+paragraph is read only when every line in it is a trailer line or an indented continuation. Malformed lines in a
+trailer paragraph are still surfaced (AC-165) and unknown keys still counted.
+
+**What it licenses.** A change to `crates/rk-git/src/trailer/grammar.rs`. `crates/` is in CODE_PATHS, so the PR is
+held unmerged until Checkpoint 8 passes, like the other post-M5 hardening PRs.
+
+**The check, run.** The F12 replay under F, on Ryan's PC at 17:09Z (head `18ff53c`, rc 0, 3 of 3 corpus tests): **74
+slices, 15 ever rejected, 16 sealed more than once**, the same as base. What moved, against base `51134da`:
+trailer-bearing commits 1686 to 1675, unknown trailer keys 2456 to 2029, legacy `Gate:` drift 14 to 5, total drift 54
+to 44. Those are trailer-shaped lines in mixed prose paragraphs that F now reads as prose. AC-444 pins only the slice
+and rejection counts and `legacy_gate > 0`, all of which hold. Whether the 9 dropped legacy `Gate:` rows were real
+trailers or quoted prose was not inspected.

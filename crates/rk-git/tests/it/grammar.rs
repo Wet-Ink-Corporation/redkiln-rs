@@ -318,3 +318,164 @@ fn rk_git_emits_no_legacy_keys() {
         );
     }
 }
+
+/// ADR-0206 (issue #18): a trailer is read only from a paragraph made entirely of trailer lines. A
+/// trailer-shaped line quoted inside a prose paragraph is prose: not a trailer, not `UnknownKey`,
+/// not `Malformed`.
+#[test]
+fn a_trailer_shaped_line_inside_a_prose_paragraph_is_prose() {
+    let body = "The audit quoted\nStory: demo/s-1 was quoted in this sentence\nin running text.\n\n\
+                The closing paragraph is prose.\n";
+    assert_eq!(
+        parse_body(body),
+        Vec::<ParsedTrailer>::new(),
+        "a line inside a prose paragraph registered as a trailer"
+    );
+}
+
+/// ADR-0206: a trailer-only paragraph is read wherever it sits, which is the predecessor's shape:
+/// its `Slice-Verdict:` paragraph is followed by a further trailer paragraph, and AC-444's F12
+/// replay (74 slices, 15 ever rejected) needs both read.
+#[test]
+fn a_trailer_only_paragraph_is_read_wherever_it_sits() {
+    let body = "Prose.\n\nSlice-Verdict: demo/sl-1 approved\n\nCo-Authored-By: A <a@example.com>\n";
+    assert_eq!(
+        parse_body(body),
+        vec![
+            ParsedTrailer::SliceVerdict {
+                project: "demo".into(),
+                slice: "sl-1".into(),
+                verdict: Verdict::Approved,
+            },
+            ParsedTrailer::UnknownKey {
+                key: "Co-Authored-By".into()
+            },
+        ],
+        "a trailer-only paragraph that is not the last one was dropped"
+    );
+}
+
+/// ADR-0206: a continuation (indented) line keeps its paragraph trailer-only, and is not itself
+/// read as a trailer.
+#[test]
+fn an_indented_continuation_line_keeps_the_paragraph_a_trailer_paragraph() {
+    let body = "Prose.\n\nStory: demo/s-1\n  a continuation line\n";
+    assert_eq!(
+        parse_body(body),
+        vec![ParsedTrailer::Story {
+            project: "demo".into(),
+            slug: "s-1".into(),
+            stage: None,
+        }],
+        "an indented continuation line disqualified the paragraph or was read"
+    );
+}
+
+/// ADR-0206: an empty or whitespace-only body has no trailer paragraph, so no trailers.
+#[test]
+fn an_empty_or_blank_body_has_no_trailers() {
+    for body in ["", " \n\t\n", "\r\n\r\n"] {
+        assert_eq!(
+            parse_body(body),
+            Vec::<ParsedTrailer>::new(),
+            "a blank body produced trailers: {body:?}"
+        );
+    }
+}
+
+/// ADR-0206: a body with no blank line is one paragraph, so a trailer line after prose in it is
+/// prose.
+#[test]
+fn a_trailer_line_in_a_single_prose_paragraph_is_prose() {
+    assert_eq!(
+        parse_body("Prose with no blank line after it.\nStory: demo/s-1\n"),
+        Vec::<ParsedTrailer>::new(),
+        "a trailer line sharing a paragraph with prose was read"
+    );
+}
+
+/// ADR-0206: blank lines are empty or whitespace only, and CRLF line ends split paragraphs the
+/// same way LF does.
+#[test]
+fn whitespace_only_lines_and_crlf_separate_paragraphs() {
+    for body in [
+        "Prose earlier.\n \nStory: demo/s-1\n\n \n\t\n",
+        "Prose earlier.\r\n\r\nStory: demo/s-1\r\n",
+    ] {
+        assert_eq!(
+            parse_body(body),
+            vec![ParsedTrailer::Story {
+                project: "demo".into(),
+                slug: "s-1".into(),
+                stage: None,
+            }],
+            "the paragraphs were split wrongly for {body:?}"
+        );
+    }
+}
+
+/// ADR-0206: a prose line makes its whole paragraph prose, while a malformed known-key line in a
+/// trailer-only paragraph is still surfaced (AC-165).
+#[test]
+fn a_prose_line_makes_its_paragraph_prose_and_malformed_trailers_are_still_surfaced() {
+    let body = "Prose first.\n\nan aside without a separator\nStory: demo/s-1\n\n\
+                Slice-Verdict: sl-1 approved\n";
+    let parsed = parse_body(body);
+    assert_eq!(parsed.len(), 1, "expected exactly one entry: {parsed:?}");
+    assert!(
+        matches!(
+            parsed.first(),
+            Some(ParsedTrailer::Malformed {
+                why: MalformedReason::UnqualifiedSliceVerdict,
+                ..
+            })
+        ),
+        "the malformed line in the trailer-only paragraph was not surfaced: {parsed:?}"
+    );
+}
+
+/// ADR-0206 through `reconcile`: a `Story:` quoted inside prose moves no tier-1 state and raises
+/// no drift.
+#[test]
+fn a_quoted_story_line_in_prose_moves_no_tier_one_state() {
+    let quoted = reconcile(&[commit(
+        "aaa",
+        "We quoted\nStory: demo/s-9 is quoted here\nin the middle of a sentence.\n",
+    )]);
+    assert_eq!(
+        quoted,
+        reconcile(&[]),
+        "a mid-body quote changed what reconcile derives"
+    );
+}
+
+/// ADR-0206 decision 2: a line whose key contains whitespace (a tab here) is neither a trailer
+/// line nor a continuation, so it makes its whole paragraph prose.
+#[test]
+fn a_key_containing_a_tab_makes_its_paragraph_prose() {
+    assert_eq!(
+        parse_body("Prose.\n\nStory\tX: demo/s-1\nStory: demo/s-2\n"),
+        Vec::<ParsedTrailer>::new(),
+        "a paragraph with a tab-bearing key was read as a trailer paragraph"
+    );
+}
+
+/// ADR-0206 decision 2: continuation lines alone qualify a paragraph but are never read, and a
+/// paragraph may start with one (unlike git, which needs a trailer first).
+#[test]
+fn continuation_lines_are_never_read_and_may_lead_a_trailer_paragraph() {
+    assert_eq!(
+        parse_body("Prose.\n\n  only a continuation\n\tand another\n"),
+        Vec::<ParsedTrailer>::new(),
+        "a continuation-only paragraph produced trailers"
+    );
+    assert_eq!(
+        parse_body("Prose.\n\n  a leading continuation\nStory: demo/s-1\n"),
+        vec![ParsedTrailer::Story {
+            project: "demo".into(),
+            slug: "s-1".into(),
+            stage: None,
+        }],
+        "a leading continuation line disqualified the trailer paragraph"
+    );
+}
