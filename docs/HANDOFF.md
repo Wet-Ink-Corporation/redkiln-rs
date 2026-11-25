@@ -1,4 +1,4 @@
-# Handoff: where redkiln-rs v1 stands (2026-11-20)
+# Handoff: where redkiln-rs v1 stands (2026-11-24)
 
 This is the cold-start page for an agent or person picking up v1. It is a snapshot. The records win where they
 disagree with it: `runbook/PROGRESS.md` (the tracker), `runbook/phase-1/s8-exit-criterion.md` (Step 8),
@@ -39,23 +39,35 @@ therefore needs one closed real fix-lane run (`rk-fix-doctor-margin-8`), one rea
   launch's `prespend` refuses any code change since the frozen sha.
 - Give Ryan copy-paste commands with concrete values, never placeholders.
 
-## 3. Current state (verified 2026-11-20 19:30Z)
+## 3. Current state (verified 2026-11-24 against the run ref `rk-run/rk-fix-doctor-margin-8` at `cc36c7e`)
 
 | What | State |
 |---|---|
 | `build/phase-0-to-1` HEAD | `a6050cc` (#161, the `-8` evidence) |
 | Frozen code sha | `a712595` (#160, D21-183: a stated 180 s bound for fixture `run` spawns, plus the `-8` item) |
 | s8j | **Closed.** Checkpoint 8j passed at `a4b76e6` (D21-173) |
-| Step 8 fix run | **`rk-fix-doctor-margin-8`, parked at the specification hold** since 2026-11-18 about 07:45Z. Run ref `1517b1f` ("hold:specification 1 opened"), gate token `f14d3f116025…`. No failures on the way: archive, step 1b (all mutants killed), evidence, CP8j recheck, preflight, and launches 1 to 3 all returned rc 0 |
-| Hold review | Done. It recommends **approve**: the repro was placed exactly as committed and confirmed red, and RootCause covers all three cases (absent `[margins]`, missing window, non-integer value) back to `rules.rs` 845-868. Full text: `/mnt/project-files/s8-r9-out8.txt` |
+| Step 8 fix run | **`rk-fix-doctor-margin-8` is past the specification hold and in verify.** Implement is done (`repro-green-refactor@1` emit at `47fb9de`). Verify: the `verify.ac-discriminates` gates for AC-1 (`3234fa0`) and AC-2 (`ed9fb9d`) are answered `discriminates`; **the AC-3 gate opened at `cc36c7e`** and expires fail-closed at **2026-12-01 07:16Z** (deadline `1796109363` in its `Gate:` trailer). The spec has **5 ACs** (`fix-spec@2` emit at `f10871e`), so AC-4 and AC-5 follow |
+| Spec defect (v1.x) | AC-4's verification filter is `doctor::rk_d_margin`, which matches no test at `47fb9de` (the floor test is `margin_floor_of_two_is_lawful`), so it passes vacuously. Filed under #37; it does not change the `-8` run |
 | PC Remote Control session | **Offline** since 2026-11-18 08:52Z. Messages to it wait until Ryan reopens it |
 | Story-lane run, check blocks, Checkpoint 8 record | Not started |
 
-### Deadline: the hold expires around 2026-11-28 07:45Z
+### Deadline: the AC-3 gate expires at 2026-12-01 07:16Z
 
-Gates are fail-closed with `gate_deadline_secs = 864000` (10 days, `.redkiln/packs/bug-standard.toml:7`). If the hold
-is not answered by then, it expires, the run fails closed, and Step 8 needs restart `-9` (D21-163's route). Every
-later gate in the run has the same 10-day window.
+Gates are fail-closed with `gate_deadline_secs = 864000` (10 days, `.redkiln/packs/bug-standard.toml:7`). The AC-3
+gate opened 2026-11-21 07:16Z (`cc36c7e`). If it is not answered by 2026-12-01 07:16Z, it expires, the run fails
+closed, and Step 8 needs restart `-9` (D21-163's route). Every later gate in the run has the same 10-day window.
+
+### Decisions already taken (Weigh-In, `.kb/decision/`)
+
+| Decision | What |
+|---|---|
+| `kb-decision-49a1fa0545` (#24) | `build/phase-0-to-1` lands on `main` as a fresh `--no-ff` merge from `origin/main` `353ea01` at the post-CP8 tip; the unpushed local `f761899` is dropped |
+| `kb-decision-a96d6b8999` (#26) | Hybrid (c): M5 certifies the Step 8 exit checks only, stated in `runbook/INDEX.md`; residual ACs are the Phase-2 entry backlog; the table follows later via #63/#66 |
+| `kb-decision-ed8ddcbb85` | v1.0.0: the workspace version bump in a post-freeze PR, an annotated tag on `main`, a GitHub release |
+| `kb-decision-0b2d35a3cf` | Claude lands (main push, tag, release) after CP8, as a one-time exception, only after Ryan's CP8 pass lines |
+| `kb-decision-86637fe105` (#154) | Route F: read trailers from every all-trailer paragraph; re-run the corpus AC-444 check before merge (the replay passes 74/15 at `f9e0c9d`) |
+| `wi-cecc23c1ff` (`kb-decision-405a986bc3`) | v1.0.0 = the CP8-certified tree plus the version bump only; the held PRs land afterwards as v1.0.1 |
+| `wi-0b4a407019` (`kb-decision-d788fb99f2`) | One relaunch per gate, only when `s8-r20-suite-diag.sh` shows the failing tests pass on rerun and are on the #164/ac329 flake list; the same test red in all three r20 runs means restart `-9`. Scope: `-8` and the story run only |
 
 Earlier attempts and why they stopped are in PROGRESS row 8 (`-1` to `-7`, D21-174 to D21-183). Each failure was fixed
 by a PR (#132 to #160) and then restarted.
@@ -64,18 +76,15 @@ by a PR (#132 to #160) and then restarted.
 
 | # | Step | Who acts | Paid |
 |---|---|---|---|
-| 1 | Reopen the PC Remote Control session (thread "Let threads run s8 scripts on Ryan's PC") | **Ryan** | no |
-| 2 | Type the hold answer in that thread: `Hold: approve, explain-sufficed no, toml-opened no` | **Ryan** | no |
-| 3 | (3) kill: `S8_GO=rk-fix-doctor-margin-8 bash ~/s8j/s8-r11-kill.sh 2>&1 \| tee ~/s8j/s8-r11-kill-out.txt`. Run `s8-r11b-capture.sh` only if the kill did not save `target/s8-cp/s8-3-pre.txt` | PC session, under Ryan's `-8` Go of 2026-11-18 06:28Z | yes |
-| 4 | Resume: `S8_GO=rk-fix-doctor-margin-8 bash ~/s8j/s8-r12-resume.sh` | PC session | yes |
-| 5 | Verify: one `verify.ac-discriminates` gate per AC. After each gate, Ryan types a line such as `AC-1: discriminates, explain-sufficed no, toml-opened no`, and the PC session relaunches with `s8-r8-launch.sh` | **Ryan** answers each gate, then the PC session relaunches | yes |
+| 1-4 | Hold answer, (3) kill, resume, implement | Done (implement emit `47fb9de`) | — |
+| 5 | Verify: one `verify.ac-discriminates` gate per AC, five ACs. AC-1 and AC-2 are answered. **Next: Ryan answers the AC-3 gate (open at `cc36c7e`, expires 2026-12-01 07:16Z)** with a line such as `AC-3: discriminates, explain-sufficed no, toml-opened no`, and the PC session relaunches with `s8-r8-launch.sh`; then AC-4 and AC-5 the same way | **Ryan** answers each gate, then the PC session relaunches | yes |
 | 6 | Review (maybe `review.blocking`), release, then closeout (`closure-record@2`, then the `closure.signoff` gate), until the last `Story:` trailer reads `closed` | **Ryan** answers the gates, the PC session relaunches | yes |
 | 7 | Story-lane run (1b): `S8_GO=rk-story-harden-spike-pack bash ~/s8j/s8-c2-story-launch.sh 2>&1 \| tee ~/s8j/s8-c2-out.txt`. It starts only after the fix run has closed. It needs **its own Go from Ryan** and stops at each gate for his answer | **Ryan** Go and gates | yes |
 | 8 | Check blocks: `bash ~/s8j/s8-c1-checks.sh 2>&1 \| tee ~/s8j/s8-c1-out.txt` | PC session | no |
 | 9 | Checkpoint 8's record in PROGRESS and the DECISIONS entry | **Ryan** writes the pass lines | no |
-| 10 | Decide what M5 certifies (#26) and how v1 lands (#24: merge form, version form, held-PR order) | **Ryan**, on cards | no |
-| 11 | Tag v1, then merge `build/phase-0-to-1` to `main` | **Ryan** | no |
-| 12 | Land the held PRs (§5), close #36, and re-parent what is left under it to #37 | agent PRs, Ryan's merges | no |
+| 10 | Decided (§3): M5 = hybrid (c); landing = fresh `--no-ff` from `353ea01`; v1.0.0 = the CP8 tree plus the version bump | done | no |
+| 11 | After Ryan's CP8 pass lines: the version-bump PR, the fresh `--no-ff` merge to `main`, the annotated `v1.0.0` tag on `main`, the GitHub release (`s8-exit-criterion.md`, landing section) | Claude, under `kb-decision-0b2d35a3cf` | no |
+| 12 | Land the held PRs (§5) as v1.0.1, close #36, and re-parent what is left under it to #37 | agent PRs, Ryan's merges | no |
 
 Copy `s8/cp8/` from the project files into `~/s8j` before step 7: the PC session refreshed only `restart8`. Copy each
 step's output into the project files root as `s8-<step>-out8.txt` for review.
@@ -99,7 +108,7 @@ Its auto mode needs Ryan's approval, typed in that thread, naming the action.
 | #150 | rk-kernel: a malformed usage charge fails closed (#47) | Same |
 | #151 | rk-git: GitError gets Display (#16) | Same. #152 is its follow-up |
 | #153 | rk-cli: drop unused anyhow and proptest (#12) | Same |
-| #154 | rk-git: trailers only from a trailer paragraph (#18, ADR-0206 proposed) | **Not mergeable.** It breaks AC-444 on the corpus (F12 replay 74 → 4 slices). Waits on Ryan's choice of F (all-trailer paragraphs), B (revert and name the residual) or D (mode split) |
+| #154 | rk-git: trailers only from a trailer paragraph (#18, ADR-0206 proposed) | Route F decided (`kb-decision-86637fe105`): every all-trailer paragraph. The replay passes 74/15 at `f9e0c9d`. Lands in the v1.0.1 train |
 
 Before merging a PR whose base has moved since its CI ran, run the touched crates' scoped tests on base plus PR in a
 detached worktree. `git merge-tree` alone is not enough: #98 and #99 were each green but turned the branch red
@@ -110,7 +119,8 @@ together.
 **M5 initiative (#36), open children:**
 - #23: mostly done. The undated "never run" comments in `crates/rk-containment` (`ffi.rs:37`, `:606`, `posix.rs:11`)
   are left for a comment-only PR after CP8.
-- #24 (the landing step) and #26 (what M5 certifies): needed for v1. Ryan decides them on cards.
+- #24 (the landing step) and #26 (what M5 certifies): decided 2026-11-20 (`kb-decision-49a1fa0545`,
+  `kb-decision-a96d6b8999`); the runbook changes they need are in a held runbook PR.
 - #25, #33, #61, #62 and #76 (and #90, outside #36) were settled by D21-158, D21-159, D21-161 and D21-163, and closed
   as completed on 2026-11-20 on Ryan's card.
 
