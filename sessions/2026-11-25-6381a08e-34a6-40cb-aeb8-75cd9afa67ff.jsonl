@@ -1,2 +1,4 @@
 {"t":"2026-11-25T07:51:38.476Z","sid":"6381a08e-34a6-40cb-aeb8-75cd9afa67ff","agent":"main","event":"session-start","source":"clear"}
 {"t":"2026-11-25T07:52:37.446Z","sid":"6381a08e-34a6-40cb-aeb8-75cd9afa67ff","agent":"main","event":"skill-loaded","via":"Skill"}
+{"t":"2026-11-25T09:17:09.676Z","sid":"6381a08e-34a6-40cb-aeb8-75cd9afa67ff","agent":"","event":"subagent-stop","type":"","msg":true,"transcript":true}
+{"t":"2026-11-26T04:47:48.373Z","sid":"6381a08e-34a6-40cb-aeb8-75cd9afa67ff","agent":"main","event":"deny-baseline-raise","via":"baseline --init","cmd":"sh \"…\" --session \"…\" --dir \"…\" batch <<…"}
