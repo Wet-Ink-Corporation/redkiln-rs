@@ -1,0 +1,93 @@
+{
+  "id": "2026-11-24b",
+  "repo": "Wet-Ink-Corporation/redkiln-rs",
+  "labels": [],
+  "new": [],
+  "existing": [
+    {
+      "number": 133,
+      "type": "Task",
+      "labels": [
+        "area/kernel",
+        "area/cli",
+        "source/agent",
+        "prio/p3",
+        "size/m"
+      ],
+      "parent": "#37",
+      "comment": "needs/triage removed: Ryan accepted the 2026-11-24 agent triage (Weigh-In wi-51a2160f40, decided B). `status/ready` stays his to add."
+    },
+    {
+      "number": 143,
+      "type": "Bug",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "prio/p2",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "needs/triage removed: Ryan accepted the 2026-11-24 agent triage (Weigh-In wi-51a2160f40, decided B). `status/ready` stays his to add."
+    },
+    {
+      "number": 152,
+      "type": "Task",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "prio/p3",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "needs/triage removed: Ryan accepted the 2026-11-24 agent triage (Weigh-In wi-51a2160f40, decided B). `status/ready` stays his to add."
+    },
+    {
+      "number": 162,
+      "type": "Bug",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "prio/p3",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "needs/triage removed: Ryan accepted the 2026-11-24 agent triage (Weigh-In wi-51a2160f40, decided B). `status/ready` stays his to add."
+    },
+    {
+      "number": 163,
+      "type": "Task",
+      "labels": [
+        "area/kernel",
+        "source/agent",
+        "prio/p2",
+        "size/m"
+      ],
+      "parent": "#37",
+      "comment": "needs/triage removed: Ryan accepted the 2026-11-24 agent triage (Weigh-In wi-51a2160f40, decided B). `status/ready` stays his to add."
+    },
+    {
+      "number": 164,
+      "type": "Task",
+      "labels": [
+        "area/cli",
+        "source/agent",
+        "prio/p2",
+        "size/m"
+      ],
+      "parent": "#37",
+      "comment": "needs/triage removed: Ryan accepted the 2026-11-24 agent triage (Weigh-In wi-51a2160f40, decided B). `status/ready` stays his to add."
+    },
+    {
+      "number": 88,
+      "type": "Task",
+      "labels": [
+        "area/kernel",
+        "source/agent",
+        "prio/p3",
+        "size/s"
+      ],
+      "parent": "#37",
+      "comment": "needs/triage removed: Ryan accepted the 2026-11-24 agent triage (Weigh-In wi-51a2160f40, decided B). `status/ready` stays his to add."
+    }
+  ]
+}

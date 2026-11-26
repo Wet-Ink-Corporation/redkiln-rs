@@ -2,6 +2,8 @@
 
 GitHub Issues on `Wet-Ink-Corporation/redkiln-rs` are the backlog ledger. Humans and unattended (AFK) agent sessions read work from it and log bugs, findings and comments to it. This file is the contract. The gap analysis and the first reconciliation behind it are in `references/audit/2026-10-08-backlog/`.
 
+The current v1 state and next steps are in `docs/HANDOFF.md`.
+
 ## What the ledger owns, and what it does not
 
 | State | Owner |
