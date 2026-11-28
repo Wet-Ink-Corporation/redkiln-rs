@@ -1294,3 +1294,160 @@ fn an_approved_seal_reads_sealed_only_until_the_next_stage_transition() {
         "a later stage_transition ends a stage-less seal's scope"
     );
 }
+
+/// *(dated 2026-11-28, s8; ADR-0154's dated note, proposed.)* A recorded refusal of one activation
+/// is cleared when a later attempt of THAT activation completes: the refusal was acted on by the
+/// retry, so an exhausted plan reaches `Done` (and `AdvanceStage` with a successor). Found on
+/// `rk-fix-doctor-margin-8`'s closeout, where `closure-record@2` was refused at attempts 1 and 2,
+/// committed at attempt 3, and the stale halt kept the lane from its `closed` mark.
+#[test]
+fn a_refusal_is_cleared_by_a_later_completion_of_the_same_activation() {
+    let planned = planned();
+    let order: Vec<String> = planned
+        .plan()
+        .expect("the assembled DAG orders")
+        .order()
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+    assert!(
+        order.len() >= 2,
+        "PREMISE: two nodes, one refused and one not: {order:?}"
+    );
+    let activity = |id: &str| {
+        planned
+            .dag()
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .expect("in the DAG")
+            .activity_id
+            .clone()
+    };
+    let refused_one = activity(&order[0]);
+    let other = activity(&order[1]);
+    let refusal = || {
+        Event::new(
+            EventKind::StepRefused,
+            serde_json::json!({ "class": "not_isolated" }),
+        )
+    };
+    let halt = NextAction::Halt {
+        reason: HaltReason::Refused {
+            class: "not_isolated".to_owned(),
+        },
+    };
+    let deadline = Timestamp::from_unix_seconds(9_000);
+    let ctx_none = FsmContext::supplied(ITEM, TREE_A, deadline, None);
+    let ctx_next = FsmContext::supplied(ITEM, TREE_A, deadline, Some("verify"));
+    let others_committed: Vec<Event> = order[1..]
+        .iter()
+        .map(|id| activation(EventKind::ActivityCommitted, &activity(id), 1))
+        .collect();
+
+    // The fix: refused at attempts 1 and 2, committed at attempt 3 → the halt is cleared.
+    let mut retried = others_committed.clone();
+    retried.extend([
+        activation(EventKind::Dispatch, &refused_one, 1),
+        refusal(),
+        activation(EventKind::Dispatch, &refused_one, 2),
+        refusal(),
+        activation(EventKind::Dispatch, &refused_one, 3),
+        activation(EventKind::ActivityCommitted, &refused_one, 3),
+    ]);
+    let healed = fold(ITEM, STAGE, &retried).expect("folds");
+    assert_eq!(
+        healed.halt(),
+        None,
+        "the retry's completion clears the refusal of its activation"
+    );
+    assert_eq!(
+        next_action(&planned, &healed, &ctx_none).expect("computes"),
+        NextAction::Done
+    );
+    assert_eq!(
+        next_action(&planned, &healed, &ctx_next).expect("computes"),
+        NextAction::AdvanceStage {
+            from: STAGE.to_owned(),
+            to: "verify".to_owned(),
+        }
+    );
+
+    // CONTROL 1: a completion of a DIFFERENT activation does not clear it (ADR-0154 still holds).
+    let mut elsewhere: Vec<Event> = vec![
+        activation(EventKind::ActivityCommitted, &refused_one, 1),
+        activation(EventKind::Dispatch, &refused_one, 2),
+        refusal(),
+    ];
+    elsewhere.extend(others_committed.iter().cloned());
+    let still = fold(ITEM, STAGE, &elsewhere).expect("folds");
+    assert_eq!(
+        next_action(&planned, &still, &ctx_next).expect("computes"),
+        halt
+    );
+    assert_ne!(
+        refused_one, other,
+        "PREMISE: control 1 completes a different activation"
+    );
+
+    // CONTROL 2: a refusal no dispatch preceded names no activation, and stays a halt.
+    let mut bare: Vec<Event> = vec![activation(EventKind::ActivityCommitted, &refused_one, 1)];
+    bare.extend(others_committed.iter().cloned());
+    bare.push(refusal());
+    let unnamed = fold(ITEM, STAGE, &bare).expect("folds");
+    assert_eq!(
+        next_action(&planned, &unnamed, &ctx_none).expect("computes"),
+        halt
+    );
+
+    // A non-agent step's refusal (`Runtime::end_walk`) names its own activation and follows no
+    // dispatch: it is credited to that activation, not to whatever was dispatched last.
+    let named_refusal = Event::new(
+        EventKind::StepRefused,
+        serde_json::json!({
+            "class": "not_isolated",
+            "item": ITEM,
+            "activity_id_at_version": refused_one,
+            "step_id": "tool",
+        }),
+    );
+    let mut tool = vec![
+        activation(EventKind::Dispatch, &other, 1),
+        named_refusal.clone(),
+    ];
+    tool.extend(others_committed.iter().cloned());
+    tool.push(activation(EventKind::ActivityCommitted, &refused_one, 2));
+    let tool_healed = fold(ITEM, STAGE, &tool).expect("folds");
+    assert_eq!(
+        next_action(&planned, &tool_healed, &ctx_none).expect("computes"),
+        NextAction::Done,
+        "a named refusal is cleared by its own activation's completion"
+    );
+    // CONTROL 4: the same named refusal is NOT cleared by the last-dispatched activation's
+    // completion.
+    let mut misdirected = vec![
+        activation(EventKind::ActivityCommitted, &refused_one, 1),
+        activation(EventKind::Dispatch, &other, 1),
+        named_refusal,
+    ];
+    misdirected.extend(others_committed.iter().cloned());
+    let kept = fold(ITEM, STAGE, &misdirected).expect("folds");
+    assert_eq!(
+        next_action(&planned, &kept, &ctx_none).expect("computes"),
+        halt
+    );
+
+    // CONTROL 3: a refusal AFTER the activation's last completion is not cleared by it.
+    let mut late = others_committed;
+    late.extend([
+        activation(EventKind::Dispatch, &refused_one, 1),
+        activation(EventKind::ActivityCommitted, &refused_one, 1),
+        activation(EventKind::Dispatch, &refused_one, 2),
+        refusal(),
+    ]);
+    let after = fold(ITEM, STAGE, &late).expect("folds");
+    assert_eq!(
+        next_action(&planned, &after, &ctx_none).expect("computes"),
+        halt
+    );
+}
