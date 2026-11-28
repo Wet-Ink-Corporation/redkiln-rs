@@ -8304,3 +8304,43 @@ gates; the entries go when `trycmd` drops humantime or the test stops using it.
 *(dated 2026-11-17, Ryan; D21-163 step 4, D21-183. Written by Claude in the s8 thread, on Ryan's instruction of 2026-11-18 06:30Z, as for `-3` to `-7`.)* The fix item minted an eighth time after `rk-fix-doctor-margin-7`'s two rc 14 stops in verify
 
 reserved-fix-item: rk-fix-doctor-margin-8 rk-cli:doctor::rules::margin
+
+## D21-184 · `s8`: a refusal is cleared by a later completion of the same activation; `-8` restarts as `-9`
+
+**What happened.** `-8` (frozen `a712595`) passed every stage. Verify was green (1592 passed) with all five ACs
+answered `discriminates`, review was answered `override-approve` over four advisory findings, release went through,
+and closeout's debt-logging and retro committed. Guard 3 then refused `closure-record@2` twice as
+`NotIsolated { surface: Env }`. Attempt 1 was refused at the 2026-11-27 18:12Z launch and attempt 2 at 03:06Z.
+Attempt 2 read `D:\repos\redkiln-rs\.redkiln\intake\rk-fix-doctor-margin-8.repro.toml`, the main checkout's path
+with the worktree segment dropped. The next launch committed attempt 3 (4/4 checklist), the `closure.signoff` gate
+was answered `close`, and the ClosureRecord was emitted (`9e785ee`). The lane still could not mint
+`Story: redkiln-rs/rk-fix-doctor-margin-8 closed`: `fsm::fold` sets `halt` on every `step_refused` row and nothing
+clears it, so the exhausted plan's `next_action` was `Halt` (step 4, ADR-0154) and never `Done`. Relaunching changes
+nothing (D21-182 recorded the same for `-6` in implement).
+
+**The ruling** (Ryan Britton, cards 2026-11-28 04:2xZ, "A: Fix kernel, restart -9", then "Kernel + ADR-0154
+amend"). A recorded `HaltReason::Refused` names the activation it refused: the row's own `activity_id_at_version` when it
+carries one (a non-agent step's refusal), otherwise the activation the latest `dispatch` row before it named. A later
+completion of that SAME activation clears the halt, because the refused attempt was retried and the retry committed,
+so the refusal was acted on. A completion of any other activation does not clear it. Neither does a refusal no
+dispatch preceded, nor one recorded after the activation's last completion. ADR-0154's order is unchanged: a halt that
+stands still outranks a supplied successor and `Done`. `GateExpired` is untouched. The new test
+`fsm::a_refusal_is_cleared_by_a_later_completion_of_the_same_activation` asserts the fix and its four controls, and
+it was watched failing first (`left: Some(Refused { class: "not_isolated" })`). No test, assertion or lint is weakened.
+
+**What it licenses.** `crates/rk-kernel` is in CODE_PATHS, so the frozen sha moves. The restart takes D21-163's route
+again:
+- Archive `-8` (suffix `h`) and mint `rk-fix-doctor-margin-9` (in this PR, so one merge moves the sha once).
+- Step 1b and the evidence at the new sha.
+- The CP8j re-check and preflight.
+- The launches, with criterion (3)'s kill and resume re-run on `-9`.
+
+D10's guard base (`4ee8639`) is unchanged: nothing here touches `crates/rk-adapter-claude`, `crates/rk-containment`,
+`.redkiln/cards` or `tools/live-run.sh`.
+
+The story-item run `rk-story-harden-spike-pack` started at `a6050cc` and is parked at its first gate
+(`unknown_facet:change`). The frozen sha moves under it, so it takes D21-163's story route: steps 1-3 (stop and
+record, archive the ref with suffix `h`, archive the store) and stop. Its re-launch at the new sha is the operator's
+decision.
+
+*(dated 2026-11-28, Ryan; D21-163 step 4, D21-184. Written by Claude in the s8 thread, as for `-3` to `-8`.)* The fix item minted a ninth time after `rk-fix-doctor-margin-8`'s closeout halt

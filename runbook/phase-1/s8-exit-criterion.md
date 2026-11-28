@@ -1571,5 +1571,20 @@ checkpoint line.)*
 > - A red verify pass writes no `step_refused` row, so a relaunch re-runs the pass; but a flaky suite is fixed, not
 >   relaunched through.
 > - Criterion (3) kill and resume is re-run on `-8`.
+>
+> *(dated 2026-11-28, s8; D21-184)* **`rk-fix-doctor-margin-8` → `-9`.** `-8` passed every stage. Verify was green
+> with all five ACs answered `discriminates`, review was `override-approve` over four advisory findings, release went
+> through, and closure was signed `close`. Its lane still could not mint `closed`. Guard 3 refused `closure-record@2`
+> twice on a read outside the worktree, attempt 3 committed, and the `step_refused` rows' recorded halt outranked
+> `Done`. D21-184 clears a refusal when a later attempt of the same activation completes (ADR-0154's dated note), which
+> moves the frozen sha:
+> - The archive uses the `h` suffix (`refs/archive/s8-failed-2026-11-08h/rk-fix-doctor-margin-8`, archive directory
+>   `2026-11-08h-rk-fix-doctor-margin-8`).
+> - `-9` is `-8` re-minted: the same BugReport, the same widened repro and `has_repro = true`.
+> - A refusal that a later attempt of the same activation retries and commits no longer holds the stage. A refusal
+>   that stands still does.
+> - The story-item run `rk-story-harden-spike-pack`, parked at its first gate at `a6050cc`, takes steps 1-3 (suffix
+>   `h`) and stops. Its re-launch at the new sha is the operator's decision.
+> - Criterion (3) kill and resume is re-run on `-9`.
 
 ---

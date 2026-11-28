@@ -101,6 +101,17 @@ does not outrank a recorded refusal.
 against a context that **does** supply a successor, asserting `Halt`. The two existing single-arm
 assertions stay; this is added beside them, not instead of them.
 
+**5.** *(dated 2026-11-28, s8; D21-184, Ryan Britton; proposed.)* **A refusal stands until a later attempt of the
+same activation completes.** `fold` records, with `HaltReason::Refused`, the activation the refusal names: the row's
+own `activity_id_at_version` when it carries one (a non-agent step's refusal), otherwise the activation the latest
+`dispatch` row before it named (an agent dispatch's refusal). A later completion row of that same `(item, activity_id_at_version)` clears the
+halt, because the refused attempt was retried and the retry committed. A completion of another activation does not
+clear it, and neither does a refusal with no preceding dispatch, or a refusal recorded after the activation's last
+completion. Decisions 1-4 are unchanged for every halt that still stands. Without this, a retried and committed
+activation left its exhausted stage reporting `Halt` forever: `rk-fix-doctor-margin-6` could not advance from
+implement (D21-182), and `rk-fix-doctor-margin-8` could not mint `closed` (D21-184). The test is
+`fsm::a_refusal_is_cleared_by_a_later_completion_of_the_same_activation`, with one control per case above.
+
 ## Consequences
 
 `NextAction::AdvanceStage` becomes unreachable for a halted run, which is what `0152` needs in order to

@@ -992,6 +992,16 @@ pub struct RunState {
     memo_hits: usize,
     amendments: usize,
     halt: Option<HaltReason>,
+    /// *(dated 2026-11-28, s8; ADR-0154's dated note, proposed.)* The activation the latest
+    /// `dispatch` row named, `(item, activity_id_at_version)`: the activation a `step_refused`
+    /// that follows it refused. Not serialised: it moves no canonical byte.
+    last_dispatched: Option<(String, String)>,
+    /// *(dated 2026-11-28, s8; ADR-0154's dated note, proposed.)* The activation the recorded
+    /// [`HaltReason::Refused`] refused: the row's own `activity_id_at_version`, or else the latest
+    /// `dispatch` row's. A later
+    /// completion of that SAME activation clears the halt: the refused attempt was retried and the
+    /// retry committed, so the refusal was acted on. A refusal no dispatch preceded stays a halt.
+    halt_activation: Option<(String, String)>,
     sealed: Option<String>,
     /// *(dated 2026-09-28, `s8e` build, package S8E-P7; D21-93; the slice record, proposed.)* The
     /// stage the latest seal was made in: the row's `stage` member, or — for a stage-less row, which
@@ -1025,6 +1035,8 @@ impl RunState {
             memo_hits: 0,
             amendments: 0,
             halt: None,
+            last_dispatched: None,
+            halt_activation: None,
             sealed: None,
             sealed_stage: None,
             survey: FoldSurvey::default(),
@@ -1373,6 +1385,21 @@ impl RunState {
         canonical(&self.to_json())
     }
 
+    /// Record `at` as completed, and clear a recorded refusal of that same activation
+    /// (ADR-0154's dated note, 2026-11-28, proposed): its retry committed.
+    fn complete(&mut self, at: (String, String)) {
+        if matches!(self.halt, Some(HaltReason::Refused { .. }))
+            && self.halt_activation.as_ref() == Some(&at)
+        {
+            self.halt = None;
+            self.halt_activation = None;
+        }
+        if self.last_dispatched.as_ref() == Some(&at) {
+            self.last_dispatched = None;
+        }
+        self.completed.insert(at);
+    }
+
     fn note_attempt(&mut self, key: &IdempotencyKey) {
         let at = (key.item.clone(), key.activity_id_at_version.clone());
         self.attempts
@@ -1642,9 +1669,7 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             // commit key; it completes the activation only when it is the completion row.
             match optional_str(event, "step_id") {
                 None => {
-                    state
-                        .completed
-                        .insert((key.item.clone(), key.activity_id_at_version.clone()));
+                    state.complete((key.item.clone(), key.activity_id_at_version.clone()));
                 }
                 Some(step_id) => {
                     let iteration_path = event
@@ -1664,9 +1689,7 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
                         .and_then(serde_json::Value::as_bool)
                         == Some(true)
                     {
-                        state
-                            .completed
-                            .insert((key.item.clone(), key.activity_id_at_version.clone()));
+                        state.complete((key.item.clone(), key.activity_id_at_version.clone()));
                     }
                     state.step_commits.insert(super::idem::CommitKey {
                         item: key.item.clone(),
@@ -1682,6 +1705,7 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             state.survey.state_moving += 1;
             let key = activation_key(event, "dispatch")?;
             state.note_attempt(&key);
+            state.last_dispatched = Some((key.item.clone(), key.activity_id_at_version.clone()));
             state
                 .dispatched
                 .insert((key.item, key.activity_id_at_version));
@@ -1690,6 +1714,16 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             state.survey.state_moving += 1;
             let class = required_str(event, "step_refused", "class")?;
             state.halt = Some(HaltReason::Refused { class });
+            // The row's own `activity_id_at_version` when it carries one (a non-agent step's
+            // refusal, `Runtime::end_walk`, which no `dispatch` row precedes); otherwise the
+            // activation the latest `dispatch` named (an agent dispatch's refusal, `error_row`).
+            state.halt_activation = match optional_str(event, "activity_id_at_version") {
+                Some(activity) => Some((
+                    optional_str(event, "item").unwrap_or_else(|| state.item.clone()),
+                    activity,
+                )),
+                None => state.last_dispatched.clone(),
+            };
         }
         EventKind::MemoHit => {
             state.survey.state_moving += 1;
@@ -1819,6 +1853,8 @@ fn gate_to_open(
 ///    [`NextAction::Dispatch`];
 /// 4. a recorded halt → [`NextAction::Halt`] — **above the successor check, ADR-0154: a recorded
 ///    halt outranks a supplied successor**, so a refused run is never reported as advancing;
+///    *(dated 2026-11-28, s8; ADR-0154 decision 5, proposed.)* a refusal that a later attempt of
+///    the same activation retried and completed is no longer a recorded halt (`fold` clears it);
 /// 5. the plan exhausted, a successor supplied, **and that successor is not the stage the fold is
 ///    already in** → [`NextAction::AdvanceStage`] (ADR-0157: a stage does not advance into itself);
 ///    **unless that successor is the held stage** (ADR-0201 decision 2, proposed): then the hold's
