@@ -55,7 +55,6 @@ rk-adapter-sqlite = { path = "../rk-adapter-sqlite" }
 rk-adapter-toolchain-node = { path = "../rk-adapter-toolchain-node" }
 rk-adapter-toolchain-rust = { path = "../rk-adapter-toolchain-rust" }
 clap.workspace = true
-anyhow.workspace = true        # ADR-0102 d6: this crate and redkiln-migrate ONLY
 toml.workspace = true          # D18-3: the ConfigFile reader
 ctrlc.workspace = true         # D18-2: the signal path, this crate ONLY
 serde.workspace = true
@@ -66,7 +65,6 @@ tempfile = "3"                 # H-3: the bootstrap GitExec's hooks directory, b
 trycmd.workspace = true        # AC-400's --help snapshot
 assert_cmd.workspace = true
 insta.workspace = true         # the Exit::ALL snapshot
-proptest.workspace = true
 
 [[test]]
 name = "it"

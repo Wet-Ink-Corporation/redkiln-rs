@@ -105,11 +105,12 @@ fn ac466_ac441_migrate_depends_on_no_harness_adapter_or_ports() {
          nothing in the product reaches"
     );
 
-    // ADR-0102 decision 6: anyhow is confined to the TWO binary crates — `rk-cli` AND
-    // `redkiln-migrate`, which is what Checkpoint 7d's own walk asserts
-    // (`assert anyhow == ["redkiln-migrate", "rk-cli"]`) and what ci.yml's confinement step at
-    // :292 already allows. This crate's arrival is what makes that rule non-vacuous for the first
-    // time: before it, the expected list was `["rk-cli"]` alone.
+    // ADR-0102 decision 6 PERMITS anyhow in the two binary crates, `rk-cli` and
+    // `redkiln-migrate`, and ci.yml's confinement step checks that nothing else takes it. This
+    // assertion pins the actual users, which is `redkiln-migrate` alone: `rk-cli` declared anyhow
+    // without using it and dropped it (GitHub issue #12, decided 2026-11-15, Weigh-In
+    // wi-7f77ac3c50). A crate outside the permission still fails here, and so does `rk-cli`
+    // taking anyhow back without this set being changed on purpose.
     // A workspace member is a package with no registry `source`. NOT `workspace_members`, whose
     // ids are `path+file:///…#0.0.0` [measured 2026-09-21] and are not names — matching a name
     // against one would make the set empty and the assertion below vacuous.
@@ -129,10 +130,8 @@ fn ac466_ac441_migrate_depends_on_no_harness_adapter_or_ports() {
         .collect();
     assert_eq!(
         anyhow_users,
-        ["redkiln-migrate", "rk-cli"]
-            .into_iter()
-            .collect::<BTreeSet<&str>>(),
-        "anyhow's workspace users are not exactly the two binary crates (ADR-0102 d6)"
+        BTreeSet::from(["redkiln-migrate"]),
+        "anyhow's workspace users are not exactly redkiln-migrate (ADR-0102 d6; issue #12)"
     );
 
     // ADR-0100 decision 1: redkiln-migrate is the ONE crate that may reach a YAML reader.
