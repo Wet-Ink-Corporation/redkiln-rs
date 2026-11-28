@@ -82,6 +82,90 @@ pub enum GitError {
     },
 }
 
+/// The most stderr characters a rendering carries. `Debug` keeps the full bytes for the record;
+/// `Display` is for an operator's terminal, so a runaway child cannot flood it.
+const STDERR_SHOWN_CHARS: usize = 2_000;
+
+/// Stderr as an operator reads it: lossy UTF-8, trailing whitespace trimmed, bounded.
+struct Stderr<'a>(&'a [u8]);
+
+impl std::fmt::Display for Stderr<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = String::from_utf8_lossy(self.0);
+        let text = text.trim_end();
+        if text.is_empty() {
+            return f.write_str(" (no stderr)");
+        }
+        match text.char_indices().nth(STDERR_SHOWN_CHARS) {
+            Some((cut, _)) => {
+                let shown = text.get(..cut).unwrap_or(text);
+                write!(f, ": {shown}… (stderr truncated)")
+            }
+            None => write!(f, ": {text}"),
+        }
+    }
+}
+
+/// The operator-facing rendering. Read-only over the variants: nothing in this crate
+/// branches on it, as nothing branches on `NonZeroExit`'s stderr.
+impl std::fmt::Display for GitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::GitNotOnPath { detail } => write!(f, "git is not on PATH: {detail}"),
+            Self::VersionBelowFloor { found, floor } => write!(
+                f,
+                "git {found} is below the floor {floor} (ADR-0091 decision 4)"
+            ),
+            Self::VersionUnparsable { output } => {
+                write!(f, "`git --version` printed something unparsable: {output}")
+            }
+            Self::Spawn { detail } => write!(f, "git could not be spawned: {detail}"),
+            Self::NonZeroExit { op, code, stderr } => {
+                match code {
+                    Some(code) => write!(f, "git {op} exited with code {code}")?,
+                    None => write!(f, "git {op} was terminated without an exit code")?,
+                }
+                write!(f, "{}", Stderr(stderr))
+            }
+            Self::ExtendedLengthPath { given } => write!(
+                f,
+                "an extended-length path was refused before reaching git: {given}"
+            ),
+            Self::ForeignWorktree {
+                target_path,
+                target_branch,
+                owned_path,
+                owned_branch,
+            } => write!(
+                f,
+                "a tier-1 write to {} ({target_branch}) was refused: this run owns {} \
+                 ({owned_branch}) (AC-529)",
+                target_path.display(),
+                owned_path.display()
+            ),
+            Self::WorktreeRemoveFailed { path, stderr } => write!(
+                f,
+                "git worktree remove failed for {}{}",
+                path.display(),
+                Stderr(stderr)
+            ),
+            Self::CarryRefused { refusal } => {
+                write!(f, "the .worktreeinclude carry was refused: {refusal}")
+            }
+            Self::WorktreeRefused { refusal } => {
+                write!(f, "run-tree creation was refused: {refusal}")
+            }
+            Self::LandingReread { expected, found } => write!(
+                f,
+                "the landing commit re-read as tree {found}, not {expected}; no ref moved"
+            ),
+            Self::ReleaseRefused { refusal } => write!(f, "the release tag was refused: {refusal}"),
+        }
+    }
+}
+
+impl std::error::Error for GitError {}
+
 impl GitError {
     /// Does this fault mean the operator said no, or that the tool never spoke? The distinction
     /// RK-B0013 was written about, kept available to callers rather than inferred from a message.

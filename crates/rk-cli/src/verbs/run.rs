@@ -1478,8 +1478,12 @@ pub fn through_step_seven(
         .reconciler
         .reconcile(&repo.exec, &repo.worktree, entry)
         .map_err(|e| {
-            eprintln!("redkiln: reconcile at entry refused: {e:?}");
-            Exit::ConfigError
+            // `GitError`'s `Display`, as doctor's reconcile arm renders it.
+            told(
+                &mut std::io::stderr().lock(),
+                &format!("redkiln: reconcile at entry refused: {e}"),
+                Exit::ConfigError,
+            )
         })?;
 
     // ---- (7) THE PACK SET, BEFORE ANY LANE DERIVATION.
