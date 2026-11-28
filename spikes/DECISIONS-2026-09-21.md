@@ -8343,4 +8343,6 @@ The story-item run `rk-story-harden-spike-pack` started at `a6050cc` and is park
 record, archive the ref with suffix `h`, archive the store) and stop. Its re-launch at the new sha is the operator's
 decision.
 
-*(dated 2026-11-28, Ryan; D21-163 step 4, D21-184. Written by Claude in the s8 thread, as for `-3` to `-8`.)* The fix item minted a ninth time after `rk-fix-doctor-margin-8`'s closeout halt
+*(dated 2026-11-28, Ryan; D21-163 step 4, D21-184. Written by Claude in the s8 thread, as for `-3` to `-8`, on Ryan's instruction of 2026-11-28.)* The fix item minted a ninth time after `rk-fix-doctor-margin-8`'s closeout halt
+
+reserved-fix-item: rk-fix-doctor-margin-9 rk-cli:doctor::rules::margin
