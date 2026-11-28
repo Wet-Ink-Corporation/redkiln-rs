@@ -9,7 +9,49 @@
 //! So there is exactly one, it lives here, and the length-prefixed framing ADR-0097 mandates is
 //! part of it rather than something each caller reimplements.
 
-use rk_types::digest::{sha256, sha256_lp};
+use rk_types::digest::{Digest, sha256, sha256_lp};
+
+// ------------------------------------------------- #19: deserialisation validates like from_hex
+
+/// A valid digest round-trips through JSON, and serialising stays the bare string.
+#[test]
+fn a_valid_digest_round_trips_through_json() -> Result<(), serde_json::Error> {
+    let d = sha256(b"abc");
+
+    let json = serde_json::to_string(&d)?;
+    let back: Digest = serde_json::from_str(&json)?;
+
+    assert_eq!(
+        json, "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\"",
+        "serialised form is the bare hex string"
+    );
+    assert_eq!(back, d, "round trip");
+    Ok(())
+}
+
+/// `from_hex` is the only constructor, so serde must refuse what it refuses: 63 characters,
+/// uppercase hex and non-hex.
+#[test]
+fn deserialising_refuses_what_from_hex_refuses() {
+    let good = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+    let short = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015a";
+    let upper = good.to_ascii_uppercase();
+    let non_hex = good.replacen('a', "g", 1);
+    let cases = [
+        (short, "a digest is 64 lowercase hex characters, got 63"),
+        (upper.as_str(), "byte 0 is outside [0-9a-f]"),
+        (non_hex.as_str(), "byte 1 is outside [0-9a-f]"),
+    ];
+
+    for (bad, why) in cases {
+        let got = serde_json::from_value::<Digest>(serde_json::Value::String(bad.to_owned()));
+        let refused = got.as_ref().map_err(ToString::to_string);
+        assert!(
+            matches!(&refused, Err(msg) if msg.contains(why)),
+            "`{bad}` must be refused with `{why}`, got {refused:?}"
+        );
+    }
+}
 
 /// Against the published SHA-256 of the empty string and of "abc" — an oracle outside this
 /// codebase, so the test cannot agree with a wrong implementation by construction.
